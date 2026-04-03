@@ -10,6 +10,11 @@
     "speed": 80.0,
     "weight": 200.0
   },
+  "enhancement_growth": {
+    "hp": 2.0,
+    "atk": 0.5,
+    "def": 1.5
+  },
   "passive_skills": [
     "team_cooldown_reduction"
   ],

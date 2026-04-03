@@ -20,6 +20,12 @@ var weight: float = 100.0
 # var ignore_def: float = 0.0
 # var crit_rate: float = 0.0
 
+# ── 強化成長值（每級/每點的固定加成） ─────────────────
+## 格式：{ "hp": float, "atk": float, "def": float }
+## 普通乾糧每升一級，三個屬性各加對應值
+## 特殊乾糧每分配一點到某屬性，該屬性加對應值
+var enhancement_growth: Dictionary = {"hp": 1.5, "atk": 1.0, "def": 0.5}
+
 # ── 技能參照 ──────────────────────────────────────────
 var passive_skill_ids: Array = []
 ## 格式：[{ "id": "shield_bash", "initial_delay": 0, "cooldown": 5.0 }]
@@ -53,13 +59,33 @@ static func _from_dict(data: Dictionary) -> CatData:
 	cat.cat_type = data.get("cat_type", "base")
 
 	var stats: Dictionary = data.get("base_stats", {})
-	cat.max_hp = stats.get("max_hp", 100)
-	cat.atk = stats.get("atk", 10)
-	cat.defense = stats.get("defense", 0)
-	cat.speed = stats.get("speed", 100.0)
-	cat.weight = stats.get("weight", 100.0)
+	cat.max_hp   = stats.get("max_hp",   100)
+	cat.atk      = stats.get("atk",      10)
+	cat.defense  = stats.get("defense",  0)
+	cat.speed    = stats.get("speed",    100.0)
+	cat.weight   = stats.get("weight",   100.0)
 
-	cat.passive_skill_ids = data.get("passive_skills", [])
+	var default_growth: Dictionary = {"hp": 1.5, "atk": 1.0, "def": 0.5}
+	var growth: Dictionary = data.get("enhancement_growth", {})
+	cat.enhancement_growth = {
+		"hp":  growth.get("hp",  default_growth["hp"]),
+		"atk": growth.get("atk", default_growth["atk"]),
+		"def": growth.get("def", default_growth["def"]),
+	}
+
+	cat.passive_skill_ids   = data.get("passive_skills", [])
 	cat.active_skill_configs = data.get("active_skills", [])
 
 	return cat
+
+
+## 將玩家強化加成直接疊加到本實例的屬性上
+## 普通乾糧：全屬性各加 (level-1) * growth
+## 特殊乾糧：各屬性加 special_points * growth
+func apply_enhancement(player_cat: PlayerCatData) -> void:
+	var food_levels: int = player_cat.cat_food_level - 1
+	var sfp: Dictionary = player_cat.special_food_points
+
+	max_hp  += int((food_levels + sfp.get("hp",  0)) * enhancement_growth.get("hp",  0.0))
+	atk     += int((food_levels + sfp.get("atk", 0)) * enhancement_growth.get("atk", 0.0))
+	defense += int((food_levels + sfp.get("def", 0)) * enhancement_growth.get("def", 0.0))

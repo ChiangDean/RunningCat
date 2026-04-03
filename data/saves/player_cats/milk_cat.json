@@ -1,10 +1,18 @@
 {
-  "cat_id": "milk_cat",
-  "level": 3,
-  "cat_food_fed": 120,
-  "cat_can_fed": 2,
-  "cat_shards": 5,
-  "active_skill_settings": [
-    { "skill_id": "shield_bash", "initial_delay": 2 }
-  ]
+	"active_skill_settings": [
+		{
+			"initial_delay": 2.0,
+			"skill_id": "shield_bash"
+		}
+	],
+	"cat_can_fed": 2,
+	"cat_food_level": 6,
+	"cat_id": "milk_cat",
+	"cat_shards": 5,
+	"schema_version": 1,
+	"special_food_points": {
+		"atk": 0.0,
+		"def": 0.0,
+		"hp": 4.0
+	}
 }

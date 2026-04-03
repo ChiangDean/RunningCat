@@ -2,6 +2,11 @@ extends Node
 
 ## 全局遊戲狀態，跨場景共享
 
+# ── 玩家資源 & 強化存檔 ──────────────────────
+var player_data: PlayerData
+## 已載入的貓咪強化存檔快取，key = cat_id
+var _player_cat_cache: Dictionary = {}
+
 # ── 玩家配置 ──────────────────────────────────
 var player_team: Array = ["milk_cat", "milk_cat", "milk_cat"]
 var skill_delays: Dictionary = {}
@@ -16,6 +21,26 @@ var boss_available: bool = false
 
 # ── 常數 ──────────────────────────────────────
 const OWNED_CATS: Array = ["milk_cat"]
+
+
+func _ready() -> void:
+	player_data = PlayerData.load_or_default()
+	for cat_id: String in OWNED_CATS:
+		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
+
+
+## 取得貓咪強化存檔（找不到時自動建立預設值）
+func get_player_cat(cat_id: String) -> PlayerCatData:
+	if not _player_cat_cache.has(cat_id):
+		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
+	return _player_cat_cache[cat_id]
+
+
+## 儲存所有玩家資料（資源 + 所有貓咪強化）
+func save_all() -> void:
+	player_data.save()
+	for cat_id: String in _player_cat_cache:
+		_player_cat_cache[cat_id].save()
 
 ## 每個 Boss 關含幾個普通遭遇戰（不含 Boss）
 const ENCOUNTERS_PER_BOSS_STAGE: int = 4

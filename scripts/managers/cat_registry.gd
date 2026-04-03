@@ -23,12 +23,16 @@ var _type_map: Dictionary = {
 
 
 ## 建立貓咪節點，自動依 cat_type 選擇對應子類別
-func create_cat(cat_id: String, team: String, skill_states: Array = []) -> BaseCat:
+## player_cat 若提供，會將強化加成疊加到 CatData 後再建立
+func create_cat(cat_id: String, team: String, skill_states: Array = [], player_cat: PlayerCatData = null) -> BaseCat:
 	var path: String = CAT_DATA_PATH + cat_id + ".json"
 	var data := CatData.from_json_file(path)
 	if data == null:
 		push_error("CatRegistry: 無法載入貓咪：" + cat_id)
 		return null
+
+	if player_cat != null:
+		data.apply_enhancement(player_cat)
 
 	var CatClass = _type_map.get(data.cat_type, BaseCat)
 	var cat: BaseCat = CatClass.new()
