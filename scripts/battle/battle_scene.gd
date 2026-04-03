@@ -221,13 +221,13 @@ func _on_battle_finished(result: String) -> void:
 
 	if result == "WIN":
 		# 勝利：中間上方顯示，推進後重啟
-		_show_result_text("勝利", Color(0.3, 1.0, 0.4, 1.0), 30.0)
+		_show_result_text("勝利", Color(0.3, 1.0, 0.4, 1.0), 310.0)
 		GameState.advance_after_win()
 		await get_tree().create_timer(1.0).timeout
 		_start_battle()
 	else:
 		# 失敗：頂部顯示，處理狀態後重啟
-		_show_result_text("敗北", Color(1.0, 0.3, 0.3, 1.0), 30.0)
+		_show_result_text("敗北", Color(1.0, 0.3, 0.3, 1.0), 310.0)
 		if is_boss:
 			GameState.on_boss_fail()
 		await get_tree().create_timer(1.0).timeout
