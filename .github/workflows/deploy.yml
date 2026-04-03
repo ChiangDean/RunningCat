@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - sandbox
       - develop
 
 permissions:
@@ -37,10 +38,19 @@ jobs:
           keep_files: true
 
       - name: Deploy to Sandbox
-        if: github.ref == 'refs/heads/develop'
+        if: github.ref == 'refs/heads/sandbox'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
           destination_dir: sandbox
+          keep_files: true
+
+      - name: Deploy to Develop
+        if: github.ref == 'refs/heads/develop'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/web
+          destination_dir: develop
           keep_files: true
