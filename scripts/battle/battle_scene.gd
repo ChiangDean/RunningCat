@@ -3,9 +3,13 @@ extends Node2D
 
 ## 主戰鬥場景：建立 UI、載入貓咪資料、執行模擬與播放
 
-# 測試用貓咪（未來改為從存檔讀取）
-const PLAYER_CAT_IDS: Array = ["milk_cat"]
-const ENEMY_CAT_IDS: Array = ["test_enemy"]
+# 最大上場數（由關卡進度解鎖，目前固定測試用）
+const MAX_CATS_ON_FIELD: int = 5
+
+# 測試用貓咪（未來改為從存檔 + 關卡設定讀取）
+# 重複 ID 代表同一種貓上場多次（暫時測試用）
+const PLAYER_CAT_IDS: Array = ["milk_cat", "milk_cat", "milk_cat"]
+const ENEMY_CAT_IDS: Array = ["test_enemy", "test_enemy", "test_enemy"]
 
 # 場景尺寸
 const SW := 720.0

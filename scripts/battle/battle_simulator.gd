@@ -38,25 +38,27 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 	var events: Array = []
 	var id_counter := 0
 
-	# ── 初始化貓咪 ───────────────────────────
+	# ── 初始化貓咪（最多 5 隻，間距 60px = CAT_HALF_W*2）──────────
 	var p_list: Array = []   # player 隊伍（index 0 = 前排）
 	var e_list: Array = []   # enemy  隊伍（index 0 = 前排）
 
-	# Player：前排在右側（x 較大），依序往左排
-	var p_start_x := 180.0
+	# Player：前排 x=315，往左排 60px，5 隻最小 x=75（安全距離離左牆 40）
+	var p_front_x := 315.0
+	var p_spacing := 60.0
 	for i in range(player_cats.size()):
 		var sc := SimCat.new(id_counter, player_cats[i], "player",
-				p_start_x - i * 70.0)
+				p_front_x - i * p_spacing)
 		p_list.append(sc)
 		events.append(BattleEvent.spawn(0.0, sc.instance_id, "player",
 				sc.pos_x, sc.current_hp, sc.data.max_hp))
 		id_counter += 1
 
-	# Enemy：前排在左側（x 較小），依序往右排
-	var e_start_x := 540.0
+	# Enemy：前排 x=405，往右排 60px，5 隻最大 x=645（安全距離離右牆 680）
+	var e_front_x := 405.0
+	var e_spacing := 60.0
 	for i in range(enemy_cats.size()):
 		var sc := SimCat.new(id_counter, enemy_cats[i], "enemy",
-				e_start_x + i * 70.0)
+				e_front_x + i * e_spacing)
 		e_list.append(sc)
 		events.append(BattleEvent.spawn(0.0, sc.instance_id, "enemy",
 				sc.pos_x, sc.current_hp, sc.data.max_hp))
@@ -79,7 +81,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 			events.sort_custom(func(a, b): return a.timestamp < b.timestamp)
 			return events
 
-		# 移動所有存活貓咪
+		# 移動所有存活貓咪（各自速度，開戰後不限制隊列順序）
 		for sc in p_list:
 			if sc.is_alive:
 				_move_cat(sc, SIM_STEP)
@@ -87,11 +89,8 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 			if sc.is_alive:
 				_move_cat(sc, SIM_STEP)
 
-		# 碰撞檢測（前排互打）
-		p_front = _get_front(p_list)
-		e_front = _get_front(e_list)
-		if p_front and e_front and _are_colliding(p_front, e_front):
-			_handle_collision(p_front, e_front, sim_time, events, p_list, e_list)
+		# 碰撞檢測：逐一比對所有存活的跨隊組合
+		_check_all_collisions(p_list, e_list, sim_time, events)
 
 		# 技能計時
 		for sc in p_list + e_list:
@@ -106,18 +105,56 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 
 # ── 輔助方法 ─────────────────────────────────
 
+## 取同隊實際最前排：player 取最大 x，enemy 取最小 x
 func _get_front(team_list: Array) -> SimCat:
-	# 取最靠近中心（720/2=360）的存活貓咪
 	var best: SimCat = null
-	var best_dist := INF
 	for sc: SimCat in team_list:
 		if not sc.is_alive:
 			continue
-		var d := absf(sc.pos_x - 360.0)
-		if d < best_dist:
-			best_dist = d
+		if best == null:
+			best = sc
+		elif sc.team == "player" and sc.pos_x > best.pos_x:
+			best = sc
+		elif sc.team == "enemy" and sc.pos_x < best.pos_x:
 			best = sc
 	return best
+
+## 檢查所有存活跨隊組合，找出所有重疊對並處理碰撞
+func _check_all_collisions(p_list: Array, e_list: Array,
+		t: float, events: Array) -> void:
+	for p: SimCat in p_list:
+		if not p.is_alive:
+			continue
+		for e: SimCat in e_list:
+			if not e.is_alive:
+				continue
+			if _are_colliding(p, e):
+				_handle_collision(p, e, t, events, p_list, e_list)
+
+## 強制同隊貓咪保持最小間距（CAT_HALF_W*2），前排優先
+## front_is_leftmost=true → enemy（前排 x 最小），false → player（前排 x 最大）
+func _enforce_queue(team_list: Array, front_is_leftmost: bool) -> void:
+	var alive: Array = []
+	for sc in team_list:
+		if sc.is_alive:
+			alive.append(sc)
+	if alive.size() <= 1:
+		return
+	var min_dist := CAT_HALF_W * 2.0
+	if front_is_leftmost:
+		# Enemy：前排 x 最小 → 升序，由前向後推，後排不能比前排更左
+		alive.sort_custom(func(a, b): return a.pos_x < b.pos_x)
+		for i in range(1, alive.size()):
+			var min_x: float = alive[i - 1].pos_x + min_dist
+			if alive[i].pos_x < min_x:
+				alive[i].pos_x = min_x
+	else:
+		# Player：前排 x 最大 → 降序，由前向後推，後排不能比前排更右
+		alive.sort_custom(func(a, b): return a.pos_x > b.pos_x)
+		for i in range(1, alive.size()):
+			var max_x: float = alive[i - 1].pos_x - min_dist
+			if alive[i].pos_x > max_x:
+				alive[i].pos_x = max_x
 
 func _move_cat(sc: SimCat, delta: float) -> void:
 	if sc.is_staggered:
@@ -134,26 +171,26 @@ func _are_colliding(a: SimCat, b: SimCat) -> bool:
 
 func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 		p_list: Array, e_list: Array) -> void:
-	# 計算傷害
-	var dmg_to_e := int(CatStats.calc_damage(p.data.atk, e.data.defense))
-	var dmg_to_p := int(CatStats.calc_damage(e.data.atk, p.data.defense))
+	# ── 傷害：硬直中不造成傷害給對方 ────────────────────
+	if not p.is_staggered:
+		var dmg := int(CatStats.calc_damage(p.data.atk, e.data.defense))
+		e.current_hp = maxi(0, e.current_hp - dmg)
+	if not e.is_staggered:
+		var dmg := int(CatStats.calc_damage(e.data.atk, p.data.defense))
+		p.current_hp = maxi(0, p.current_hp - dmg)
 
-	e.current_hp = maxi(0, e.current_hp - dmg_to_e)
-	p.current_hp = maxi(0, p.current_hp - dmg_to_p)
-
-	# 計算回彈
+	# ── 回彈：不論硬直狀態都發生 ────────────────────────
 	var kb_p := CatStats.calc_knockback_distance(e.data.weight, p.data.weight)
 	var kb_e := CatStats.calc_knockback_distance(p.data.weight, e.data.weight)
 
-	# 分開位置，避免持續重疊觸發
-	p.pos_x = e.pos_x - CAT_HALF_W * 2.0 - 5.0
-	e.pos_x = p.pos_x + CAT_HALF_W * 2.0 + 5.0
+	# 先分開位置避免重疊繼續觸發
+	p.pos_x = e.pos_x - CAT_HALF_W * 2.0 - 2.0
+	e.pos_x = p.pos_x + CAT_HALF_W * 2.0 + 2.0
 
-	# 回彈
 	p.pos_x -= kb_p
 	e.pos_x += kb_e
 
-	# 撞牆檢查
+	# ── 撞牆修正 ─────────────────────────────────────────
 	var p_stagger_t := CatStats.STAGGER_TIME
 	if p.pos_x - CAT_HALF_W <= WALL_LEFT:
 		p.pos_x = WALL_LEFT + CAT_HALF_W
@@ -164,21 +201,23 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 		e.pos_x = WALL_RIGHT - CAT_HALF_W
 		e_stagger_t = CatStats.WALL_STAGGER_TIME
 
-	# 硬直
-	p.is_staggered = true
-	p.stagger_timer = p_stagger_t
-	e.is_staggered = true
-	e.stagger_timer = e_stagger_t
+	# ── 硬直：已在硬直中則不重置計時器 ──────────────────
+	if not p.is_staggered:
+		p.is_staggered = true
+		p.stagger_timer = p_stagger_t
+	if not e.is_staggered:
+		e.is_staggered = true
+		e.stagger_timer = e_stagger_t
 
-	# 寫入碰撞事件（各自一條，帶更新後的 pos 與 hp）
+	# ── 事件 ────────────────────────────────────────────
 	events.append(BattleEvent.collision(t, p.instance_id, p.pos_x, p.current_hp, -kb_p))
 	events.append(BattleEvent.collision(t, e.instance_id, e.pos_x, e.current_hp, kb_e))
 
-	# 死亡判定
-	if e.current_hp <= 0:
+	# ── 死亡判定 ─────────────────────────────────────────
+	if e.current_hp <= 0 and e.is_alive:
 		e.is_alive = false
 		events.append(BattleEvent.cat_die(t, e.instance_id, "enemy", e.pos_x))
-	if p.current_hp <= 0:
+	if p.current_hp <= 0 and p.is_alive:
 		p.is_alive = false
 		events.append(BattleEvent.cat_die(t, p.instance_id, "player", p.pos_x))
 
