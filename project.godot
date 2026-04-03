@@ -25,6 +25,10 @@ window/stretch/mode="canvas_items"
 
 3d/physics_engine="Jolt Physics"
 
+[gui]
+
+theme/custom="res://resources/default_theme.tres"
+
 [rendering]
 
 rendering_device/driver.windows="d3d12"
