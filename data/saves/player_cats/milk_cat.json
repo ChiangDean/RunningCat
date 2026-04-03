@@ -1,0 +1,10 @@
+{
+  "cat_id": "milk_cat",
+  "level": 3,
+  "cat_food_fed": 120,
+  "cat_can_fed": 2,
+  "cat_shards": 5,
+  "active_skill_settings": [
+    { "skill_id": "shield_bash", "initial_delay": 2 }
+  ]
+}
