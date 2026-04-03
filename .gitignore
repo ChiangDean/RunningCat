@@ -1,0 +1,19 @@
+# Godot
+.godot/
+/android/
+*.import
+
+# Mono / C#
+.mono/
+data_*/
+mono_crash.*.json
+bin/
+obj/
+build/
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
