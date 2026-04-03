@@ -148,10 +148,11 @@ func _on_battle_end(ev: BattleEvent) -> void:
 	battle_finished.emit(ev.result)
 
 func _update_cat_movement(delta: float) -> void:
-	# 以與模擬器相同的速度推進視覺位置
+	# 各貓咪以自身速度獨立移動，開戰後不限制隊列順序
 	var scaled_delta := delta * _speed_mult
+
 	for id: int in _cat_nodes:
-		var node: CatNode = _cat_nodes[id]
+		var node: CatNode = _cat_nodes.get(id)
 		if node == null:
 			continue
 
@@ -161,11 +162,9 @@ func _update_cat_movement(delta: float) -> void:
 			if _cat_stagger_timers[id] > 0.0:
 				continue  # 硬直中，不移動
 
-		# 使用貓咪真實速度（與模擬器一致）
 		var speed: float = _cat_speeds.get(id, 80.0)
 		var dir := 1.0 if node.team == "player" else -1.0
-		node.position.x += dir * speed * scaled_delta
-		node.position.x = clampf(node.position.x, 40.0, 680.0)
+		node.position.x = clampf(node.position.x + dir * speed * scaled_delta, 40.0, 680.0)
 
 func _find_cat_data(id: int, team: String) -> CatData:
 	# 根據 spawn 順序找 CatData
