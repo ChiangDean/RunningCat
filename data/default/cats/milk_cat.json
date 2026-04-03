@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "milk_cat",
+  "display_name": "牛奶貓",
+  "cat_type": "tank",
+  "base_stats": {
+    "max_hp": 1000,
+    "atk": 150,
+    "defense": 50,
+    "speed": 80.0,
+    "weight": 200.0
+  },
+  "passive_skills": [
+    "team_cooldown_reduction"
+  ],
+  "active_skills": [
+    {
+      "id": "shield_bash",
+      "initial_delay": 0,
+      "cooldown": 5.0
+    }
+  ]
+}
