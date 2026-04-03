@@ -17,3 +17,6 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Ignore Godot 4.x UID files
+*.gd.uid

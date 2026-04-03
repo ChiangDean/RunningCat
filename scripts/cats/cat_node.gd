@@ -63,12 +63,41 @@ func _build_visuals() -> void:
 	_name_label.add_theme_font_size_override("font_size", 12)
 	add_child(_name_label)
 
+
 func update_hp(hp: int) -> void:
 	current_hp = maxi(0, hp)
 	var ratio := float(current_hp) / float(max_hp) if max_hp > 0 else 0.0
 	_hp_bar_fill.size.x = HP_BAR_W * ratio
 	# 顏色從綠到紅
 	_hp_bar_fill.color = Color(1.0 - ratio, ratio * 0.9, 0.1, 1.0)
+
+# 顯示傷害數字（浮動動畫）
+func show_damage_number(damage: int) -> void:
+	if damage <= 0:
+		return
+	var dmg_label := Label.new()
+	dmg_label.text = "-" + str(damage)
+	dmg_label.position = Vector2(-HP_BAR_W / 2.0, -BODY_H - 32.0)
+	dmg_label.size = Vector2(HP_BAR_W, 20.0)
+	dmg_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dmg_label.add_theme_font_size_override("font_size", 18)
+
+	# 設定顏色：我方紅色、敵方紫色，皆有白色外框
+	dmg_label.add_theme_color_override("font_outline_color", Color(1,1,1,1))
+	dmg_label.add_theme_constant_override("outline_size", 2)
+	if team == "player":
+		dmg_label.add_theme_color_override("font_color", Color(1, 0.2, 0.2, 1))
+	else:
+		dmg_label.add_theme_color_override("font_color", Color(0.7, 0.3, 1.0, 1))
+	add_child(dmg_label)
+
+	var tween := create_tween()
+	tween.tween_property(dmg_label, "position:y", dmg_label.position.y - 24.0, 0.6).set_ease(Tween.EASE_OUT)
+	tween.tween_property(dmg_label, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(func():
+		if is_instance_valid(dmg_label):
+			dmg_label.queue_free()
+	)
 
 ## 直接 tween 到模擬器計算後的最終 x 座標（絕對位置，不是偏移量）
 func move_to(target_x: float) -> void:

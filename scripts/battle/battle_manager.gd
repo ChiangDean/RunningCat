@@ -115,13 +115,17 @@ func _on_collision(ev: BattleEvent) -> void:
 	var node: CatNode = _cat_nodes.get(ev.cat_id)
 	if node == null:
 		return
+	var prev_hp = node.current_hp
 	node.update_hp(ev.current_hp)
 	# ev.pos_x 是模擬器算完回彈+撞牆後的最終座標，直接 tween 過去
+	var damage = max(0, prev_hp - ev.current_hp)
+	if damage > 0:
+		node.show_damage_number(damage)
 	node.move_to(ev.pos_x)
 	# 套用硬直（靠近牆壁用 WALL_STAGGER_TIME，否則 STAGGER_TIME）
 	var is_near_wall := (ev.pos_x <= 70.0 or ev.pos_x >= 650.0)
 	_cat_stagger_timers[ev.cat_id] = \
-			CatStats.WALL_STAGGER_TIME if is_near_wall else CatStats.STAGGER_TIME
+		CatStats.WALL_STAGGER_TIME if is_near_wall else CatStats.STAGGER_TIME
 
 func _on_hp_update(ev: BattleEvent) -> void:
 	var node: CatNode = _cat_nodes.get(ev.cat_id)
