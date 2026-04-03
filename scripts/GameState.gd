@@ -71,10 +71,11 @@ func advance_after_win() -> void:
 	elif current_stage < 3:
 		current_stage += 1
 	else:
-		# stage 3 通關 → 解鎖 Boss，繼續刷 stage 3
-		boss_available = true
+		# stage 3 通關 → 直接進 Boss
+		current_stage = 0
+		boss_available = false
 
-## Boss 失敗後退回 stage 3
+## Boss 失敗後退回 stage 3，顯示「挑戰Boss」按鈕
 func on_boss_fail() -> void:
 	current_stage = 3
 	boss_available = true

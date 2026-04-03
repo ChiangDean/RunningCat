@@ -263,44 +263,37 @@ func _on_battle_finished(result: String) -> void:
 	_last_result = result
 	var is_boss := GameState.current_stage == 0
 
-	# 更新 level_result_lbl
+	if result == "WIN":
+		# 勝利：直接推進，不顯示 overlay
+		GameState.advance_after_win()
+		_start_battle()
+		return
+
+	# 失敗或時間到：顯示 overlay
 	var level_result_lbl := _result_overlay.find_child("LevelResultLabel") as Label
 	if level_result_lbl:
 		level_result_lbl.text = GameState.get_level_display()
 
-	match result:
-		"WIN":
-			_result_label.text = "勝利！"
-			_result_label.modulate = Color(0.3, 1.0, 0.4, 1.0)
-			_retry_btn.visible = false
-			_continue_btn.visible = true
-			_continue_btn.text = "繼續"
-		"LOSE", "TIMEOUT":
-			if is_boss:
-				_result_label.text = "失敗！"
-				_result_label.modulate = Color(1.0, 0.3, 0.3, 1.0)
-				_retry_btn.visible = false
-				_continue_btn.visible = true
-				_continue_btn.text = "繼續"
-			else:
-				_result_label.text = "失敗！" if result == "LOSE" else "時間到！"
-				_result_label.modulate = Color(1.0, 0.3, 0.3, 1.0) if result == "LOSE" else Color(1.0, 0.8, 0.2, 1.0)
-				_retry_btn.visible = true
-				_continue_btn.visible = false
+	_result_label.text = "失敗！" if result == "LOSE" else "時間到！"
+	_result_label.modulate = Color(1.0, 0.3, 0.3, 1.0) if result == "LOSE" else Color(1.0, 0.8, 0.2, 1.0)
+
+	if is_boss:
+		# Boss 失敗：退回 stage 3，按確認後顯示 Boss 按鈕
+		_retry_btn.visible = false
+		_continue_btn.visible = true
+		_continue_btn.text = "確認"
+	else:
+		_retry_btn.visible = true
+		_continue_btn.visible = false
 
 	_result_overlay.visible = true
 
 func _on_retry_pressed() -> void:
-	# 重試同一關
 	_start_battle()
 
 func _on_continue_pressed() -> void:
-	var is_boss := GameState.current_stage == 0
-	if _last_result == "WIN":
-		GameState.advance_after_win()
-	elif is_boss:
-		# Boss 失敗 → 回到 stage 3
-		GameState.on_boss_fail()
+	# 只會在 Boss 失敗時觸發
+	GameState.on_boss_fail()
 	_start_battle()
 
 func _on_challenge_boss_pressed() -> void:
