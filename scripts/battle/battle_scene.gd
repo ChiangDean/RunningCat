@@ -25,10 +25,7 @@ var _speed_3x: Button
 var _skip_btn: Button
 var _level_label: Label
 var _boss_btn: Button
-var _result_overlay: Control
-var _result_label: Label
-var _retry_btn: Button
-var _continue_btn: Button
+var _result_display: Label  # 勝利／敗北 短暫顯示用
 
 var _last_result: String = ""
 
@@ -135,54 +132,13 @@ func _build_ui() -> void:
 		nav_btn.pressed.connect(nav_items[i][1])
 		_ui_layer.add_child(nav_btn)
 
-	# 結果覆蓋層
-	_result_overlay = Control.new()
-	_result_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_result_overlay.visible = false
-	_ui_layer.add_child(_result_overlay)
-
-	var overlay_bg := ColorRect.new()
-	overlay_bg.color = Color(0.0, 0.0, 0.0, 0.7)
-	overlay_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_result_overlay.add_child(overlay_bg)
-
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-200.0, -220.0)
-	panel.size = Vector2(400.0, 440.0)
-	_result_overlay.add_child(panel)
-
-	var vbox := VBoxContainer.new()
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	panel.add_child(vbox)
-
-	_result_label = Label.new()
-	_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_result_label.add_theme_font_size_override("font_size", 48)
-	vbox.add_child(_result_label)
-
-	var level_result_lbl := Label.new()
-	level_result_lbl.name = "LevelResultLabel"
-	level_result_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_result_lbl.add_theme_font_size_override("font_size", 22)
-	level_result_lbl.modulate = Color(0.8, 0.8, 0.8, 1.0)
-	vbox.add_child(level_result_lbl)
-
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0.0, 20.0)
-	vbox.add_child(spacer)
-
-	_retry_btn = Button.new()
-	_retry_btn.text = "重試"
-	_retry_btn.custom_minimum_size = Vector2(200.0, 60.0)
-	vbox.add_child(_retry_btn)
-	_retry_btn.pressed.connect(_on_retry_pressed)
-
-	_continue_btn = Button.new()
-	_continue_btn.text = "繼續"
-	_continue_btn.custom_minimum_size = Vector2(200.0, 60.0)
-	vbox.add_child(_continue_btn)
-	_continue_btn.pressed.connect(_on_continue_pressed)
+	# 勝利／敗北 短暫顯示文字（無按鈕，自動推進）
+	_result_display = Label.new()
+	_result_display.size = Vector2(SW, 80.0)
+	_result_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_display.add_theme_font_size_override("font_size", 64)
+	_result_display.visible = false
+	_ui_layer.add_child(_result_display)
 
 # ── 工廠輔助 ─────────────────────────────────
 
@@ -217,7 +173,7 @@ func _refresh_ui() -> void:
 # ── 戰鬥邏輯 ─────────────────────────────────
 
 func _start_battle() -> void:
-	_result_overlay.visible = false
+	_result_display.visible = false
 	_refresh_ui()
 
 	for child in _player_team.get_children():
@@ -264,37 +220,24 @@ func _on_battle_finished(result: String) -> void:
 	var is_boss := GameState.current_stage == 0
 
 	if result == "WIN":
-		# 勝利：直接推進，不顯示 overlay
+		# 勝利：中間上方顯示，推進後重啟
+		_show_result_text("勝利", Color(0.3, 1.0, 0.4, 1.0), NAV_Y / 2.0 - 100.0)
 		GameState.advance_after_win()
+		await get_tree().create_timer(1.5).timeout
 		_start_battle()
-		return
-
-	# 失敗或時間到：顯示 overlay
-	var level_result_lbl := _result_overlay.find_child("LevelResultLabel") as Label
-	if level_result_lbl:
-		level_result_lbl.text = GameState.get_level_display()
-
-	_result_label.text = "失敗！" if result == "LOSE" else "時間到！"
-	_result_label.modulate = Color(1.0, 0.3, 0.3, 1.0) if result == "LOSE" else Color(1.0, 0.8, 0.2, 1.0)
-
-	if is_boss:
-		# Boss 失敗：退回 stage 3，按確認後顯示 Boss 按鈕
-		_retry_btn.visible = false
-		_continue_btn.visible = true
-		_continue_btn.text = "確認"
 	else:
-		_retry_btn.visible = true
-		_continue_btn.visible = false
+		# 失敗：頂部顯示，處理狀態後重啟
+		_show_result_text("敗北", Color(1.0, 0.3, 0.3, 1.0), 60.0)
+		if is_boss:
+			GameState.on_boss_fail()
+		await get_tree().create_timer(1.5).timeout
+		_start_battle()
 
-	_result_overlay.visible = true
-
-func _on_retry_pressed() -> void:
-	_start_battle()
-
-func _on_continue_pressed() -> void:
-	# 只會在 Boss 失敗時觸發
-	GameState.on_boss_fail()
-	_start_battle()
+func _show_result_text(text: String, color: Color, y: float) -> void:
+	_result_display.text = text
+	_result_display.modulate = color
+	_result_display.position = Vector2(0.0, y)
+	_result_display.visible = true
 
 func _on_challenge_boss_pressed() -> void:
 	GameState.challenge_boss()
