@@ -15,20 +15,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.6.2
-          use-dotnet: true
+          use-dotnet: false
           include-templates: true
-
-      - name: Build C# Project
-        run: dotnet build
 
       - name: Export Web
         run: |
