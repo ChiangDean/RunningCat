@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="新遊戲專案"
+config/name="RunningCat"
 run/main_scene="res://scenes/StartScene.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus", "Mobile")
 config/icon="res://icon.svg"
