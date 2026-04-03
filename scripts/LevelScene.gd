@@ -1,14 +1,11 @@
 extends Control
 
-## 關卡選擇畫面：世界 1（1-1 → 1-2 → 1-3 → 1-Boss）
-
-const SW := 720.0
+## 關卡資訊畫面（目前顯示玩家目前進度，未來可擴充為關卡地圖）
 
 func _ready() -> void:
 	_build_ui()
 
 func _build_ui() -> void:
-	# 背景
 	var bg := ColorRect.new()
 	bg.color = Color(0.133, 0.157, 0.192, 1.0)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -37,7 +34,7 @@ func _build_ui() -> void:
 	top_row.add_child(back_btn)
 
 	var title := Label.new()
-	title.text = "關卡選擇"
+	title.text = "關卡進度"
 	title.add_theme_font_size_override("font_size", 36)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -47,43 +44,21 @@ func _build_ui() -> void:
 	spacer.custom_minimum_size = Vector2(100.0, 50.0)
 	top_row.add_child(spacer)
 
-	# 世界 1 標題
-	var world_lbl := Label.new()
-	world_lbl.text = "第一世界"
-	world_lbl.add_theme_font_size_override("font_size", 26)
-	world_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root_vbox.add_child(world_lbl)
-
 	root_vbox.add_child(_make_separator())
 
-	# 關卡按鈕
-	for level_id: String in GameState.WORLD_ORDER:
-		var btn := _make_level_button(level_id)
-		root_vbox.add_child(btn)
+	# 目前關卡資訊
+	var info_lbl := Label.new()
+	info_lbl.text = "目前關卡：%s" % GameState.get_level_display()
+	info_lbl.add_theme_font_size_override("font_size", 26)
+	info_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(info_lbl)
 
-func _make_level_button(level_id: String) -> Button:
-	var unlocked: bool = GameState.is_level_unlocked(level_id)
-	var cleared: bool = level_id in GameState.cleared_levels
-	var info: Dictionary = GameState.LEVELS[level_id]
-
-	var label: String = level_id
-	if info.get("is_boss", false):
-		label = "⚔ %s（Boss）" % level_id
-	if cleared:
-		label += " ✓"
-
-	var btn := Button.new()
-	btn.text = label
-	btn.custom_minimum_size = Vector2(0.0, 80.0)
-	btn.disabled = not unlocked
-	if not unlocked:
-		btn.modulate = Color(0.5, 0.5, 0.5, 1.0)
-
-	btn.pressed.connect(func():
-		GameState.current_level = level_id
-		get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
-	)
-	return btn
+	var global_lbl := Label.new()
+	global_lbl.text = "全局關卡編號：%d" % GameState.current_global_stage
+	global_lbl.add_theme_font_size_override("font_size", 20)
+	global_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	global_lbl.modulate = Color(0.7, 0.7, 0.7, 1.0)
+	root_vbox.add_child(global_lbl)
 
 func _make_separator() -> HSeparator:
 	return HSeparator.new()

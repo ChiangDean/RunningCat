@@ -6,48 +6,116 @@ extends Node
 var player_team: Array = ["milk_cat", "milk_cat", "milk_cat"]
 var skill_delays: Dictionary = {}
 
-# ── 關卡進度 ──────────────────────────────────
-## 章節 1=新手I, 2=新手II, ...
-var current_chapter: int = 1
-## 世界 1-10
-var current_world: int = 1
-## 關卡 1-3（普通），0=Boss
-var current_stage: int = 1
-## stage 3 通關後為 true，顯示「挑戰Boss」按鈕
+# ── 關卡進度（單一數字記錄）──────────────────────
+## 全局關卡編號（1 起算），單一數字即可還原所有進度資訊
+## 每個 Boss 關 = 4 個遭遇戰 + 1 個 Boss，共 5 格
+## 範例：1=1-1, 2=1-2, 3=1-3, 4=1-4, 5=1-BOSS, 6=2-1, 50=10-BOSS
+var current_global_stage: int = 1
+## Boss 失敗後為 true，顯示「挑戰 Boss」按鈕
 var boss_available: bool = false
 
 # ── 常數 ──────────────────────────────────────
 const OWNED_CATS: Array = ["milk_cat"]
-const MAX_WORLD: int = 10
-const MAX_CHAPTER: int = 10
 
-const CHAPTER_NAMES: Array = [
-	"",
-	"新手I", "新手II", "新手III", "新手IV", "新手V",
-	"中級I", "中級II", "中級III", "中級IV", "中級V",
+## 每個 Boss 關含幾個普通遭遇戰（不含 Boss）
+const ENCOUNTERS_PER_BOSS_STAGE: int = 4
+## 每個區域含幾個 Boss 關
+const BOSS_STAGES_PER_ZONE: int = 10
+## 每個領地含幾個區域
+const ZONES_PER_TERRITORY: int = 5
+
+## 難度成長係數（Stage 與 Boss 分開計算）
+## 每進一普通遭遇戰，敵方數值累積 ×1.003
+const STAGE_GROWTH: float = 1.003
+## 每過一個 Boss 關，Boss 數值累積 ×1.02
+const BOSS_GROWTH: float = 1.02
+
+const TERRITORY_NAMES: Array = [
+	"", "新手", "普通", "高級", "進階", "菁英",
 ]
+const ZONE_SUFFIXES: Array = [
+	"", "I", "II", "III", "IV", "V",
+]
+
+# ── 進度輔助計算 ───────────────────────────────
+
+## 當前 Boss 關序號（全局，1 起算）
+## 1-1 ~ 1-BOSS 均屬第 1 個 Boss 關，2-1 ~ 2-BOSS 屬第 2 個，以此類推
+func get_boss_stage_number() -> int:
+	return ceili(float(current_global_stage) / float(ENCOUNTERS_PER_BOSS_STAGE + 1))
+
+## 當前遭遇戰索引（1~4 = 普通遭遇戰，5 = Boss）
+func get_encounter_index() -> int:
+	return ((current_global_stage - 1) % (ENCOUNTERS_PER_BOSS_STAGE + 1)) + 1
+
+## 是否目前是 Boss 戰
+func is_current_boss() -> bool:
+	return get_encounter_index() == ENCOUNTERS_PER_BOSS_STAGE + 1
+
+## Boss 關在當前區域內的序號（1~BOSS_STAGES_PER_ZONE）
+func get_zone_boss_stage() -> int:
+	return ((get_boss_stage_number() - 1) % BOSS_STAGES_PER_ZONE) + 1
+
+## 當前所在領地的區域序號（1~ZONES_PER_TERRITORY）
+func get_zone_in_territory() -> int:
+	var stages_per_territory: int = BOSS_STAGES_PER_ZONE * ZONES_PER_TERRITORY
+	return (((get_boss_stage_number() - 1) % stages_per_territory) / BOSS_STAGES_PER_ZONE) + 1
+
+## 當前領地序號（1 起算）
+func get_territory_number() -> int:
+	var stages_per_territory: int = BOSS_STAGES_PER_ZONE * ZONES_PER_TERRITORY
+	return ((get_boss_stage_number() - 1) / stages_per_territory) + 1
 
 # ── 關卡顯示 ──────────────────────────────────
 
+## 顯示格式範例：「新手 I  1-4」、「新手 II  3-BOSS」
 func get_level_display() -> String:
-	var chapter_name: String = _get_chapter_name()
-	if current_stage == 0:
-		return "%s %d-Boss" % [chapter_name, current_world]
-	return "%s %d-%d" % [chapter_name, current_world, current_stage]
+	var stage_str: String
+	if is_current_boss():
+		stage_str = "%d-BOSS" % get_zone_boss_stage()
+	else:
+		stage_str = "%d-%d" % [get_zone_boss_stage(), get_encounter_index()]
 
-func _get_chapter_name() -> String:
-	if current_chapter < CHAPTER_NAMES.size():
-		return CHAPTER_NAMES[current_chapter]
-	return "章節%d" % current_chapter
+	return "%s %s  %s" % [_get_territory_name(), _get_zone_suffix(), stage_str]
 
-# ── 敵方生成（MVP：依難度調整數量，未來改為關卡設定檔）──
+func _get_territory_name() -> String:
+	var t: int = get_territory_number()
+	if t < TERRITORY_NAMES.size():
+		return TERRITORY_NAMES[t]
+	return "領地%d" % t
+
+func _get_zone_suffix() -> String:
+	var z: int = get_zone_in_territory()
+	if z < ZONE_SUFFIXES.size():
+		return ZONE_SUFFIXES[z]
+	return "%d" % z
+
+# ── 難度計算 ───────────────────────────────────
+
+## 回傳當前關卡的敵方數值倍率
+## 普通遭遇戰：每關 +0.3% 複利成長（Stage 軌道）
+## Boss 關：每個 Boss +2% 複利成長（Boss 軌道，與 Stage 分開計算）
+func get_difficulty_multiplier() -> float:
+	if is_current_boss():
+		# Boss 軌道：依全局 Boss 關序號計算
+		# 1-BOSS = ×1.020, 10-BOSS = ×1.219, 50-BOSS = ×2.692
+		return pow(BOSS_GROWTH, get_boss_stage_number())
+	else:
+		# Stage 軌道：依全局關卡編號計算（1-1 = ×1.000）
+		# 1-4 = ×1.009, 10-4 = ×1.136, 50-4 = ×2.064
+		return pow(STAGE_GROWTH, current_global_stage - 1)
+
+# ── 敵方生成 ───────────────────────────────────
 
 func get_enemy_ids() -> Array:
+	var boss_stage := get_boss_stage_number()
 	var count: int
-	if current_stage == 0:
-		count = mini(1 + current_world, 5)
+	if is_current_boss():
+		# Boss 戰：隨世界推進增加到最多 5 隻
+		count = mini(1 + boss_stage, 5)
 	else:
-		count = mini(current_stage + maxi(current_world - 1, 0), 5)
+		# 普通遭遇戰：較少，每 3 個 Boss 關增加一隻
+		count = mini(1 + (boss_stage - 1) / 3, 5)
 	count = maxi(count, 1)
 	var ids: Array = []
 	for i in range(count):
@@ -56,33 +124,21 @@ func get_enemy_ids() -> Array:
 
 # ── 進度邏輯 ──────────────────────────────────
 
-## 勝利後推進關卡
+## 勝利後推進到下一關（一律 +1，結構由 current_global_stage 自動計算）
 func advance_after_win() -> void:
-	if current_stage == 0:
-		# Boss 勝利 → 下一世界
-		boss_available = false
-		current_world += 1
-		if current_world > MAX_WORLD:
-			current_world = 1
-			current_chapter += 1
-			if current_chapter > MAX_CHAPTER:
-				current_chapter = MAX_CHAPTER  # 封頂（未來可擴充）
-		current_stage = 1
-	elif current_stage < 3:
-		current_stage += 1
-	else:
-		# stage 3 通關 → 直接進 Boss
-		current_stage = 0
-		boss_available = false
+	boss_available = false
+	current_global_stage += 1
 
-## Boss 失敗後退回 stage 3，顯示「挑戰Boss」按鈕
+## Boss 失敗後退回該 Boss 關的第 4 遭遇戰，顯示「挑戰 Boss」按鈕
 func on_boss_fail() -> void:
-	current_stage = 3
+	var bs: int = get_boss_stage_number()
+	current_global_stage = (bs - 1) * (ENCOUNTERS_PER_BOSS_STAGE + 1) + ENCOUNTERS_PER_BOSS_STAGE
 	boss_available = true
 
-## 切換到 Boss 關卡
+## 玩家手動挑戰 Boss（從第 4 遭遇戰跳到 Boss）
 func challenge_boss() -> void:
-	current_stage = 0
+	var bs: int = get_boss_stage_number()
+	current_global_stage = bs * (ENCOUNTERS_PER_BOSS_STAGE + 1)
 
 # ── 技能延遲 ──────────────────────────────────
 

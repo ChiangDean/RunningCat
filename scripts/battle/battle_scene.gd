@@ -168,7 +168,7 @@ func _highlight_speed_btn(active: Button) -> void:
 
 func _refresh_ui() -> void:
 	_level_label.text = GameState.get_level_display()
-	_boss_btn.visible = GameState.boss_available and GameState.current_stage != 0
+	_boss_btn.visible = GameState.boss_available and not GameState.is_current_boss()
 
 # ── 戰鬥邏輯 ─────────────────────────────────
 
@@ -195,10 +195,16 @@ func _start_battle() -> void:
 		else:
 			push_error("BattleScene: 無法載入玩家貓咪 " + cat_id)
 
+	var diff_mult: float = GameState.get_difficulty_multiplier()
 	for cat_id: String in GameState.get_enemy_ids():
 		var path := "res://data/default/cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
+			# 依關卡難度倍率縮放敵方數值（speed 不縮放，保持操作手感一致）
+			data.max_hp = roundi(data.max_hp * diff_mult)
+			data.atk = roundi(data.atk * diff_mult)
+			data.defense = roundi(data.defense * diff_mult)
+			data.weight = roundi(data.weight * diff_mult)
 			enemy_cats.append(data)
 		else:
 			push_error("BattleScene: 無法載入敵方貓咪 " + cat_id)
@@ -217,7 +223,7 @@ func _on_skip_pressed() -> void:
 
 func _on_battle_finished(result: String) -> void:
 	_last_result = result
-	var is_boss := GameState.current_stage == 0
+	var is_boss := GameState.is_current_boss()
 
 	if result == "WIN":
 		# 勝利：中間上方顯示，推進後重啟
