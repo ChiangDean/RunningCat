@@ -18,6 +18,10 @@ var _is_finished: bool = false
 # 貓咪節點對照表 { instance_id: CatNode }
 var _cat_nodes: Dictionary = {}
 
+# 各貓咪的速度與硬直狀態（同步模擬器數值）
+var _cat_speeds: Dictionary = {}         # instance_id → float（像素/秒）
+var _cat_stagger_timers: Dictionary = {} # instance_id → float（剩餘硬直秒數）
+
 # 戰鬥場景提供的容器節點
 var _player_team_node: Node2D
 var _enemy_team_node: Node2D
@@ -35,6 +39,12 @@ func setup(events: Array, player_cats: Array, enemy_cats: Array,
 	_player_team_node = player_node
 	_enemy_team_node = enemy_node
 	_timer_label = timer_lbl
+	_cat_nodes.clear()
+	_cat_speeds.clear()
+	_cat_stagger_timers.clear()
+	_event_idx = 0
+	_sim_time = 0.0
+	_is_finished = false
 	_is_running = true
 
 func set_speed(mult: float) -> void:
@@ -97,13 +107,21 @@ func _spawn_cat_node(ev: BattleEvent) -> void:
 	node.setup(ev.cat_id, ev.team, cat_data.display_name, ev.max_hp)
 	node.position = Vector2(ev.pos_x, 0.0)
 	_cat_nodes[ev.cat_id] = node
+	# 記錄真實速度（與模擬器一致）
+	_cat_speeds[ev.cat_id] = cat_data.speed
+	_cat_stagger_timers[ev.cat_id] = 0.0
 
 func _on_collision(ev: BattleEvent) -> void:
 	var node: CatNode = _cat_nodes.get(ev.cat_id)
 	if node == null:
 		return
 	node.update_hp(ev.current_hp)
-	node.apply_knockback(ev.knockback)
+	# ev.pos_x 是模擬器算完回彈+撞牆後的最終座標，直接 tween 過去
+	node.move_to(ev.pos_x)
+	# 套用硬直（靠近牆壁用 WALL_STAGGER_TIME，否則 STAGGER_TIME）
+	var is_near_wall := (ev.pos_x <= 70.0 or ev.pos_x >= 650.0)
+	_cat_stagger_timers[ev.cat_id] = \
+			CatStats.WALL_STAGGER_TIME if is_near_wall else CatStats.STAGGER_TIME
 
 func _on_hp_update(ev: BattleEvent) -> void:
 	var node: CatNode = _cat_nodes.get(ev.cat_id)
@@ -118,8 +136,11 @@ func _on_skill_activate(ev: BattleEvent) -> void:
 func _on_cat_die(ev: BattleEvent) -> void:
 	var node: CatNode = _cat_nodes.get(ev.cat_id)
 	if node:
+		node.move_to(ev.pos_x)   # 確保死亡動畫從正確位置飛出
 		node.play_death()
 		_cat_nodes.erase(ev.cat_id)
+		_cat_speeds.erase(ev.cat_id)
+		_cat_stagger_timers.erase(ev.cat_id)
 
 func _on_battle_end(ev: BattleEvent) -> void:
 	_is_running = false
@@ -127,16 +148,23 @@ func _on_battle_end(ev: BattleEvent) -> void:
 	battle_finished.emit(ev.result)
 
 func _update_cat_movement(delta: float) -> void:
-	# 讓存活貓咪持續朝中心移動（視覺補間）
+	# 以與模擬器相同的速度推進視覺位置
+	var scaled_delta := delta * _speed_mult
 	for id: int in _cat_nodes:
 		var node: CatNode = _cat_nodes[id]
 		if node == null:
 			continue
-		# 根據隊伍決定移動方向
+
+		# 更新硬直計時
+		if _cat_stagger_timers.has(id):
+			_cat_stagger_timers[id] -= scaled_delta
+			if _cat_stagger_timers[id] > 0.0:
+				continue  # 硬直中，不移動
+
+		# 使用貓咪真實速度（與模擬器一致）
+		var speed: float = _cat_speeds.get(id, 80.0)
 		var dir := 1.0 if node.team == "player" else -1.0
-		# 簡單地讓節點緩慢向前移（視覺效果，模擬已在 simulator 計算過）
-		node.position.x += dir * 60.0 * delta * _speed_mult
-		# 夾在牆壁之間
+		node.position.x += dir * speed * scaled_delta
 		node.position.x = clampf(node.position.x, 40.0, 680.0)
 
 func _find_cat_data(id: int, team: String) -> CatData:

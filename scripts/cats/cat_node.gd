@@ -70,11 +70,10 @@ func update_hp(hp: int) -> void:
 	# 顏色從綠到紅
 	_hp_bar_fill.color = Color(1.0 - ratio, ratio * 0.9, 0.1, 1.0)
 
-func apply_knockback(direction: float) -> void:
-	# 簡單位移 tween
-	var target_x := position.x + direction
+## 直接 tween 到模擬器計算後的最終 x 座標（絕對位置，不是偏移量）
+func move_to(target_x: float) -> void:
 	var tween := create_tween()
-	tween.tween_property(self, "position:x", target_x, 0.15).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "position:x", target_x, 0.12).set_ease(Tween.EASE_OUT)
 
 func play_death() -> void:
 	# 往反方向拋物線飛出
