@@ -6,10 +6,7 @@ extends Node2D
 # 最大上場數（由關卡進度解鎖，目前固定測試用）
 const MAX_CATS_ON_FIELD: int = 5
 
-# 測試用貓咪（未來改為從存檔 + 關卡設定讀取）
-# 重複 ID 代表同一種貓上場多次（暫時測試用）
-const PLAYER_CAT_IDS: Array = ["milk_cat", "milk_cat", "milk_cat"]
-const ENEMY_CAT_IDS: Array = ["test_enemy", "test_enemy", "test_enemy"]
+# 貓咪 ID 從 GameState 讀取
 
 # 場景尺寸
 const SW := 720.0
@@ -196,15 +193,19 @@ func _start_battle() -> void:
 	var player_cats: Array = []
 	var enemy_cats: Array = []
 
-	for cat_id: String in PLAYER_CAT_IDS:
+	for i in range(GameState.player_team.size()):
+		var cat_id: String = GameState.player_team[i]
 		var path := "res://data/default/cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
+			# 套用技能起始延遲設定
+			if data.active_skill_configs.size() > 0:
+				data.active_skill_configs[0]["initial_delay"] = GameState.get_delay(i)
 			player_cats.append(data)
 		else:
 			push_error("BattleScene: 無法載入玩家貓咪 " + cat_id)
 
-	for cat_id: String in ENEMY_CAT_IDS:
+	for cat_id: String in GameState.get_enemy_ids():
 		var path := "res://data/default/cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
@@ -229,6 +230,8 @@ func _on_skip_pressed() -> void:
 
 func _on_battle_finished(result: String) -> void:
 	_last_result = result
+	if result == "WIN":
+		GameState.mark_cleared(GameState.current_level)
 	match result:
 		"WIN":
 			_result_label.text = "勝利！"
@@ -246,5 +249,4 @@ func _on_replay_pressed() -> void:
 	_start_battle()
 
 func _on_continue_pressed() -> void:
-	# 暫時：回到 StartScene
-	get_tree().change_scene_to_file("res://scenes/StartScene.tscn")
+	get_tree().change_scene_to_file("res://scenes/LevelScene.tscn")

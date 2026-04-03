@@ -29,6 +29,10 @@ window/stretch/mode="canvas_items"
 
 theme/custom="res://resources/default_theme.tres"
 
+[autoload]
+
+GameState="*res://scripts/GameState.gd"
+
 [rendering]
 
 rendering_device/driver.windows="d3d12"
