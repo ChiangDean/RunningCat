@@ -196,7 +196,7 @@ func _make_separator() -> HSeparator:
 # ── 導航 ─────────────────────────────────────
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/StartScene.tscn")
+	get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
 
 func _on_confirm_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/StartScene.tscn")
+	get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")

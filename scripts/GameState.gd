@@ -3,55 +3,87 @@ extends Node
 ## 全局遊戲狀態，跨場景共享
 
 # ── 玩家配置 ──────────────────────────────────
-## 出戰隊伍（cat_id 陣列，最多 5 隻）
 var player_team: Array = ["milk_cat", "milk_cat", "milk_cat"]
-## 技能起始延遲 dict：slot_index (int) -> delay (int 0-9)
 var skill_delays: Dictionary = {}
 
 # ── 關卡進度 ──────────────────────────────────
-var current_level: String = "1-1"
-var cleared_levels: Array = []
+## 章節 1=新手I, 2=新手II, ...
+var current_chapter: int = 1
+## 世界 1-10
+var current_world: int = 1
+## 關卡 1-3（普通），0=Boss
+var current_stage: int = 1
+## stage 3 通關後為 true，顯示「挑戰Boss」按鈕
+var boss_available: bool = false
 
-# ── 可用貓咪（MVP：硬編碼，未來改從存檔讀取）──
+# ── 常數 ──────────────────────────────────────
 const OWNED_CATS: Array = ["milk_cat"]
+const MAX_WORLD: int = 10
+const MAX_CHAPTER: int = 10
 
-# ── 關卡定義 ─────────────────────────────────
-const LEVELS: Dictionary = {
-	"1-1": {
-		"world": 1, "stage": 1, "is_boss": false,
-		"enemy_ids": ["test_enemy", "test_enemy"]
-	},
-	"1-2": {
-		"world": 1, "stage": 2, "is_boss": false,
-		"enemy_ids": ["test_enemy", "test_enemy", "test_enemy"]
-	},
-	"1-3": {
-		"world": 1, "stage": 3, "is_boss": false,
-		"enemy_ids": ["test_enemy", "test_enemy", "test_enemy", "test_enemy"]
-	},
-	"1-Boss": {
-		"world": 1, "stage": 4, "is_boss": true,
-		"enemy_ids": ["test_enemy", "test_enemy", "test_enemy", "test_enemy", "test_enemy"]
-	},
-}
-const WORLD_ORDER: Array = ["1-1", "1-2", "1-3", "1-Boss"]
+const CHAPTER_NAMES: Array = [
+	"",
+	"新手I", "新手II", "新手III", "新手IV", "新手V",
+	"中級I", "中級II", "中級III", "中級IV", "中級V",
+]
 
-# ── 公開方法 ──────────────────────────────────
+# ── 關卡顯示 ──────────────────────────────────
 
-func is_level_unlocked(level_id: String) -> bool:
-	var idx: int = WORLD_ORDER.find(level_id)
-	if idx <= 0:
-		return true
-	return WORLD_ORDER[idx - 1] in cleared_levels
+func get_level_display() -> String:
+	var chapter_name: String = _get_chapter_name()
+	if current_stage == 0:
+		return "%s %d-Boss" % [chapter_name, current_world]
+	return "%s %d-%d" % [chapter_name, current_world, current_stage]
+
+func _get_chapter_name() -> String:
+	if current_chapter < CHAPTER_NAMES.size():
+		return CHAPTER_NAMES[current_chapter]
+	return "章節%d" % current_chapter
+
+# ── 敵方生成（MVP：依難度調整數量，未來改為關卡設定檔）──
 
 func get_enemy_ids() -> Array:
-	if current_level in LEVELS:
-		return LEVELS[current_level]["enemy_ids"]
-	return []
+	var count: int
+	if current_stage == 0:
+		count = mini(1 + current_world, 5)
+	else:
+		count = mini(current_stage + maxi(current_world - 1, 0), 5)
+	count = maxi(count, 1)
+	var ids: Array = []
+	for i in range(count):
+		ids.append("test_enemy")
+	return ids
 
-func mark_cleared(level_id: String) -> void:
-	if level_id not in cleared_levels:
-		cleared_levels.append(level_id)
+# ── 進度邏輯 ──────────────────────────────────
+
+## 勝利後推進關卡
+func advance_after_win() -> void:
+	if current_stage == 0:
+		# Boss 勝利 → 下一世界
+		boss_available = false
+		current_world += 1
+		if current_world > MAX_WORLD:
+			current_world = 1
+			current_chapter += 1
+			if current_chapter > MAX_CHAPTER:
+				current_chapter = MAX_CHAPTER  # 封頂（未來可擴充）
+		current_stage = 1
+	elif current_stage < 3:
+		current_stage += 1
+	else:
+		# stage 3 通關 → 解鎖 Boss，繼續刷 stage 3
+		boss_available = true
+
+## Boss 失敗後退回 stage 3
+func on_boss_fail() -> void:
+	current_stage = 3
+	boss_available = true
+
+## 切換到 Boss 關卡
+func challenge_boss() -> void:
+	current_stage = 0
+
+# ── 技能延遲 ──────────────────────────────────
 
 func get_delay(slot_index: int) -> int:
 	return skill_delays.get(slot_index, 0)
