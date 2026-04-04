@@ -1,0 +1,18 @@
+{
+  "id": "ninja_shadow",
+  "display_name": "影分身斬",
+  "description": "以 75% 攻擊力攻擊血量最低的敵人，連擊 2 次",
+  "skill_type": "active",
+  "cooldown": 4.5,
+  "effects": [
+    {
+      "type": "damage",
+      "value": 0.75,
+      "target": "enemy_lowest_hp",
+      "hits": 2
+    }
+  ],
+  "rank_scaling": [
+    { "effect_index": 0, "property": "value", "per_5_ranks": 0.05 }
+  ]
+}

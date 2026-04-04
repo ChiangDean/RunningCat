@@ -16,29 +16,33 @@ var atk: int = 10
 var defense: int = 0
 var speed: float = 100.0
 var weight: float = 100.0
-# 未來可新增（不影響舊 JSON）：
-# var ignore_def: float = 0.0
-# var crit_rate: float = 0.0
 
 # ── 稀有度 ────────────────────────────────────────────
-var rarity: String = "common"         # 對應 gacha_config 的 rarity id
-var gacha_available: bool = false      # 是否可從誘捕籠抽到
+var rarity: String = "common"
+var gacha_available: bool = false
 
-# ── 強化成長值（每級/每點的固定加成） ─────────────────
-## 格式：{ "hp": float, "atk": float, "def": float }
+# ── 強化成長值 ─────────────────────────────────────────
 var enhancement_growth: Dictionary = {"hp": 1.5, "atk": 1.0, "def": 0.5}
 
-# ── 品階成長值（百分比加成，每升一品階疊加） ───────────
-## 格式：{ "hp_percent": float, "atk_percent": float, "def_percent": float }
+# ── 品階成長值 ─────────────────────────────────────────
 var rank_growth: Dictionary = {"hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0}
 
-# ── 技能參照 ──────────────────────────────────────────
+# ── 當前品階（apply_rank_bonus 後設定，供模擬器計算技能加成）──
+var rank: int = 0
+
+# ── 技能參照（原始 id 列表） ───────────────────────────
 var passive_skill_ids: Array = []
-## 格式：[{ "id": "shield_bash", "initial_delay": 0, "cooldown": 5.0 }]
+## 格式：[{ "id": "milk_shield", "initial_delay": 0, "cooldown": 5.0 }]
 var active_skill_configs: Array = []
 
+# ── 已解析技能 Dictionary（模擬器 / UI 使用）──────────
+## 被動技能完整資料（含 effects、rank_scaling）
+var passive_skills_data: Array = []
+## 主動技能完整資料：技能 JSON 合併 cat config（含 initial_delay、cooldown override）
+var active_skills_data: Array = []
 
-## 從 JSON 檔案載入，自動執行 migration
+
+## 從 JSON 檔案載入，自動執行 migration 並解析技能
 static func from_json_file(path: String) -> CatData:
 	if not FileAccess.file_exists(path):
 		push_error("CatData: 找不到檔案：" + path)
@@ -93,12 +97,51 @@ static func _from_dict(data: Dictionary) -> CatData:
 	cat.passive_skill_ids    = data.get("passive_skills", [])
 	cat.active_skill_configs = data.get("active_skills", [])
 
+	# ── 解析技能完整資料 ──────────────────────────────
+	cat._load_skill_data()
+
 	return cat
 
 
+## 解析技能 JSON 並合併到 passive_skills_data / active_skills_data
+func _load_skill_data() -> void:
+	passive_skills_data.clear()
+	active_skills_data.clear()
+
+	for sid: String in passive_skill_ids:
+		var d := _read_skill_json("res://data/default/skills/passive/" + sid + ".json")
+		if not d.is_empty():
+			passive_skills_data.append(d)
+
+	for cfg: Dictionary in active_skill_configs:
+		var sid: String = cfg.get("id", "")
+		var d := _read_skill_json("res://data/default/skills/active/" + sid + ".json")
+		if not d.is_empty():
+			d = d.duplicate(true)
+			# cat config 的 initial_delay / cooldown 覆蓋技能預設值
+			d["initial_delay"] = cfg.get("initial_delay", 0)
+			if cfg.has("cooldown"):
+				d["cooldown"] = cfg["cooldown"]
+			active_skills_data.append(d)
+
+
+static func _read_skill_json(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		push_warning("CatData: 找不到技能檔案：" + path)
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		file.close()
+		return {}
+	file.close()
+	var result = json.get_data()
+	if result is Dictionary:
+		return result
+	return {}
+
+
 ## 將玩家強化加成直接疊加到本實例的屬性上
-## 普通乾糧：全屬性各加 (level-1) * growth
-## 特殊乾糧：各屬性加 special_points * growth
 func apply_enhancement(player_cat: PlayerCatData) -> void:
 	var food_levels: int = player_cat.cat_food_level - 1
 	var sfp: Dictionary = player_cat.special_food_points
@@ -108,13 +151,18 @@ func apply_enhancement(player_cat: PlayerCatData) -> void:
 	defense += int((food_levels + sfp.get("def", 0)) * enhancement_growth.get("def", 0.0))
 
 
-## 將品階百分比加成疊加到當前屬性（須在 apply_enhancement 之後呼叫）
-## 每品階：HP/ATK/DEF 各 +hp_percent%（預設 1%）
+## 將品階百分比加成疊加到當前屬性，並記錄 rank 供技能加成計算
 func apply_rank_bonus(player_cat: PlayerCatData) -> void:
-	var r: int = player_cat.rank
-	if r <= 0:
+	rank = player_cat.rank
+	if rank <= 0:
 		return
 	var rg: Dictionary = rank_growth
-	max_hp  = int(max_hp  * (1.0 + r * rg.get("hp_percent",  1.0) / 100.0))
-	atk     = int(atk     * (1.0 + r * rg.get("atk_percent", 1.0) / 100.0))
-	defense = int(defense * (1.0 + r * rg.get("def_percent", 1.0) / 100.0))
+	max_hp  = int(max_hp  * (1.0 + rank * rg.get("hp_percent",  1.0) / 100.0))
+	atk     = int(atk     * (1.0 + rank * rg.get("atk_percent", 1.0) / 100.0))
+	defense = int(defense * (1.0 + rank * rg.get("def_percent", 1.0) / 100.0))
+
+
+## 計算技能品階加成後的 effect value
+## 每 5 品階：effect.value += per_5_ranks
+static func get_scaled_effect_value(base_value: float, per_5_ranks: float, current_rank: int) -> float:
+	return base_value + floorf(current_rank / 5.0) * per_5_ranks

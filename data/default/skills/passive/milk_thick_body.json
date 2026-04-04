@@ -1,0 +1,16 @@
+{
+  "id": "milk_thick_body",
+  "display_name": "厚實體態",
+  "description": "自身受到的傷害 -8%",
+  "skill_type": "passive",
+  "effects": [
+    {
+      "type": "damage_reduction",
+      "value": 0.08,
+      "target": "self"
+    }
+  ],
+  "rank_scaling": [
+    { "effect_index": 0, "property": "value", "per_5_ranks": 0.01 }
+  ]
+}
