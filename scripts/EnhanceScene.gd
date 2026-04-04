@@ -213,6 +213,11 @@ func _rebuild_detail_panel() -> void:
 
 	_detail_panel.add_child(_make_separator())
 
+	# ── 技能資訊 ──────────────────────────────
+	_build_skill_section(cat_data, player_cat)
+
+	_detail_panel.add_child(_make_separator())
+
 	# ── 重置按鈕 ──────────────────────────────
 	var reset_btn := Button.new()
 	reset_btn.text = "重置（退回全部素材）"
@@ -415,6 +420,123 @@ func _stat_display_name(stat_key: String) -> String:
 
 func _make_separator() -> HSeparator:
 	return HSeparator.new()
+
+
+# ── 技能區塊 ──────────────────────────────────
+
+func _build_skill_section(cat_data: CatData, player_cat: PlayerCatData) -> void:
+	var skill_title := Label.new()
+	skill_title.text = "技能"
+	skill_title.add_theme_font_size_override("font_size", 22)
+	_detail_panel.add_child(skill_title)
+
+	var rank: int = player_cat.rank
+
+	# 被動技能
+	for sid: String in cat_data.passive_skill_ids:
+		var skill_d := CatData._read_skill_json(
+				"res://data/default/skills/passive/" + sid + ".json")
+		if skill_d.is_empty():
+			continue
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		_detail_panel.add_child(row)
+
+		var lbl := Label.new()
+		lbl.text = "【被動】%s" % skill_d.get("display_name", sid)
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lbl.add_theme_font_size_override("font_size", 18)
+		row.add_child(lbl)
+
+		# 品階標示
+		if rank > 0:
+			var rank_lbl := Label.new()
+			rank_lbl.text = "+%d" % rank
+			rank_lbl.add_theme_font_size_override("font_size", 16)
+			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
+			row.add_child(rank_lbl)
+
+		# 提示按鈕
+		var info_btn := Button.new()
+		info_btn.text = "?"
+		info_btn.custom_minimum_size = Vector2(36.0, 36.0)
+		info_btn.pressed.connect(func():
+			_show_skill_bonus_info(skill_d, rank, false)
+		)
+		row.add_child(info_btn)
+
+	# 主動技能
+	for skill_d: Dictionary in cat_data.active_skills_data:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		_detail_panel.add_child(row)
+
+		var lbl := Label.new()
+		lbl.text = "【主動】%s  CD:%.1fs" % [
+				skill_d.get("display_name", ""), skill_d.get("cooldown", 0.0)]
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lbl.add_theme_font_size_override("font_size", 18)
+		row.add_child(lbl)
+
+		if rank > 0:
+			var rank_lbl := Label.new()
+			rank_lbl.text = "+%d" % rank
+			rank_lbl.add_theme_font_size_override("font_size", 16)
+			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
+			row.add_child(rank_lbl)
+
+		var info_btn := Button.new()
+		info_btn.text = "?"
+		info_btn.custom_minimum_size = Vector2(36.0, 36.0)
+		info_btn.pressed.connect(func():
+			_show_skill_bonus_info(skill_d, rank, true)
+		)
+		row.add_child(info_btn)
+
+
+func _show_skill_bonus_info(skill_d: Dictionary, rank: int, is_active: bool) -> void:
+	var name: String = skill_d.get("display_name", "")
+	var desc: String = skill_d.get("description", "")
+	var scaling: Array = skill_d.get("rank_scaling", [])
+	var effects: Array = skill_d.get("effects", [])
+
+	var lines: Array = [name, desc, ""]
+
+	if rank <= 0 or scaling.is_empty():
+		lines.append("尚未升階，無額外加成。")
+	else:
+		lines.append("目前品階 +%d 的技能加成：" % rank)
+		for rs: Dictionary in scaling:
+			var eff_idx: int = rs.get("effect_index", 0)
+			var per_5: float = rs.get("per_5_ranks", 0.0)
+			var bonus: float = floorf(rank / 5.0) * per_5
+			if bonus <= 0.0:
+				continue
+			var stat_name: String = ""
+			if eff_idx < effects.size():
+				var eff: Dictionary = effects[eff_idx]
+				stat_name = _stat_display_label(eff.get("stat", ""), eff.get("type", ""))
+			lines.append("  %s 額外增強 +%.0f%%" % [stat_name, bonus * 100.0])
+
+	var dialog := AcceptDialog.new()
+	dialog.title = "技能加成說明"
+	dialog.dialog_text = "\n".join(lines)
+	dialog.min_size = Vector2(500.0, 240.0)
+	add_child(dialog)
+	dialog.popup_centered()
+	dialog.confirmed.connect(func(): dialog.queue_free())
+
+
+func _stat_display_label(stat: String, eff_type: String) -> String:
+	match stat:
+		"defense": return "防禦力"
+		"atk":     return "攻擊力"
+		"speed":   return "速度"
+		"max_hp":  return "最大 HP"
+		_:
+			if eff_type == "damage": return "傷害"
+			if eff_type == "reflect": return "反彈傷害"
+			return "效果"
 
 
 # ── 導航 ──────────────────────────────────────

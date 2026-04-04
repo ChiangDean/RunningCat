@@ -13,6 +13,10 @@ const BATTLE_Y := 750.0
 const NAV_H := 110.0
 const NAV_Y := SH - NAV_H
 
+const SKILL_BAR_Y := BATTLE_Y + 10.0
+const SKILL_SLOT_W := 100.0
+const SKILL_SLOT_H := 90.0
+
 # ── 戰鬥節點 ─────────────────────────────────
 var _player_team: Node2D
 var _enemy_team: Node2D
@@ -27,6 +31,7 @@ var _speed_3x: Button
 var _skip_btn: Button
 var _level_label: Label
 var _result_display: Label
+var _skill_bar: Control
 
 # ── 地下城資料 ────────────────────────────────
 var _dungeon_id: String = ""
@@ -55,7 +60,7 @@ func _build_scene() -> void:
 
 func _build_background() -> void:
 	var bg := ColorRect.new()
-	bg.color = Color(0.10, 0.08, 0.15, 1.0)   # 地下城偏暗紫色調
+	bg.color = Color(0.10, 0.08, 0.15, 1.0)
 	bg.size = Vector2(SW, SH)
 	add_child(bg)
 
@@ -122,12 +127,16 @@ func _build_ui() -> void:
 	var dungeon_name: String = _dungeon_cfg.get("name", "地下城")
 	_level_label = _make_label(
 		"%s  Lv.%d" % [dungeon_name, _dungeon_level],
-		Vector2(0.0, BATTLE_Y + 10.0),
+		Vector2(0.0, BATTLE_Y + 10.0 + SKILL_SLOT_H + 10.0),
 		Vector2(SW, 40.0),
 		22
 	)
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ui_layer.add_child(_level_label)
+
+	# 技能列
+	_skill_bar = _build_skill_bar()
+	_ui_layer.add_child(_skill_bar)
 
 	# 底部導覽背景
 	var nav_bg := ColorRect.new()
@@ -148,6 +157,99 @@ func _build_ui() -> void:
 	_result_display.add_theme_font_size_override("font_size", 64)
 	_result_display.visible = false
 	_ui_layer.add_child(_result_display)
+
+
+func _build_skill_bar() -> Control:
+	var bar := Control.new()
+	bar.name = "SkillBar"
+	var total_w := SKILL_SLOT_W * MAX_CATS_ON_FIELD + 8.0 * (MAX_CATS_ON_FIELD - 1)
+	bar.position = Vector2((SW - total_w) / 2.0, SKILL_BAR_Y)
+	bar.size = Vector2(total_w, SKILL_SLOT_H)
+
+	for i in range(MAX_CATS_ON_FIELD):
+		var slot := _make_skill_slot(i)
+		slot.position = Vector2(i * (SKILL_SLOT_W + 8.0), 0.0)
+		bar.add_child(slot)
+
+	return bar
+
+
+func _make_skill_slot(idx: int) -> Control:
+	var slot := Control.new()
+	slot.name = "Slot%d" % idx
+	slot.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
+
+	var bg := ColorRect.new()
+	bg.name = "Bg"
+	bg.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
+	bg.color = Color(0.15, 0.10, 0.20, 1.0)
+	slot.add_child(bg)
+
+	var name_lbl := Label.new()
+	name_lbl.name = "NameLabel"
+	name_lbl.size = Vector2(SKILL_SLOT_W, 22.0)
+	name_lbl.position = Vector2(0.0, SKILL_SLOT_H - 24.0)
+	name_lbl.add_theme_font_size_override("font_size", 12)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.clip_contents = true
+	slot.add_child(name_lbl)
+
+	var overlay := ColorRect.new()
+	overlay.name = "Overlay"
+	overlay.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
+	overlay.color = Color(0.0, 0.0, 0.0, 0.6)
+	overlay.visible = false
+	slot.add_child(overlay)
+
+	var cd_lbl := Label.new()
+	cd_lbl.name = "CdLabel"
+	cd_lbl.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
+	cd_lbl.add_theme_font_size_override("font_size", 22)
+	cd_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cd_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	cd_lbl.visible = false
+	slot.add_child(cd_lbl)
+
+	var buff_frame := ColorRect.new()
+	buff_frame.name = "BuffFrame"
+	buff_frame.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
+	buff_frame.color = Color(1.0, 0.85, 0.0, 0.0)
+	buff_frame.visible = false
+	slot.add_child(buff_frame)
+
+	var border_color := Color(1.0, 0.85, 0.0, 1.0)
+	var bt := 3.0
+	for side in [
+		[Vector2(0, 0), Vector2(SKILL_SLOT_W, bt)],
+		[Vector2(0, SKILL_SLOT_H - bt), Vector2(SKILL_SLOT_W, bt)],
+		[Vector2(0, 0), Vector2(bt, SKILL_SLOT_H)],
+		[Vector2(SKILL_SLOT_W - bt, 0), Vector2(bt, SKILL_SLOT_H)],
+	]:
+		var border := ColorRect.new()
+		border.position = side[0]
+		border.size = side[1]
+		border.color = border_color
+		buff_frame.add_child(border)
+
+	return slot
+
+
+func _refresh_skill_bar_names(player_cats: Array) -> void:
+	if _skill_bar == null:
+		return
+	for i in range(player_cats.size()):
+		var slot_node: Control = _skill_bar.get_node_or_null("Slot%d" % i)
+		if slot_node == null:
+			continue
+		var name_lbl: Label = slot_node.get_node_or_null("NameLabel")
+		if name_lbl:
+			var cat: CatData = player_cats[i]
+			name_lbl.text = cat.active_skills_data[0].get("display_name", "") \
+					if cat.active_skills_data.size() > 0 else ""
+	for i in range(player_cats.size(), MAX_CATS_ON_FIELD):
+		var slot_node: Control = _skill_bar.get_node_or_null("Slot%d" % i)
+		if slot_node:
+			slot_node.visible = false
 
 
 # ── 工廠輔助 ─────────────────────────────────
@@ -190,7 +292,6 @@ func _start_battle() -> void:
 	for child in _enemy_team.get_children():
 		child.queue_free()
 
-	# 建立玩家隊伍
 	var player_cats: Array = []
 	for i in range(GameState.player_team.size()):
 		var cat_id: String = GameState.player_team[i]
@@ -202,11 +303,13 @@ func _start_battle() -> void:
 			var player_cat := GameState.get_player_cat(cat_id)
 			data.apply_enhancement(player_cat)
 			data.apply_rank_bonus(player_cat)
+			data._load_skill_data()
+			if data.active_skills_data.size() > 0:
+				data.active_skills_data[0]["initial_delay"] = GameState.get_delay(i)
 			player_cats.append(data)
 		else:
 			push_error("DungeonBattleScene: 無法載入玩家貓咪 " + cat_id)
 
-	# 建立地下城敵人（依地下城設定計算數值）
 	var enemy_cats: Array = []
 	var mult: float = pow(_dungeon_cfg.get("difficulty_multiplier", 1.03), _dungeon_level - 1)
 	var base_hp: float  = _dungeon_cfg.get("base_hp",  100.0)
@@ -226,10 +329,12 @@ func _start_battle() -> void:
 		push_error("DungeonBattleScene: 貓咪資料不足")
 		return
 
+	_refresh_skill_bar_names(player_cats)
+
 	var simulator := BattleSimulator.new()
 	var events := simulator.simulate(player_cats, enemy_cats)
 	_battle_manager.setup(events, player_cats, enemy_cats,
-			_player_team, _enemy_team, _timer_label)
+			_player_team, _enemy_team, _timer_label, _skill_bar)
 
 
 func _on_skip_pressed() -> void:
@@ -246,7 +351,6 @@ func _on_battle_finished(result: String) -> void:
 	else:
 		_show_result_text("敗北", Color(1.0, 0.3, 0.3, 1.0), 310.0)
 		await get_tree().create_timer(1.0).timeout
-		# 失敗不消耗卷，直接返回
 		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
 
 

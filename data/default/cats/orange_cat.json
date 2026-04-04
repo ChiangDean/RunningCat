@@ -14,8 +14,8 @@
   },
   "enhancement_growth": { "hp": 2.5, "atk": 0.5, "def": 1.5 },
   "rank_growth": { "hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0 },
-  "passive_skills": ["team_cooldown_reduction"],
+  "passive_skills": ["orange_aura"],
   "active_skills": [
-    { "id": "shield_bash", "initial_delay": 0, "cooldown": 5.5 }
+    { "id": "orange_charge", "initial_delay": 0, "cooldown": 5.5 }
   ]
 }

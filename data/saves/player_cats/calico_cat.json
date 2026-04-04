@@ -1,0 +1,14 @@
+{
+	"active_skill_settings": [],
+	"cat_can_fed": 0,
+	"cat_food_level": 1,
+	"cat_id": "calico_cat",
+	"cat_shards": 0,
+	"rank": 0,
+	"schema_version": 1,
+	"special_food_points": {
+		"atk": 0.0,
+		"def": 0.0,
+		"hp": 0.0
+	}
+}

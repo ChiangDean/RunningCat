@@ -1,0 +1,16 @@
+{
+  "id": "calico_luck",
+  "display_name": "幸運花紋",
+  "description": "我方全體冷卻時間 -8%",
+  "skill_type": "passive",
+  "effects": [
+    {
+      "type": "cooldown_reduction",
+      "value": 0.08,
+      "target": "team"
+    }
+  ],
+  "rank_scaling": [
+    { "effect_index": 0, "property": "value", "per_5_ranks": 0.01 }
+  ]
+}

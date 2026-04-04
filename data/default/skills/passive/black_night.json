@@ -1,0 +1,18 @@
+{
+  "id": "black_night",
+  "display_name": "夜行者",
+  "description": "自身速度 +10%",
+  "skill_type": "passive",
+  "effects": [
+    {
+      "type": "stat_boost",
+      "stat": "speed",
+      "value": 0.10,
+      "value_type": "percent",
+      "target": "self"
+    }
+  ],
+  "rank_scaling": [
+    { "effect_index": 0, "property": "value", "per_5_ranks": 0.01 }
+  ]
+}

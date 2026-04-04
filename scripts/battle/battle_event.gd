@@ -8,6 +8,7 @@ enum Type {
 	COLLISION,      # 碰撞（含傷害+回彈）
 	HP_UPDATE,      # 血量更新（技能傷害）
 	SKILL_ACTIVATE, # 主動技能發動
+	BUFF_APPLY,     # Buff / Debuff 施加（供 UI 顯示持續狀態用）
 	CAT_DIE,        # 貓咪死亡
 	BATTLE_END,     # 戰鬥結束
 }
@@ -31,6 +32,9 @@ var knockback: float = 0.0
 
 # SKILL_ACTIVATE
 var skill_id: String = ""
+
+# BUFF_APPLY：持續時間（秒），ui 用於顯示外框
+var buff_duration: float = 0.0
 
 # BATTLE_END 結果："WIN" / "LOSE" / "TIMEOUT"
 var result: String = ""
@@ -73,6 +77,14 @@ static func skill_activate(time: float, id: int, sid: String) -> BattleEvent:
 	e.timestamp = time
 	e.cat_id = id
 	e.skill_id = sid
+	return e
+
+static func buff_apply(time: float, id: int, duration: float) -> BattleEvent:
+	var e := BattleEvent.new()
+	e.type = Type.BUFF_APPLY
+	e.timestamp = time
+	e.cat_id = id
+	e.buff_duration = duration
 	return e
 
 static func cat_die(time: float, id: int, team_name: String, x: float) -> BattleEvent:

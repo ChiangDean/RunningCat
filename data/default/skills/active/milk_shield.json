@@ -1,0 +1,20 @@
+{
+  "id": "milk_shield",
+  "display_name": "牛奶護盾",
+  "description": "提升自身防禦力 30%，持續 4 秒",
+  "skill_type": "active",
+  "cooldown": 5.0,
+  "effects": [
+    {
+      "type": "buff_stat",
+      "stat": "defense",
+      "value": 0.30,
+      "value_type": "percent",
+      "target": "self",
+      "duration": 4.0
+    }
+  ],
+  "rank_scaling": [
+    { "effect_index": 0, "property": "value", "per_5_ranks": 0.05 }
+  ]
+}

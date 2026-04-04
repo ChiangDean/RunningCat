@@ -14,8 +14,8 @@
   },
   "enhancement_growth": { "hp": 0.5, "atk": 2.0, "def": 0.5 },
   "rank_growth": { "hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0 },
-  "passive_skills": [],
+  "passive_skills": ["black_night"],
   "active_skills": [
-    { "id": "scratch", "initial_delay": 0, "cooldown": 5.0 }
+    { "id": "black_ambush", "initial_delay": 0, "cooldown": 5.0 }
   ]
 }

@@ -10,17 +10,16 @@
     "speed": 80.0,
     "weight": 200.0
   },
-  "enhancement_growth": {
-    "hp": 2.0,
-    "atk": 0.5,
-    "def": 1.5
-  },
+  "rarity": "fine",
+  "gacha_available": false,
+  "enhancement_growth": { "hp": 2.0, "atk": 0.5, "def": 1.5 },
+  "rank_growth": { "hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0 },
   "passive_skills": [
-    "team_cooldown_reduction"
+    "milk_thick_body"
   ],
   "active_skills": [
     {
-      "id": "shield_bash",
+      "id": "milk_shield",
       "initial_delay": 0,
       "cooldown": 5.0
     }
