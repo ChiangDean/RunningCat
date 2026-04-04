@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "orange_cat",
+  "display_name": "大橘貓",
+  "cat_type": "tank",
+  "rarity": "uncommon",
+  "gacha_available": true,
+  "base_stats": {
+    "max_hp": 1200,
+    "atk": 130,
+    "defense": 60,
+    "speed": 70.0,
+    "weight": 220.0
+  },
+  "enhancement_growth": { "hp": 2.5, "atk": 0.5, "def": 1.5 },
+  "rank_growth": { "hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0 },
+  "passive_skills": ["team_cooldown_reduction"],
+  "active_skills": [
+    { "id": "shield_bash", "initial_delay": 0, "cooldown": 5.5 }
+  ]
+}

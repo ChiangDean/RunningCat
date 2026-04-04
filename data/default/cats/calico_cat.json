@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "calico_cat",
+  "display_name": "三花貓",
+  "cat_type": "speed",
+  "rarity": "common",
+  "gacha_available": true,
+  "base_stats": {
+    "max_hp": 600,
+    "atk": 100,
+    "defense": 20,
+    "speed": 150.0,
+    "weight": 100.0
+  },
+  "enhancement_growth": { "hp": 1.0, "atk": 1.5, "def": 0.5 },
+  "rank_growth": { "hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0 },
+  "passive_skills": [],
+  "active_skills": [
+    { "id": "scratch", "initial_delay": 0, "cooldown": 4.0 }
+  ]
+}

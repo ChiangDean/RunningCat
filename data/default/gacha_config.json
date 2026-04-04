@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "pull_costs": {
+    "single": 100,
+    "eleven": 1000,
+    "thirty_five": 3000
+  },
+  "daily_free_pull_cap": 50,
+  "duplicate_shard_reward": 10,
+  "rarities": [
+    { "id": "common",    "name": "普通", "color": "#FFFFFF", "rank": 1 },
+    { "id": "uncommon",  "name": "優等", "color": "#AAAAAA", "rank": 2 },
+    { "id": "fine",      "name": "精良", "color": "#66CCFF", "rank": 3 },
+    { "id": "special",   "name": "特殊", "color": "#3366FF", "rank": 4 },
+    { "id": "precious",  "name": "珍藏", "color": "#00FF88", "rank": 5 },
+    { "id": "excellent", "name": "卓越", "color": "#FF88CC", "rank": 6 },
+    { "id": "rare",      "name": "稀有", "color": "#FF8800", "rank": 7 },
+    { "id": "epic",      "name": "史詩", "color": "#AA44FF", "rank": 8 },
+    { "id": "legendary", "name": "傳說", "color": "#FF2222", "rank": 9 }
+  ],
+  "technique_levels": [
+    {
+      "level": 1,
+      "required_pulls": 0,
+      "rates": {
+        "common": 100, "uncommon": 0, "fine": 0, "special": 0,
+        "precious": 0, "excellent": 0, "rare": 0, "epic": 0, "legendary": 0
+      }
+    },
+    {
+      "level": 2,
+      "required_pulls": 30,
+      "rates": {
+        "common": 80, "uncommon": 20, "fine": 0, "special": 0,
+        "precious": 0, "excellent": 0, "rare": 0, "epic": 0, "legendary": 0
+      }
+    },
+    {
+      "level": 3,
+      "required_pulls": 100,
+      "rates": {
+        "common": 60, "uncommon": 30, "fine": 10, "special": 0,
+        "precious": 0, "excellent": 0, "rare": 0, "epic": 0, "legendary": 0
+      }
+    }
+  ],
+  "cat_pool": {
+    "common":   ["calico_cat", "black_cat"],
+    "uncommon": ["orange_cat", "tuxedo_cat"],
+    "fine":     ["ninja_cat"]
+  },
+  "trap_points_exchange": {
+    "extra_pull": 500,
+    "cat_shard":  100
+  }
+}

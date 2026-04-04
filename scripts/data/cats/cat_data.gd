@@ -20,11 +20,17 @@ var weight: float = 100.0
 # var ignore_def: float = 0.0
 # var crit_rate: float = 0.0
 
+# ── 稀有度 ────────────────────────────────────────────
+var rarity: String = "common"         # 對應 gacha_config 的 rarity id
+var gacha_available: bool = false      # 是否可從誘捕籠抽到
+
 # ── 強化成長值（每級/每點的固定加成） ─────────────────
 ## 格式：{ "hp": float, "atk": float, "def": float }
-## 普通乾糧每升一級，三個屬性各加對應值
-## 特殊乾糧每分配一點到某屬性，該屬性加對應值
 var enhancement_growth: Dictionary = {"hp": 1.5, "atk": 1.0, "def": 0.5}
+
+# ── 品階成長值（百分比加成，每升一品階疊加） ───────────
+## 格式：{ "hp_percent": float, "atk_percent": float, "def_percent": float }
+var rank_growth: Dictionary = {"hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0}
 
 # ── 技能參照 ──────────────────────────────────────────
 var passive_skill_ids: Array = []
@@ -65,6 +71,9 @@ static func _from_dict(data: Dictionary) -> CatData:
 	cat.speed    = stats.get("speed",    100.0)
 	cat.weight   = stats.get("weight",   100.0)
 
+	cat.rarity          = data.get("rarity",          "common")
+	cat.gacha_available = data.get("gacha_available", false)
+
 	var default_growth: Dictionary = {"hp": 1.5, "atk": 1.0, "def": 0.5}
 	var growth: Dictionary = data.get("enhancement_growth", {})
 	cat.enhancement_growth = {
@@ -73,7 +82,15 @@ static func _from_dict(data: Dictionary) -> CatData:
 		"def": growth.get("def", default_growth["def"]),
 	}
 
-	cat.passive_skill_ids   = data.get("passive_skills", [])
+	var default_rank_growth: Dictionary = {"hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0}
+	var rg: Dictionary = data.get("rank_growth", {})
+	cat.rank_growth = {
+		"hp_percent":  rg.get("hp_percent",  default_rank_growth["hp_percent"]),
+		"atk_percent": rg.get("atk_percent", default_rank_growth["atk_percent"]),
+		"def_percent": rg.get("def_percent", default_rank_growth["def_percent"]),
+	}
+
+	cat.passive_skill_ids    = data.get("passive_skills", [])
 	cat.active_skill_configs = data.get("active_skills", [])
 
 	return cat
@@ -89,3 +106,15 @@ func apply_enhancement(player_cat: PlayerCatData) -> void:
 	max_hp  += int((food_levels + sfp.get("hp",  0)) * enhancement_growth.get("hp",  0.0))
 	atk     += int((food_levels + sfp.get("atk", 0)) * enhancement_growth.get("atk", 0.0))
 	defense += int((food_levels + sfp.get("def", 0)) * enhancement_growth.get("def", 0.0))
+
+
+## 將品階百分比加成疊加到當前屬性（須在 apply_enhancement 之後呼叫）
+## 每品階：HP/ATK/DEF 各 +hp_percent%（預設 1%）
+func apply_rank_bonus(player_cat: PlayerCatData) -> void:
+	var r: int = player_cat.rank
+	if r <= 0:
+		return
+	var rg: Dictionary = rank_growth
+	max_hp  = int(max_hp  * (1.0 + r * rg.get("hp_percent",  1.0) / 100.0))
+	atk     = int(atk     * (1.0 + r * rg.get("atk_percent", 1.0) / 100.0))
+	defense = int(defense * (1.0 + r * rg.get("def_percent", 1.0) / 100.0))
