@@ -33,11 +33,36 @@ var current_global_stage: int = 1
 ## Boss 失敗後為 true，顯示「挑戰 Boss」按鈕
 var boss_available: bool = false
 
+# ── 地下城戰鬥狀態 ────────────────────────────
+var dungeon_battle_id: String = ""
+var dungeon_battle_level: int = 1
+var dungeon_data: PlayerDungeonData
+## 地下城全域設定（啟動時載入一次，供所有場景共用）
+var dungeon_config: Dictionary = {}
+
 # ── 常數 ──────────────────────────────────────
 func _ready() -> void:
 	player_data = PlayerData.load_or_default()
+	current_global_stage = player_data.current_stage
+	dungeon_config = _load_json("res://data/default/dungeon_config.json")
+	dungeon_data = PlayerDungeonData.load_or_default()
+	dungeon_data.check_daily_reset(int(dungeon_config.get("daily_free_tickets", 2)))
 	for cat_id: String in player_data.owned_cat_ids:
 		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
+
+
+static func _load_json(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("GameState: 無法開啟 " + path)
+		return {}
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		file.close()
+		push_error("GameState: JSON 解析失敗 " + path)
+		return {}
+	file.close()
+	return json.get_data()
 
 
 ## 取得貓咪強化存檔（找不到時自動建立預設值）
@@ -47,9 +72,11 @@ func get_player_cat(cat_id: String) -> PlayerCatData:
 	return _player_cat_cache[cat_id]
 
 
-## 儲存所有玩家資料（資源 + 所有貓咪強化）
+## 儲存所有玩家資料（資源 + 所有貓咪強化 + 地下城進度）
 func save_all() -> void:
+	player_data.current_stage = current_global_stage
 	player_data.save()
+	dungeon_data.save()
 	for cat_id: String in _player_cat_cache:
 		_player_cat_cache[cat_id].save()
 
@@ -164,6 +191,8 @@ func get_enemy_ids() -> Array:
 func advance_after_win() -> void:
 	boss_available = false
 	current_global_stage += 1
+	player_data.current_stage = current_global_stage
+	player_data.save()  # 即時寫入，確保強制退出時不遺失進度
 
 ## Boss 失敗後退回該 Boss 關的第 4 遭遇戰，顯示「挑戰 Boss」按鈕
 func on_boss_fail() -> void:

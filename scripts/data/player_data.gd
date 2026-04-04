@@ -12,11 +12,16 @@ var special_cat_food: int = 0
 var gold: int = 0
 var diamonds: int = 0
 var trap_points: int = 0         # 誘捕點數，用於商店兌換
+var trap_cages: int = 0          # 誘捕籠道具（消耗品，可存放後手動使用）
+var whisker_shards: int = 0      # 通用鬍鬚碎片（地下城獎勵等來源）
 
 # ── 誘捕籠 ────────────────────────────────────────────
 var total_pulls: int = 0          # 累計誘捕次數，決定誘捕技術等級
 var free_pull_count: int = 1      # 每日免費抽數（累積遞增，上限由 Config 設定）
 var last_free_pull_date: String = ""  # 上次免費誘捕日期（YYYY-MM-DD），空字串 = 未使用過
+
+# ── 關卡進度 ────────────────────────────────────────────
+var current_stage: int = 1        # 全局關卡進度，對應 GameState.current_global_stage
 
 # ── 擁有貓咪 ──────────────────────────────────────────
 ## 玩家目前擁有的貓咪 ID 列表（初始含牛奶貓）
@@ -60,9 +65,12 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.gold              = data.get("gold",              0)
 	p.diamonds          = data.get("diamonds",          0)
 	p.trap_points       = data.get("trap_points",       0)
+	p.trap_cages        = data.get("trap_cages",        0)
+	p.whisker_shards    = data.get("whisker_shards",    0)
 	p.total_pulls       = data.get("total_pulls",       0)
 	p.free_pull_count   = data.get("free_pull_count",   1)
 	p.last_free_pull_date = data.get("last_free_pull_date", "")
+	p.current_stage     = data.get("current_stage",     1)
 	var ids: Array = data.get("owned_cat_ids", ["milk_cat"])
 	p.owned_cat_ids = ids if not ids.is_empty() else ["milk_cat"]
 	return p
@@ -87,8 +95,11 @@ func _to_dict() -> Dictionary:
 		"gold":               gold,
 		"diamonds":           diamonds,
 		"trap_points":        trap_points,
+		"trap_cages":         trap_cages,
+		"whisker_shards":     whisker_shards,
 		"total_pulls":        total_pulls,
 		"free_pull_count":    free_pull_count,
 		"last_free_pull_date": last_free_pull_date,
+		"current_stage":      current_stage,
 		"owned_cat_ids":      owned_cat_ids,
 	}
