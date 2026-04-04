@@ -8,6 +8,7 @@ const SH := 1280.0
 var _info_label: Label
 var _diamond_label: Label
 var _free_btn: Button
+var _cage_btn: Button
 var _result_panel: VBoxContainer
 var _result_scroll: ScrollContainer
 
@@ -98,6 +99,13 @@ func _build_ui() -> void:
 	_free_btn.pressed.connect(_on_free_pull_pressed)
 	root_vbox.add_child(_free_btn)
 
+	# 使用誘捕籠道具
+	_cage_btn = Button.new()
+	_cage_btn.custom_minimum_size = Vector2(0.0, 70.0)
+	_cage_btn.add_theme_font_size_override("font_size", 24)
+	_cage_btn.pressed.connect(_on_cage_pull_pressed)
+	root_vbox.add_child(_cage_btn)
+
 	# 特別誘捕（待開放）
 	var special_btn := Button.new()
 	special_btn.text = "特別誘捕  🔒 待開放"
@@ -142,6 +150,14 @@ func _on_free_pull_pressed() -> void:
 	var count: int = GameState.player_data.free_pull_count
 	GameState.player_data.consume_free_pull(GachaSystem.free_pull_cap())
 	_execute_pulls(count)
+
+
+func _on_cage_pull_pressed() -> void:
+	if GameState.player_data.trap_cages <= 0:
+		_show_message("沒有誘捕籠道具！")
+		return
+	GameState.player_data.trap_cages -= 1
+	_execute_pulls(1)
 
 
 func _execute_pulls(count: int) -> void:
@@ -217,6 +233,16 @@ func _refresh_info() -> void:
 		_free_btn.text = "每日免費誘捕（今日 %d 抽）" % free_count
 		_free_btn.disabled = false
 		_free_btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+	var cage_count: int = GameState.player_data.trap_cages
+	if cage_count > 0:
+		_cage_btn.text = "使用誘捕籠道具（持有 %d 個）" % cage_count
+		_cage_btn.disabled = false
+		_cage_btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	else:
+		_cage_btn.text = "使用誘捕籠道具（持有 0 個）"
+		_cage_btn.disabled = true
+		_cage_btn.modulate = Color(0.6, 0.6, 0.6, 1.0)
 
 
 func _show_message(msg: String) -> void:
