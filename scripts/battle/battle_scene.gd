@@ -123,7 +123,7 @@ func _build_ui() -> void:
 
 	# 導覽按鈕
 	var nav_items: Array = [["配置", _on_nav_config], ["強化", _on_nav_enhance],
-							["商店", _on_nav_stub], ["競技場", _on_nav_stub]]
+							["商店", _on_nav_shop], ["競技場", _on_nav_stub]]
 	var btn_w := SW / nav_items.size()
 	for i in range(nav_items.size()):
 		var nav_btn := _make_button(nav_items[i][0],
@@ -191,7 +191,9 @@ func _start_battle() -> void:
 		if data:
 			if data.active_skill_configs.size() > 0:
 				data.active_skill_configs[0]["initial_delay"] = GameState.get_delay(i)
-			data.apply_enhancement(GameState.get_player_cat(cat_id))
+			var player_cat := GameState.get_player_cat(cat_id)
+			data.apply_enhancement(player_cat)
+			data.apply_rank_bonus(player_cat)
 			player_cats.append(data)
 		else:
 			push_error("BattleScene: 無法載入玩家貓咪 " + cat_id)
@@ -257,6 +259,9 @@ func _on_nav_config() -> void:
 
 func _on_nav_enhance() -> void:
 	get_tree().change_scene_to_file("res://scenes/EnhanceScene.tscn")
+
+func _on_nav_shop() -> void:
+	get_tree().change_scene_to_file("res://scenes/ShopScene.tscn")
 
 func _on_nav_stub() -> void:
 	pass  # 未來實作

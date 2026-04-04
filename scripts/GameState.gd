@@ -7,6 +7,20 @@ var player_data: PlayerData
 ## 已載入的貓咪強化存檔快取，key = cat_id
 var _player_cat_cache: Dictionary = {}
 
+## 目前擁有的貓咪 ID 列表（從 player_data 讀取）
+func get_owned_cats() -> Array:
+	if player_data == null:
+		return ["milk_cat"]
+	return player_data.owned_cat_ids
+
+
+## 新增擁有的貓咪並建立快取（扭蛋後呼叫）
+func add_owned_cat(cat_id: String) -> void:
+	if not player_data.owned_cat_ids.has(cat_id):
+		player_data.owned_cat_ids.append(cat_id)
+	if not _player_cat_cache.has(cat_id):
+		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
+
 # ── 玩家配置 ──────────────────────────────────
 var player_team: Array = ["milk_cat", "milk_cat", "milk_cat"]
 var skill_delays: Dictionary = {}
@@ -20,12 +34,9 @@ var current_global_stage: int = 1
 var boss_available: bool = false
 
 # ── 常數 ──────────────────────────────────────
-const OWNED_CATS: Array = ["milk_cat"]
-
-
 func _ready() -> void:
 	player_data = PlayerData.load_or_default()
-	for cat_id: String in OWNED_CATS:
+	for cat_id: String in player_data.owned_cat_ids:
 		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
 
 

@@ -1,7 +1,16 @@
 {
 	"cat_food": 10,
 	"diamonds": 0,
+	"free_pull_count": 2,
 	"gold": 500,
+	"last_free_pull_date": "2026-04-04",
+	"owned_cat_ids": [
+		"milk_cat",
+		"black_cat",
+		"calico_cat"
+	],
 	"schema_version": 1,
-	"special_cat_food": 0
+	"special_cat_food": 0,
+	"total_pulls": 4,
+	"trap_points": 0
 }

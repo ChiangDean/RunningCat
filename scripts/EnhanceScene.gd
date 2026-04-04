@@ -80,7 +80,7 @@ func _build_ui() -> void:
 	cat_row.add_theme_constant_override("separation", 12)
 	root_vbox.add_child(cat_row)
 
-	for cat_id: String in GameState.OWNED_CATS:
+	for cat_id: String in GameState.get_owned_cats():
 		var btn := Button.new()
 		btn.text = _get_display_name(cat_id)
 		btn.custom_minimum_size = Vector2(140.0, 56.0)
@@ -96,8 +96,9 @@ func _build_ui() -> void:
 	root_vbox.add_child(_detail_panel)
 
 	# 若只有一隻貓，自動選中
-	if GameState.OWNED_CATS.size() > 0:
-		_select_cat(GameState.OWNED_CATS[0])
+	var _owned := GameState.get_owned_cats()
+	if _owned.size() > 0:
+		_select_cat(_owned[0])
 
 
 # ── 貓咪選擇 ──────────────────────────────────

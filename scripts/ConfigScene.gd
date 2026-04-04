@@ -74,7 +74,7 @@ func _build_ui() -> void:
 	cats_container.add_theme_constant_override("separation", 8)
 	root_vbox.add_child(cats_container)
 
-	for cat_id: String in GameState.OWNED_CATS:
+	for cat_id: String in GameState.get_owned_cats():
 		var row := _make_cat_row(cat_id)
 		cats_container.add_child(row)
 
