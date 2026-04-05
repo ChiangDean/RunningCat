@@ -397,13 +397,7 @@ func _show_rank_bonus_info(cat_data: CatData, rank: int) -> void:
 			"  攻擊額外提升 +%.0f%%" % (rank * rg.get("atk_percent", 1.0)),
 			"  防禦額外提升 +%.0f%%" % (rank * rg.get("def_percent", 1.0)),
 		]
-	var dialog := AcceptDialog.new()
-	dialog.title = "品階加成說明"
-	dialog.dialog_text = "\n".join(lines)
-	dialog.min_size = Vector2(400.0, 200.0)
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func(): dialog.queue_free())
+	DialogManager.show_info("品階加成說明", "\n".join(lines))
 
 
 # ── 標籤更新 ──────────────────────────────────
@@ -511,16 +505,7 @@ func _refresh_special_point_labels(player_cat: PlayerCatData) -> void:
 # ── 確認視窗 ──────────────────────────────────
 
 func _show_confirm(message: String, on_confirm: Callable) -> void:
-	var dialog := ConfirmationDialog.new()
-	dialog.dialog_text = message
-	dialog.min_size = Vector2(500.0, 200.0)
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func():
-		on_confirm.call()
-		dialog.queue_free()
-	)
-	dialog.canceled.connect(func(): dialog.queue_free())
+	DialogManager.show_confirm("確認", message, on_confirm)
 
 
 # ── 輔助 ──────────────────────────────────────
@@ -640,13 +625,7 @@ func _show_skill_bonus_info(skill_d: Dictionary, rank: int, is_active: bool) -> 
 				stat_name = _stat_display_label(eff.get("stat", ""), eff.get("type", ""))
 			lines.append("  %s 額外增強 +%.0f%%" % [stat_name, bonus * 100.0])
 
-	var dialog := AcceptDialog.new()
-	dialog.title = "技能加成說明"
-	dialog.dialog_text = "\n".join(lines)
-	dialog.min_size = Vector2(500.0, 240.0)
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func(): dialog.queue_free())
+	DialogManager.show_info("技能加成說明", "\n".join(lines))
 
 
 func _stat_display_label(stat: String, eff_type: String) -> String:

@@ -196,21 +196,12 @@ func _on_ad_pressed(dungeon_id: String) -> void:
 	var daily_free: int  = int(GameState.dungeon_config.get("daily_free_tickets",  2))
 	var event_bonus: int = int(GameState.dungeon_config.get("event_bonus_tickets",  0))
 
-	var dialog := ConfirmationDialog.new()
-	dialog.title = "看廣告獲得卷"
-	dialog.dialog_text = "可以透過看廣告獲得地下城卷"
-	dialog.ok_button_text = "確認"
-	dialog.cancel_button_text = "取消"
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func():
+	DialogManager.show_confirm("看廣告獲得卷", "可以透過看廣告獲得地下城卷", func():
 		# 廣告功能待實作，確認後直接給卷（模擬看完廣告）
 		GameState.dungeon_data.grant_ad_ticket(dungeon_id, ad_per_type, daily_free + event_bonus)
 		GameState.save_all()
 		_refresh_panel(dungeon_id)
-		dialog.queue_free()
-	)
-	dialog.canceled.connect(func(): dialog.queue_free())
+	, Callable(), "確認", "取消")
 
 
 func _on_sweep_pressed(dungeon_id: String) -> void:
@@ -275,12 +266,7 @@ func _show_reward_popup(header: String, level: int, rewards: Dictionary) -> void
 	if rewards.get("whisker_shards", 0) > 0:
 		lines.append("  鬍鬚碎片 ×%d" % rewards["whisker_shards"])
 
-	var dialog := AcceptDialog.new()
-	dialog.title = header
-	dialog.dialog_text = "\n".join(lines)
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func(): dialog.queue_free())
+	DialogManager.show_info(header, "\n".join(lines))
 
 
 func _on_back_pressed() -> void:

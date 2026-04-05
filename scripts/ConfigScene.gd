@@ -278,13 +278,7 @@ func _show_skill_popup(cat_id: String) -> void:
 		if not rank_info.is_empty():
 			lines.append("  " + rank_info)
 
-	var dialog := AcceptDialog.new()
-	dialog.title = "技能資訊"
-	dialog.dialog_text = "\n".join(lines)
-	dialog.min_size = Vector2(560.0, 300.0)
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func(): dialog.queue_free())
+	DialogManager.show_info("技能資訊", "\n".join(lines))
 
 
 func _format_rank_scaling(skill_d: Dictionary, rank: int) -> String:

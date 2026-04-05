@@ -313,26 +313,18 @@ func _on_buy_ticket_pressed() -> void:
 	if cost < 0:
 		_show_dialog("今日已達購買上限", "無法繼續購買。")
 		return
-	var confirm := ConfirmationDialog.new()
-	confirm.title = "購買競技券"
-	confirm.dialog_text = "花費 %d 鑽購買 %d 張競技券\n今日已購買 %d / %d 次" % [
+	var msg := "花費 %d 鑽購買 %d 張競技券\n今日已購買 %d / %d 次" % [
 		cost, PlayerArenaData.TICKETS_PER_PURCHASE,
 		d.daily_purchase_count, PlayerArenaData.MAX_DAILY_PURCHASES
 	]
-	confirm.ok_button_text = "購買"
-	confirm.cancel_button_text = "取消"
-	add_child(confirm)
-	confirm.popup_centered()
-	confirm.confirmed.connect(func():
+	DialogManager.show_confirm("購買競技券", msg, func():
 		if d.purchase_tickets(cost, GameState.player_data):
 			GameState.save_all()
 			_refresh_status()
 			_refresh_opponents(false)
 		else:
 			_show_dialog("購買失敗", "鑽石不足。")
-		confirm.queue_free()
-	)
-	confirm.canceled.connect(func(): confirm.queue_free())
+	, Callable(), "購買", "取消")
 
 
 func _on_back_pressed() -> void:
@@ -345,18 +337,15 @@ func _show_rank_rewards() -> void:
 	var d := GameState.arena_data
 	var claimable := ArenaRankSystem.get_claimable_rewards(d.score, d.claimed_rank_rewards)
 
-	var dialog := AcceptDialog.new()
-	dialog.title = "段位獎勵"
-	dialog.ok_button_text = "關閉"
-	add_child(dialog)
-
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(500.0, 600.0)
-	dialog.add_child(scroll)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
 	scroll.add_child(vbox)
+
+	# close_fn 在 show_info_node 回傳後填入
+	var close_fn: Callable
 
 	for rank_key: String in ArenaRankSystem.RANK_ORDER:
 		var min_score: int = ArenaRankSystem.rank_key_to_min_score(rank_key)
@@ -400,7 +389,8 @@ func _show_rank_rewards() -> void:
 				ArenaRankSystem.apply_reward(rank_key, GameState.player_data)
 				d.claim_reward(rank_key)
 				GameState.save_all()
-				dialog.queue_free()
+				if close_fn.is_valid():
+					close_fn.call()
 				_show_rank_rewards()
 			)
 			row.add_child(claim_btn)
@@ -411,8 +401,7 @@ func _show_rank_rewards() -> void:
 			locked_lbl.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
 			row.add_child(locked_lbl)
 
-	dialog.popup_centered_ratio(0.85)
-	dialog.confirmed.connect(func(): dialog.queue_free())
+	close_fn = DialogManager.show_info_node("段位獎勵", scroll)
 
 
 # ── 工具 ──────────────────────────────────────────────
@@ -439,9 +428,4 @@ func _format_reward(reward: Dictionary) -> String:
 
 
 func _show_dialog(title_text: String, body_text: String) -> void:
-	var dialog := AcceptDialog.new()
-	dialog.title = title_text
-	dialog.dialog_text = body_text
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func(): dialog.queue_free())
+	DialogManager.show_info(title_text, body_text)
