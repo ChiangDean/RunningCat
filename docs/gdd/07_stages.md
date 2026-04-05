@@ -2,21 +2,23 @@
 
 ## 7-1 關卡結構
 
-- **遭遇戰**：最基本單位，每個 Boss 關含 4 個遭遇戰 + 1 個 Boss
-- **區域（Zone）**：10 個 Boss 關，命名：新手 I、新手 II...
-- **領地（Territory）**：5 個區域
+- **遭遇戰**：最基本單位，每個 Boss 關含 N 個遭遇戰 + 1 個 Boss（N 由 boss_config.json 設定，預設 4）
+- **區域（Zone）**：M 個 Boss 關，命名：新手 I、新手 II...（M 由 boss_config.json 設定，預設 10）
+- **領地（Territory）**：K 個區域（K 由 boss_config.json 設定，預設 5）
 
 關卡表示：`1-1、1-2、1-3、1-4、1-BOSS`
 
 ## 7-2 進度記錄
 
+
 以單一整數 `current_global_stage` 記錄，從數字還原所有層級：
 
 ```
-全局 1 = 1-1 ｜ 全局 5 = 1-BOSS ｜ 全局 6 = 2-1 ｜ 全局 50 = 10-BOSS
-Boss 關序號 = ceil(global / 5)
-遭遇戰索引 = ((global - 1) % 5) + 1   # 1~4=普通, 5=Boss
+全局 1 = 1-1 ｜ 全局 (N+1) = 1-BOSS ｜ 全局 (N+2) = 2-1 ｜ 全局 (M*(N+1)) = M-BOSS
+Boss 關序號 = ceil(global / (N+1))
+遭遇戰索引 = ((global - 1) % (N+1)) + 1   # 1~N=普通, N+1=Boss
 ```
+（N、M 皆由 boss_config.json 設定，預設 N=4, M=10）
 
 ## 7-3 通關規則
 
@@ -27,10 +29,12 @@ Boss 關序號 = ceil(global / 5)
 
 ## 7-4 難度自動計算
 
-| 類型 | 成長係數 |
+| 類型 | 成長係數（由 boss_config.json 設定）|
 |------|---------|
-| 普通遭遇戰 | ×1.003 / 關 |
-| Boss 關 | ×1.02 / Boss 關 |
+| 普通遭遇戰 | ×1.003 / 關（預設）|
+| Boss 關 | ×1.02 / Boss 關（預設）|
+
+所有成長係數皆可於 boss_config.json 設定，調整後遊戲自動套用。
 
 | 關卡 | 倍率 |
 |------|------|

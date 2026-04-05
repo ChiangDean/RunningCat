@@ -11,7 +11,8 @@ Cat5 Cat4 Cat3 Cat2 Cat1  →←  Cat1 Cat2 Cat3 Cat4 Cat5
 - 我方：左側，面朝右；Cat1 在最右（前排）
 - 敵方：右側，面朝左；Cat1 在最左（前排）
 - 同隊不碰撞，對方互相碰撞
-- **最大上場數：5 隻**
+- **最大上場數：由 config 設定（預設 5 隻，可調整）**
+    最大上場數、隊伍限制等皆可於 JSON 設定檔（如 boss_config.json、dungeon_config.json、arena_config.json）調整，遊戲會自動讀取。
 
 ## 3-2 戰鬥流程
 
