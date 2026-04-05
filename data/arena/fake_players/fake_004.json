@@ -1,0 +1,13 @@
+{
+	"player_id": "fake_004",
+	"player_name": "Neko♪Fighter",
+	"score": 210,
+	"defense_team": ["tuxedo_cat", "ninja_cat", "orange_cat", "milk_cat", "black_cat"],
+	"defense_snapshot": {
+		"tuxedo_cat": { "cat_food_level": 7, "special_food_points": { "hp": 2, "atk": 2, "def": 1 }, "rank": 1 },
+		"ninja_cat":  { "cat_food_level": 7, "special_food_points": { "hp": 1, "atk": 3, "def": 0 }, "rank": 1 },
+		"orange_cat": { "cat_food_level": 6, "special_food_points": { "hp": 2, "atk": 1, "def": 0 }, "rank": 0 },
+		"milk_cat":   { "cat_food_level": 6, "special_food_points": { "hp": 2, "atk": 0, "def": 1 }, "rank": 0 },
+		"black_cat":  { "cat_food_level": 5, "special_food_points": { "hp": 0, "atk": 2, "def": 1 }, "rank": 0 }
+	}
+}

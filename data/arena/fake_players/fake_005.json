@@ -1,0 +1,13 @@
+{
+	"player_id": "fake_005",
+	"player_name": "貓拳道場主",
+	"score": 265,
+	"defense_team": ["calico_cat", "orange_cat", "tuxedo_cat", "ninja_cat", "milk_cat"],
+	"defense_snapshot": {
+		"calico_cat": { "cat_food_level": 9, "special_food_points": { "hp": 2, "atk": 1, "def": 2 }, "rank": 1 },
+		"orange_cat": { "cat_food_level": 8, "special_food_points": { "hp": 3, "atk": 1, "def": 0 }, "rank": 1 },
+		"tuxedo_cat": { "cat_food_level": 8, "special_food_points": { "hp": 1, "atk": 2, "def": 1 }, "rank": 1 },
+		"ninja_cat":  { "cat_food_level": 7, "special_food_points": { "hp": 0, "atk": 3, "def": 1 }, "rank": 1 },
+		"milk_cat":   { "cat_food_level": 7, "special_food_points": { "hp": 2, "atk": 1, "def": 1 }, "rank": 0 }
+	}
+}

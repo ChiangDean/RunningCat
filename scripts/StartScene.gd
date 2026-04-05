@@ -45,6 +45,12 @@ func _build_ui() -> void:
 	start_btn.text = "開始遊戲"
 	start_btn.custom_minimum_size = Vector2(300.0, 80.0)
 	start_btn.pressed.connect(func():
+		# 遊戲啟動時同步一次防守快照
+		GameState.arena_data.update_defense_snapshot(
+			GameState.player_data.arena_defense_team,
+			GameState._player_cat_cache
+		)
+		GameState.arena_data.save()
 		get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
 	)
 	vbox.add_child(start_btn)

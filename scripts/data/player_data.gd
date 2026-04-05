@@ -27,6 +27,16 @@ var current_stage: int = 1        # 全局關卡進度，對應 GameState.curren
 ## 玩家目前擁有的貓咪 ID 列表（初始含牛奶貓）
 var owned_cat_ids: Array = ["milk_cat"]
 
+# ── 隊伍設定 ──────────────────────────────────────────
+## BOSS 推關隊伍（最多 5 隻）
+var boss_team: Array = []
+## 地下城隊伍（最多 5 隻）
+var dungeon_team: Array = []
+## 競技場攻擊隊伍（最多 5 隻）
+var arena_attack_team: Array = []
+## 競技場防守隊伍（最多 5 隻；空陣列 = 自動代入攻擊隊伍）
+var arena_defense_team: Array = []
+
 
 # ── 查詢輔助 ──────────────────────────────────────────
 
@@ -73,6 +83,10 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.current_stage     = data.get("current_stage",     1)
 	var ids: Array = data.get("owned_cat_ids", ["milk_cat"])
 	p.owned_cat_ids = ids if not ids.is_empty() else ["milk_cat"]
+	p.boss_team          = data.get("boss_team",           [])
+	p.dungeon_team       = data.get("dungeon_team",        [])
+	p.arena_attack_team  = data.get("arena_attack_team",   [])
+	p.arena_defense_team = data.get("arena_defense_team",  [])
 	return p
 
 
@@ -100,6 +114,10 @@ func _to_dict() -> Dictionary:
 		"total_pulls":        total_pulls,
 		"free_pull_count":    free_pull_count,
 		"last_free_pull_date": last_free_pull_date,
-		"current_stage":      current_stage,
-		"owned_cat_ids":      owned_cat_ids,
+		"current_stage":       current_stage,
+		"owned_cat_ids":       owned_cat_ids,
+		"boss_team":           boss_team,
+		"dungeon_team":        dungeon_team,
+		"arena_attack_team":   arena_attack_team,
+		"arena_defense_team":  arena_defense_team,
 	}

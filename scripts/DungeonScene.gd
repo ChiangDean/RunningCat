@@ -240,6 +240,12 @@ func _on_challenge_pressed(dungeon_id: String) -> void:
 
 	GameState.dungeon_battle_id    = dungeon_id
 	GameState.dungeon_battle_level = next_level
+	# 使用地下城專屬陣容，未設定則 fallback 到 boss_team
+	var dungeon_team: Array = GameState.player_data.dungeon_team
+	if dungeon_team.is_empty():
+		dungeon_team = GameState.player_data.boss_team
+	if not dungeon_team.is_empty():
+		GameState.player_team = dungeon_team.duplicate()
 	get_tree().change_scene_to_file("res://scenes/DungeonBattleScene.tscn")
 
 

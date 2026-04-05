@@ -1,0 +1,13 @@
+{
+	"player_id": "fake_007",
+	"player_name": "SilverPaw",
+	"score": 420,
+	"defense_team": ["tuxedo_cat", "calico_cat", "ninja_cat", "orange_cat", "black_cat"],
+	"defense_snapshot": {
+		"tuxedo_cat": { "cat_food_level": 13, "special_food_points": { "hp": 3, "atk": 3, "def": 2 }, "rank": 2 },
+		"calico_cat": { "cat_food_level": 12, "special_food_points": { "hp": 3, "atk": 2, "def": 3 }, "rank": 2 },
+		"ninja_cat":  { "cat_food_level": 12, "special_food_points": { "hp": 1, "atk": 5, "def": 1 }, "rank": 2 },
+		"orange_cat": { "cat_food_level": 11, "special_food_points": { "hp": 4, "atk": 2, "def": 1 }, "rank": 2 },
+		"black_cat":  { "cat_food_level": 11, "special_food_points": { "hp": 2, "atk": 4, "def": 1 }, "rank": 2 }
+	}
+}

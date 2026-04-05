@@ -1,0 +1,12 @@
+{
+	"player_id": "fake_002",
+	"player_name": "橘貓飼主",
+	"score": 78,
+	"defense_team": ["orange_cat", "tuxedo_cat", "milk_cat", "ninja_cat"],
+	"defense_snapshot": {
+		"orange_cat": { "cat_food_level": 3, "special_food_points": { "hp": 1, "atk": 1, "def": 0 }, "rank": 0 },
+		"tuxedo_cat": { "cat_food_level": 3, "special_food_points": { "hp": 0, "atk": 1, "def": 1 }, "rank": 0 },
+		"milk_cat":   { "cat_food_level": 2, "special_food_points": { "hp": 1, "atk": 0, "def": 0 }, "rank": 0 },
+		"ninja_cat":  { "cat_food_level": 2, "special_food_points": { "hp": 0, "atk": 1, "def": 0 }, "rank": 0 }
+	}
+}

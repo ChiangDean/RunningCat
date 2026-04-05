@@ -1,0 +1,13 @@
+{
+	"player_id": "fake_006",
+	"player_name": "ねこ将軍",
+	"score": 340,
+	"defense_team": ["ninja_cat", "black_cat", "tuxedo_cat", "calico_cat", "orange_cat"],
+	"defense_snapshot": {
+		"ninja_cat":  { "cat_food_level": 11, "special_food_points": { "hp": 1, "atk": 4, "def": 1 }, "rank": 2 },
+		"black_cat":  { "cat_food_level": 10, "special_food_points": { "hp": 2, "atk": 3, "def": 1 }, "rank": 2 },
+		"tuxedo_cat": { "cat_food_level": 10, "special_food_points": { "hp": 2, "atk": 2, "def": 2 }, "rank": 1 },
+		"calico_cat": { "cat_food_level": 9,  "special_food_points": { "hp": 3, "atk": 1, "def": 2 }, "rank": 1 },
+		"orange_cat": { "cat_food_level": 9,  "special_food_points": { "hp": 3, "atk": 2, "def": 0 }, "rank": 1 }
+	}
+}

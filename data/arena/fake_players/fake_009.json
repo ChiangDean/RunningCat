@@ -1,0 +1,13 @@
+{
+	"player_id": "fake_009",
+	"player_name": "GoldCatStriker",
+	"score": 635,
+	"defense_team": ["ninja_cat", "orange_cat", "calico_cat", "tuxedo_cat", "black_cat"],
+	"defense_snapshot": {
+		"ninja_cat":  { "cat_food_level": 19, "special_food_points": { "hp": 2, "atk": 7, "def": 2 }, "rank": 4 },
+		"orange_cat": { "cat_food_level": 18, "special_food_points": { "hp": 5, "atk": 4, "def": 2 }, "rank": 4 },
+		"calico_cat": { "cat_food_level": 18, "special_food_points": { "hp": 5, "atk": 3, "def": 3 }, "rank": 3 },
+		"tuxedo_cat": { "cat_food_level": 17, "special_food_points": { "hp": 4, "atk": 4, "def": 3 }, "rank": 3 },
+		"black_cat":  { "cat_food_level": 16, "special_food_points": { "hp": 3, "atk": 5, "def": 3 }, "rank": 3 }
+	}
+}
