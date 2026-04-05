@@ -162,7 +162,14 @@ func _make_team_slot_row(slot_index: int, cat_id: String) -> HBoxContainer:
 	var is_filled := cat_id != ""
 
 	var name_lbl := Label.new()
-	name_lbl.text = "%d. %s" % [slot_index + 1, _get_display_name(cat_id)] if is_filled else "%d." % [slot_index + 1]
+	if is_filled:
+		var player_cat := GameState.get_player_cat(cat_id)
+		var lv := 1
+		if player_cat != null:
+			lv = player_cat.cat_food_level
+		name_lbl.text = "%d. %s" % [slot_index + 1, CatRegistry.get_cat_display_name_with_lv(cat_id, lv)]
+	else:
+		name_lbl.text = "%d." % [slot_index + 1]
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.add_theme_font_size_override("font_size", 22)
 	row.add_child(name_lbl)
@@ -245,7 +252,11 @@ func _make_cat_row(cat_id: String) -> HBoxContainer:
 	row.add_theme_constant_override("separation", 12)
 
 	var name_lbl := Label.new()
-	name_lbl.text = _get_display_name(cat_id)
+	var player_cat := GameState.get_player_cat(cat_id)
+	var lv := 1
+	if player_cat != null:
+		lv = player_cat.cat_food_level
+	name_lbl.text = CatRegistry.get_cat_display_name_with_lv(cat_id, lv)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.add_theme_font_size_override("font_size", 22)
 	row.add_child(name_lbl)

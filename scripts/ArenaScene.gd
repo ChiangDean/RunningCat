@@ -409,8 +409,11 @@ func _show_rank_rewards() -> void:
 func _cat_ids_to_names(ids: Array) -> String:
 	var names: Array = []
 	for cat_id: String in ids:
-		var data := CatData.from_json_file("res://data/default/cats/" + cat_id + ".json")
-		names.append(data.display_name if data != null else cat_id)
+		var lv := 1
+		var player_cat = GameState.get_player_cat(cat_id)
+		if player_cat != null:
+			lv = player_cat.cat_food_level
+		names.append(CatRegistry.get_cat_display_name_with_lv(cat_id, lv))
 	return ", ".join(names)
 
 

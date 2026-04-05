@@ -14,6 +14,7 @@ var _detail_panel: VBoxContainer  # 右側詳細面板，每次選貓重建
 var _resource_label: Label
 var _stat_labels: Dictionary = {}  # "hp"/"atk"/"def" -> Label
 var _food_level_label: Label
+var _cat_name_label: Label
 var _food_cost_label: Label
 var _special_cost_label: Label
 var _special_point_labels: Dictionary = {}  # "hp"/"atk"/"def" -> Label
@@ -125,6 +126,7 @@ func _rebuild_detail_panel() -> void:
 	_rank_upgrade_btn = null
 	_food_upgrade_btn = null
 	_food_max_btn = null
+	_cat_name_label = null
 
 	if _selected_cat_id == "":
 		return
@@ -140,10 +142,10 @@ func _rebuild_detail_panel() -> void:
 	name_row.add_theme_constant_override("separation", 8)
 	_detail_panel.add_child(name_row)
 
-	var name_lbl := Label.new()
-	name_lbl.text = cat_data.display_name
-	name_lbl.add_theme_font_size_override("font_size", 28)
-	name_row.add_child(name_lbl)
+	_cat_name_label = Label.new()
+	_cat_name_label.text = CatRegistry.get_cat_display_name_with_lv(_selected_cat_id, player_cat.cat_food_level)
+	_cat_name_label.add_theme_font_size_override("font_size", 28)
+	name_row.add_child(_cat_name_label)
 
 	_rank_stars_label = Label.new()
 	_rank_stars_label.add_theme_font_size_override("font_size", 20)
@@ -214,48 +216,44 @@ func _rebuild_detail_panel() -> void:
 
 	_detail_panel.add_child(_make_separator())
 
-	# ── 普通乾糧升級 ──────────────────────────────
-	var food_title := Label.new()
-	food_title.text = "普通乾糧升級"
-	food_title.add_theme_font_size_override("font_size", 22)
-	_detail_panel.add_child(food_title)
-
-	_food_level_label = Label.new()
-	_food_level_label.add_theme_font_size_override("font_size", 20)
-	_detail_panel.add_child(_food_level_label)
-
-	_food_cost_label = Label.new()
-	_food_cost_label.add_theme_font_size_override("font_size", 20)
-	_detail_panel.add_child(_food_cost_label)
-
-	var food_btn_row := HBoxContainer.new()
-	food_btn_row.add_theme_constant_override("separation", 16)
-	_detail_panel.add_child(food_btn_row)
-
-	_food_upgrade_btn = Button.new()
-	_food_upgrade_btn.custom_minimum_size = Vector2(180.0, 52.0)
-	_food_upgrade_btn.pressed.connect(_on_upgrade_one_pressed)
-	food_btn_row.add_child(_food_upgrade_btn)
-
-	_food_max_btn = Button.new()
-	_food_max_btn.custom_minimum_size = Vector2(260.0, 52.0)
-	_food_max_btn.pressed.connect(_on_upgrade_max_pressed)
-	food_btn_row.add_child(_food_max_btn)
-	_refresh_food_labels(player_cat)
-
-	_detail_panel.add_child(_make_separator())
-
 	# ── 技能資訊 ──────────────────────────────
 	_build_skill_section(cat_data, player_cat)
 
 	_detail_panel.add_child(_make_separator())
 
-	# ── 重置按鈕 ──────────────────────────────
+	# ── 升級、快速升級、重置按鈕同一列 ─────────────
+	var action_row := HBoxContainer.new()
+	action_row.add_theme_constant_override("separation", 16)
+	_detail_panel.add_child(action_row)
+
+	_food_upgrade_btn = Button.new()
+	_food_upgrade_btn.pressed.connect(_on_upgrade_one_pressed)
+	_food_upgrade_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_row.add_child(_food_upgrade_btn)
+
+	_food_max_btn = Button.new()
+	_food_max_btn.pressed.connect(_on_upgrade_max_pressed)
+	_food_max_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_row.add_child(_food_max_btn)
+
 	var reset_btn := Button.new()
-	reset_btn.text = "重置（退回全部素材）"
-	reset_btn.custom_minimum_size = Vector2(0.0, 56.0)
+	reset_btn.text = "重置"
 	reset_btn.pressed.connect(_on_reset_pressed)
-	_detail_panel.add_child(reset_btn)
+	reset_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_row.add_child(reset_btn)
+
+	# 設定按鈕比例 40% 40% 20%
+	_food_upgrade_btn.custom_minimum_size = Vector2(0, 52.0)
+	_food_max_btn.custom_minimum_size = Vector2(0, 52.0)
+	reset_btn.custom_minimum_size = Vector2(0, 52.0)
+	_food_upgrade_btn.size_flags_stretch_ratio = 4
+	_food_max_btn.size_flags_stretch_ratio = 4
+	reset_btn.size_flags_stretch_ratio = 2
+
+	_food_cost_label = Label.new()
+	_food_cost_label.add_theme_font_size_override("font_size", 20)
+	_detail_panel.add_child(_food_cost_label)
+	_refresh_food_labels(player_cat)
 
 
 # ── 升級邏輯 ──────────────────────────────────
@@ -417,6 +415,9 @@ func _refresh_all_labels() -> void:
 	_refresh_special_point_labels(player_cat)
 	_refresh_special_buttons(player_cat)
 	_refresh_rank_labels(player_cat)
+	# 更新名稱Lv顯示
+	if _cat_name_label != null:
+		_cat_name_label.text = CatRegistry.get_cat_display_name_with_lv(_selected_cat_id, player_cat.cat_food_level)
 
 
 func _refresh_resource_label() -> void:
@@ -454,18 +455,18 @@ func _refresh_food_labels(player_cat: PlayerCatData) -> void:
 	var lv   := player_cat.cat_food_level
 	var held := GameState.player_data.cat_food
 	if lv >= PlayerCatData.MAX_CAT_FOOD_LEVEL:
-		_food_level_label.text = "  等級：Lv.%d（上限）" % lv
-		_food_cost_label.text  = ""
+		if _food_cost_label != null:
+			_food_cost_label.text  = ""
 		if _food_upgrade_btn:
-			_food_upgrade_btn.text     = "升級（已上限）"
+			_food_upgrade_btn.text     = "升級(Max)"
 			_food_upgrade_btn.disabled = true
 		if _food_max_btn:
-			_food_max_btn.text     = "快速升級（已上限）"
+			_food_max_btn.text     = "快速升級(Max)"
 			_food_max_btn.disabled = true
 	else:
 		var cost := PlayerCatData.cat_food_cost_for_level(lv)
-		_food_level_label.text = "  等級：Lv.%d" % lv
-		_food_cost_label.text  = ""
+		if _food_cost_label != null:
+			_food_cost_label.text  = ""
 		if _food_upgrade_btn:
 			_food_upgrade_btn.text     = "升級(%d/%d)" % [held, cost]
 			_food_upgrade_btn.disabled = held < cost
@@ -480,10 +481,10 @@ func _refresh_food_labels(player_cat: PlayerCatData) -> void:
 				total_cost += c
 				target_lv  += 1
 			if target_lv > lv:
-				_food_max_btn.text     = "快速升級(Lv%d %d/%d)" % [target_lv, held, total_cost]
+				_food_max_btn.text     = "快速升級(Lv%d)" % [target_lv]
 				_food_max_btn.disabled = false
 			else:
-				_food_max_btn.text     = "快速升級（乾糧不足）"
+				_food_max_btn.text     = "快速升級(不足)"
 				_food_max_btn.disabled = true
 
 

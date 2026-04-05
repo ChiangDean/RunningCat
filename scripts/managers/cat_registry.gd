@@ -43,3 +43,11 @@ func create_cat(cat_id: String, team: String, skill_states: Array = [], player_c
 ## 動態註冊新類型，不需修改 _type_map（例如 plugin 系統用）
 func register_type(type_name: String, cat_class) -> void:
 	_type_map[type_name] = cat_class
+
+
+# 共用：名稱+等級
+static func get_cat_display_name_with_lv(cat_id: String, lv: int) -> String:
+	var data := CatData.from_json_file("res://data/default/cats/" + cat_id + ".json")
+	if data != null:
+		return "%sLv%d" % [data.display_name, lv]
+	return "%sLv%d" % [cat_id, lv]
