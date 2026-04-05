@@ -17,6 +17,12 @@ var _food_level_label: Label
 var _food_cost_label: Label
 var _special_cost_label: Label
 var _special_point_labels: Dictionary = {}  # "hp"/"atk"/"def" -> Label
+var _rank_stars_label: Label
+var _rank_upgrade_btn: Button
+var _special_plus_btns: Dictionary = {}   # stat_key -> Button
+var _special_minus_btns: Dictionary = {}  # stat_key -> Button
+var _food_upgrade_btn: Button
+var _food_max_btn: Button
 
 
 func _ready() -> void:
@@ -113,6 +119,12 @@ func _rebuild_detail_panel() -> void:
 		child.queue_free()
 	_stat_labels.clear()
 	_special_point_labels.clear()
+	_special_plus_btns.clear()
+	_special_minus_btns.clear()
+	_rank_stars_label = null
+	_rank_upgrade_btn = null
+	_food_upgrade_btn = null
+	_food_max_btn = null
 
 	if _selected_cat_id == "":
 		return
@@ -123,28 +135,86 @@ func _rebuild_detail_panel() -> void:
 	if cat_data == null:
 		return
 
-	# ── 標題 ──────────────────────────────────
+	# ── 名字列（名字 + 星星 + ? + 升階）──────────────
+	var name_row := HBoxContainer.new()
+	name_row.add_theme_constant_override("separation", 8)
+	_detail_panel.add_child(name_row)
+
 	var name_lbl := Label.new()
 	name_lbl.text = cat_data.display_name
 	name_lbl.add_theme_font_size_override("font_size", 28)
-	_detail_panel.add_child(name_lbl)
+	name_row.add_child(name_lbl)
 
-	# ── 屬性顯示 ──────────────────────────────
+	_rank_stars_label = Label.new()
+	_rank_stars_label.add_theme_font_size_override("font_size", 20)
+	_rank_stars_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
+	name_row.add_child(_rank_stars_label)
+
+	var rank_info_btn := Button.new()
+	rank_info_btn.text = "?"
+	rank_info_btn.custom_minimum_size = Vector2(36.0, 36.0)
+	rank_info_btn.pressed.connect(func(): _show_rank_bonus_info(cat_data, player_cat.rank))
+	name_row.add_child(rank_info_btn)
+
+	var name_spacer := Control.new()
+	name_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_row.add_child(name_spacer)
+
+	_rank_upgrade_btn = Button.new()
+	_rank_upgrade_btn.custom_minimum_size = Vector2(160.0, 44.0)
+	_rank_upgrade_btn.pressed.connect(_on_rank_upgrade_pressed)
+	name_row.add_child(_rank_upgrade_btn)
+	_refresh_rank_labels(player_cat)
+
+	# ── 屬性 + 特殊乾糧 ───────────────────────────
 	var stats_title := Label.new()
 	stats_title.text = "屬性"
 	stats_title.add_theme_font_size_override("font_size", 22)
 	_detail_panel.add_child(stats_title)
 
+	_special_cost_label = Label.new()
+	_special_cost_label.add_theme_font_size_override("font_size", 18)
+	_detail_panel.add_child(_special_cost_label)
+
 	for stat_key: String in ["hp", "atk", "def"]:
-		var lbl := Label.new()
-		lbl.add_theme_font_size_override("font_size", 20)
-		_stat_labels[stat_key] = lbl
-		_detail_panel.add_child(lbl)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		_detail_panel.add_child(row)
+
+		var stat_lbl := Label.new()
+		stat_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stat_lbl.add_theme_font_size_override("font_size", 20)
+		_stat_labels[stat_key] = stat_lbl
+		row.add_child(stat_lbl)
+
+		var minus_btn := Button.new()
+		minus_btn.text = "−"
+		minus_btn.custom_minimum_size = Vector2(44.0, 44.0)
+		minus_btn.pressed.connect(func(): _on_special_remove_pressed(stat_key))
+		_special_minus_btns[stat_key] = minus_btn
+		row.add_child(minus_btn)
+
+		var pt_lbl := Label.new()
+		pt_lbl.add_theme_font_size_override("font_size", 20)
+		pt_lbl.custom_minimum_size = Vector2(40.0, 0.0)
+		pt_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_special_point_labels[stat_key] = pt_lbl
+		row.add_child(pt_lbl)
+
+		var plus_btn := Button.new()
+		plus_btn.custom_minimum_size = Vector2(44.0, 44.0)
+		plus_btn.pressed.connect(func(): _on_special_add_pressed(stat_key))
+		_special_plus_btns[stat_key] = plus_btn
+		row.add_child(plus_btn)
+
 	_refresh_stat_labels(cat_data, player_cat)
+	_refresh_special_cost_label(player_cat)
+	_refresh_special_point_labels(player_cat)
+	_refresh_special_buttons(player_cat)
 
 	_detail_panel.add_child(_make_separator())
 
-	# ── 普通乾糧升級 ──────────────────────────
+	# ── 普通乾糧升級 ──────────────────────────────
 	var food_title := Label.new()
 	food_title.text = "普通乾糧升級"
 	food_title.add_theme_font_size_override("font_size", 22)
@@ -157,59 +227,21 @@ func _rebuild_detail_panel() -> void:
 	_food_cost_label = Label.new()
 	_food_cost_label.add_theme_font_size_override("font_size", 20)
 	_detail_panel.add_child(_food_cost_label)
-	_refresh_food_labels(player_cat)
 
 	var food_btn_row := HBoxContainer.new()
 	food_btn_row.add_theme_constant_override("separation", 16)
 	_detail_panel.add_child(food_btn_row)
 
-	var upgrade_btn := Button.new()
-	upgrade_btn.text = "升級"
-	upgrade_btn.custom_minimum_size = Vector2(120.0, 52.0)
-	upgrade_btn.pressed.connect(_on_upgrade_one_pressed)
-	food_btn_row.add_child(upgrade_btn)
+	_food_upgrade_btn = Button.new()
+	_food_upgrade_btn.custom_minimum_size = Vector2(180.0, 52.0)
+	_food_upgrade_btn.pressed.connect(_on_upgrade_one_pressed)
+	food_btn_row.add_child(_food_upgrade_btn)
 
-	var max_btn := Button.new()
-	max_btn.text = "一鍵升至 Lv.%d" % PlayerCatData.MAX_CAT_FOOD_LEVEL
-	max_btn.custom_minimum_size = Vector2(240.0, 52.0)
-	max_btn.pressed.connect(_on_upgrade_max_pressed)
-	food_btn_row.add_child(max_btn)
-
-	_detail_panel.add_child(_make_separator())
-
-	# ── 特殊乾糧分配 ──────────────────────────
-	var special_title := Label.new()
-	special_title.text = "特殊乾糧分配"
-	special_title.add_theme_font_size_override("font_size", 22)
-	_detail_panel.add_child(special_title)
-
-	_special_cost_label = Label.new()
-	_special_cost_label.add_theme_font_size_override("font_size", 20)
-	_detail_panel.add_child(_special_cost_label)
-	_refresh_special_cost_label(player_cat)
-
-	for stat_key: String in ["hp", "atk", "def"]:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 16)
-		_detail_panel.add_child(row)
-
-		var stat_name_lbl := Label.new()
-		stat_name_lbl.text = _stat_display_name(stat_key)
-		stat_name_lbl.custom_minimum_size = Vector2(60.0, 44.0)
-		stat_name_lbl.add_theme_font_size_override("font_size", 20)
-		row.add_child(stat_name_lbl)
-
-		var add_btn := Button.new()
-		add_btn.text = "+"
-		add_btn.custom_minimum_size = Vector2(52.0, 52.0)
-		add_btn.pressed.connect(func(): _on_special_add_pressed(stat_key))
-		row.add_child(add_btn)
-
-		var pt_lbl := Label.new()
-		pt_lbl.add_theme_font_size_override("font_size", 20)
-		_special_point_labels[stat_key] = pt_lbl
-		row.add_child(pt_lbl)
-	_refresh_special_point_labels(player_cat)
+	_food_max_btn = Button.new()
+	_food_max_btn.custom_minimum_size = Vector2(260.0, 52.0)
+	_food_max_btn.pressed.connect(_on_upgrade_max_pressed)
+	food_btn_row.add_child(_food_max_btn)
+	_refresh_food_labels(player_cat)
 
 	_detail_panel.add_child(_make_separator())
 
@@ -304,6 +336,76 @@ func _on_reset_pressed() -> void:
 	)
 
 
+func _on_special_remove_pressed(stat_key: String) -> void:
+	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	if player_cat.special_food_points.get(stat_key, 0) <= 0:
+		return
+	var total_pts := player_cat.get_total_special_points()
+	var refund := total_pts  # 退還最後一點的費用（第 total_pts 點費用 = total_pts）
+	player_cat.special_food_points[stat_key] -= 1
+	GameState.player_data.special_cat_food += refund
+	GameState.save_all()
+	_refresh_all_labels()
+
+
+func _on_rank_upgrade_pressed() -> void:
+	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	var target_rank := player_cat.rank + 1
+	var cost := PlayerCatData.rank_upgrade_cost(target_rank)
+	if player_cat.cat_shards < cost:
+		return
+	player_cat.cat_shards -= cost
+	player_cat.rank += 1
+	GameState.save_all()
+	_refresh_all_labels()
+
+
+func _refresh_rank_labels(player_cat: PlayerCatData) -> void:
+	if _rank_stars_label == null or _rank_upgrade_btn == null:
+		return
+	var rank := player_cat.rank
+	_rank_stars_label.text = "★×%d" % rank if rank > 0 else ""
+	var cost := PlayerCatData.rank_upgrade_cost(rank + 1)
+	var held := player_cat.cat_shards
+	_rank_upgrade_btn.text = "升階(%d/%d)" % [held, cost]
+	_rank_upgrade_btn.disabled = held < cost
+
+
+func _refresh_special_buttons(player_cat: PlayerCatData) -> void:
+	var held      := GameState.player_data.special_cat_food
+	var total_pts := player_cat.get_total_special_points()
+	var next_cost := PlayerCatData.special_food_next_cost(total_pts)
+	for stat_key: String in ["hp", "atk", "def"]:
+		if _special_plus_btns.has(stat_key):
+			var btn: Button = _special_plus_btns[stat_key]
+			btn.text     = "+"
+			btn.disabled = held < next_cost
+		if _special_minus_btns.has(stat_key):
+			var btn: Button = _special_minus_btns[stat_key]
+			btn.disabled = player_cat.special_food_points.get(stat_key, 0) <= 0
+
+
+func _show_rank_bonus_info(cat_data: CatData, rank: int) -> void:
+	var rg := cat_data.rank_growth
+	var lines: Array
+	if rank <= 0:
+		lines = ["尚未升階", "", "每升一階：", "  血量、攻擊、防禦各額外提升 +1%"]
+	else:
+		lines = [
+			"目前品階 +%d 的加成：" % rank,
+			"  血量額外提升 +%.0f%%" % (rank * rg.get("hp_percent", 1.0)),
+			"  攻擊額外提升 +%.0f%%" % (rank * rg.get("atk_percent", 1.0)),
+			"  防禦額外提升 +%.0f%%" % (rank * rg.get("def_percent", 1.0)),
+		]
+	var dialog := AcceptDialog.new()
+	dialog.title = "品階加成說明"
+	dialog.dialog_text = "\n".join(lines)
+	dialog.min_size = Vector2(400.0, 200.0)
+	add_child(dialog)
+	dialog.popup_centered()
+	dialog.confirmed.connect(func(): dialog.queue_free())
+
+
 # ── 標籤更新 ──────────────────────────────────
 
 func _refresh_all_labels() -> void:
@@ -319,6 +421,8 @@ func _refresh_all_labels() -> void:
 	_refresh_food_labels(player_cat)
 	_refresh_special_cost_label(player_cat)
 	_refresh_special_point_labels(player_cat)
+	_refresh_special_buttons(player_cat)
+	_refresh_rank_labels(player_cat)
 
 
 func _refresh_resource_label() -> void:
@@ -333,48 +437,66 @@ func _refresh_stat_labels(cat_data: CatData, player_cat: PlayerCatData) -> void:
 	var food_lv := player_cat.cat_food_level - 1
 	var sfp     := player_cat.special_food_points
 	var g       := cat_data.enhancement_growth
+	var rk      := player_cat.rank
+	var rg      := cat_data.rank_growth
 
 	# HP
-	var hp_food_bonus    := int(food_lv * g.get("hp", 0.0))
-	var hp_special_bonus := int(sfp.get("hp", 0) * g.get("hp", 0.0))
-	var hp_base_with_food := cat_data.max_hp + hp_food_bonus
-	_stat_labels["hp"].text = _format_stat("HP", hp_base_with_food, hp_special_bonus)
+	var hp_pre  := cat_data.max_hp + int(food_lv * g.get("hp", 0.0)) + int(sfp.get("hp", 0) * g.get("hp", 0.0))
+	var hp_final := int(hp_pre * (1.0 + rk * rg.get("hp_percent", 1.0) / 100.0))
+	_stat_labels["hp"].text = "HP: %d" % hp_final
 
 	# ATK
-	var atk_food_bonus    := int(food_lv * g.get("atk", 0.0))
-	var atk_special_bonus := int(sfp.get("atk", 0) * g.get("atk", 0.0))
-	var atk_base_with_food := cat_data.atk + atk_food_bonus
-	_stat_labels["atk"].text = _format_stat("ATK", atk_base_with_food, atk_special_bonus)
+	var atk_pre  := cat_data.atk + int(food_lv * g.get("atk", 0.0)) + int(sfp.get("atk", 0) * g.get("atk", 0.0))
+	var atk_final := int(atk_pre * (1.0 + rk * rg.get("atk_percent", 1.0) / 100.0))
+	_stat_labels["atk"].text = "ATK: %d" % atk_final
 
 	# DEF
-	var def_food_bonus    := int(food_lv * g.get("def", 0.0))
-	var def_special_bonus := int(sfp.get("def", 0) * g.get("def", 0.0))
-	var def_base_with_food := cat_data.defense + def_food_bonus
-	_stat_labels["def"].text = _format_stat("DEF", def_base_with_food, def_special_bonus)
-
-
-func _format_stat(label_name: String, base_with_food: int, special_bonus: int) -> String:
-	if special_bonus > 0:
-		return "  %s: %d +%d" % [label_name, base_with_food, special_bonus]
-	return "  %s: %d" % [label_name, base_with_food]
+	var def_pre  := cat_data.defense + int(food_lv * g.get("def", 0.0)) + int(sfp.get("def", 0) * g.get("def", 0.0))
+	var def_final := int(def_pre * (1.0 + rk * rg.get("def_percent", 1.0) / 100.0))
+	_stat_labels["def"].text = "DEF: %d" % def_final
 
 
 func _refresh_food_labels(player_cat: PlayerCatData) -> void:
-	var lv := player_cat.cat_food_level
+	var lv   := player_cat.cat_food_level
+	var held := GameState.player_data.cat_food
 	if lv >= PlayerCatData.MAX_CAT_FOOD_LEVEL:
 		_food_level_label.text = "  等級：Lv.%d（上限）" % lv
-		_food_cost_label.text  = "  已達等級上限"
+		_food_cost_label.text  = ""
+		if _food_upgrade_btn:
+			_food_upgrade_btn.text     = "升級（已上限）"
+			_food_upgrade_btn.disabled = true
+		if _food_max_btn:
+			_food_max_btn.text     = "快速升級（已上限）"
+			_food_max_btn.disabled = true
 	else:
 		var cost := PlayerCatData.cat_food_cost_for_level(lv)
-		_food_level_label.text = "  等級：Lv.%d → Lv.%d" % [lv, lv + 1]
-		_food_cost_label.text  = "  費用：%d 普通乾糧（持有 %d）" % [
-			cost, GameState.player_data.cat_food]
+		_food_level_label.text = "  等級：Lv.%d" % lv
+		_food_cost_label.text  = ""
+		if _food_upgrade_btn:
+			_food_upgrade_btn.text     = "升級(%d/%d)" % [held, cost]
+			_food_upgrade_btn.disabled = held < cost
+		if _food_max_btn:
+			# 計算目前乾糧可升到的最高等級
+			var target_lv  := lv
+			var total_cost := 0
+			while target_lv < PlayerCatData.MAX_CAT_FOOD_LEVEL:
+				var c := PlayerCatData.cat_food_cost_for_level(target_lv)
+				if total_cost + c > held:
+					break
+				total_cost += c
+				target_lv  += 1
+			if target_lv > lv:
+				_food_max_btn.text     = "快速升級(Lv%d %d/%d)" % [target_lv, held, total_cost]
+				_food_max_btn.disabled = false
+			else:
+				_food_max_btn.text     = "快速升級（乾糧不足）"
+				_food_max_btn.disabled = true
 
 
 func _refresh_special_cost_label(player_cat: PlayerCatData) -> void:
 	var total_pts := player_cat.get_total_special_points()
 	var next_cost := PlayerCatData.special_food_next_cost(total_pts)
-	_special_cost_label.text = "  下一點費用：%d 特殊乾糧（持有 %d）" % [
+	_special_cost_label.text = "  特殊乾糧下一點費用：%d（持有 %d）" % [
 		next_cost, GameState.player_data.special_cat_food]
 
 
@@ -383,7 +505,7 @@ func _refresh_special_point_labels(player_cat: PlayerCatData) -> void:
 		if not _special_point_labels.has(stat_key):
 			continue
 		var pts: int = player_cat.special_food_points.get(stat_key, 0)
-		_special_point_labels[stat_key].text = "已分配 %d 點" % pts
+		_special_point_labels[stat_key].text = "%d" % pts
 
 
 # ── 確認視窗 ──────────────────────────────────
@@ -448,10 +570,10 @@ func _build_skill_section(cat_data: CatData, player_cat: PlayerCatData) -> void:
 		lbl.add_theme_font_size_override("font_size", 18)
 		row.add_child(lbl)
 
-		# 品階標示
-		if rank > 0:
+		# 品階標示（每 5 階 +1 技能等級，至少 5 階才顯示）
+		if rank >= 5:
 			var rank_lbl := Label.new()
-			rank_lbl.text = "+%d" % rank
+			rank_lbl.text = "+%d" % (rank / 5)
 			rank_lbl.add_theme_font_size_override("font_size", 16)
 			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
 			row.add_child(rank_lbl)
@@ -478,9 +600,9 @@ func _build_skill_section(cat_data: CatData, player_cat: PlayerCatData) -> void:
 		lbl.add_theme_font_size_override("font_size", 18)
 		row.add_child(lbl)
 
-		if rank > 0:
+		if rank >= 5:
 			var rank_lbl := Label.new()
-			rank_lbl.text = "+%d" % rank
+			rank_lbl.text = "+%d" % (rank / 5)
 			rank_lbl.add_theme_font_size_override("font_size", 16)
 			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
 			row.add_child(rank_lbl)
