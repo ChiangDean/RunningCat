@@ -9,8 +9,9 @@ var _info_label: Label
 var _diamond_label: Label
 var _free_btn: Button
 var _cage_btn: Button
-var _result_panel: VBoxContainer
-var _result_scroll: ScrollContainer
+var _pull_buttons: Dictionary = {}
+
+const PACK_CAGE_COSTS := {1: 1, 11: 10, 35: 30}
 
 
 func _ready() -> void:
@@ -83,11 +84,13 @@ func _build_ui() -> void:
 		var cnt: int  = pull_pack[0]
 		var cost: int = pull_pack[1]
 		var btn := Button.new()
-		btn.text = "%d 抽\n%d 💎" % [cnt, cost]
+		# 文字會在 _refresh_info 中更新為 "誘捕x{count}({owned}/{required})"
+		btn.text = "誘捕x%d" % [cnt]
 		btn.custom_minimum_size = Vector2(0.0, 80.0)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.add_theme_font_size_override("font_size", 22)
 		btn.pressed.connect(func(): _on_pull_pressed(cnt, cost))
+		_pull_buttons[cnt] = btn
 		pull_row.add_child(btn)
 
 	root_vbox.add_child(_make_separator())
@@ -117,30 +120,52 @@ func _build_ui() -> void:
 
 	root_vbox.add_child(_make_separator())
 
-	# 結果區域
-	var result_title := Label.new()
-	result_title.text = "抽取結果"
-	result_title.add_theme_font_size_override("font_size", 22)
-	root_vbox.add_child(result_title)
-
-	_result_scroll = ScrollContainer.new()
-	_result_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(_result_scroll)
-
-	_result_panel = VBoxContainer.new()
-	_result_panel.add_theme_constant_override("separation", 8)
-	_result_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_result_scroll.add_child(_result_panel)
+	# (結果改為彈窗顯示，移除場景內結果區域)
 
 
 # ── 抽獎 ───────────────────────────────────────────────
 
 func _on_pull_pressed(count: int, cost: int) -> void:
-	if GameState.player_data.diamonds < cost:
-		_show_message("鑽石不足！（需要 %d 💎，持有 %d 💎）" % [cost, GameState.player_data.diamonds])
+	var available_cages: int = GameState.player_data.trap_cages
+	var required_cages: int = int(PACK_CAGE_COSTS.get(count, count))
+	# 足夠誘捕籠：直接使用對應的誘捕籠數量
+	if available_cages >= required_cages:
+		GameState.player_data.trap_cages -= required_cages
+		GameState.save_all()
+		_execute_pulls(count)
 		return
-	GameState.player_data.diamonds -= cost
-	_execute_pulls(count)
+
+	# 部分誘捕籠：使用現有誘捕籠，並以鑽石補足剩餘抽數
+	if available_cages > 0:
+		var used_cages := available_cages
+		var remaining_draws: int = count - used_cages
+		var diamond_needed: int = GachaSystem.cost_for_count(remaining_draws)
+		var msg: String = "誘捕籠不足：您有 %d 個誘捕籠，是否使用它們並以 %d 鑽石補足剩下 %d 抽？" % [used_cages, diamond_needed, remaining_draws]
+		DialogManager.show_confirm("補足抽卡", msg, func() -> void:
+			if GameState.player_data.diamonds >= diamond_needed:
+				GameState.player_data.trap_cages -= used_cages
+				GameState.player_data.diamonds -= diamond_needed
+				GameState.save_all()
+				_execute_pulls(count)
+			else:
+				DialogManager.show_confirm("鑽石不足", "鑽石不足，是否前往商店頁面購買？", func() -> void:
+					get_tree().change_scene_to_file("res://scenes/ShopScene.tscn")
+				)
+		)
+		return
+
+	# 無誘捕籠：詢問是否以鑽石直接誘捕
+	var diamond_needed: int = GachaSystem.cost_for_count(count)
+	DialogManager.show_confirm("使用鑽石？", "是否直接使用 %d 鑽石誘捕 %d 次貓咪？" % [diamond_needed, count], func() -> void:
+		if GameState.player_data.diamonds >= diamond_needed:
+			GameState.player_data.diamonds -= diamond_needed
+			GameState.save_all()
+			_execute_pulls(count)
+		else:
+			DialogManager.show_confirm("鑽石不足", "鑽石不足，是否前往商店頁面購買？", func() -> void:
+				get_tree().change_scene_to_file("res://scenes/ShopScene.tscn")
+			)
+	)
 
 
 func _on_free_pull_pressed() -> void:
@@ -170,22 +195,26 @@ func _execute_pulls(count: int) -> void:
 # ── 結果顯示 ───────────────────────────────────────────
 
 func _show_results(results: Array) -> void:
-	for child in _result_panel.get_children():
-		child.queue_free()
+	# 使用彈窗顯示抽取結果，內容可滑動
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(500.0, 520.0)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vbox)
 
 	for r: Dictionary in results:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 16)
-		_result_panel.add_child(row)
+		vbox.add_child(row)
 
-		# 稀有度色塊
 		var color_box := ColorRect.new()
 		color_box.custom_minimum_size = Vector2(16.0, 44.0)
 		var hex: String = r.get("rarity_color", "#FFFFFF")
 		color_box.color = Color.html(hex)
 		row.add_child(color_box)
 
-		# 稀有度名稱
 		var rarity_lbl := Label.new()
 		rarity_lbl.text = "[%s]" % r.get("rarity_name", "")
 		rarity_lbl.add_theme_font_size_override("font_size", 20)
@@ -194,14 +223,12 @@ func _show_results(results: Array) -> void:
 		rarity_lbl.add_theme_color_override("font_color", rarity_color)
 		row.add_child(rarity_lbl)
 
-		# 貓咪名稱
 		var name_lbl := Label.new()
 		name_lbl.text = r.get("display_name", r.get("cat_id", ""))
 		name_lbl.add_theme_font_size_override("font_size", 22)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_lbl)
 
-		# 新/重複標示
 		var status_lbl := Label.new()
 		status_lbl.add_theme_font_size_override("font_size", 20)
 		if r.get("is_new", false):
@@ -213,6 +240,9 @@ func _show_results(results: Array) -> void:
 			status_lbl.add_theme_color_override("font_color", Color(0.8, 0.8, 0.5, 1.0))
 		row.add_child(status_lbl)
 
+	# show_info_node 支援點擊 overlay 或右上 ✕ 關閉
+	DialogManager.show_info_node("抽取結果", scroll)
+
 
 # ── 刷新顯示 ───────────────────────────────────────────
 
@@ -222,7 +252,14 @@ func _refresh_info() -> void:
 	var next: int = GachaSystem.get_next_level_threshold()
 	var next_str := "（已滿等）" if next == -1 else "（距下一等級 %d 抽）" % (next - total)
 	_info_label.text = "誘捕技術：Lv.%d　累計 %d 抽 %s" % [lv, total, next_str]
-	_diamond_label.text = "💎 鑽石：%d" % GameState.player_data.diamonds
+	var cage_count_top: int = GameState.player_data.trap_cages
+	_diamond_label.text = "誘捕籠：%d　💎 鑽石：%d" % [cage_count_top, GameState.player_data.diamonds]
+
+	# 更新抽卡按鈕文字，顯示擁有 / 需求誘捕籠
+	for cnt_key in _pull_buttons.keys():
+		var btn: Button = _pull_buttons[cnt_key]
+		var required: int = int(PACK_CAGE_COSTS.get(cnt_key, cnt_key))
+		btn.text = "誘捕x%d(%d/%d)" % [int(cnt_key), cage_count_top, required]
 
 	var free_count: int = GameState.player_data.free_pull_count
 	if GameState.player_data.has_used_free_pull_today():

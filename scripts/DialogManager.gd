@@ -19,6 +19,8 @@ const _FONT_CONTENT := 18
 const _FONT_BTN     := 18
 const _FONT_HINT    := 16
 
+const _INERTIAL_SCROLL := preload("res://scripts/ui/inertial_scroll.gd")
+
 
 # ── 公開 API ────────────────────────────────────────────
 
@@ -32,6 +34,13 @@ func show_info(title: String, text: String, on_close: Callable = Callable()) -> 
 
 ## 回傳一個 Callable，呼叫它可從外部主動關閉這個 dialog
 func show_info_node(title: String, content: Control, on_close: Callable = Callable()) -> Callable:
+	# If the content is a ScrollContainer, attach the inertial scroller helper so touch drag has inertia/bounce
+	if content is ScrollContainer:
+		# Prefer calling the registered class; fallback to the preloaded script if needed
+		if typeof(InertialScroller) != TYPE_NIL:
+			InertialScroller.attach(content)
+		elif _INERTIAL_SCROLL != null:
+			_INERTIAL_SCROLL.attach(content)
 	return _build(title, content, false, on_close, Callable())
 
 
