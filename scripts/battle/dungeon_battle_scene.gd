@@ -378,13 +378,7 @@ func _show_reward_popup(level: int, rewards: Dictionary) -> void:
 	if rewards.get("whisker_shards", 0) > 0:
 		lines.append("  鬍鬚碎片 ×%d" % rewards["whisker_shards"])
 
-	var dialog := AcceptDialog.new()
-	dialog.title = "挑戰成功！"
-	dialog.dialog_text = "\n".join(lines)
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func():
-		dialog.queue_free()
+	DialogManager.show_info("挑戰成功！", "\n".join(lines), func():
 		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
 	)
 

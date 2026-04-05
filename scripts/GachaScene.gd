@@ -246,11 +246,7 @@ func _refresh_info() -> void:
 
 
 func _show_message(msg: String) -> void:
-	var dialog := AcceptDialog.new()
-	dialog.dialog_text = msg
-	add_child(dialog)
-	dialog.popup_centered()
-	dialog.confirmed.connect(func(): dialog.queue_free())
+	DialogManager.show_info("提示", msg)
 
 
 func _make_separator() -> HSeparator:

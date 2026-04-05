@@ -32,6 +32,7 @@ theme/custom="res://resources/default_theme.tres"
 [autoload]
 
 GameState="*res://scripts/GameState.gd"
+DialogManager="*res://scripts/DialogManager.gd"
 
 [rendering]
 
