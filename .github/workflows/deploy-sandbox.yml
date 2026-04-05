@@ -26,6 +26,9 @@ jobs:
           use-dotnet: false
           include-templates: true
 
+      - name: Import Resources
+        run: godot --headless --import || true
+
       - name: Export Web
         run: |
           mkdir -p build/web

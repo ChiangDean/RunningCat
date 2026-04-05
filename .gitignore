@@ -2,6 +2,7 @@
 .godot/
 /android/
 *.import
+!assets/fonts/*.import
 
 # Mono / C#
 .mono/
