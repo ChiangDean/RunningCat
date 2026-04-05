@@ -3,6 +3,7 @@
 	"ad_tickets_per_type": 2,
 	"event_bonus_tickets": 0,
 	"reset_timezone_offset_hours": 8,
+	"max_team_size": 5,
 	"dungeons": [
 		{
 			"id": "cat_food",

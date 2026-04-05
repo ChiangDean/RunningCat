@@ -5,7 +5,7 @@ extends Node2D
 ## - 勝利：消耗卷、給予獎勵、更新最高關卡，返回地下城頁面
 ## - 失敗：不消耗卷，返回地下城頁面
 
-const MAX_CATS_ON_FIELD: int = 5
+var MAX_CATS_ON_FIELD: int = 5
 
 const SW := 720.0
 const SH := 1280.0
@@ -46,6 +46,7 @@ func _ready() -> void:
 		if cfg.get("id", "") == _dungeon_id:
 			_dungeon_cfg = cfg
 			break
+	MAX_CATS_ON_FIELD = int(GameState.dungeon_config.get("max_team_size", 5))
 	_build_scene()
 	_start_battle()
 
