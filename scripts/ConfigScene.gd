@@ -2,7 +2,7 @@ extends Control
 
 ## 配置畫面：選擇各場景出戰貓咪 + 設定技能起始延遲
 ## 支援四種隊伍類型：BOSS推關 / 地下城 / 競技場攻擊 / 競技場防禦
-## 長按出戰貓咪列中的「技能」按鈕 → 彈出技能資訊面板
+## 長按出戰貓咪列中的「技能」按鈕 → 彩蛋資訊面板
 
 const SW := 720.0
 const SH := 1280.0
@@ -12,6 +12,7 @@ var _current_team_type: String = "boss"
 
 var _team_container: VBoxContainer
 var _team_type_btns: Dictionary = {}   # key: team_type → Button
+var cats_container: VBoxContainer      # 新增：class 層級 cats_container
 
 const TEAM_LABELS: Dictionary = {
 	"boss":          "BOSS 推關",
@@ -99,13 +100,10 @@ func _build_ui() -> void:
 	cats_title.add_theme_font_size_override("font_size", 24)
 	root_vbox.add_child(cats_title)
 
-	var cats_container := VBoxContainer.new()
+	cats_container = VBoxContainer.new()
 	cats_container.add_theme_constant_override("separation", 8)
 	root_vbox.add_child(cats_container)
-
-	for cat_id: String in GameState.get_owned_cats():
-		cats_container.add_child(_make_cat_row(cat_id))
-
+	_refresh_cats_list()
 	root_vbox.add_child(_make_separator())
 
 	var confirm_btn := Button.new()
@@ -151,6 +149,7 @@ func _refresh_team() -> void:
 		empty_lbl.text = "（尚未選擇貓咪）"
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_team_container.add_child(empty_lbl)
+	_refresh_cats_list() # 新增：每次隊伍刷新時也刷新可用貓咪按鈕狀態
 
 
 func _make_team_slot_row(slot_index: int, cat_id: String) -> HBoxContainer:
@@ -242,12 +241,17 @@ func _make_cat_row(cat_id: String) -> HBoxContainer:
 	var add_btn := Button.new()
 	add_btn.text = "加入"
 	add_btn.custom_minimum_size = Vector2(100.0, 50.0)
+
+	# 若已在隊伍中則 disabled
+	var team := _get_editing_team()
+	if cat_id in team:
+		add_btn.disabled = true
 	add_btn.pressed.connect(func():
-		var team := _get_editing_team()
-		if team.size() < 5:
-			team.append(cat_id)
+		var editing_team := _get_editing_team()
+		if editing_team.size() < 5 and not (cat_id in editing_team):
+			editing_team.append(cat_id)
 			GameState.player_data.save()
-			_refresh_team()
+			_refresh_team() # 這裡會自動刷新所有按鈕狀態
 	)
 	row.add_child(add_btn)
 
@@ -331,3 +335,10 @@ func _save_with_snapshot() -> void:
 	)
 	GameState.arena_data.save()
 	GameState.player_data.save()
+
+func _refresh_cats_list() -> void:
+	# 先移除所有子節點
+	for child in cats_container.get_children():
+		child.queue_free()
+	for cat_id: String in GameState.get_owned_cats():
+		cats_container.add_child(_make_cat_row(cat_id))
