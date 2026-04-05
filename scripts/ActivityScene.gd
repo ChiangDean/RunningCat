@@ -59,14 +59,12 @@ func _build_ui() -> void:
 	)
 	root_vbox.add_child(dungeon_btn)
 
-	# 競技場按鈕（待開放）
+	# 競技場按鈕
 	var arena_btn := _make_entry_button(
-		"競技場  🔒 待開放",
-		"異步 PvP 對戰",
-		func(): pass
+		"競技場",
+		"異步 PvP 對戰，爭奪段位獎勵",
+		_on_arena_pressed
 	)
-	arena_btn.disabled = true
-	arena_btn.modulate = Color(0.6, 0.6, 0.6, 1.0)
 	root_vbox.add_child(arena_btn)
 
 
@@ -101,6 +99,10 @@ func _make_entry_button(title_text: String, subtitle_text: String, callback: Cal
 
 func _on_dungeon_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
+
+
+func _on_arena_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/ArenaScene.tscn")
 
 
 func _on_back_pressed() -> void:

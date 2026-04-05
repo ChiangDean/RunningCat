@@ -16,6 +16,6 @@
 | 七、關卡系統 | [07_stages.md](gdd/07_stages.md) |
 | 八、主畫面 & UI | [08_ui.md](gdd/08_ui.md) |
 | 九、活動系統（地下城） | [09_activity.md](gdd/09_activity.md) |
-| 十、競技場 | [09_arena.md](gdd/09_arena.md) |
+| 十、競技場 | [10_arena.md](gdd/10_arena.md) |
 | 十一、技能系統 | [10_skills.md](gdd/10_skills.md) |
 | 十二、帳號 & 資料 | [11_account.md](gdd/11_account.md) |

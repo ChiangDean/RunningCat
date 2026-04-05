@@ -40,6 +40,12 @@ var dungeon_data: PlayerDungeonData
 ## 地下城全域設定（啟動時載入一次，供所有場景共用）
 var dungeon_config: Dictionary = {}
 
+# ── 競技場狀態 ────────────────────────────────
+var arena_data: PlayerArenaData
+## 競技場當前對戰資訊（進入戰鬥前設定，戰鬥結束後讀取）
+var arena_opponent: Dictionary = {}   # { player_id, player_name, score, rank_name, defense_team }
+var arena_config: Dictionary = {}     # 由 config 讀取的競技場設定（賽季日期、購買費用等）
+
 # ── 常數 ──────────────────────────────────────
 func _ready() -> void:
 	player_data = PlayerData.load_or_default()
@@ -49,6 +55,14 @@ func _ready() -> void:
 	dungeon_data.check_daily_reset(int(dungeon_config.get("daily_free_tickets", 2)))
 	for cat_id: String in player_data.owned_cat_ids:
 		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
+	arena_config = _load_json("res://data/default/arena_config.json")
+	arena_data = PlayerArenaData.load_or_create()
+	arena_data.season_end_date = arena_config.get("season_end_date", arena_data.season_end_date)
+	arena_data.check_daily_reset()
+	arena_data.check_season_reset()
+	# 以 boss_team 作為預設出戰隊伍
+	if not player_data.boss_team.is_empty():
+		player_team = player_data.boss_team.duplicate()
 
 
 static func _load_json(path: String) -> Dictionary:
@@ -72,11 +86,13 @@ func get_player_cat(cat_id: String) -> PlayerCatData:
 	return _player_cat_cache[cat_id]
 
 
-## 儲存所有玩家資料（資源 + 所有貓咪強化 + 地下城進度）
+## 儲存所有玩家資料（資源 + 所有貓咪強化 + 地下城進度 + 競技場）
 func save_all() -> void:
 	player_data.current_stage = current_global_stage
 	player_data.save()
 	dungeon_data.save()
+	arena_data.save()
+	arena_data.flush_to_leaderboard()
 	for cat_id: String in _player_cat_cache:
 		_player_cat_cache[cat_id].save()
 

@@ -1,0 +1,13 @@
+{
+	"player_id": "fake_008",
+	"player_name": "고양이킹",
+	"score": 510,
+	"defense_team": ["orange_cat", "ninja_cat", "tuxedo_cat", "calico_cat", "milk_cat"],
+	"defense_snapshot": {
+		"orange_cat": { "cat_food_level": 16, "special_food_points": { "hp": 4, "atk": 3, "def": 2 }, "rank": 3 },
+		"ninja_cat":  { "cat_food_level": 15, "special_food_points": { "hp": 2, "atk": 5, "def": 2 }, "rank": 3 },
+		"tuxedo_cat": { "cat_food_level": 15, "special_food_points": { "hp": 3, "atk": 3, "def": 3 }, "rank": 3 },
+		"calico_cat": { "cat_food_level": 14, "special_food_points": { "hp": 4, "atk": 2, "def": 3 }, "rank": 2 },
+		"milk_cat":   { "cat_food_level": 13, "special_food_points": { "hp": 4, "atk": 2, "def": 2 }, "rank": 2 }
+	}
+}

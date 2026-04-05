@@ -1,18 +1,31 @@
 extends Control
 
-## 配置畫面：選擇出戰貓咪 + 設定技能起始延遲
+## 配置畫面：選擇各場景出戰貓咪 + 設定技能起始延遲
+## 支援四種隊伍類型：BOSS推關 / 地下城 / 競技場攻擊 / 競技場防禦
 ## 長按出戰貓咪列中的「技能」按鈕 → 彈出技能資訊面板
 
 const SW := 720.0
 const SH := 1280.0
 
+## 當前編輯的隊伍類型
+var _current_team_type: String = "boss"
+
 var _team_container: VBoxContainer
+var _team_type_btns: Dictionary = {}   # key: team_type → Button
+
+const TEAM_LABELS: Dictionary = {
+	"boss":          "BOSS 推關",
+	"dungeon":       "地下城",
+	"arena_attack":  "競技場攻擊",
+	"arena_defense": "競技場防禦",
+}
+
 
 func _ready() -> void:
 	_build_ui()
 
+
 func _build_ui() -> void:
-	# 背景
 	var bg := ColorRect.new()
 	bg.color = Color(0.133, 0.157, 0.192, 1.0)
 	bg.size = Vector2(SW, SH)
@@ -21,7 +34,6 @@ func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 
-	# 主容器
 	var root_vbox := VBoxContainer.new()
 	root_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root_vbox.add_theme_constant_override("separation", 16)
@@ -52,6 +64,23 @@ func _build_ui() -> void:
 	spacer.custom_minimum_size = Vector2(100.0, 50.0)
 	top_row.add_child(spacer)
 
+	# 隊伍類型選擇列
+	var type_row := HBoxContainer.new()
+	type_row.add_theme_constant_override("separation", 6)
+	root_vbox.add_child(type_row)
+
+	for type_key: String in ["boss", "dungeon", "arena_attack", "arena_defense"]:
+		var btn := Button.new()
+		btn.text = TEAM_LABELS[type_key]
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.custom_minimum_size = Vector2(0.0, 48.0)
+		btn.add_theme_font_size_override("font_size", 18)
+		btn.pressed.connect(func(): _switch_team_type(type_key))
+		type_row.add_child(btn)
+		_team_type_btns[type_key] = btn
+
+	root_vbox.add_child(_make_separator())
+
 	# 出戰隊伍區塊
 	var team_title := Label.new()
 	team_title.text = "出戰隊伍（最多 5 隻）"
@@ -75,19 +104,37 @@ func _build_ui() -> void:
 	root_vbox.add_child(cats_container)
 
 	for cat_id: String in GameState.get_owned_cats():
-		var row := _make_cat_row(cat_id)
-		cats_container.add_child(row)
+		cats_container.add_child(_make_cat_row(cat_id))
 
 	root_vbox.add_child(_make_separator())
 
-	# 確認按鈕
 	var confirm_btn := Button.new()
 	confirm_btn.text = "確認"
 	confirm_btn.custom_minimum_size = Vector2(0.0, 64.0)
 	confirm_btn.pressed.connect(_on_confirm_pressed)
 	root_vbox.add_child(confirm_btn)
 
+	_switch_team_type("boss")
+
+
+# ── 隊伍類型切換 ──────────────────────────────
+
+func _switch_team_type(type_key: String) -> void:
+	_current_team_type = type_key
+	for key: String in _team_type_btns:
+		var btn: Button = _team_type_btns[key]
+		btn.modulate = Color(1.0, 1.0, 1.0, 1.0) if key == type_key else Color(0.6, 0.6, 0.6, 1.0)
 	_refresh_team()
+
+
+func _get_editing_team() -> Array:
+	match _current_team_type:
+		"boss":          return GameState.player_data.boss_team
+		"dungeon":       return GameState.player_data.dungeon_team
+		"arena_attack":  return GameState.player_data.arena_attack_team
+		"arena_defense": return GameState.player_data.arena_defense_team
+	return GameState.player_data.boss_team
+
 
 # ── 隊伍更新 ─────────────────────────────────
 
@@ -95,96 +142,92 @@ func _refresh_team() -> void:
 	for child in _team_container.get_children():
 		child.queue_free()
 
-	for i in range(GameState.player_team.size()):
-		var cat_id: String = GameState.player_team[i]
-		var row := _make_team_slot_row(i, cat_id)
-		_team_container.add_child(row)
+	var team := _get_editing_team()
+	for i in range(team.size()):
+		_team_container.add_child(_make_team_slot_row(i, team[i]))
 
-	if GameState.player_team.size() == 0:
+	if team.is_empty():
 		var empty_lbl := Label.new()
 		empty_lbl.text = "（尚未選擇貓咪）"
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_team_container.add_child(empty_lbl)
 
+
 func _make_team_slot_row(slot_index: int, cat_id: String) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 
-	# 槽號 + 貓名
 	var name_lbl := Label.new()
-	var display_name := _get_display_name(cat_id)
-	name_lbl.text = "%d. %s" % [slot_index + 1, display_name]
+	name_lbl.text = "%d. %s" % [slot_index + 1, _get_display_name(cat_id)]
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.add_theme_font_size_override("font_size", 22)
 	row.add_child(name_lbl)
 
-	# 技能按鈕（長按查看技能）
+	# 技能按鈕（長按查看）
 	var skill_btn := Button.new()
 	skill_btn.text = "技能"
 	skill_btn.custom_minimum_size = Vector2(64.0, 44.0)
-	# 用 button_down + timer 模擬長按
 	var press_time: float = 0.0
-	var is_pressed := false
-	skill_btn.button_down.connect(func():
-		is_pressed = true
-		press_time = Time.get_ticks_msec() / 1000.0
-	)
+	skill_btn.button_down.connect(func(): press_time = Time.get_ticks_msec() / 1000.0)
 	skill_btn.button_up.connect(func():
-		is_pressed = false
-		var held := Time.get_ticks_msec() / 1000.0 - press_time
-		if held >= 0.4:
+		if Time.get_ticks_msec() / 1000.0 - press_time >= 0.4:
 			_show_skill_popup(cat_id)
 	)
 	row.add_child(skill_btn)
 
-	# 延遲選擇器
-	var delay_lbl_prefix := Label.new()
-	delay_lbl_prefix.text = "延遲:"
-	delay_lbl_prefix.add_theme_font_size_override("font_size", 20)
-	row.add_child(delay_lbl_prefix)
+	# 延遲（僅 boss / dungeon / arena_attack 有意義）
+	if _current_team_type != "arena_defense":
+		var delay_lbl := Label.new()
+		delay_lbl.text = "延遲:"
+		delay_lbl.add_theme_font_size_override("font_size", 20)
+		row.add_child(delay_lbl)
 
-	var minus_btn := Button.new()
-	minus_btn.text = "-"
-	minus_btn.custom_minimum_size = Vector2(44.0, 44.0)
-	row.add_child(minus_btn)
+		var minus_btn := Button.new()
+		minus_btn.text = "-"
+		minus_btn.custom_minimum_size = Vector2(44.0, 44.0)
+		row.add_child(minus_btn)
 
-	var delay_val := Label.new()
-	delay_val.text = str(GameState.get_delay(slot_index))
-	delay_val.custom_minimum_size = Vector2(30.0, 44.0)
-	delay_val.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	delay_val.add_theme_font_size_override("font_size", 22)
-	row.add_child(delay_val)
-
-	var plus_btn := Button.new()
-	plus_btn.text = "+"
-	plus_btn.custom_minimum_size = Vector2(44.0, 44.0)
-	row.add_child(plus_btn)
-
-	minus_btn.pressed.connect(func():
-		GameState.set_delay(slot_index, GameState.get_delay(slot_index) - 1)
+		var delay_val := Label.new()
 		delay_val.text = str(GameState.get_delay(slot_index))
-	)
-	plus_btn.pressed.connect(func():
-		GameState.set_delay(slot_index, GameState.get_delay(slot_index) + 1)
-		delay_val.text = str(GameState.get_delay(slot_index))
-	)
+		delay_val.custom_minimum_size = Vector2(30.0, 44.0)
+		delay_val.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		delay_val.add_theme_font_size_override("font_size", 22)
+		row.add_child(delay_val)
+
+		var plus_btn := Button.new()
+		plus_btn.text = "+"
+		plus_btn.custom_minimum_size = Vector2(44.0, 44.0)
+		row.add_child(plus_btn)
+
+		minus_btn.pressed.connect(func():
+			GameState.set_delay(slot_index, GameState.get_delay(slot_index) - 1)
+			delay_val.text = str(GameState.get_delay(slot_index))
+		)
+		plus_btn.pressed.connect(func():
+			GameState.set_delay(slot_index, GameState.get_delay(slot_index) + 1)
+			delay_val.text = str(GameState.get_delay(slot_index))
+		)
 
 	# 移除按鈕
 	var remove_btn := Button.new()
 	remove_btn.text = "移除"
 	remove_btn.custom_minimum_size = Vector2(80.0, 44.0)
 	remove_btn.pressed.connect(func():
-		GameState.player_team.remove_at(slot_index)
-		var new_delays: Dictionary = {}
-		for j in range(GameState.player_team.size()):
-			var old_j: int = j if j < slot_index else j + 1
-			new_delays[j] = GameState.skill_delays.get(old_j, 0)
-		GameState.skill_delays = new_delays
+		var team := _get_editing_team()
+		team.remove_at(slot_index)
+		if _current_team_type == "boss":
+			var new_delays: Dictionary = {}
+			for j in range(team.size()):
+				var old_j: int = j if j < slot_index else j + 1
+				new_delays[j] = GameState.skill_delays.get(old_j, 0)
+			GameState.skill_delays = new_delays
+		GameState.player_data.save()
 		_refresh_team()
 	)
 	row.add_child(remove_btn)
 
 	return row
+
 
 func _make_cat_row(cat_id: String) -> HBoxContainer:
 	var row := HBoxContainer.new()
@@ -200,13 +243,16 @@ func _make_cat_row(cat_id: String) -> HBoxContainer:
 	add_btn.text = "加入"
 	add_btn.custom_minimum_size = Vector2(100.0, 50.0)
 	add_btn.pressed.connect(func():
-		if GameState.player_team.size() < 5:
-			GameState.player_team.append(cat_id)
+		var team := _get_editing_team()
+		if team.size() < 5:
+			team.append(cat_id)
+			GameState.player_data.save()
 			_refresh_team()
 	)
 	row.add_child(add_btn)
 
 	return row
+
 
 # ── 技能資訊 Popup ────────────────────────────
 
@@ -215,10 +261,8 @@ func _show_skill_popup(cat_id: String) -> void:
 	if cat_data == null:
 		return
 	var player_cat := GameState.get_player_cat(cat_id)
-
 	var lines: Array = [cat_data.display_name + " 技能"]
 
-	# 被動技能
 	for sid: String in cat_data.passive_skill_ids:
 		var skill_d := CatData._read_skill_json(
 				"res://data/default/skills/passive/" + sid + ".json")
@@ -226,7 +270,6 @@ func _show_skill_popup(cat_id: String) -> void:
 			lines.append("【被動】%s" % skill_d.get("display_name", sid))
 			lines.append("  " + skill_d.get("description", ""))
 
-	# 主動技能
 	for skill_d: Dictionary in cat_data.active_skills_data:
 		var rank_info := _format_rank_scaling(skill_d, player_cat.rank)
 		lines.append("【主動】%s  CD: %.1fs" % [
@@ -263,6 +306,7 @@ func _format_rank_scaling(skill_d: Dictionary, rank: int) -> String:
 		return ""
 	return "品階加成（+%d）：%s" % [rank, ", ".join(parts)]
 
+
 # ── 輔助 ─────────────────────────────────────
 
 func _get_display_name(cat_id: String) -> String:
@@ -272,10 +316,24 @@ func _get_display_name(cat_id: String) -> String:
 func _make_separator() -> HSeparator:
 	return HSeparator.new()
 
+
 # ── 導航 ─────────────────────────────────────
 
 func _on_back_pressed() -> void:
+	# 同步 boss_team → GameState.player_team
+	GameState.player_team = GameState.player_data.boss_team.duplicate()
+	_save_with_snapshot()
 	get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
 
 func _on_confirm_pressed() -> void:
+	GameState.player_team = GameState.player_data.boss_team.duplicate()
+	_save_with_snapshot()
 	get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
+
+func _save_with_snapshot() -> void:
+	GameState.arena_data.update_defense_snapshot(
+		GameState.player_data.arena_defense_team,
+		GameState._player_cat_cache
+	)
+	GameState.arena_data.save()
+	GameState.player_data.save()
