@@ -13,7 +13,7 @@ var gold: int = 0
 var diamonds: int = 0
 var trap_points: int = 0         # 誘捕點數，用於商店兌換
 var trap_cages: int = 0          # 誘捕籠道具（消耗品，可存放後手動使用）
-var whisker_shards: int = 0      # 通用鬍鬚碎片（地下城獎勵等來源）
+var whisker_shards: int = 0      # 通用鬍鬚（地下城獎勵等來源）
 
 # ── 誘捕籠 ────────────────────────────────────────────
 var total_pulls: int = 0          # 累計誘捕次數，決定誘捕技術等級

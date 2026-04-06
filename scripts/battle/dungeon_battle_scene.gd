@@ -377,7 +377,7 @@ func _show_reward_popup(level: int, rewards: Dictionary) -> void:
 	if rewards.get("trap_cages", 0) > 0:
 		lines.append("  誘捕籠 ×%d" % rewards["trap_cages"])
 	if rewards.get("whisker_shards", 0) > 0:
-		lines.append("  鬍鬚碎片 ×%d" % rewards["whisker_shards"])
+		lines.append("  鬍鬚 ×%d" % rewards["whisker_shards"])
 
 	DialogManager.show_info("挑戰成功！", "\n".join(lines), func():
 		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")

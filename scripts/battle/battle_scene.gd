@@ -142,8 +142,9 @@ func _build_ui() -> void:
 	_ui_layer.add_child(nav_bg)
 
 	# 導覽按鈕
-	var nav_items: Array = [["配置", _on_nav_config], ["強化", _on_nav_enhance],
-							["活動", _on_nav_activity], ["商店", _on_nav_shop]]
+	var nav_items: Array = [["鏟屎官", _on_nav_scooper], ["配置", _on_nav_config],
+							["強化", _on_nav_enhance], ["活動", _on_nav_activity],
+							["商店", _on_nav_shop]]
 	var btn_w := SW / nav_items.size()
 	for i in range(nav_items.size()):
 		var nav_btn := _make_button(nav_items[i][0],
@@ -395,6 +396,10 @@ func _on_challenge_boss_pressed() -> void:
 
 
 # ── 導覽 ─────────────────────────────────────
+
+func _on_nav_scooper() -> void:
+	DialogManager.show_info("鏟屎官", "鏟屎官系統開發中，敬請期待！")
+
 
 func _on_nav_config() -> void:
 	get_tree().change_scene_to_file("res://scenes/ConfigScene.tscn")

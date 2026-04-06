@@ -246,7 +246,7 @@ func _show_results(results: Array) -> void:
 			status_lbl.add_theme_color_override("font_color", Color(0.3, 1.0, 0.5, 1.0))
 		else:
 			var shards: int = r.get("shards_given", 0)
-			status_lbl.text = "碎片 +%d" % shards
+			status_lbl.text = "鬍鬚 +%d" % shards
 			status_lbl.add_theme_color_override("font_color", Color(0.8, 0.8, 0.5, 1.0))
 		row.add_child(status_lbl)
 

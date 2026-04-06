@@ -148,7 +148,7 @@ static func _process_single(cat_id: String, rarity_id: String, config: Dictionar
 		# 新貓咪：加入擁有列表並初始化存檔
 		GameState.add_owned_cat(cat_id)
 	else:
-		# 重複貓咪：給鬍鬚碎片或誘捕點數
+		# 重複貓咪：給鬍鬚或誘捕點數
 		var player_cat := GameState.get_player_cat(cat_id)
 		shards_given = int(config.get("duplicate_shard_reward", 10))
 		player_cat.cat_shards += shards_given
