@@ -50,6 +50,10 @@ var arena_data: PlayerArenaData
 var arena_opponent: Dictionary = {}   # { player_id, player_name, score, rank_name, defense_team }
 var arena_config: Dictionary = {}     # 由 config 讀取的競技場設定（賽季日期、購買費用等）
 
+# ── 掛機系統 ──────────────────────────────────
+var idle_config: Dictionary = {}
+var _idle_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
 # ── 常數 ──────────────────────────────────────
 func _ready() -> void:
 	player_data = PlayerData.load_or_default()
@@ -68,6 +72,13 @@ func _ready() -> void:
 	# 以 boss_team 作為預設出戰隊伍
 	if not player_data.boss_team.is_empty():
 		player_team = player_data.boss_team.duplicate()
+	# 掛機系統：載入設定與隨機種子
+	idle_config = _load_json("res://data/default/idle_config.json")
+	_idle_rng.randomize()
+	# 首次啟動時初始化計時起點（往後只有領取時才會重設）
+	if player_data.last_quit_time == 0:
+		player_data.last_quit_time = Time.get_unix_time_from_system()
+		player_data.save()
 
 
 static func _load_json(path: String) -> Dictionary:
@@ -237,3 +248,64 @@ func get_delay(slot_index: int) -> int:
 
 func set_delay(slot_index: int, delay: int) -> void:
 	skill_delays[slot_index] = clampi(delay, 0, 9)
+
+
+# ── 掛機系統 ──────────────────────────────────
+
+## 當前累積的離線秒數（已套最大上限），即時計算
+func get_idle_elapsed_seconds() -> int:
+	if player_data.last_quit_time == 0:
+		return 0
+	var now: int = Time.get_unix_time_from_system()
+	var max_seconds: int = int(float(idle_config.get("max_idle_hours", 8)) * 3600.0)
+	return mini(now - player_data.last_quit_time, max_seconds)
+
+## 可領取的完整分鐘數（即時計算）
+func get_idle_complete_minutes() -> int:
+	return get_idle_elapsed_seconds() / 60
+
+## 是否已累積至少一分鐘可領取（即時計算）
+func has_pending_idle_rewards() -> bool:
+	return get_idle_complete_minutes() >= 1
+
+## 計算並回傳當前可領取的獎勵明細（即時計算，不修改任何狀態）
+func get_pending_idle_rewards() -> Dictionary:
+	var minutes := get_idle_complete_minutes()
+	if minutes < 1:
+		return {}
+	var rates := IdleSystem.calculate_rates(idle_config, current_global_stage, player_data.scooper_level)
+	return IdleSystem.calculate_rewards(minutes, rates)
+
+## 領取掛機獎勵：加入玩家資源，並將 last_quit_time 往前撥回餘秒（保留不足一分鐘的累積）
+func claim_idle_rewards() -> void:
+	if not has_pending_idle_rewards():
+		return
+	var elapsed_seconds := get_idle_elapsed_seconds()
+	var remainder_seconds := elapsed_seconds % 60
+	var rewards := get_pending_idle_rewards()
+	player_data.gold           += rewards.get("gold",     0)
+	player_data.poop_count     += rewards.get("poop",     0)
+	player_data.cat_food       += rewards.get("cat_food", 0)
+	player_data.diamonds       += rewards.get("diamonds", 0)
+	player_data.whisker_shards += rewards.get("whiskers", 0)
+	# 將餘秒保留至下次計算
+	player_data.last_quit_time = Time.get_unix_time_from_system() - remainder_seconds
+	player_data.save()
+
+## 鏟一次屎：扣除一個屎堆，隨機產出並存檔
+## 回傳產出 dict（exp, memory_shards, whiskers），poop_count 為 0 時回傳空 dict
+func scoop_poop() -> Dictionary:
+	if player_data.poop_count <= 0:
+		return {}
+	player_data.poop_count -= 1
+	var result := IdleSystem.scoop_once(idle_config, _idle_rng, player_data.scooper_level)
+	player_data.scooper_exp    += result.get("exp",           0)
+	player_data.memory_shards  += result.get("memory_shards", 0)
+	player_data.whisker_shards += result.get("whiskers",      0)
+	player_data.save()
+	return result
+
+## 應用程式暫停或關閉時，即時存檔（不重置掛機計時）
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
+		player_data.save()

@@ -23,6 +23,17 @@ var last_free_pull_date: String = ""  # 上次免費誘捕日期（YYYY-MM-DD）
 # ── 關卡進度 ────────────────────────────────────────────
 var current_stage: int = 1        # 全局關卡進度，對應 GameState.current_global_stage
 
+# ── 掛機 ──────────────────────────────────────────────
+var last_quit_time: int = 0      # Unix 時間戳（秒），每次存檔更新
+var poop_count: int = 0          # 待鏟的屎堆數量
+
+# ── 回憶碎片 ──────────────────────────────────────────────
+var memory_shards: int = 0       # 回憶碎片（鏟屎獲得，用於解鎖回憶）
+
+# ── 鏟屎官 ────────────────────────────────────────────────
+var scooper_level: int = 0       # 鏟屎官等級（升等邏輯 Phase 2）
+var scooper_exp: int = 0         # 鏟屎官累計 EXP（升等邏輯 Phase 2）
+
 # ── 擁有貓咪 ──────────────────────────────────────────
 ## 玩家目前擁有的貓咪 ID 列表（初始含牛奶貓）
 var owned_cat_ids: Array = ["milk_cat"]
@@ -77,6 +88,11 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.trap_points       = data.get("trap_points",       0)
 	p.trap_cages        = data.get("trap_cages",        0)
 	p.whisker_shards    = data.get("whisker_shards",    0)
+	p.last_quit_time    = data.get("last_quit_time",    0)
+	p.poop_count        = data.get("poop_count",        0)
+	p.memory_shards     = data.get("memory_shards",     0)
+	p.scooper_level     = data.get("scooper_level",     0)
+	p.scooper_exp       = data.get("scooper_exp",       0)
 	p.total_pulls       = data.get("total_pulls",       0)
 	p.free_pull_count   = data.get("free_pull_count",   1)
 	p.last_free_pull_date = data.get("last_free_pull_date", "")
@@ -111,6 +127,11 @@ func _to_dict() -> Dictionary:
 		"trap_points":        trap_points,
 		"trap_cages":         trap_cages,
 		"whisker_shards":     whisker_shards,
+		"last_quit_time":     last_quit_time,
+		"poop_count":         poop_count,
+		"memory_shards":      memory_shards,
+		"scooper_level":      scooper_level,
+		"scooper_exp":        scooper_exp,
 		"total_pulls":        total_pulls,
 		"free_pull_count":    free_pull_count,
 		"last_free_pull_date": last_free_pull_date,
