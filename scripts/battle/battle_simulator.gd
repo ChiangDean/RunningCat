@@ -10,6 +10,9 @@ const SIM_STEP: float = 1.0 / 30.0   # 30fps 模擬精度
 const WALL_LEFT: float = 40.0
 const WALL_RIGHT: float = 680.0
 const CAT_HALF_W: float = 30.0
+const BASE_CRIT_DAMAGE_MULT: float = 1.5
+
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 # ── 模擬用輕量貓咪狀態 ───────────────────────────────
 class SimCat:
@@ -35,6 +38,8 @@ class SimCat:
 
 	# 被動 — 永久效果（僅需查詢，不倒數）
 	var passive_damage_reduction: float = 0.0   # 0.08 = 減少 8% 傷害
+	var crit_rate: float = 0.0
+	var crit_damage_bonus: float = 0.0
 
 	# 主動 Buff / Debuff（持續時間）
 	# 每個 entry: { "type": String, "stat": String, "value": float,
@@ -52,6 +57,9 @@ class SimCat:
 		base_atk   = cat_data.atk
 		base_def   = cat_data.defense
 		base_speed = cat_data.speed
+		passive_damage_reduction = clampf(float(cat_data.get_meta("damage_reduction_bonus", 0.0)), 0.0, 0.9)
+		crit_rate = clampf(float(cat_data.get_meta("crit_rate", 0.0)), 0.0, 1.0)
+		crit_damage_bonus = maxf(0.0, float(cat_data.get_meta("crit_damage_bonus", 0.0)))
 
 	# ── 有效屬性（含 active buff 疊加）───────────────
 	func get_effective_def() -> int:
@@ -130,6 +138,7 @@ class SimCat:
 
 ## 傳入雙方 CatData 陣列，回傳 Array[BattleEvent]（依時間排序）
 func simulate(player_cats: Array, enemy_cats: Array) -> Array:
+	_rng.randomize()
 	var events: Array = []
 	var id_counter := 0
 
@@ -357,12 +366,10 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 	var dmg_to_e := 0
 	var dmg_to_p := 0
 	if not p.is_staggered:
-		dmg_to_e = int(CatStats.calc_damage(p.get_effective_atk(), e.get_effective_def()))
-		dmg_to_e = int(dmg_to_e * (1.0 - e.passive_damage_reduction))
+		dmg_to_e = _calc_attack_damage(p, e, p.get_effective_atk())
 		e.current_hp = maxi(0, e.current_hp - dmg_to_e)
 	if not e.is_staggered:
-		dmg_to_p = int(CatStats.calc_damage(e.get_effective_atk(), p.get_effective_def()))
-		dmg_to_p = int(dmg_to_p * (1.0 - p.passive_damage_reduction))
+		dmg_to_p = _calc_attack_damage(e, p, e.get_effective_atk())
 		p.current_hp = maxi(0, p.current_hp - dmg_to_p)
 
 	# ── Reflect：被攻擊方的 reflect 傷害反彈給攻擊方 ──
@@ -421,6 +428,15 @@ func _check_death(sc: SimCat, t: float, events: Array) -> void:
 		events.append(BattleEvent.cat_die(t, sc.instance_id, sc.team, sc.pos_x))
 
 
+func _calc_attack_damage(attacker: SimCat, defender: SimCat, raw_atk: float) -> int:
+	var damage := int(CatStats.calc_damage(raw_atk, defender.get_effective_def()))
+	if damage <= 0:
+		return 0
+	if _rng.randf() < attacker.crit_rate:
+		damage = int(float(damage) * (BASE_CRIT_DAMAGE_MULT + attacker.crit_damage_bonus))
+	return int(float(damage) * (1.0 - defender.passive_damage_reduction))
+
+
 # ── 主動技能計時與觸發 ───────────────────────────────
 
 func _tick_skills(sc: SimCat, delta: float, t: float, events: Array,
@@ -459,9 +475,7 @@ func _execute_skill(caster: SimCat, skill_d: Dictionary, t: float, events: Array
 				if target == null or not target.is_alive:
 					continue
 				for _h in range(hits):
-					var dmg := int(CatStats.calc_damage(
-							caster.get_effective_atk() * value, target.get_effective_def()))
-					dmg = int(dmg * (1.0 - target.passive_damage_reduction))
+					var dmg := _calc_attack_damage(caster, target, caster.get_effective_atk() * value)
 					target.current_hp = maxi(0, target.current_hp - dmg)
 					events.append(BattleEvent.hp_update(t, target.instance_id,
 							target.current_hp, target.base_hp))

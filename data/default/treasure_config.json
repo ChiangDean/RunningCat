@@ -1,0 +1,71 @@
+{
+	"schema_version": 1,
+	"items": [
+		{
+			"id": "gilded_litter_scoop",
+			"name": "鎏金貓砂鏟",
+			"description": "打磨過的鏟面能把掛機時累積的屎堆也算得更精準。",
+			"source_text": "取得方式：商城禮包 / 超值禮包",
+			"placeholder_color": "#C9A44C",
+			"effects": [
+				{ "target": "all", "stat": "idle_poop_percent", "value": 0.05 },
+				{ "target": "tank", "stat": "max_hp_percent", "value": 0.04 }
+			]
+		},
+		{
+			"id": "moon_chime",
+			"name": "月鈴",
+			"description": "晃動時會發出幾乎聽不見的細響，卻總能讓貓咪抓準致命一擊。",
+			"source_text": "取得方式：商城禮包 / 超值禮包",
+			"placeholder_color": "#7E8FB7",
+			"effects": [
+				{ "target": "all", "stat": "crit_rate", "value": 0.04 },
+				{ "target": "all", "stat": "crit_damage", "value": 0.15 }
+			]
+		},
+		{
+			"id": "bastion_whisker_knot",
+			"name": "堡壘鬍鬚結",
+			"description": "粗厚的繩結綁在胸前，能讓前排貓咪硬撐到隊友接手。",
+			"source_text": "取得方式：商城禮包 / 超值禮包",
+			"placeholder_color": "#5E8C7B",
+			"effects": [
+				{ "target": "tank", "stat": "def_percent", "value": 0.08 },
+				{ "target": "tank", "stat": "damage_reduction", "value": 0.04 }
+			]
+		},
+		{
+			"id": "spring_paw_clockwork",
+			"name": "彈簧肉球發條",
+			"description": "只要上緊一次，速度型貓咪整場都像踩著節拍衝刺。",
+			"source_text": "取得方式：商城禮包 / 超值禮包",
+			"placeholder_color": "#D37A5E",
+			"effects": [
+				{ "target": "speed", "stat": "atk_percent", "value": 0.05 },
+				{ "target": "speed", "stat": "cooldown_reduction", "value": 0.05 }
+			]
+		},
+		{
+			"id": "shadow_fang_medal",
+			"name": "影牙勳章",
+			"description": "邊緣磨得很薄，刺客型貓咪配戴後總能先一步出手。",
+			"source_text": "取得方式：商城禮包 / 超值禮包",
+			"placeholder_color": "#7C5C92",
+			"effects": [
+				{ "target": "assassin", "stat": "atk_percent", "value": 0.06 },
+				{ "target": "assassin", "stat": "crit_rate", "value": 0.06 }
+			]
+		},
+		{
+			"id": "velvet_guard_pin",
+			"name": "絨盾別針",
+			"description": "看起來柔軟，實際上能把守備型貓咪的站場時間再往後拖很久。",
+			"source_text": "取得方式：商城禮包 / 超值禮包",
+			"placeholder_color": "#56798E",
+			"effects": [
+				{ "target": "defensive", "stat": "max_hp_percent", "value": 0.10 },
+				{ "target": "defensive", "stat": "damage_reduction", "value": 0.03 }
+			]
+		}
+	]
+}

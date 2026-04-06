@@ -296,6 +296,7 @@ func _on_upgrade_one_pressed() -> void:
 	GameState.player_data.cat_food -= cost
 	player_cat.cat_food_level += 1
 	GameState.save_all()
+	GameState.refresh_achievements()
 	_refresh_all_labels()
 
 
@@ -326,6 +327,7 @@ func _on_upgrade_max_pressed() -> void:
 		GameState.player_data.cat_food -= total_cost
 		player_cat.cat_food_level = target_level
 		GameState.save_all()
+		GameState.refresh_achievements()
 		_refresh_all_labels()
 	_show_confirm(confirm_msg, _on_confirm_upgrade)
 
@@ -383,6 +385,7 @@ func _on_rank_upgrade_pressed() -> void:
 	player_cat.cat_shards -= cost
 	player_cat.rank += 1
 	GameState.save_all()
+	GameState.refresh_achievements()
 	_refresh_all_labels()
 
 

@@ -29,10 +29,26 @@ var poop_count: int = 0          # 待鏟的屎堆數量
 
 # ── 回憶碎片 ──────────────────────────────────────────────
 var memory_shards: int = 0       # 回憶碎片（鏟屎獲得，用於解鎖回憶）
+var unlocked_memory_ids: Array = []  # 已解鎖的回憶 ID
+
+# ── 寶藏收藏 ──────────────────────────────────────────────
+## key = treasure_id
+## 結構：{ "quantity": int, "latest_obtained_at": String }
+var treasures: Dictionary = {}
+
+# ── 商城禮包 ──────────────────────────────────────────────
+## key = bundle_id, value = 已購買次數
+var bundle_purchase_counts: Dictionary = {}
+
+# ── 成就 ────────────────────────────────────────────────
+## key = achievement_id
+## 結構：{ "completed": bool, "claimed": bool, "completed_at": String, "claimed_at": String }
+var achievement_states: Dictionary = {}
 
 # ── 鏟屎官 ────────────────────────────────────────────────
 var scooper_level: int = 0       # 鏟屎官等級（升等邏輯 Phase 2）
 var scooper_exp: int = 0         # 鏟屎官累計 EXP（升等邏輯 Phase 2）
+var special_ability_ids: Array = []# 鏟屎官特殊技能
 
 # ── 裝備 ──────────────────────────────────────────────────
 ## key = equipment_id，entry 存在代表已購買
@@ -96,8 +112,13 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.last_quit_time    = data.get("last_quit_time",    0)
 	p.poop_count        = data.get("poop_count",        0)
 	p.memory_shards     = data.get("memory_shards",     0)
+	p.unlocked_memory_ids = data.get("unlocked_memory_ids", [])
+	p.treasures         = data.get("treasures",         {})
+	p.bundle_purchase_counts = data.get("bundle_purchase_counts", {})
+	p.achievement_states = data.get("achievement_states", {})
 	p.scooper_level     = data.get("scooper_level",     0)
 	p.scooper_exp       = data.get("scooper_exp",       0)
+	p.special_ability_ids = data.get("special_ability_ids", [])
 	p.equipments        = data.get("equipments",        {})
 	p.total_pulls       = data.get("total_pulls",       0)
 	p.free_pull_count   = data.get("free_pull_count",   1)
@@ -136,8 +157,13 @@ func _to_dict() -> Dictionary:
 		"last_quit_time":     last_quit_time,
 		"poop_count":         poop_count,
 		"memory_shards":      memory_shards,
+		"unlocked_memory_ids": unlocked_memory_ids,
+		"treasures":          treasures,
+		"bundle_purchase_counts": bundle_purchase_counts,
+		"achievement_states": achievement_states,
 		"scooper_level":      scooper_level,
 		"scooper_exp":        scooper_exp,
+		"special_ability_ids": special_ability_ids,
 		"equipments":         equipments,
 		"total_pulls":        total_pulls,
 		"free_pull_count":    free_pull_count,

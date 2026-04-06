@@ -30,6 +30,7 @@ var drag_threshold: float = DEFAULT_DRAG_THRESHOLD
 var _last_pos: float = 0.0
 var _drag_accum: float = 0.0
 var _last_ev_time_us: int = 0
+var _last_velocity_sample: float = 0.0
 var fade_timer: Timer
 var is_scrolling: bool = false
 var _last_haptic_us: int = 0
@@ -61,7 +62,6 @@ static func attach(
 
 func _init_attach() -> void:
 	set_process(true)
-	target.gui_input.connect(_on_gui_input)
 	target.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	# ❗重點：預設不顯示，但在互動時顯示（auto）
@@ -97,34 +97,55 @@ func _get_max_scroll() -> float:
 	else:
 		return max(target.get_h_scroll_bar().max_value - target.get_h_scroll_bar().page, 0.0)
 
+
+func _event_inside_target(event: InputEvent) -> bool:
+	if target == null:
+		return false
+	if not (event is InputEventMouseButton \
+		or event is InputEventMouseMotion \
+		or event is InputEventScreenTouch \
+		or event is InputEventScreenDrag):
+		return false
+	return target.get_global_rect().has_point(event.position)
+
 # ── Input ──────────────────────────────────────────────
 
-func _on_gui_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if target == null:
 		return
 
 	# press
 	if (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) \
 	or (event is InputEventScreenTouch and event.pressed):
+		if not _event_inside_target(event):
+			return
 
 		dragging = true
 		velocity = 0.0
+		_last_velocity_sample = 0.0
 		moved = false
 		_drag_accum = 0.0
 		_last_pos = _get_pos(event)
 		_last_ev_time_us = Time.get_ticks_usec()
-		get_viewport().set_input_as_handled()
+		_show_scrollbar()
 		return
 
 	# release
 	if (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed) \
 	or (event is InputEventScreenTouch and not event.pressed):
 
+		if not dragging:
+			return
 		dragging = false
+		if moved:
+			velocity = clamp(_last_velocity_sample, -MAX_VELOCITY, MAX_VELOCITY)
+			_show_scrollbar()
 		return
 
 	# motion
 	if not ((event is InputEventMouseMotion and dragging) or (event is InputEventScreenDrag and dragging)):
+		return
+	if not _event_inside_target(event):
 		return
 
 	var now_us = Time.get_ticks_usec()
@@ -139,6 +160,9 @@ func _on_gui_input(event: InputEvent) -> void:
 	_drag_accum += abs(delta)
 	if _drag_accum > drag_threshold:
 		moved = true
+	else:
+		# 尚未超過拖曳門檻時，不攔截按鈕點擊，也不移動 scroll。
+		return
 
 	# 使用 desired-scroll 計算 overscroll，以避免方向或 max_scroll 推論錯誤
 	var cur_scroll := _get_scroll()
@@ -160,6 +184,7 @@ func _on_gui_input(event: InputEvent) -> void:
 	# ✨ velocity 計算（升級版）
 	if dt > 0.0005:
 		var v_sample = -delta / dt
+		_last_velocity_sample = v_sample
 		velocity = lerp(velocity, v_sample, 0.6)
 		velocity = clamp(velocity, -MAX_VELOCITY, MAX_VELOCITY)
 
@@ -182,6 +207,10 @@ func _process(delta: float) -> void:
 
 	if abs(velocity) <= min_velocity:
 		velocity = 0.0
+		if is_scrolling and not fade_timer.is_stopped():
+			return
+		if is_scrolling:
+			_fade_scrollbar()
 		return
 
 	var scroll := _get_scroll()
@@ -208,6 +237,7 @@ func _process(delta: float) -> void:
 		_set_scroll(desired)
 		var decay := pow(0.95, delta * 60.0)
 		velocity *= decay
+		_show_scrollbar()
 
 func consume_moved() -> bool:
 	var m := moved
@@ -224,6 +254,8 @@ func _force_hide_scrollbars():
 		hsb.modulate.a = 0.0
 
 func _show_scrollbar():
+	if fade_timer == null:
+		return
 	var vsb = target.get_v_scroll_bar()
 	var hsb = target.get_h_scroll_bar()
 
@@ -242,6 +274,8 @@ func _show_scrollbar():
 	fade_timer.start()
 
 func _fade_scrollbar():
+	if target == null:
+		return
 	var vsb = target.get_v_scroll_bar()
 	var hsb = target.get_h_scroll_bar()
 

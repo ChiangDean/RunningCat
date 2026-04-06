@@ -1,0 +1,74 @@
+{
+	"schema_version": 1,
+	"categories": [
+		{ "id": "value_pack", "name": "超值禮包" }
+	],
+	"items": [
+		{
+			"id": "value_pack_gilded_litter_scoop",
+			"name": "開工清潔組",
+			"category": "value_pack",
+			"description": "適合先把掛機收益墊高的入門禮包。",
+			"diamond_cost": 280,
+			"purchase_limit": 1,
+			"rewards": [
+				{ "type": "treasure", "id": "gilded_litter_scoop", "quantity": 1 }
+			]
+		},
+		{
+			"id": "value_pack_moon_chime",
+			"name": "夜行暴擊組",
+			"category": "value_pack",
+			"description": "提高全隊暴擊率與暴擊傷害的泛用寶藏。",
+			"diamond_cost": 420,
+			"purchase_limit": 2,
+			"rewards": [
+				{ "type": "treasure", "id": "moon_chime", "quantity": 1 }
+			]
+		},
+		{
+			"id": "value_pack_bastion_whisker_knot",
+			"name": "前排硬扛組",
+			"category": "value_pack",
+			"description": "為坦克型貓咪補強防禦與減傷。",
+			"diamond_cost": 360,
+			"purchase_limit": 3,
+			"rewards": [
+				{ "type": "treasure", "id": "bastion_whisker_knot", "quantity": 1 }
+			]
+		},
+		{
+			"id": "value_pack_spring_paw_clockwork",
+			"name": "衝刺連發組",
+			"category": "value_pack",
+			"description": "讓速度型貓咪打得更快，也更早轉回技能。",
+			"diamond_cost": 390,
+			"purchase_limit": 3,
+			"rewards": [
+				{ "type": "treasure", "id": "spring_paw_clockwork", "quantity": 1 }
+			]
+		},
+		{
+			"id": "value_pack_shadow_fang_medal",
+			"name": "暗襲獵手組",
+			"category": "value_pack",
+			"description": "提高刺客型貓咪的爆發與收頭能力。",
+			"diamond_cost": 460,
+			"purchase_limit": 3,
+			"rewards": [
+				{ "type": "treasure", "id": "shadow_fang_medal", "quantity": 1 }
+			]
+		},
+		{
+			"id": "value_pack_velvet_guard_pin",
+			"name": "守備韌性組",
+			"category": "value_pack",
+			"description": "守備型貓咪用的耐久禮包，適合拖長戰線。",
+			"diamond_cost": 340,
+			"purchase_limit": 2,
+			"rewards": [
+				{ "type": "treasure", "id": "velvet_guard_pin", "quantity": 1 }
+			]
+		}
+	]
+}
