@@ -426,7 +426,7 @@ func _on_challenge_boss_pressed() -> void:
 # ── 導覽 ─────────────────────────────────────
 
 func _on_nav_scooper() -> void:
-	DialogManager.show_info("鏟屎官", "鏟屎官系統開發中，敬請期待！")
+	get_tree().change_scene_to_file("res://scenes/ScooperScene.tscn")
 
 
 ## 顯示貓砂盆互動視窗：掛機獎勵領取（完整分鐘）+ 屎堆鏟除

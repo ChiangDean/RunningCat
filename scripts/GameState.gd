@@ -302,8 +302,19 @@ func scoop_poop() -> Dictionary:
 	player_data.scooper_exp    += result.get("exp",           0)
 	player_data.memory_shards  += result.get("memory_shards", 0)
 	player_data.whisker_shards += result.get("whiskers",      0)
+	_check_scooper_level_up()
 	player_data.save()
 	return result
+
+
+## 檢查並處理鏟屎官升等（可能連續升多級）
+func _check_scooper_level_up() -> void:
+	var base: int = int(idle_config.get("scooper_exp_per_level", 10))
+	var threshold := (player_data.scooper_level + 1) * base
+	while player_data.scooper_exp >= threshold:
+		player_data.scooper_exp -= threshold
+		player_data.scooper_level += 1
+		threshold = (player_data.scooper_level + 1) * base
 
 ## 應用程式暫停或關閉時，即時存檔（不重置掛機計時）
 func _notification(what: int) -> void:
