@@ -24,6 +24,12 @@ var _special_plus_btns: Dictionary = {}   # stat_key -> Button
 var _special_minus_btns: Dictionary = {}  # stat_key -> Button
 var _food_upgrade_btn: Button
 var _food_max_btn: Button
+var _cat_hscroll: ScrollContainer
+var _cat_scroller: InertialScroller
+var _cat_drag_threshold: float = 8.0
+
+# Ensure autoload GameState is available to the compiler
+@onready var GameState = get_node("/root/GameState")
 
 
 func _ready() -> void:
@@ -76,25 +82,7 @@ func _build_ui() -> void:
 	_refresh_resource_label()
 
 	root_vbox.add_child(_make_separator())
-
-	# ── 貓咪選擇列 ───────────────────────────
-	var cat_select_title := Label.new()
-	cat_select_title.text = "選擇貓咪"
-	cat_select_title.add_theme_font_size_override("font_size", 24)
-	root_vbox.add_child(cat_select_title)
-
-	var cat_row := HBoxContainer.new()
-	cat_row.add_theme_constant_override("separation", 12)
-	root_vbox.add_child(cat_row)
-
-	for cat_id: String in GameState.get_owned_cats():
-		var btn := Button.new()
-		btn.text = _get_display_name(cat_id)
-		btn.custom_minimum_size = Vector2(140.0, 56.0)
-		btn.pressed.connect(func(): _select_cat(cat_id))
-		cat_row.add_child(btn)
-
-	root_vbox.add_child(_make_separator())
+	# 貓咪選單會移動到畫面底部，改為下方橫向可滑動清單
 
 	# ── 詳細面板（初始為空，選貓後填充）─────────
 	_detail_panel = VBoxContainer.new()
@@ -102,10 +90,43 @@ func _build_ui() -> void:
 	_detail_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(_detail_panel)
 
+	# 自動選中會在底部貓咪清單建立後處理
+
+	# ── 底部 貓咪選擇列（橫向可滑動） ─────────────────
+	var cat_select_title := Label.new()
+	cat_select_title.text = "選擇貓咪"
+	cat_select_title.add_theme_font_size_override("font_size", 24)
+	root_vbox.add_child(_make_separator())
+	root_vbox.add_child(cat_select_title)
+
+	_cat_hscroll = ScrollContainer.new()
+	_cat_hscroll.custom_minimum_size = Vector2(0, 88)
+	_cat_hscroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var cat_row := HBoxContainer.new()
+	cat_row.add_theme_constant_override("separation", 12)
+	_cat_hscroll.add_child(cat_row)
+	root_vbox.add_child(_cat_hscroll)
+	# attach a shared inertial scroller for horizontal dragging (show scrollbar only on interaction)
+	_cat_scroller = InertialScroller.attach(_cat_hscroll, "horizontal")
+
+	for cat_id: String in GameState.get_owned_cats():
+		var btn := Button.new()
+		btn.text = _get_display_name(cat_id)
+		btn.custom_minimum_size = Vector2(140.0, 64.0)
+		# Let parent receive input so dragging while pressing a button works
+		btn.mouse_filter = Control.MOUSE_FILTER_PASS
+		btn.pressed.connect(Callable(self, "_on_cat_button_pressed").bind(cat_id))
+		cat_row.add_child(btn)
+
 	# 若只有一隻貓，自動選中
-	var _owned := GameState.get_owned_cats()
+	var _owned: Array = GameState.get_owned_cats()
 	if _owned.size() > 0:
 		_select_cat(_owned[0])
+
+	# 隱藏水平捲動條（視覺上保持簡潔）
+	for child in _cat_hscroll.get_children():
+		if child is HScrollBar:
+			child.hide()
 
 
 # ── 貓咪選擇 ──────────────────────────────────
@@ -113,6 +134,13 @@ func _build_ui() -> void:
 func _select_cat(cat_id: String) -> void:
 	_selected_cat_id = cat_id
 	_rebuild_detail_panel()
+
+
+func _on_cat_button_pressed(cat_id: String) -> void:
+	# If user dragged more than threshold while pressing, treat as scroll not click
+	if _cat_scroller != null and _cat_scroller.consume_moved():
+		return
+	_select_cat(cat_id)
 
 
 func _rebuild_detail_panel() -> void:
@@ -131,7 +159,7 @@ func _rebuild_detail_panel() -> void:
 	if _selected_cat_id == "":
 		return
 
-	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
 	var cat_data   := CatData.from_json_file(
 		"res://data/default/cats/" + _selected_cat_id + ".json")
 	if cat_data == null:
@@ -155,7 +183,7 @@ func _rebuild_detail_panel() -> void:
 	var rank_info_btn := Button.new()
 	rank_info_btn.text = "?"
 	rank_info_btn.custom_minimum_size = Vector2(36.0, 36.0)
-	rank_info_btn.pressed.connect(func(): _show_rank_bonus_info(cat_data, player_cat.rank))
+	rank_info_btn.pressed.connect(Callable(self, "_show_rank_bonus_info").bind(cat_data, player_cat.rank))
 	name_row.add_child(rank_info_btn)
 
 	var name_spacer := Control.new()
@@ -192,7 +220,7 @@ func _rebuild_detail_panel() -> void:
 		var minus_btn := Button.new()
 		minus_btn.text = "−"
 		minus_btn.custom_minimum_size = Vector2(44.0, 44.0)
-		minus_btn.pressed.connect(func(): _on_special_remove_pressed(stat_key))
+		minus_btn.pressed.connect(Callable(self, "_on_special_remove_pressed").bind(stat_key))
 		_special_minus_btns[stat_key] = minus_btn
 		row.add_child(minus_btn)
 
@@ -205,7 +233,7 @@ func _rebuild_detail_panel() -> void:
 
 		var plus_btn := Button.new()
 		plus_btn.custom_minimum_size = Vector2(44.0, 44.0)
-		plus_btn.pressed.connect(func(): _on_special_add_pressed(stat_key))
+		plus_btn.pressed.connect(Callable(self, "_on_special_add_pressed").bind(stat_key))
 		_special_plus_btns[stat_key] = plus_btn
 		row.add_child(plus_btn)
 
@@ -259,7 +287,7 @@ func _rebuild_detail_panel() -> void:
 # ── 升級邏輯 ──────────────────────────────────
 
 func _on_upgrade_one_pressed() -> void:
-	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
 	if player_cat.cat_food_level >= PlayerCatData.MAX_CAT_FOOD_LEVEL:
 		return
 	var cost := PlayerCatData.cat_food_cost_for_level(player_cat.cat_food_level)
@@ -272,13 +300,13 @@ func _on_upgrade_one_pressed() -> void:
 
 
 func _on_upgrade_max_pressed() -> void:
-	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
 	var levels_to_go := PlayerCatData.MAX_CAT_FOOD_LEVEL - player_cat.cat_food_level
 	if levels_to_go <= 0:
 		return
 
 	# 計算實際可以升幾級
-	var available := GameState.player_data.cat_food
+	var available: int = GameState.player_data.cat_food
 	var upgradable := 0
 	var total_cost := 0
 	for i in range(levels_to_go):
@@ -294,16 +322,16 @@ func _on_upgrade_max_pressed() -> void:
 
 	var target_level := player_cat.cat_food_level + upgradable
 	var confirm_msg := "升至 Lv.%d，花費 %d 普通乾糧，確定嗎？" % [target_level, total_cost]
-	_show_confirm(confirm_msg, func():
+	var _on_confirm_upgrade = func():
 		GameState.player_data.cat_food -= total_cost
 		player_cat.cat_food_level = target_level
 		GameState.save_all()
 		_refresh_all_labels()
-	)
+	_show_confirm(confirm_msg, _on_confirm_upgrade)
 
 
 func _on_special_add_pressed(stat_key: String) -> void:
-	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
 	var total_pts := player_cat.get_total_special_points()
 	var cost := PlayerCatData.special_food_next_cost(total_pts)
 	if GameState.player_data.special_cat_food < cost:
@@ -315,7 +343,7 @@ func _on_special_add_pressed(stat_key: String) -> void:
 
 
 func _on_reset_pressed() -> void:
-	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
 	var food_refund := PlayerCatData.cat_food_total_cost(1, player_cat.cat_food_level)
 	var total_pts   := player_cat.get_total_special_points()
 	var special_refund := PlayerCatData.special_food_total_spent(total_pts)
@@ -324,18 +352,18 @@ func _on_reset_pressed() -> void:
 	var diamond_cost := 0
 	var msg := "退回 %d 普通乾糧、%d 特殊乾糧\n費用：%d 鑽石\n確定重置嗎？" % [
 		food_refund, special_refund, diamond_cost]
-	_show_confirm(msg, func():
+	var _on_confirm_reset = func():
 		GameState.player_data.cat_food         += food_refund
 		GameState.player_data.special_cat_food += special_refund
 		player_cat.cat_food_level   = 1
 		player_cat.special_food_points = {"hp": 0, "atk": 0, "def": 0}
 		GameState.save_all()
 		_refresh_all_labels()
-	)
+	_show_confirm(msg, _on_confirm_reset)
 
 
 func _on_special_remove_pressed(stat_key: String) -> void:
-	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
 	if player_cat.special_food_points.get(stat_key, 0) <= 0:
 		return
 	var total_pts := player_cat.get_total_special_points()
@@ -347,8 +375,8 @@ func _on_special_remove_pressed(stat_key: String) -> void:
 
 
 func _on_rank_upgrade_pressed() -> void:
-	var player_cat := GameState.get_player_cat(_selected_cat_id)
-	var target_rank := player_cat.rank + 1
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
+	var target_rank: int = player_cat.rank + 1
 	var cost := PlayerCatData.rank_upgrade_cost(target_rank)
 	if player_cat.cat_shards < cost:
 		return
@@ -364,13 +392,13 @@ func _refresh_rank_labels(player_cat: PlayerCatData) -> void:
 	var rank := player_cat.rank
 	_rank_stars_label.text = "★×%d" % rank if rank > 0 else ""
 	var cost := PlayerCatData.rank_upgrade_cost(rank + 1)
-	var held := player_cat.cat_shards
+	var held: int = player_cat.cat_shards
 	_rank_upgrade_btn.text = "升階(%d/%d)" % [held, cost]
 	_rank_upgrade_btn.disabled = held < cost
 
 
 func _refresh_special_buttons(player_cat: PlayerCatData) -> void:
-	var held      := GameState.player_data.special_cat_food
+	var held: int = GameState.player_data.special_cat_food
 	var total_pts := player_cat.get_total_special_points()
 	var next_cost := PlayerCatData.special_food_next_cost(total_pts)
 	for stat_key: String in ["hp", "atk", "def"]:
@@ -404,7 +432,7 @@ func _refresh_all_labels() -> void:
 	_refresh_resource_label()
 	if _selected_cat_id == "":
 		return
-	var player_cat := GameState.get_player_cat(_selected_cat_id)
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
 	var cat_data   := CatData.from_json_file(
 		"res://data/default/cats/" + _selected_cat_id + ".json")
 	if cat_data == null:
@@ -453,7 +481,7 @@ func _refresh_stat_labels(cat_data: CatData, player_cat: PlayerCatData) -> void:
 
 func _refresh_food_labels(player_cat: PlayerCatData) -> void:
 	var lv   := player_cat.cat_food_level
-	var held := GameState.player_data.cat_food
+	var held: int = GameState.player_data.cat_food
 	if lv >= PlayerCatData.MAX_CAT_FOOD_LEVEL:
 		if _food_cost_label != null:
 			_food_cost_label.text  = ""
@@ -568,9 +596,7 @@ func _build_skill_section(cat_data: CatData, player_cat: PlayerCatData) -> void:
 		var info_btn := Button.new()
 		info_btn.text = "?"
 		info_btn.custom_minimum_size = Vector2(36.0, 36.0)
-		info_btn.pressed.connect(func():
-			_show_skill_bonus_info(skill_d, rank, false)
-		)
+		info_btn.pressed.connect(Callable(self, "_show_skill_bonus_info").bind(skill_d, rank, false))
 		row.add_child(info_btn)
 
 	# 主動技能
@@ -596,9 +622,7 @@ func _build_skill_section(cat_data: CatData, player_cat: PlayerCatData) -> void:
 		var info_btn := Button.new()
 		info_btn.text = "?"
 		info_btn.custom_minimum_size = Vector2(36.0, 36.0)
-		info_btn.pressed.connect(func():
-			_show_skill_bonus_info(skill_d, rank, true)
-		)
+		info_btn.pressed.connect(Callable(self, "_show_skill_bonus_info").bind(skill_d, rank, true))
 		row.add_child(info_btn)
 
 
@@ -639,7 +663,6 @@ func _stat_display_label(stat: String, eff_type: String) -> String:
 			if eff_type == "damage": return "傷害"
 			if eff_type == "reflect": return "反彈傷害"
 			return "效果"
-
 
 # ── 導航 ──────────────────────────────────────
 
