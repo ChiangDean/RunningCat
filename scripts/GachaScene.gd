@@ -13,6 +13,13 @@ var _pull_buttons: Dictionary = {}
 
 const PACK_CAGE_COSTS := {1: 1, 11: 10, 35: 30}
 
+var _results_scroll: ScrollContainer
+var _results_scroller: InertialScroller
+var _results_drag_threshold: float = 8.0
+
+# Ensure autoload GameState is available to the compiler
+@onready var GameState = get_node("/root/GameState")
+
 
 func _ready() -> void:
 	_build_ui()
@@ -198,6 +205,9 @@ func _show_results(results: Array) -> void:
 	# 使用彈窗顯示抽取結果，內容可滑動
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(500.0, 520.0)
+	_results_scroll = scroll
+	# attach shared inertial scroller for vertical results (show scrollbar only on interaction)
+	_results_scroller = InertialScroller.attach(scroll, "vertical")
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
@@ -292,3 +302,6 @@ func _make_separator() -> HSeparator:
 
 func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ShopScene.tscn")
+
+
+# Results scrolling and inertia are handled by the shared InertialScroller
