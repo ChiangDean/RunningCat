@@ -22,14 +22,14 @@ var cat_food_level: int = 1
 var special_food_points: Dictionary = {"hp": 0, "atk": 0, "def": 0}
 
 # ── 品階 ─────────────────────────────────────────────
-## 當前品階（0 = 未升階），升至品階 N 需 N×20 片鬍鬚碎片
+## 當前品階（0 = 未升階），升至品階 N 需 N×20 片鬍鬚
 ## 每階：HP/ATK/DEF 各 +1%（依 CatData.rank_growth 設定）
 ## 每 5 階：技能效果 +10%
 var rank: int = 0
 
 # ── 其他強化（預留，不影響現有邏輯） ─────────────────────
 var cat_can_fed: int = 0      # 罐頭投入量 → Weight（未來實作）
-var cat_shards: int = 0       # 持有鬍鬚碎片，用於升品階
+var cat_shards: int = 0       # 持有鬍鬚，用於升品階
 
 # ── 配置設定 ──────────────────────────────────────────
 ## 格式：[{ "skill_id": "shield_bash", "initial_delay": 0 }]
@@ -64,7 +64,7 @@ static func special_food_total_spent(total_points_allocated: int) -> int:
 
 # ── 查詢輔助 ──────────────────────────────────────────
 
-## 升至品階 target_rank 所需鬍鬚碎片（單步花費）
+## 升至品階 target_rank 所需鬍鬚（單步花費）
 ## cost = target_rank × 20
 static func rank_upgrade_cost(target_rank: int) -> int:
 	return target_rank * 20

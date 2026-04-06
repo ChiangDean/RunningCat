@@ -36,6 +36,7 @@ var _level_label: Label
 var _boss_btn: Button
 var _result_display: Label
 var _skill_bar: Control      # 技能列容器
+var _sandbox_btn: Button     # 檢查貓砂盆按鈕
 
 var _last_result: String = ""
 
@@ -43,6 +44,12 @@ var _last_result: String = ""
 func _ready() -> void:
 	_build_scene()
 	_start_battle()
+	# 每秒更新貓砂盆按鈕顯示
+	var sandbox_timer := Timer.new()
+	sandbox_timer.wait_time = 1.0
+	sandbox_timer.autostart = true
+	sandbox_timer.timeout.connect(_refresh_sandbox_btn)
+	add_child(sandbox_timer)
 
 
 # ── 建立場景 ──────────────────────────────────
@@ -106,6 +113,7 @@ func _build_ui() -> void:
 	_speed_1x.pressed.connect(func(): _set_speed(1.0, _speed_1x))
 	_speed_2x.pressed.connect(func(): _set_speed(2.0, _speed_2x))
 	_speed_3x.pressed.connect(func(): _set_speed(3.0, _speed_3x))
+	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 
 	# 計時器
@@ -117,6 +125,7 @@ func _build_ui() -> void:
 	_skip_btn = _make_button("跳過", Vector2(SW - 100.0, 20.0), Vector2(80.0, 44.0))
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
+	_skip_btn.visible = GameState.can_skip_battle()
 
 	# 關卡標籤（與勝敗文字同高）
 	_level_label = _make_label("", Vector2(0.0, STAGE_BTN_Y - 40.0), Vector2(SW, 36.0), 20)
@@ -142,8 +151,9 @@ func _build_ui() -> void:
 	_ui_layer.add_child(nav_bg)
 
 	# 導覽按鈕
-	var nav_items: Array = [["配置", _on_nav_config], ["強化", _on_nav_enhance],
-							["活動", _on_nav_activity], ["商店", _on_nav_shop]]
+	var nav_items: Array = [["鏟屎官", _on_nav_scooper], ["配置", _on_nav_config],
+							["強化", _on_nav_enhance], ["活動", _on_nav_activity],
+							["商店", _on_nav_shop]]
 	var btn_w := SW / nav_items.size()
 	for i in range(nav_items.size()):
 		var nav_btn := _make_button(nav_items[i][0],
@@ -151,6 +161,12 @@ func _build_ui() -> void:
 				Vector2(btn_w - 20.0, NAV_H - 20.0))
 		nav_btn.pressed.connect(nav_items[i][1])
 		_ui_layer.add_child(nav_btn)
+
+	# 檢查貓砂盆按鈕（頂部置中，計時器下方）
+	_sandbox_btn = _make_button("🪣 清理貓砂盆",
+			Vector2(SW / 2.0 - 90.0, 72.0), Vector2(180.0, 38.0))
+	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
+	_ui_layer.add_child(_sandbox_btn)
 
 	# 勝利／敗北 短暫顯示文字
 	_result_display = Label.new()
@@ -289,12 +305,22 @@ func _make_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
 
 
 func _set_speed(mult: float, active_btn: Button) -> void:
+	if mult > GameState.get_special_ability_speed_cap():
+		return
 	_battle_manager.set_speed(mult)
 	_highlight_speed_btn(active_btn)
 
 
+func _apply_speed_unlocks() -> void:
+	var speed_cap: float = GameState.get_special_ability_speed_cap()
+	_speed_2x.visible = speed_cap >= 2.0
+	_speed_3x.visible = speed_cap >= 3.0
+
+
 func _highlight_speed_btn(active: Button) -> void:
 	for btn: Button in [_speed_1x, _speed_2x, _speed_3x]:
+		if btn == null or not btn.visible:
+			continue
 		btn.modulate = Color(0.7, 0.7, 0.7, 1.0)
 	active.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
@@ -302,6 +328,21 @@ func _highlight_speed_btn(active: Button) -> void:
 func _refresh_ui() -> void:
 	_level_label.text = GameState.get_level_display()
 	_boss_btn.visible = GameState.boss_available and not GameState.is_current_boss()
+	_refresh_sandbox_btn()
+
+
+func _refresh_sandbox_btn() -> void:
+	var elapsed := GameState.get_idle_elapsed_seconds()
+	var claimable_minutes := elapsed / 60
+	if claimable_minutes < 1:
+		_sandbox_btn.disabled = true
+		_sandbox_btn.text = "🪣 乾淨貓砂盆"
+	else:
+		_sandbox_btn.disabled = false
+		var h := elapsed / 3600
+		var m := (elapsed % 3600) / 60
+		var s := elapsed % 60
+		_sandbox_btn.text = "🪣 清理貓砂盆 %02d:%02d:%02d" % [h, m, s]
 
 
 # ── 戰鬥邏輯 ─────────────────────────────────
@@ -328,6 +369,7 @@ func _start_battle() -> void:
 			var player_cat := GameState.get_player_cat(cat_id)
 			data.apply_enhancement(player_cat)
 			data.apply_rank_bonus(player_cat)
+			_apply_equipment_bonuses(data)
 			# 重新載入技能（強化後 rank 已設定，需更新 initial_delay）
 			data._load_skill_data()
 			if data.active_skills_data.size() > 0:
@@ -395,6 +437,124 @@ func _on_challenge_boss_pressed() -> void:
 
 
 # ── 導覽 ─────────────────────────────────────
+
+## 將鏟屎官戰鬥加成套用至 CatData（裝備 + 回憶 + 寶藏）
+func _apply_equipment_bonuses(data: CatData) -> void:
+	GameState.apply_player_combat_bonuses(data)
+
+
+func _on_nav_scooper() -> void:
+	get_tree().change_scene_to_file("res://scenes/ScooperScene.tscn")
+
+
+## 顯示貓砂盆互動視窗：掛機獎勵領取（完整分鐘）+ 屎堆鏟除
+func _show_sandbox_dialog() -> void:
+	var elapsed_seconds := GameState.get_idle_elapsed_seconds()
+	var complete_minutes := elapsed_seconds / 60
+	var has_rewards := complete_minutes >= 1
+	var rewards := GameState.get_pending_idle_rewards() if has_rewards else {}
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	vbox.custom_minimum_size = Vector2(400.0, 0.0)
+
+	# ── 掛機獎勵區 ────────────────────────────────────────
+	var rewards_section := VBoxContainer.new()
+	rewards_section.add_theme_constant_override("separation", 6)
+	rewards_section.visible = has_rewards
+
+	if has_rewards:
+		var h := complete_minutes / 60
+		var m := complete_minutes % 60
+		var time_lbl := Label.new()
+		time_lbl.text = "累積時間：%d 小時 %d 分鐘" % [h, m]
+		time_lbl.add_theme_font_size_override("font_size", 18)
+		time_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rewards_section.add_child(time_lbl)
+
+		for entry: Array in [
+			["💰 金幣",   "gold"],
+			["💩 屎堆",   "poop"],
+			["🍖 貓糧",   "cat_food"],
+			["💎 鑽石",   "diamonds"],
+			["🐱 鬍鬚",   "whiskers"],
+		]:
+			var val: int = rewards.get(entry[1], 0)
+			if val > 0:
+				var lbl := Label.new()
+				lbl.text = "  %s  +%d" % [entry[0], val]
+				lbl.add_theme_font_size_override("font_size", 18)
+				rewards_section.add_child(lbl)
+
+	vbox.add_child(rewards_section)
+
+	# ── 鏟屎互動區 ────────────────────────────────────────
+	var scoop_section := VBoxContainer.new()
+	scoop_section.add_theme_constant_override("separation", 8)
+	scoop_section.visible = not has_rewards and GameState.player_data.poop_count > 0
+
+	var poop_count_lbl := Label.new()
+	poop_count_lbl.text = "💩 待鏟屎堆：%d 個" % GameState.player_data.poop_count
+	poop_count_lbl.add_theme_font_size_override("font_size", 20)
+	scoop_section.add_child(poop_count_lbl)
+
+	var result_lbl := Label.new()
+	result_lbl.text = ""
+	result_lbl.add_theme_font_size_override("font_size", 18)
+	result_lbl.add_theme_color_override("font_color", Color(0.8, 1.0, 0.7, 1.0))
+	scoop_section.add_child(result_lbl)
+
+	var scoop_btn := Button.new()
+	scoop_btn.text = "🪣 鏟屎！"
+	scoop_btn.custom_minimum_size = Vector2(160.0, 52.0)
+	scoop_btn.disabled = GameState.player_data.poop_count <= 0
+	scoop_btn.pressed.connect(func() -> void:
+		var r := GameState.scoop_poop()
+		var remaining := GameState.player_data.poop_count
+		poop_count_lbl.text = "💩 待鏟屎堆：%d 個" % remaining
+		var parts := []
+		if r.get("exp", 0) > 0:
+			parts.append("EXP +%d" % r["exp"])
+		if r.get("memory_shards", 0) > 0:
+			parts.append("回憶碎片 +%d" % r["memory_shards"])
+		if r.get("whiskers", 0) > 0:
+			parts.append("鬍鬚 +%d" % r["whiskers"])
+		result_lbl.text = "（空手而歸）" if parts.is_empty() else "獲得：" + "、".join(parts)
+		scoop_btn.disabled = remaining <= 0
+		_refresh_sandbox_btn()
+	)
+	scoop_section.add_child(scoop_btn)
+	vbox.add_child(scoop_section)
+
+	# ── 領取按鈕 ───────────────────────────────────────────
+	var close_ref := [Callable()]
+
+	if has_rewards:
+		var claim_btn := Button.new()
+		claim_btn.text = "領取獎勵"
+		claim_btn.custom_minimum_size = Vector2(200.0, 52.0)
+		claim_btn.pressed.connect(func() -> void:
+			var claimed := rewards.duplicate()
+			GameState.claim_idle_rewards()
+			close_ref[0].call()
+			_refresh_sandbox_btn()
+			var lines := []
+			for entry: Array in [
+				["💰 金幣",   "gold"],
+				["💩 屎堆",   "poop"],
+				["🍖 貓糧",   "cat_food"],
+				["💎 鑽石",   "diamonds"],
+				["🐱 鬍鬚",   "whiskers"],
+			]:
+				var val: int = claimed.get(entry[1], 0)
+				if val > 0:
+					lines.append("  %s  +%d" % [entry[0], val])
+			DialogManager.show_info("領取成功！", "\n".join(lines))
+		)
+		vbox.add_child(claim_btn)
+
+	close_ref[0] = DialogManager.show_info_node("🪣 清理貓砂盆", vbox)
+
 
 func _on_nav_config() -> void:
 	get_tree().change_scene_to_file("res://scenes/ConfigScene.tscn")

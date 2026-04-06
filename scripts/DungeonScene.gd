@@ -264,7 +264,7 @@ func _show_reward_popup(header: String, level: int, rewards: Dictionary) -> void
 	if rewards.get("trap_cages", 0) > 0:
 		lines.append("  誘捕籠 ×%d" % rewards["trap_cages"])
 	if rewards.get("whisker_shards", 0) > 0:
-		lines.append("  鬍鬚碎片 ×%d" % rewards["whisker_shards"])
+		lines.append("  鬍鬚 ×%d" % rewards["whisker_shards"])
 
 	DialogManager.show_info(header, "\n".join(lines))
 

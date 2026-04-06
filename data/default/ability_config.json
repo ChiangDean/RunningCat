@@ -1,0 +1,53 @@
+{
+	"schema_version": 1,
+	"items": [
+		{
+			"id": "idle_reward_boost_small",
+			"name": "勤勞鏟屎官",
+			"effect_type": "idle_reward_multiplier",
+			"value": 0.1,
+			"description": "掛機產出 +10%",
+			"source_text": "取得方式：活動 / 成就 / 商城禮包"
+		},
+		{
+			"id": "idle_reward_boost_large",
+			"name": "黃金鏟屎官",
+			"effect_type": "idle_reward_multiplier",
+			"value": 0.2,
+			"description": "掛機產出 +20%",
+			"source_text": "取得方式：活動 / 成就 / 商城禮包"
+		},
+		{
+			"id": "idle_time_extension",
+			"name": "加班執照",
+			"effect_type": "idle_max_hours_bonus",
+			"value": 4,
+			"description": "掛機時間上限 +4 小時",
+			"source_text": "取得方式：活動 / 成就 / 商城禮包"
+		},
+		{
+			"id": "boss_speed_2x",
+			"name": "雙倍推進",
+			"effect_type": "unlock_battle_speed",
+			"value": 2,
+			"description": "解鎖戰鬥 2x 速度",
+			"source_text": "取得方式：活動 / 成就 / 商城禮包"
+		},
+		{
+			"id": "boss_speed_3x",
+			"name": "三倍推進",
+			"effect_type": "unlock_battle_speed",
+			"value": 3,
+			"description": "解鎖戰鬥 3x 速度",
+			"source_text": "取得方式：活動 / 成就 / 商城禮包"
+		},
+		{
+			"id": "battle_skip",
+			"name": "瞬間收工",
+			"effect_type": "unlock_battle_skip",
+			"value": 1,
+			"description": "解鎖跳過按鈕",
+			"source_text": "取得方式：活動 / 成就 / 商城禮包"
+		}
+	]
+}

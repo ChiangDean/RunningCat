@@ -102,6 +102,7 @@ func _build_ui() -> void:
 	_speed_1x.pressed.connect(func(): _set_speed(1.0, _speed_1x))
 	_speed_2x.pressed.connect(func(): _set_speed(2.0, _speed_2x))
 	_speed_3x.pressed.connect(func(): _set_speed(3.0, _speed_3x))
+	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 
 	# 計時器
@@ -113,6 +114,7 @@ func _build_ui() -> void:
 	_skip_btn = _make_button("跳過", Vector2(SW - 100.0, 20.0), Vector2(80.0, 44.0))
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
+	_skip_btn.visible = GameState.can_skip_battle()
 
 	# ── 競技場對戰標題（放在速度按鈕下方，y ≈ 74）──
 	var my_data := GameState.arena_data
@@ -275,6 +277,11 @@ func _refresh_skill_bar_names(player_cats: Array) -> void:
 			slot_node.visible = false
 
 
+## 將鏟屎官戰鬥加成套用至 CatData（裝備 + 回憶 + 寶藏）
+func _apply_equipment_bonuses(data: CatData) -> void:
+	GameState.apply_player_combat_bonuses(data)
+
+
 # ── 工廠輔助 ───────────────────────��─────────
 
 func _make_label(txt: String, pos: Vector2, sz: Vector2, font_size: int) -> Label:
@@ -295,12 +302,22 @@ func _make_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
 
 
 func _set_speed(mult: float, active_btn: Button) -> void:
+	if mult > GameState.get_special_ability_speed_cap():
+		return
 	_battle_manager.set_speed(mult)
 	_highlight_speed_btn(active_btn)
 
 
+func _apply_speed_unlocks() -> void:
+	var speed_cap: float = GameState.get_special_ability_speed_cap()
+	_speed_2x.visible = speed_cap >= 2.0
+	_speed_3x.visible = speed_cap >= 3.0
+
+
 func _highlight_speed_btn(active: Button) -> void:
 	for btn: Button in [_speed_1x, _speed_2x, _speed_3x]:
+		if btn == null or not btn.visible:
+			continue
 		btn.modulate = Color(0.7, 0.7, 0.7, 1.0)
 	active.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
@@ -325,6 +342,7 @@ func _start_battle() -> void:
 			var player_cat := GameState.get_player_cat(cat_id)
 			data.apply_enhancement(player_cat)
 			data.apply_rank_bonus(player_cat)
+			_apply_equipment_bonuses(data)
 			data._load_skill_data()
 			if data.active_skills_data.size() > 0:
 				data.active_skills_data[0]["initial_delay"] = GameState.get_delay(i)
