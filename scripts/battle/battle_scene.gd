@@ -357,6 +357,7 @@ func _start_battle() -> void:
 			var player_cat := GameState.get_player_cat(cat_id)
 			data.apply_enhancement(player_cat)
 			data.apply_rank_bonus(player_cat)
+			_apply_equipment_bonuses(data)
 			# 重新載入技能（強化後 rank 已設定，需更新 initial_delay）
 			data._load_skill_data()
 			if data.active_skills_data.size() > 0:
@@ -424,6 +425,23 @@ func _on_challenge_boss_pressed() -> void:
 
 
 # ── 導覽 ─────────────────────────────────────
+
+## 將裝備加成套用至 CatData（atk_percent / def_percent / max_hp_percent）
+func _apply_equipment_bonuses(data: CatData) -> void:
+	var bonuses := GameState.get_equipment_bonuses()
+	for bonus: Dictionary in bonuses:
+		var target: String = bonus.get("target", "all")
+		if target != "all" and target != data.cat_type:
+			continue
+		var value: float = float(bonus.get("value", 0.0))
+		match bonus.get("stat", ""):
+			"atk_percent":
+				data.atk = int(data.atk * (1.0 + value))
+			"def_percent":
+				data.defense = int(data.defense * (1.0 + value))
+			"max_hp_percent":
+				data.max_hp = int(data.max_hp * (1.0 + value))
+
 
 func _on_nav_scooper() -> void:
 	get_tree().change_scene_to_file("res://scenes/ScooperScene.tscn")

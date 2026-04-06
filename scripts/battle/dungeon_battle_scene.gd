@@ -253,6 +253,23 @@ func _refresh_skill_bar_names(player_cats: Array) -> void:
 			slot_node.visible = false
 
 
+## 將裝備加成套用至 CatData（atk_percent / def_percent / max_hp_percent）
+func _apply_equipment_bonuses(data: CatData) -> void:
+	var bonuses := GameState.get_equipment_bonuses()
+	for bonus: Dictionary in bonuses:
+		var target: String = bonus.get("target", "all")
+		if target != "all" and target != data.cat_type:
+			continue
+		var value: float = float(bonus.get("value", 0.0))
+		match bonus.get("stat", ""):
+			"atk_percent":
+				data.atk = int(data.atk * (1.0 + value))
+			"def_percent":
+				data.defense = int(data.defense * (1.0 + value))
+			"max_hp_percent":
+				data.max_hp = int(data.max_hp * (1.0 + value))
+
+
 # ── 工廠輔助 ─────────────────────────────────
 
 func _make_label(txt: String, pos: Vector2, sz: Vector2, font_size: int) -> Label:
@@ -304,6 +321,7 @@ func _start_battle() -> void:
 			var player_cat := GameState.get_player_cat(cat_id)
 			data.apply_enhancement(player_cat)
 			data.apply_rank_bonus(player_cat)
+			_apply_equipment_bonuses(data)
 			data._load_skill_data()
 			if data.active_skills_data.size() > 0:
 				data.active_skills_data[0]["initial_delay"] = GameState.get_delay(i)

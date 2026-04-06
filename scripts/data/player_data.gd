@@ -34,6 +34,11 @@ var memory_shards: int = 0       # 回憶碎片（鏟屎獲得，用於解鎖回
 var scooper_level: int = 0       # 鏟屎官等級（升等邏輯 Phase 2）
 var scooper_exp: int = 0         # 鏟屎官累計 EXP（升等邏輯 Phase 2）
 
+# ── 裝備 ──────────────────────────────────────────────────
+## key = equipment_id，entry 存在代表已購買
+## 結構：{ "level": int, "exp": int, "broken": bool, "sick_cat_id": String }
+var equipments: Dictionary = {}
+
 # ── 擁有貓咪 ──────────────────────────────────────────
 ## 玩家目前擁有的貓咪 ID 列表（初始含牛奶貓）
 var owned_cat_ids: Array = ["milk_cat"]
@@ -93,6 +98,7 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.memory_shards     = data.get("memory_shards",     0)
 	p.scooper_level     = data.get("scooper_level",     0)
 	p.scooper_exp       = data.get("scooper_exp",       0)
+	p.equipments        = data.get("equipments",        {})
 	p.total_pulls       = data.get("total_pulls",       0)
 	p.free_pull_count   = data.get("free_pull_count",   1)
 	p.last_free_pull_date = data.get("last_free_pull_date", "")
@@ -132,6 +138,7 @@ func _to_dict() -> Dictionary:
 		"memory_shards":      memory_shards,
 		"scooper_level":      scooper_level,
 		"scooper_exp":        scooper_exp,
+		"equipments":         equipments,
 		"total_pulls":        total_pulls,
 		"free_pull_count":    free_pull_count,
 		"last_free_pull_date": last_free_pull_date,

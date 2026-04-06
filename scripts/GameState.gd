@@ -54,6 +54,10 @@ var arena_config: Dictionary = {}     # 由 config 讀取的競技場設定（�
 var idle_config: Dictionary = {}
 var _idle_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
+# ── 裝備系統 ──────────────────────────────────
+var equipment_config: Dictionary = {}
+var _equip_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
 # ── 常數 ──────────────────────────────────────
 func _ready() -> void:
 	player_data = PlayerData.load_or_default()
@@ -75,6 +79,9 @@ func _ready() -> void:
 	# 掛機系統：載入設定與隨機種子
 	idle_config = _load_json("res://data/default/idle_config.json")
 	_idle_rng.randomize()
+	# 裝備系統：載入設定與隨機種子
+	equipment_config = _load_json("res://data/default/equipment_config.json")
+	_equip_rng.randomize()
 	# 首次啟動時初始化計時起點（往後只有領取時才會重設）
 	if player_data.last_quit_time == 0:
 		player_data.last_quit_time = Time.get_unix_time_from_system()
@@ -320,3 +327,185 @@ func _check_scooper_level_up() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
 		player_data.save()
+
+
+# ── 裝備系統 ──────────────────────────────────
+
+## 根據 ID 取得裝備設定項目（找不到回傳空 dict）
+func _get_equip_item(equip_id: String) -> Dictionary:
+	var items: Array = equipment_config.get("items", [])
+	for item: Dictionary in items:
+		if item.get("id", "") == equip_id:
+			return item
+	return {}
+
+
+## 是否已購買指定裝備
+func is_equipment_owned(equip_id: String) -> bool:
+	return player_data.equipments.has(equip_id)
+
+
+## 購買裝備。回傳 "" 表示成功，否則回傳錯誤訊息
+func buy_equipment(equip_id: String) -> String:
+	var item := _get_equip_item(equip_id)
+	if item.is_empty():
+		return "找不到裝備"
+	if is_equipment_owned(equip_id):
+		return "已擁有此裝備"
+	var unlock_level: int = item.get("unlock_level", 1)
+	if player_data.scooper_level < unlock_level:
+		return "鏟屎官等級不足（需要 Lv.%d）" % unlock_level
+	var cost: int = item.get("buy_cost", 0)
+	if player_data.gold < cost:
+		return "金幣不足（需要 %d）" % cost
+	player_data.gold -= cost
+	player_data.equipments[equip_id] = {
+		"level": 0, "exp": 0, "broken": false, "sick_cat_id": ""
+	}
+	player_data.save()
+	return ""
+
+
+## 升級裝備。回傳結果 dict：
+## { success, exp, leveled_up, broken, sick_cat_id, error }
+func upgrade_equipment(equip_id: String) -> Dictionary:
+	var item := _get_equip_item(equip_id)
+	if item.is_empty():
+		return { "success": false, "error": "找不到裝備" }
+	if not is_equipment_owned(equip_id):
+		return { "success": false, "error": "尚未購買此裝備" }
+	var state: Dictionary = player_data.equipments[equip_id]
+	if state.get("broken", false):
+		return { "success": false, "error": "裝備已損壞，請先修復" }
+	if state.get("sick_cat_id", "") != "":
+		return { "success": false, "error": "有貓咪生病，請先就醫" }
+	var current_level: int = state.get("level", 0)
+	var max_level: int = player_data.scooper_level
+	if current_level >= max_level:
+		return { "success": false, "error": "已達升級上限（Lv.%d）" % max_level }
+	var cost: int = item.get("upgrade_cost", 300)
+	if player_data.gold < cost:
+		return { "success": false, "error": "金幣不足（需要 %d）" % cost }
+
+	player_data.gold -= cost
+
+	# 隨機取得 0~3 EXP（依設定加權）
+	var exp_weights: Array = item.get("exp_weights", [20, 40, 30, 10])
+	var exp_gained: int = _roll_weighted(exp_weights)
+
+	# 損壞判定
+	var now_broken: bool = _equip_rng.randf() < float(item.get("damage_chance", 0.1))
+
+	# 生病判定（損壞時不觸發）
+	var sick_cat_id := ""
+	if not now_broken:
+		var illness_chance: float = float(item.get("illness_chance", 0.05))
+		if _equip_rng.randf() < illness_chance:
+			var cat_ids: Array = player_data.owned_cat_ids
+			if not cat_ids.is_empty():
+				sick_cat_id = cat_ids[_equip_rng.randi() % cat_ids.size()]
+
+	# 套用 EXP 並檢查升等
+	var exp_per_level: int = int(equipment_config.get("exp_per_level", 10))
+	state["exp"] = state.get("exp", 0) + exp_gained
+	var leveled_up := false
+	while state.get("level", 0) < max_level and state.get("exp", 0) >= exp_per_level:
+		state["exp"] -= exp_per_level
+		state["level"] = state.get("level", 0) + 1
+		leveled_up = true
+
+	state["broken"] = now_broken
+	if sick_cat_id != "":
+		state["sick_cat_id"] = sick_cat_id
+
+	player_data.equipments[equip_id] = state
+	player_data.save()
+
+	return {
+		"success":    true,
+		"exp":        exp_gained,
+		"leveled_up": leveled_up,
+		"broken":     now_broken,
+		"sick_cat_id": sick_cat_id,
+		"error":      ""
+	}
+
+
+## 修復損壞裝備。回傳 "" 表示成功，否則回傳錯誤訊息
+func repair_equipment(equip_id: String) -> String:
+	var item := _get_equip_item(equip_id)
+	if item.is_empty():
+		return "找不到裝備"
+	if not is_equipment_owned(equip_id):
+		return "尚未購買此裝備"
+	var state: Dictionary = player_data.equipments[equip_id]
+	if not state.get("broken", false):
+		return "裝備未損壞"
+	var cost: int = item.get("repair_cost", 200)
+	if player_data.gold < cost:
+		return "金幣不足（需要 %d）" % cost
+	player_data.gold -= cost
+	state["broken"] = false
+	player_data.equipments[equip_id] = state
+	player_data.save()
+	return ""
+
+
+## 替生病的貓咪就醫。回傳 "" 表示成功，否則回傳錯誤訊息
+func heal_sick_cat(equip_id: String) -> String:
+	var item := _get_equip_item(equip_id)
+	if item.is_empty():
+		return "找不到裝備"
+	if not is_equipment_owned(equip_id):
+		return "尚未購買此裝備"
+	var state: Dictionary = player_data.equipments[equip_id]
+	if state.get("sick_cat_id", "") == "":
+		return "沒有貓咪需要就醫"
+	var cost: int = item.get("heal_cost", 500)
+	if player_data.gold < cost:
+		return "金幣不足（需要 %d）" % cost
+	player_data.gold -= cost
+	state["sick_cat_id"] = ""
+	player_data.equipments[equip_id] = state
+	player_data.save()
+	return ""
+
+
+## 取得所有有效裝備加成（非損壞、等級 > 0）
+## 回傳 Array[Dictionary]，每項：{ target, stat, value }
+func get_equipment_bonuses() -> Array:
+	var result: Array = []
+	var items: Array = equipment_config.get("items", [])
+	for item: Dictionary in items:
+		var equip_id: String = item.get("id", "")
+		if not is_equipment_owned(equip_id):
+			continue
+		var state: Dictionary = player_data.equipments.get(equip_id, {})
+		if state.get("broken", false):
+			continue
+		var level: int = state.get("level", 0)
+		if level <= 0:
+			continue
+		var bonus_per_level: float = float(item.get("bonus_per_level", 0.0))
+		result.append({
+			"target": item.get("bonus_target", "all"),
+			"stat":   item.get("bonus_stat",   ""),
+			"value":  bonus_per_level * level,
+		})
+	return result
+
+
+## 加權隨機：weights 為整數陣列，回傳命中的索引（0-based）
+func _roll_weighted(weights: Array) -> int:
+	var total := 0
+	for w in weights:
+		total += int(w)
+	if total <= 0:
+		return 0
+	var roll := _equip_rng.randi() % total
+	var cumulative := 0
+	for i in range(weights.size()):
+		cumulative += int(weights[i])
+		if roll < cumulative:
+			return i
+	return 0

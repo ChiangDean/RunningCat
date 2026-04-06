@@ -22,5 +22,6 @@
 	"scoop_memory_shard_base_chance": 0.0001,
 	"scoop_whisker_base_chance": 0.0002,
 	"scoop_whisker_chance_per_scooper_level": 0.0001,
-	"scoop_memory_shard_chance_per_two_scooper_levels": 0.0001
+	"scoop_memory_shard_chance_per_two_scooper_levels": 0.0001,
+	"scooper_exp_per_level": 10
 }
