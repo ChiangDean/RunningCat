@@ -15,9 +15,29 @@ concurrency:
 jobs:
   export-web:
     runs-on: ubuntu-latest
+    environment: Dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Generate runtime config
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          if [ -z "$API_BASE_URL" ]; then
+            echo "API_BASE_URL is not set for Dev environment." >&2
+            exit 1
+          fi
+          case "$API_BASE_URL" in
+            */api) FINAL_API_BASE_URL="$API_BASE_URL" ;;
+            *) FINAL_API_BASE_URL="${API_BASE_URL%/}/api" ;;
+          esac
+          mkdir -p config
+          cat > config/runtime_config.json <<EOF
+          {
+            "api_base_url": "$FINAL_API_BASE_URL"
+          }
+          EOF
 
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2

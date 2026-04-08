@@ -5,24 +5,53 @@ const HERO_IMAGE := preload("res://assets/sprites/ui/start_scene_homey_v1.png")
 const TITLE_TEXT := "\u55b5\u55b5\u885d\u649e\u6d3e\u5c0d"
 const SUBTITLE_TEXT := "\u93df\u5c4e\u5b98\u4e5f\u60f3\u7576\u8c93"
 const TAP_TO_START_TEXT := "\u9ede\u64ca\u4efb\u610f\u4f4d\u7f6e\u958b\u59cb"
+const CONFIG_PATH := "res://config/runtime_config.json"
+const LOCAL_CONFIG_PATH := "res://config/runtime_config.local.json"
+const DEVICE_ID_PATH := "user://device_id.txt"
+const DEFAULT_ENVIRONMENT := "Local"
+const DEFAULT_API_BASE_URL := "http://localhost:5000/api"
 
-var _start_button: Button
+enum AuthMode
+{
+	LOGIN,
+	REGISTER
+}
+
+var _api_base_url := DEFAULT_API_BASE_URL
+var _device_id := ""
+var _request_in_flight := false
+var _input_ready := false
+var _loading_track_fill_width := 0.0
+var _http_request: HTTPRequest
+var _mode: AuthMode = AuthMode.LOGIN
+
 var _title_card: Control
+var _auth_block: Control
 var _loading_block: Control
-var _loading_fill: Control
+var _loading_fill: ColorRect
 var _loading_label: Label
 var _loading_percent_label: Label
 var _paw_row: HBoxContainer
 var _tap_hint: Label
-var _input_ready := false
-var _loading_track_fill_width := 0.0
+
+var _form_title: Label
+var _display_name_input: LineEdit
+var _account_input: LineEdit
+var _password_input: LineEdit
+var _confirm_password_input: LineEdit
+var _primary_button: Button
+var _secondary_button: Button
+var _status_label: Label
 
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_api_base_url = _resolve_api_base_url()
+	_device_id = _load_or_create_device_id()
 	_build_ui()
+	_attach_http_request()
 	_play_idle_animation()
-	_start_fake_loading()
+	_apply_mode()
 
 
 func _build_ui() -> void:
@@ -57,10 +86,15 @@ func _build_ui() -> void:
 	_title_card = _build_title_block()
 	layout.add_child(_title_card)
 
+	_auth_block = _build_auth_block()
+	layout.add_child(_auth_block)
+
 	_loading_block = _build_loading_block()
+	_loading_block.visible = false
 	layout.add_child(_loading_block)
 
 	_tap_hint = _build_tap_hint()
+	_tap_hint.visible = false
 	layout.add_child(_tap_hint)
 
 
@@ -109,6 +143,79 @@ func _build_title_block() -> PanelContainer:
 	subtitle.add_theme_font_size_override("font_size", 24)
 	subtitle.add_theme_color_override("font_color", Color("6a5547"))
 	content.add_child(subtitle)
+
+	return panel
+
+
+func _build_auth_block() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.5
+	panel.anchor_top = 0.63
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 0.63
+	panel.position = Vector2(-220, 0)
+	panel.custom_minimum_size = Vector2(440, 240)
+	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_bottom", 18)
+	panel.add_child(margin)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 10)
+	margin.add_child(content)
+
+	_form_title = Label.new()
+	_form_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_form_title.add_theme_font_size_override("font_size", 28)
+	_form_title.add_theme_color_override("font_color", Color("4f3d31"))
+	content.add_child(_form_title)
+
+	_display_name_input = _build_input("\u540d\u7a31", false)
+	content.add_child(_display_name_input)
+
+	_account_input = _build_input("\u5e33\u865f", false)
+	content.add_child(_account_input)
+
+	_password_input = _build_input("\u5bc6\u78bc", true)
+	content.add_child(_password_input)
+
+	_confirm_password_input = _build_input("\u518d\u6b21\u8f38\u5165\u5bc6\u78bc", true)
+	content.add_child(_confirm_password_input)
+
+	var button_row := HBoxContainer.new()
+	button_row.add_theme_constant_override("separation", 12)
+	content.add_child(button_row)
+
+	_primary_button = Button.new()
+	_primary_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_primary_button.custom_minimum_size = Vector2(0, 54)
+	_primary_button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("9aae8b"), 10))
+	_primary_button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("a8bc98"), 10))
+	_primary_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("869a79"), 8))
+	_primary_button.pressed.connect(_on_primary_pressed)
+	button_row.add_child(_primary_button)
+
+	_secondary_button = Button.new()
+	_secondary_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_secondary_button.custom_minimum_size = Vector2(0, 54)
+	_secondary_button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("d4b593"), 10))
+	_secondary_button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("ddc19f"), 10))
+	_secondary_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("c59f78"), 8))
+	_secondary_button.pressed.connect(_on_secondary_pressed)
+	button_row.add_child(_secondary_button)
+
+	_status_label = Label.new()
+	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_status_label.custom_minimum_size = Vector2(0, 42)
+	_status_label.add_theme_font_size_override("font_size", 15)
+	_status_label.add_theme_color_override("font_color", Color("7d2f2f"))
+	content.add_child(_status_label)
 
 	return panel
 
@@ -175,19 +282,6 @@ func _build_loading_block() -> Control:
 	return block
 
 
-func _build_paw_row() -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 8)
-	for _i in range(4):
-		var paw := Label.new()
-		paw.text = "\u25cf"
-		paw.add_theme_font_size_override("font_size", 14)
-		paw.add_theme_color_override("font_color", Color("9aae8b"))
-		row.add_child(paw)
-	return row
-
-
 func _build_tap_hint() -> Label:
 	var hint := Label.new()
 	hint.text = TAP_TO_START_TEXT
@@ -203,8 +297,37 @@ func _build_tap_hint() -> Label:
 	hint.add_theme_color_override("font_shadow_color", Color("5e4a3d"))
 	hint.add_theme_constant_override("shadow_offset_x", 2)
 	hint.add_theme_constant_override("shadow_offset_y", 2)
-	hint.visible = false
 	return hint
+
+
+func _build_paw_row() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	for _i in range(4):
+		var paw := Label.new()
+		paw.text = "\u25cf"
+		paw.add_theme_font_size_override("font_size", 14)
+		paw.add_theme_color_override("font_color", Color("9aae8b"))
+		row.add_child(paw)
+	return row
+
+
+func _build_input(placeholder: String, secret: bool) -> LineEdit:
+	var input := LineEdit.new()
+	input.placeholder_text = placeholder
+	input.custom_minimum_size = Vector2(0, 46)
+	input.secret = secret
+	input.add_theme_font_size_override("font_size", 18)
+	input.text_submitted.connect(_on_input_submitted)
+	return input
+
+
+func _attach_http_request() -> void:
+	_http_request = HTTPRequest.new()
+	_http_request.timeout = 15.0
+	_http_request.request_completed.connect(_on_request_completed)
+	add_child(_http_request)
 
 
 func _play_idle_animation() -> void:
@@ -213,16 +336,6 @@ func _play_idle_animation() -> void:
 		var title_tween := create_tween().set_loops()
 		title_tween.tween_property(_title_card, "position:y", base_y + 6.0, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		title_tween.tween_property(_title_card, "position:y", base_y, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
-	if _start_button != null:
-		var button_tween := create_tween().set_loops()
-		button_tween.tween_property(_start_button, "scale", Vector2.ONE * 1.03, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		button_tween.tween_property(_start_button, "scale", Vector2.ONE, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
-	if _tap_hint != null:
-		var hint_tween := create_tween().set_loops()
-		hint_tween.tween_property(_tap_hint, "modulate:a", 0.45, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		hint_tween.tween_property(_tap_hint, "modulate:a", 1.0, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	if _paw_row != null:
 		for i in range(_paw_row.get_child_count()):
@@ -234,12 +347,181 @@ func _play_idle_animation() -> void:
 			paw_tween.tween_property(paw, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 			paw_tween.parallel().tween_property(paw, "modulate:a", 0.45, 0.32)
 
+	if _tap_hint != null:
+		var hint_tween := create_tween().set_loops()
+		hint_tween.tween_property(_tap_hint, "modulate:a", 0.45, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		hint_tween.tween_property(_tap_hint, "modulate:a", 1.0, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _apply_mode() -> void:
+	var is_register := _mode == AuthMode.REGISTER
+	_form_title.text = "\u5efa\u7acb\u5e33\u865f" if is_register else "\u767b\u5165"
+	_display_name_input.visible = is_register
+	_confirm_password_input.visible = is_register
+	_primary_button.text = "\u8a3b\u518a" if is_register else "\u767b\u5165"
+	_secondary_button.text = "\u8fd4\u56de\u767b\u5165" if is_register else "\u8a3b\u518a"
+	_status_label.text = ""
+
+
+func _set_auth_interactable(editable: bool) -> void:
+	_display_name_input.editable = editable
+	_account_input.editable = editable
+	_password_input.editable = editable
+	_confirm_password_input.editable = editable
+	_primary_button.disabled = not editable
+	_secondary_button.disabled = not editable
+
+
+func _on_input_submitted(_text: String) -> void:
+	if _mode == AuthMode.LOGIN:
+		_submit_login()
+	else:
+		_submit_register()
+
+
+func _on_primary_pressed() -> void:
+	if _mode == AuthMode.LOGIN:
+		_submit_login()
+	else:
+		_submit_register()
+
+
+func _on_secondary_pressed() -> void:
+	if _request_in_flight:
+		return
+	_mode = AuthMode.LOGIN if _mode == AuthMode.REGISTER else AuthMode.REGISTER
+	_apply_mode()
+
+
+func _submit_login() -> void:
+	if _request_in_flight:
+		return
+
+	var account := _account_input.text.strip_edges()
+	var password := _password_input.text
+	if account == "" or password.strip_edges() == "":
+		_set_status("\u8acb\u8f38\u5165\u5e33\u865f\u8207\u5bc6\u78bc\u3002", true)
+		return
+
+	_request_in_flight = true
+	_set_auth_interactable(false)
+	_set_status("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...", false)
+
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json"
+	])
+	var body := JSON.stringify({
+		"account": account,
+		"password": password,
+		"deviceId": _device_id,
+		"deviceName": _build_device_name()
+	})
+	var error := _http_request.request("%s/auth/login" % _api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_set_auth_interactable(true)
+		_set_status("\u7121\u6cd5\u9001\u51fa\u8acb\u6c42\uff0c\u932f\u8aa4\u78bc: %s" % error, true)
+
+
+func _submit_register() -> void:
+	if _request_in_flight:
+		return
+
+	var display_name := _display_name_input.text.strip_edges()
+	var account := _account_input.text.strip_edges()
+	var password := _password_input.text
+	var confirm_password := _confirm_password_input.text
+
+	if display_name == "" or account == "" or password.strip_edges() == "" or confirm_password.strip_edges() == "":
+		_set_status("\u8acb\u5b8c\u6574\u586b\u5beb\u540d\u7a31\u3001\u5e33\u865f\u8207\u5bc6\u78bc\u3002", true)
+		return
+
+	if password.length() < 8:
+		_set_status("\u5bc6\u78bc\u81f3\u5c11\u9700\u8981 8 \u78bc\u3002", true)
+		return
+
+	if password != confirm_password:
+		_set_status("\u5169\u6b21\u8f38\u5165\u7684\u5bc6\u78bc\u4e0d\u4e00\u81f4\u3002", true)
+		return
+
+	_request_in_flight = true
+	_set_auth_interactable(false)
+	_set_status("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...", false)
+
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json"
+	])
+	var body := JSON.stringify({
+		"displayName": display_name,
+		"account": account,
+		"password": password,
+		"confirmPassword": confirm_password,
+		"deviceId": _device_id,
+		"deviceName": _build_device_name()
+	})
+	var error := _http_request.request("%s/auth/register" % _api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_set_auth_interactable(true)
+		_set_status("\u7121\u6cd5\u9001\u51fa\u8acb\u6c42\uff0c\u932f\u8aa4\u78bc: %s" % error, true)
+
+
+func _on_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_request_in_flight = false
+	_set_auth_interactable(true)
+
+	var response_text := body.get_string_from_utf8()
+	var response_json := JSON.new()
+	if response_text == "" or response_json.parse(response_text) != OK:
+		_set_status("\u4f3a\u670d\u5668\u56de\u50b3\u683c\u5f0f\u7121\u6cd5\u89e3\u6790\u3002", true)
+		return
+
+	var payload_variant: Variant = response_json.get_data()
+	var payload: Dictionary = payload_variant if payload_variant is Dictionary else {}
+	var success := bool(payload.get("success", false))
+	var data_variant: Variant = payload.get("data", {})
+	var error_variant: Variant = payload.get("error", {})
+	var data: Dictionary = data_variant if data_variant is Dictionary else {}
+	var error_payload: Dictionary = error_variant if error_variant is Dictionary else {}
+
+	if response_code >= 200 and response_code < 300 and success:
+		GameState.set_auth_session(_api_base_url, data)
+		_show_loading_state()
+		return
+
+	var message := String(error_payload.get("message", "\u767b\u5165\u5931\u6557\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002"))
+	_set_status(message, true)
+
+
+func _show_loading_state() -> void:
+	_input_ready = false
+	_set_status("", false)
+	if _auth_block != null:
+		_auth_block.visible = false
+	if _loading_block != null:
+		_loading_block.visible = true
+		_loading_block.modulate.a = 1.0
+	if _tap_hint != null:
+		_tap_hint.visible = false
+	if _loading_fill != null:
+		_loading_fill.size.x = 0.0
+	if _loading_label != null:
+		_loading_label.text = "\u8c93\u54aa\u5011\u6b63\u5728\u96c6\u5408..."
+	if _loading_percent_label != null:
+		_loading_percent_label.text = "0%"
+	_start_fake_loading()
+
+
 func _start_fake_loading() -> void:
 	if _loading_fill == null:
 		return
+
 	var tween := create_tween()
 	tween.tween_property(_loading_fill, "size:x", _loading_track_fill_width, 2.0).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
 	tween.finished.connect(_finish_fake_loading)
+
 	var percent_tween := create_tween()
 	percent_tween.tween_method(_update_loading_progress, 0.0, 100.0, 2.0)
 
@@ -266,24 +548,103 @@ func _update_loading_progress(value: float) -> void:
 		_loading_percent_label.text = "%d%%" % int(round(value))
 
 
-func _input(event: InputEvent) -> void:
+func _start_game() -> void:
 	if not _input_ready:
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_start_game()
-		get_viewport()
-	elif event is InputEventScreenTouch and event.pressed:
-		_start_game()
-		get_viewport()
 
-
-func _start_game() -> void:
 	GameState.arena_data.update_defense_snapshot(
 		GameState.player_data.arena_defense_team,
 		GameState._player_cat_cache
 	)
 	GameState.arena_data.save()
 	get_tree().change_scene_to_file(BATTLE_SCENE_PATH)
+
+
+func _input(event: InputEvent) -> void:
+	if not _input_ready:
+		return
+
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_start_game()
+	elif event is InputEventScreenTouch and event.pressed:
+		_start_game()
+
+
+func _set_status(message: String, is_error: bool) -> void:
+	if _status_label == null:
+		return
+	_status_label.text = message
+	_status_label.add_theme_color_override("font_color", Color("7d2f2f") if is_error else Color("46613d"))
+
+
+func _resolve_api_base_url() -> String:
+	var config := _load_runtime_config()
+	if config.has("api_base_url"):
+		return String(config.get("api_base_url", DEFAULT_API_BASE_URL)).rstrip("/")
+
+	var configured_environment := String(config.get("environment", DEFAULT_ENVIRONMENT))
+	var environment_name := _normalize_environment_name(configured_environment)
+	var environments_variant: Variant = config.get("environments", {})
+	var environments: Dictionary = environments_variant if environments_variant is Dictionary else {}
+	var environment_variant: Variant = environments.get(environment_name, {})
+	var environment_config: Dictionary = environment_variant if environment_variant is Dictionary else {}
+	var api_base_url := String(environment_config.get("api_base_url", DEFAULT_API_BASE_URL))
+	return api_base_url.rstrip("/")
+
+
+func _load_runtime_config() -> Dictionary:
+	var local_config := _load_json_config(LOCAL_CONFIG_PATH)
+	if not local_config.is_empty():
+		return local_config
+
+	return _load_json_config(CONFIG_PATH)
+
+
+func _load_json_config(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+
+	var json := JSON.new()
+	var content := file.get_as_text()
+	file.close()
+	if json.parse(content) != OK:
+		return {}
+
+	var data: Variant = json.get_data()
+	return data if data is Dictionary else {}
+
+
+func _normalize_environment_name(environment_name: String) -> String:
+	var normalized := environment_name.strip_edges()
+	if normalized.to_lower() == "dev":
+		return "DEV"
+	if normalized.to_lower() == "sandbox":
+		return "Sandbox"
+	if normalized.to_lower() == "production":
+		return "Production"
+	return "Local"
+
+
+func _build_device_name() -> String:
+	return "%s-%s" % [OS.get_name(), Engine.get_architecture_name()]
+
+
+func _load_or_create_device_id() -> String:
+	if FileAccess.file_exists(DEVICE_ID_PATH):
+		var existing_file := FileAccess.open(DEVICE_ID_PATH, FileAccess.READ)
+		if existing_file != null:
+			var existing_id := existing_file.get_as_text().strip_edges()
+			existing_file.close()
+			if existing_id != "":
+				return existing_id
+
+	var generated_id := "%s-%s" % [Time.get_unix_time_from_system(), randi()]
+	var file := FileAccess.open(DEVICE_ID_PATH, FileAccess.WRITE)
+	if file != null:
+		file.store_string(generated_id)
+		file.close()
+	return generated_id
 
 
 func _make_card_stylebox() -> StyleBoxFlat:

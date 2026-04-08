@@ -1,5 +1,8 @@
 extends Node
 
+var api_base_url: String = ""
+var auth_session: Dictionary = {}
+
 ## 全局遊戲狀態，跨場景共享
 signal achievements_changed
 
@@ -7,6 +10,16 @@ signal achievements_changed
 var player_data: PlayerData
 ## 已載入的貓咪強化存檔快取，key = cat_id
 var _player_cat_cache: Dictionary = {}
+
+
+func set_auth_session(base_url: String, session: Dictionary) -> void:
+	api_base_url = base_url
+	auth_session = session.duplicate(true)
+
+
+func clear_auth_session() -> void:
+	api_base_url = ""
+	auth_session = {}
 
 ## 目前擁有的貓咪 ID 列表（從 player_data 讀取）
 func get_owned_cats() -> Array:

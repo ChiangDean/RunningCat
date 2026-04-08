@@ -1,0 +1,17 @@
+{
+  "environment": "Local",
+  "environments": {
+    "Local": {
+      "api_base_url": "http://localhost:5000/api"
+    },
+    "DEV": {
+      "api_base_url": "https://your-dev-api.example.com/api"
+    },
+    "Sandbox": {
+      "api_base_url": "https://your-sandbox-api.example.com/api"
+    },
+    "Production": {
+      "api_base_url": "https://your-production-api.example.com/api"
+    }
+  }
+}
