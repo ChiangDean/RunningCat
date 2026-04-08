@@ -1,4 +1,4 @@
-# RunningCat — Game Design Document (GDD)
+# MeowPartyDashClient — Game Design Document (GDD)
 
 > 最後更新：2026-04-03（完整版）
 > 狀態：開發前規劃階段

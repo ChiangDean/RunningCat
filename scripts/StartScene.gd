@@ -25,7 +25,7 @@ func _build_ui() -> void:
 	center.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "RunningCat"
+	title.text = "MeowPartyDashClient"
 	title.add_theme_font_size_override("font_size", 64)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)

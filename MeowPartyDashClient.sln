@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RunningCat", "RunningCat.csproj", "{E09683DC-6F24-42EC-8FA8-3A08FD80D4D5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeowPartyDashClient", "MeowPartyDashClient.csproj", "{E09683DC-6F24-42EC-8FA8-3A08FD80D4D5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
