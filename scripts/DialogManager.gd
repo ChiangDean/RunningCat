@@ -92,7 +92,7 @@ func _build(
 		)
 	else:
 		# Confirm 框：overlay 不可點擊關閉
-		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

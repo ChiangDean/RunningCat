@@ -1,5 +1,12 @@
 extends Node
 
+const AUTH_SESSION_PATH := "user://auth_session.json"
+const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
+const LEGACY_PLAYER_DATA_PATH := PlayerData.LEGACY_SAVE_PATH
+const LEGACY_PLAYER_DUNGEON_DATA_PATH := PlayerDungeonData.SAVE_PATH
+const LEGACY_PLAYER_ARENA_DATA_PATH := PlayerArenaData.SAVE_PATH
+const LEGACY_PLAYER_CAT_DIR_PATH := PlayerCatData.SAVE_DIR
+
 var api_base_url: String = ""
 var auth_session: Dictionary = {}
 
@@ -15,11 +22,152 @@ var _player_cat_cache: Dictionary = {}
 func set_auth_session(base_url: String, session: Dictionary) -> void:
 	api_base_url = base_url
 	auth_session = session.duplicate(true)
+	_save_auth_session()
 
 
 func clear_auth_session() -> void:
 	api_base_url = ""
 	auth_session = {}
+	_delete_auth_session_file()
+
+
+func clear_persisted_player_state() -> void:
+	_delete_file_if_exists(PLAYER_DATA_PATH)
+	_delete_file_if_exists(LEGACY_PLAYER_DATA_PATH)
+	_delete_file_if_exists(LEGACY_PLAYER_DUNGEON_DATA_PATH)
+	_delete_file_if_exists(LEGACY_PLAYER_ARENA_DATA_PATH)
+	_delete_files_in_directory(LEGACY_PLAYER_CAT_DIR_PATH)
+
+	player_data = PlayerData.new()
+	_player_cat_cache = {}
+	player_team = ["milk_cat", "milk_cat", "milk_cat"]
+	skill_delays = {}
+	current_global_stage = 1
+	boss_available = false
+	dungeon_battle_id = ""
+	dungeon_battle_level = 1
+	dungeon_data = PlayerDungeonData.new()
+	arena_data = PlayerArenaData.new()
+	arena_opponent = {}
+
+
+func clear_auth_and_player_state() -> void:
+	clear_auth_session()
+	clear_persisted_player_state()
+
+
+func load_persisted_auth_session() -> bool:
+	if not FileAccess.file_exists(AUTH_SESSION_PATH):
+		return false
+
+	var file := FileAccess.open(AUTH_SESSION_PATH, FileAccess.READ)
+	if file == null:
+		return false
+
+	var content := file.get_as_text()
+	file.close()
+
+	var json := JSON.new()
+	if json.parse(content) != OK:
+		return false
+
+	var data: Variant = json.get_data()
+	if not (data is Dictionary):
+		return false
+
+	var payload: Dictionary = data
+	var session_variant: Variant = payload.get("session", {})
+	if not (session_variant is Dictionary):
+		return false
+
+	var persisted_base_url := String(payload.get("api_base_url", "")).strip_edges()
+	if persisted_base_url == "":
+		return false
+
+	var session: Dictionary = session_variant if session_variant is Dictionary else {}
+	api_base_url = persisted_base_url
+	auth_session = session.duplicate(true)
+	return not auth_session.is_empty()
+
+
+func get_access_token() -> String:
+	return String(auth_session.get("accessToken", "")).strip_edges()
+
+
+func get_refresh_token() -> String:
+	return String(auth_session.get("refreshToken", "")).strip_edges()
+
+
+func apply_player_bootstrap(data: Dictionary) -> void:
+	if player_data == null:
+		player_data = PlayerData.load_or_default()
+
+	player_data.account = String(data.get("account", player_data.account))
+	player_data.display_name = String(data.get("displayName", player_data.display_name))
+	player_data.player_public_id = String(data.get("playerPublicId", player_data.player_public_id))
+	player_data.player_name = String(data.get("playerName", player_data.player_name))
+	player_data.cat_food = int(data.get("catFood", player_data.cat_food))
+	player_data.special_cat_food = int(data.get("specialCatFood", player_data.special_cat_food))
+	player_data.gold = int(data.get("gold", player_data.gold))
+	player_data.diamonds = int(data.get("diamonds", player_data.diamonds))
+	player_data.trap_points = int(data.get("trapPoints", player_data.trap_points))
+	player_data.trap_cages = int(data.get("trapCages", player_data.trap_cages))
+	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
+	player_data.last_quit_time = int(data.get("lastQuitTimeUnixSeconds", player_data.last_quit_time))
+	player_data.poop_count = int(data.get("poopCount", player_data.poop_count))
+	player_data.memory_shards = int(data.get("memoryShards", player_data.memory_shards))
+	player_data.scooper_level = int(data.get("scooperLevel", player_data.scooper_level))
+	player_data.scooper_exp = int(data.get("scooperExp", player_data.scooper_exp))
+	player_data.total_pulls = int(data.get("totalPulls", player_data.total_pulls))
+	player_data.free_pull_count = int(data.get("freePullCount", player_data.free_pull_count))
+	player_data.last_free_pull_date = String(data.get("lastFreePullDate", player_data.last_free_pull_date))
+	player_data.current_stage = int(data.get("currentStage", player_data.current_stage))
+	current_global_stage = player_data.current_stage
+	player_data.save()
+
+
+func _save_auth_session() -> void:
+	var file := FileAccess.open(AUTH_SESSION_PATH, FileAccess.WRITE)
+	if file == null:
+		return
+
+	file.store_string(JSON.stringify({
+		"api_base_url": api_base_url,
+		"session": auth_session,
+	}, "\t"))
+	file.close()
+
+
+func _delete_auth_session_file() -> void:
+	_delete_file_if_exists(AUTH_SESSION_PATH)
+
+
+func _delete_file_if_exists(path: String) -> void:
+	if not FileAccess.file_exists(path):
+		return
+
+	var absolute_path := ProjectSettings.globalize_path(path)
+	DirAccess.remove_absolute(absolute_path)
+
+
+func _delete_files_in_directory(path: String) -> void:
+	var absolute_path := ProjectSettings.globalize_path(path)
+	if not DirAccess.dir_exists_absolute(absolute_path):
+		return
+
+	var directory := DirAccess.open(path)
+	if directory == null:
+		return
+
+	directory.list_dir_begin()
+	while true:
+		var entry_name := directory.get_next()
+		if entry_name == "":
+			break
+		if entry_name == "." or entry_name == ".." or directory.current_is_dir():
+			continue
+		directory.remove(entry_name)
+	directory.list_dir_end()
 
 ## 目前擁有的貓咪 ID 列表（從 player_data 讀取）
 func get_owned_cats() -> Array:

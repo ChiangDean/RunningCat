@@ -5,6 +5,8 @@ extends Resource
 ## 只記錄「玩家改變了什麼」，不重複存 default 的原始數值
 ## 執行時搭配 CatData（default）合併計算出實際數值
 
+# TODO(auth-persistence-migration): Move player cat saves to `user://` with legacy fallback + one-time migration.
+# Remove this marker after the `res://` save path has been retired.
 const SAVE_DIR: String = "res://data/saves/player_cats/"
 const MAX_CAT_FOOD_LEVEL: int = 30
 

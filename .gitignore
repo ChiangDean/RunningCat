@@ -25,3 +25,4 @@ Thumbs.db
 # Runtime client config
 config/runtime_config.json
 config/runtime_config.local.json
+data/saves/

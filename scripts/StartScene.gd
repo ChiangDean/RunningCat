@@ -10,6 +10,11 @@ const LOCAL_CONFIG_PATH := "res://config/runtime_config.local.json"
 const DEVICE_ID_PATH := "user://device_id.txt"
 const DEFAULT_ENVIRONMENT := "Local"
 const DEFAULT_API_BASE_URL := "http://localhost:5000/api"
+const REQUEST_KIND_AUTH := "auth"
+const REQUEST_KIND_BOOTSTRAP := "bootstrap"
+const REQUEST_KIND_REFRESH := "refresh"
+const REQUEST_KIND_LOGOUT_REVOKE := "logout_revoke"
+const REQUEST_KIND_LOGOUT_REFRESH := "logout_refresh"
 
 enum AuthMode
 {
@@ -20,6 +25,7 @@ enum AuthMode
 var _api_base_url := DEFAULT_API_BASE_URL
 var _device_id := ""
 var _request_in_flight := false
+var _request_kind := ""
 var _input_ready := false
 var _loading_track_fill_width := 0.0
 var _http_request: HTTPRequest
@@ -33,6 +39,7 @@ var _loading_label: Label
 var _loading_percent_label: Label
 var _paw_row: HBoxContainer
 var _tap_hint: Label
+var _logout_button: Button
 
 var _form_title: Label
 var _display_name_input: LineEdit
@@ -42,6 +49,8 @@ var _confirm_password_input: LineEdit
 var _primary_button: Button
 var _secondary_button: Button
 var _status_label: Label
+var _logout_revoke_retry := false
+var _logout_dialog_open := false
 
 
 func _ready() -> void:
@@ -52,6 +61,10 @@ func _ready() -> void:
 	_attach_http_request()
 	_play_idle_animation()
 	_apply_mode()
+	if GameState.load_persisted_auth_session():
+		_api_base_url = GameState.api_base_url
+		_sync_logout_button_visibility()
+		_begin_authenticated_bootstrap("正在恢復登入...")
 
 
 func _build_ui() -> void:
@@ -96,6 +109,10 @@ func _build_ui() -> void:
 	_tap_hint = _build_tap_hint()
 	_tap_hint.visible = false
 	layout.add_child(_tap_hint)
+
+	_logout_button = _build_logout_button()
+	layout.add_child(_logout_button)
+	_sync_logout_button_visibility()
 
 
 func _build_title_block() -> PanelContainer:
@@ -300,6 +317,24 @@ func _build_tap_hint() -> Label:
 	return hint
 
 
+func _build_logout_button() -> Button:
+	var button := Button.new()
+	button.text = "登出"
+	button.anchor_left = 1.0
+	button.anchor_top = 0.0
+	button.anchor_right = 1.0
+	button.anchor_bottom = 0.0
+	button.position = Vector2(-140, 28)
+	button.custom_minimum_size = Vector2(112, 48)
+	button.visible = false
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("d4b593"), 10))
+	button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("ddc19f"), 10))
+	button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("c59f78"), 8))
+	button.pressed.connect(_on_logout_pressed)
+	return button
+
+
 func _build_paw_row() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -404,6 +439,7 @@ func _submit_login() -> void:
 		return
 
 	_request_in_flight = true
+	_request_kind = REQUEST_KIND_AUTH
 	_set_auth_interactable(false)
 	_set_status("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...", false)
 
@@ -446,6 +482,7 @@ func _submit_register() -> void:
 		return
 
 	_request_in_flight = true
+	_request_kind = REQUEST_KIND_AUTH
 	_set_auth_interactable(false)
 	_set_status("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...", false)
 
@@ -470,6 +507,8 @@ func _submit_register() -> void:
 
 func _on_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_request_in_flight = false
+	var completed_request_kind := _request_kind
+	_request_kind = ""
 	_set_auth_interactable(true)
 
 	var response_text := body.get_string_from_utf8()
@@ -487,16 +526,125 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 	var error_payload: Dictionary = error_variant if error_variant is Dictionary else {}
 
 	if response_code >= 200 and response_code < 300 and success:
+		if completed_request_kind == REQUEST_KIND_AUTH or completed_request_kind == REQUEST_KIND_REFRESH:
+			GameState.set_auth_session(_api_base_url, data)
+			_api_base_url = GameState.api_base_url
+			_sync_logout_button_visibility()
+			_begin_authenticated_bootstrap("正在同步玩家資料...")
+			return
+		if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
+			GameState.apply_player_bootstrap(data)
+			_show_loading_state()
+			return
+		if completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
+			GameState.set_auth_session(GameState.api_base_url, data)
+			_sync_logout_button_visibility()
+			_begin_logout_revoke()
+			return
+		if completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE:
+			_finalize_logout()
+			return
 		GameState.set_auth_session(_api_base_url, data)
+		_sync_logout_button_visibility()
 		_show_loading_state()
+		return
+
+	if completed_request_kind == REQUEST_KIND_BOOTSTRAP and response_code == 401 and GameState.get_refresh_token() != "":
+		_begin_refresh_then_bootstrap()
+		return
+
+	if completed_request_kind == REQUEST_KIND_REFRESH:
+		GameState.clear_auth_session()
+		_api_base_url = _resolve_api_base_url()
+		_sync_logout_button_visibility()
+		_set_status("登入已過期，請重新登入。", true)
+		return
+
+	if completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE:
+		if response_code == 404:
+			_finalize_logout()
+			return
+		if response_code == 401 and not _logout_revoke_retry and GameState.get_refresh_token() != "":
+			_begin_logout_refresh()
+			return
+		var logout_message := String(error_payload.get("message", "登出失敗，請稍後再試。"))
+		_set_logout_button_state(true)
+		_set_status(logout_message, true)
+		return
+
+	if completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
+		if response_code == 401 or response_code == 404:
+			_finalize_logout()
+			return
+		var logout_refresh_message := String(error_payload.get("message", "更新登入狀態失敗，請稍後再試。"))
+		_set_logout_button_state(true)
+		_set_status(logout_refresh_message, true)
 		return
 
 	var message := String(error_payload.get("message", "\u767b\u5165\u5931\u6557\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002"))
 	_set_status(message, true)
 
 
+func _begin_authenticated_bootstrap(status_message: String) -> void:
+	if _request_in_flight:
+		return
+
+	var access_token := GameState.get_access_token()
+	if access_token == "":
+		GameState.clear_auth_session()
+		_set_status("登入資訊遺失，請重新登入。", true)
+		return
+
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_BOOTSTRAP
+	_set_auth_interactable(false)
+	_set_status(status_message, false)
+
+	var headers := PackedStringArray([
+		"Accept: application/json",
+		"Authorization: Bearer %s" % access_token
+	])
+	var error := _http_request.request("%s/auth/bootstrap" % _api_base_url, headers, HTTPClient.METHOD_GET)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_set_status("無法同步玩家資料，錯誤碼: %s" % error, true)
+
+
+func _begin_refresh_then_bootstrap() -> void:
+	if _request_in_flight:
+		return
+
+	var refresh_token := GameState.get_refresh_token()
+	if refresh_token == "":
+		GameState.clear_auth_session()
+		_set_status("登入已過期，請重新登入。", true)
+		return
+
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_REFRESH
+	_set_auth_interactable(false)
+	_set_status("正在更新登入資訊...", false)
+
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json"
+	])
+	var body := JSON.stringify({
+		"refreshToken": refresh_token
+	})
+	var error := _http_request.request("%s/auth/refresh" % _api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_set_status("無法更新登入資訊，錯誤碼: %s" % error, true)
+
+
 func _show_loading_state() -> void:
 	_input_ready = false
+	_sync_logout_button_visibility()
 	_set_status("", false)
 	if _auth_block != null:
 		_auth_block.visible = false
@@ -528,6 +676,7 @@ func _start_fake_loading() -> void:
 
 func _finish_fake_loading() -> void:
 	_input_ready = true
+	_sync_logout_button_visibility()
 	if _loading_label != null:
 		_loading_label.text = "\u8c93\u54aa\u968a\u4f0d\u96c6\u5408\u5b8c\u7562"
 	if _loading_percent_label != null:
@@ -563,10 +712,16 @@ func _start_game() -> void:
 func _input(event: InputEvent) -> void:
 	if not _input_ready:
 		return
+	if _logout_dialog_open:
+		return
 
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if _is_event_on_logout_button(event.position):
+			return
 		_start_game()
 	elif event is InputEventScreenTouch and event.pressed:
+		if _is_event_on_logout_button(event.position):
+			return
 		_start_game()
 
 
@@ -575,6 +730,135 @@ func _set_status(message: String, is_error: bool) -> void:
 		return
 	_status_label.text = message
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f") if is_error else Color("46613d"))
+
+
+func _sync_logout_button_visibility() -> void:
+	if _logout_button == null:
+		return
+	_logout_button.visible = _input_ready and not GameState.auth_session.is_empty()
+
+
+func _is_event_on_logout_button(event_position: Vector2) -> bool:
+	if _logout_button == null or not _logout_button.visible:
+		return false
+	return _logout_button.get_global_rect().has_point(event_position)
+
+
+func _set_logout_button_state(enabled: bool, button_text: String = "登出") -> void:
+	if _logout_button == null:
+		return
+	_logout_button.disabled = not enabled
+	_logout_button.text = button_text
+
+
+func _on_logout_pressed() -> void:
+	if _request_in_flight:
+		return
+
+	DialogManager.show_confirm(
+		"登出",
+		"確定要登出目前帳號嗎？系統會撤銷 refresh token，並清除本機登入與玩家資料。",
+		Callable(self, "_begin_logout")
+	)
+
+
+func _begin_logout() -> void:
+	_logout_revoke_retry = false
+	_begin_logout_revoke()
+
+
+func _begin_logout_revoke() -> void:
+	var refresh_token := GameState.get_refresh_token()
+	if refresh_token == "":
+		_finalize_logout()
+		return
+
+	var access_token := GameState.get_access_token()
+	if access_token == "":
+		_begin_logout_refresh()
+		return
+
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_LOGOUT_REVOKE
+	_set_auth_interactable(false)
+	_set_logout_button_state(false, "登出中...")
+	_set_status("正在登出...", false)
+
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"Authorization: Bearer %s" % access_token
+	])
+	var body := JSON.stringify({
+		"refreshToken": refresh_token,
+		"reason": "Player logout from client."
+	})
+	var error := _http_request.request("%s/auth/revoke" % GameState.api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_set_logout_button_state(true)
+		_set_status("無法送出登出請求，錯誤碼: %s" % error, true)
+
+
+func _begin_logout_refresh() -> void:
+	var refresh_token := GameState.get_refresh_token()
+	if refresh_token == "":
+		_finalize_logout()
+		return
+
+	_logout_revoke_retry = true
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_LOGOUT_REFRESH
+	_set_auth_interactable(false)
+	_set_logout_button_state(false, "更新中...")
+	_set_status("正在更新登入狀態...", false)
+
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json"
+	])
+	var body := JSON.stringify({
+		"refreshToken": refresh_token
+	})
+	var error := _http_request.request("%s/auth/refresh" % GameState.api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_set_logout_button_state(true)
+		_set_status("無法更新登入狀態，錯誤碼: %s" % error, true)
+
+
+func _finalize_logout() -> void:
+	_logout_dialog_open = false
+	GameState.clear_auth_and_player_state()
+	_api_base_url = _resolve_api_base_url()
+	_request_in_flight = false
+	_request_kind = ""
+	_input_ready = false
+	_set_auth_interactable(true)
+	_set_logout_button_state(true)
+	_sync_logout_button_visibility()
+	_mode = AuthMode.LOGIN
+	_apply_mode()
+	if _auth_block != null:
+		_auth_block.visible = true
+	if _loading_block != null:
+		_loading_block.visible = false
+		_loading_block.modulate.a = 1.0
+	if _tap_hint != null:
+		_tap_hint.visible = false
+	if _loading_fill != null:
+		_loading_fill.size.x = 0.0
+	if _loading_percent_label != null:
+		_loading_percent_label.text = "0%"
+	_account_input.text = ""
+	_password_input.text = ""
+	_confirm_password_input.text = ""
+	_display_name_input.text = ""
+	_set_status("已登出。", false)
 
 
 func _resolve_api_base_url() -> String:

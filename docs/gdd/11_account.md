@@ -15,7 +15,10 @@
 3. 按下 `登入` 時，前端呼叫 `/api/auth/login` 驗證帳號密碼。
 4. 按下 `註冊` 後切換成註冊模式，補顯示名稱與再次輸入密碼欄位。
 5. 註冊模式送出時，前端呼叫 `/api/auth/register` 建立帳號。
-6. 成功後保存 token 與 API base URL，接著進入遊戲主流程。
+6. 成功後先保存 token 與 API base URL，接著呼叫 `/api/auth/bootstrap` 取得玩家核心資料。
+7. bootstrap 成功後，把登入 session 與玩家核心資料寫入 `user://` 本地存檔，再進入遊戲主流程。
+8. Client 重啟時若本地仍有 session，會先嘗試自動恢復登入；若 access token 過期，會用 refresh token 更新後再重新抓 bootstrap。
+9. 玩家從 `ConfigScene` 登出時，Client 會優先呼叫 `/api/auth/revoke` 撤銷目前 refresh token；若 access token 已過期，會先 refresh 再 revoke，最後清除本地 `user://auth_session.json` 與玩家存檔。
 
 ## Runtime API 設定
 
