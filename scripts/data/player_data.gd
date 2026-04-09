@@ -4,7 +4,8 @@ extends Resource
 ## 玩家全域資源存檔
 ## 新增欄位只需加上預設值，舊存檔讀取時不會壞掉
 
-const SAVE_PATH: String = "res://data/saves/player_data.json"
+const SAVE_PATH: String = "user://player_data.json"
+const LEGACY_SAVE_PATH: String = "res://data/saves/player_data.json"
 
 # ── 資源 ──────────────────────────────────────────────
 var cat_food: int = 0
@@ -14,6 +15,10 @@ var diamonds: int = 0
 var trap_points: int = 0         # 誘捕點數，用於商店兌換
 var trap_cages: int = 0          # 誘捕籠道具（消耗品，可存放後手動使用）
 var whisker_shards: int = 0      # 通用鬍鬚（地下城獎勵等來源）
+var account: String = ""
+var display_name: String = ""
+var player_public_id: String = ""
+var player_name: String = ""
 
 # ── 誘捕籠 ────────────────────────────────────────────
 var total_pulls: int = 0          # 累計誘捕次數，決定誘捕技術等級
@@ -88,9 +93,10 @@ static func _today_string() -> String:
 # ── 載入 ───────────────────────────────────────────────
 
 static func load_or_default() -> PlayerData:
-	if not FileAccess.file_exists(SAVE_PATH):
+	var load_path := SAVE_PATH if FileAccess.file_exists(SAVE_PATH) else LEGACY_SAVE_PATH
+	if not FileAccess.file_exists(load_path):
 		return PlayerData.new()
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var file := FileAccess.open(load_path, FileAccess.READ)
 	var json := JSON.new()
 	if json.parse(file.get_as_text()) != OK:
 		file.close()
@@ -102,6 +108,10 @@ static func load_or_default() -> PlayerData:
 
 static func _from_dict(data: Dictionary) -> PlayerData:
 	var p := PlayerData.new()
+	p.account           = data.get("account",           "")
+	p.display_name      = data.get("display_name",      "")
+	p.player_public_id  = data.get("player_public_id",  "")
+	p.player_name       = data.get("player_name",       "")
 	p.cat_food          = data.get("cat_food",          0)
 	p.special_cat_food  = data.get("special_cat_food",  0)
 	p.gold              = data.get("gold",              0)
@@ -147,6 +157,10 @@ func save() -> void:
 func _to_dict() -> Dictionary:
 	return {
 		"schema_version":     1,
+		"account":            account,
+		"display_name":       display_name,
+		"player_public_id":   player_public_id,
+		"player_name":        player_name,
 		"cat_food":           cat_food,
 		"special_cat_food":   special_cat_food,
 		"gold":               gold,

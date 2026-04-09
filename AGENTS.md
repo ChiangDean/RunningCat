@@ -7,4 +7,5 @@
 - Keep Godot client changes in GDScript and follow existing scene/script patterns already used in this project.
 - Prefer adding small, explicit UI state transitions instead of rewriting whole scene flows when only one stage changes.
 - Runtime API config is environment-specific: CI generates `config/runtime_config.json`, while local development may override with ignored `config/runtime_config.local.json`.
+- Persistent local runtime data such as login session and player save files must use `user://`, not `res://`.
 - When new stable project-specific constraints are discovered during work, record them here so future changes stay consistent.

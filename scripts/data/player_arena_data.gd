@@ -4,6 +4,8 @@ extends Resource
 ## 玩家競技場存檔
 ## 對應 data/saves/player_arena.json
 
+# TODO(auth-persistence-migration): Move arena save persistence to `user://` with legacy fallback + one-time migration.
+# Remove this marker after the `res://` save path has been retired.
 const SAVE_PATH: String = "res://data/saves/player_arena.json"
 const ARENA_DATA_PATH: String = "res://data/arena/arena_data.json"
 
