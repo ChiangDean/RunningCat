@@ -63,6 +63,7 @@ func clear_persisted_player_state() -> void:
 	dungeon_overview_data = []
 	arena_data = PlayerArenaData.new()
 	arena_opponent = {}
+	arena_overview_data = {}
 
 
 func clear_auth_and_player_state() -> void:
@@ -271,6 +272,7 @@ var boss_config: Dictionary = {}
 # ── 競技場狀態 ────────────────────────────────
 var arena_data: PlayerArenaData
 var arena_opponent: Dictionary = {}
+var arena_overview_data: Dictionary = {}
 var arena_config: Dictionary = {}
 
 # ── 掛機系統 ──────────────────────────────────
@@ -320,6 +322,7 @@ func _ready() -> void:
 	arena_data.season_end_date = arena_config.get("season_end_date", arena_data.season_end_date)
 	arena_data.check_daily_reset()
 	arena_data.check_season_reset()
+	arena_overview_data = CacheIO.load_config_dict("arena")
 	if not player_data.boss_team.is_empty():
 		player_team = player_data.boss_team.duplicate()
 	idle_config = FileUtils.load_json("res://data/default/idle_config.json")
@@ -389,6 +392,22 @@ func update_scooper_treasure(data: Array) -> void:
 func update_scooper_achievement(data: Array) -> void:
 	scooper_achievement_data = data
 	CacheIO.save_scooper("achievement", data)
+
+
+func update_arena(data: Dictionary) -> void:
+	arena_overview_data = data.duplicate(true)
+	CacheIO.save_config("arena", arena_overview_data)
+	if player_data == null:
+		return
+	if arena_overview_data.get("playerName") != null:
+		player_data.player_name = String(arena_overview_data.get("playerName", player_data.player_name))
+	if arena_overview_data.get("playerPublicId") != null:
+		player_data.player_public_id = String(arena_overview_data.get("playerPublicId", player_data.player_public_id))
+	player_data.diamonds = int(arena_overview_data.get("diamonds", player_data.diamonds))
+	player_data.trap_cages = int(arena_overview_data.get("trapCages", player_data.trap_cages))
+	player_data.cat_food = int(arena_overview_data.get("catFood", player_data.cat_food))
+	player_data.special_cat_food = int(arena_overview_data.get("specialCatFood", player_data.special_cat_food))
+	player_data.save()
 
 
 # ── Config 快取讀寫（保留供 ConfigScene 直接呼叫）─────
