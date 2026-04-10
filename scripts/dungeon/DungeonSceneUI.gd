@@ -99,19 +99,20 @@ static func refresh_panel(scene, dungeon_id: int) -> void:
 	ad_label.text = "今日可補票次數：%d" % ad_count
 
 	var ad_button: Button = entry["ad_button"]
-	var can_get_ad_ticket := ad_count > 0 and not scene._action_inflight
+	var action_inflight: bool = bool(scene._action_inflight)
+	var can_get_ad_ticket: bool = ad_count > 0 and not action_inflight
 	ad_button.disabled = not can_get_ad_ticket
 	ad_button.modulate = Color(1.0, 1.0, 1.0, 1.0) if can_get_ad_ticket else Color(0.5, 0.5, 0.5, 1.0)
 
 	var sweep_button: Button = entry["sweep_button"]
-	var can_sweep := max_floor > 0 and ticket_count > 0 and not scene._action_inflight
+	var can_sweep: bool = max_floor > 0 and ticket_count > 0 and not action_inflight
 	sweep_button.text = "掃蕩 Lv.%d" % max_floor if max_floor > 0 else "掃蕩"
 	sweep_button.disabled = not can_sweep
 	sweep_button.modulate = Color(1.0, 1.0, 1.0, 1.0) if can_sweep else Color(0.5, 0.5, 0.5, 1.0)
 
 	var challenge_button: Button = entry["challenge_button"]
 	var next_floor := max_floor + 1
-	var can_challenge := ticket_count > 0 and not scene._action_inflight
+	var can_challenge: bool = ticket_count > 0 and not action_inflight
 	challenge_button.text = "挑戰 Lv.%d" % next_floor
 	challenge_button.disabled = not can_challenge
 	challenge_button.modulate = Color(1.0, 1.0, 1.0, 1.0) if can_challenge else Color(0.5, 0.5, 0.5, 1.0)
