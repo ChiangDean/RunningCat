@@ -1,10 +1,6 @@
 class_name DungeonBattleScene
 extends Node2D
 
-## 地下城戰鬥場景
-## - 勝利：消耗卷、給予獎勵、更新最高關卡，返回地下城頁面
-## - 失敗：不消耗卷，返回地下城頁面
-
 var MAX_CATS_ON_FIELD: int = 5
 
 const SW := 720.0
@@ -17,12 +13,10 @@ const SKILL_BAR_Y := BATTLE_Y + 10.0
 const SKILL_SLOT_W := 100.0
 const SKILL_SLOT_H := 90.0
 
-# ── 戰鬥節點 ─────────────────────────────────
 var _player_team: Node2D
 var _enemy_team: Node2D
 var _battle_manager: BattleManager
 
-# ── UI 節點 ───────────────────────────────────
 var _ui_layer: CanvasLayer
 var _timer_label: Label
 var _speed_1x: Button
@@ -33,25 +27,29 @@ var _level_label: Label
 var _result_display: Label
 var _skill_bar: Control
 
-# ── 地下城資料 ────────────────────────────────
 var _dungeon_id: String = ""
+var _dungeon_key: String = ""
 var _dungeon_level: int = 1
 var _dungeon_cfg: Dictionary = {}
+var _result_submit_inflight := false
+
+@onready var ApiClient = get_node("/root/ApiClient")
 
 
 func _ready() -> void:
 	_dungeon_id = GameState.dungeon_battle_id
+	_dungeon_key = GameState.dungeon_battle_key
 	_dungeon_level = GameState.dungeon_battle_level
+
 	for cfg: Dictionary in GameState.dungeon_config.get("dungeons", []):
-		if cfg.get("id", "") == _dungeon_id:
+		if cfg.get("id", "") == _dungeon_key:
 			_dungeon_cfg = cfg
 			break
+
 	MAX_CATS_ON_FIELD = int(GameState.dungeon_config.get("max_team_size", 5))
 	_build_scene()
 	_start_battle()
 
-
-# ── 建立場景 ──────────────────────────────────
 
 func _build_scene() -> void:
 	_build_background()
@@ -102,7 +100,6 @@ func _build_ui() -> void:
 	_ui_layer = CanvasLayer.new()
 	add_child(_ui_layer)
 
-	# 速度按鈕
 	_speed_1x = _make_button("1x", Vector2(20.0, 20.0), Vector2(70.0, 44.0))
 	_speed_2x = _make_button("2x", Vector2(95.0, 20.0), Vector2(70.0, 44.0))
 	_speed_3x = _make_button("3x", Vector2(170.0, 20.0), Vector2(70.0, 44.0))
@@ -115,19 +112,16 @@ func _build_ui() -> void:
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 
-	# 計時器
 	_timer_label = _make_label("60.0", Vector2(260.0, 20.0), Vector2(200.0, 50.0), 28)
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ui_layer.add_child(_timer_label)
 
-	# 跳過按鈕
 	_skip_btn = _make_button("跳過", Vector2(SW - 100.0, 20.0), Vector2(80.0, 44.0))
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
 	_skip_btn.visible = GameState.can_skip_battle()
 
-	# 地下城關卡標籤
-	var dungeon_name: String = _dungeon_cfg.get("name", "地下城")
+	var dungeon_name: String = _dungeon_cfg.get("name", "地城")
 	_level_label = _make_label(
 		"%s  Lv.%d" % [dungeon_name, _dungeon_level],
 		Vector2(0.0, BATTLE_Y + 10.0 + SKILL_SLOT_H + 10.0),
@@ -137,23 +131,19 @@ func _build_ui() -> void:
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ui_layer.add_child(_level_label)
 
-	# 技能列
 	_skill_bar = _build_skill_bar()
 	_ui_layer.add_child(_skill_bar)
 
-	# 底部導覽背景
 	var nav_bg := ColorRect.new()
 	nav_bg.color = Color(0.1, 0.1, 0.12, 1.0)
 	nav_bg.position = Vector2(0.0, NAV_Y)
 	nav_bg.size = Vector2(SW, NAV_H)
 	_ui_layer.add_child(nav_bg)
 
-	# 撤退按鈕
 	var retreat_btn := _make_button("撤退", Vector2(10.0, NAV_Y + 10.0), Vector2(SW - 20.0, NAV_H - 20.0))
 	retreat_btn.pressed.connect(_on_retreat_pressed)
 	_ui_layer.add_child(retreat_btn)
 
-	# 勝利／敗北 顯示
 	_result_display = Label.new()
 	_result_display.size = Vector2(SW, 80.0)
 	_result_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -240,6 +230,7 @@ func _make_skill_slot(idx: int) -> Control:
 func _refresh_skill_bar_names(player_cats: Array) -> void:
 	if _skill_bar == null:
 		return
+
 	for i in range(player_cats.size()):
 		var slot_node: Control = _skill_bar.get_node_or_null("Slot%d" % i)
 		if slot_node == null:
@@ -247,20 +238,17 @@ func _refresh_skill_bar_names(player_cats: Array) -> void:
 		var name_lbl: Label = slot_node.get_node_or_null("NameLabel")
 		if name_lbl:
 			var cat: CatData = player_cats[i]
-			name_lbl.text = cat.active_skills_data[0].get("display_name", "") \
-					if cat.active_skills_data.size() > 0 else ""
+			name_lbl.text = cat.active_skills_data[0].get("display_name", "") if cat.active_skills_data.size() > 0 else ""
+
 	for i in range(player_cats.size(), MAX_CATS_ON_FIELD):
 		var slot_node: Control = _skill_bar.get_node_or_null("Slot%d" % i)
 		if slot_node:
 			slot_node.visible = false
 
 
-## 將鏟屎官戰鬥加成套用至 CatData（裝備 + 回憶 + 寶藏）
 func _apply_equipment_bonuses(data: CatData) -> void:
 	GameState.apply_player_combat_bonuses(data)
 
-
-# ── 工廠輔助 ─────────────────────────────────
 
 func _make_label(txt: String, pos: Vector2, sz: Vector2, font_size: int) -> Label:
 	var lbl := Label.new()
@@ -300,8 +288,6 @@ func _highlight_speed_btn(active: Button) -> void:
 	active.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
-# ── 戰鬥初始化 ────────────────────────────────
-
 func _start_battle() -> void:
 	_result_display.visible = false
 
@@ -315,8 +301,9 @@ func _start_battle() -> void:
 		var player_cat_id: int = GameState.player_team[i]
 		var cat_id: String = GameState.get_cat_file_id(player_cat_id)
 		if cat_id.is_empty():
-			push_error("DungeonBattleScene: 無法解析 playerCatId %d 的本地貓咪檔名" % player_cat_id)
+			push_error("DungeonBattleScene: 找不到 playerCatId %d 對應的貓咪資料。" % player_cat_id)
 			continue
+
 		var path := "res://data/default/cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
@@ -331,40 +318,37 @@ func _start_battle() -> void:
 				data.active_skills_data[0]["initial_delay"] = GameState.get_delay(i)
 			player_cats.append(data)
 		else:
-			push_error("DungeonBattleScene: 無法載入玩家貓咪 " + cat_id)
+			push_error("DungeonBattleScene: 無法載入玩家貓咪 %s。" % cat_id)
 
 	var enemy_cats: Array = []
 	var mult: float = pow(_dungeon_cfg.get("difficulty_multiplier", 1.03), _dungeon_level - 1)
-	var base_hp: float  = _dungeon_cfg.get("base_hp",  100.0)
+	var base_hp: float = _dungeon_cfg.get("base_hp", 100.0)
 	var base_atk: float = _dungeon_cfg.get("base_atk", 15.0)
 	var base_def: float = _dungeon_cfg.get("base_def", 5.0)
 
-	var data := CatData.from_json_file("res://data/default/cats/test_enemy.json")
-	if data:
-		data.max_hp   = roundi(base_hp  * mult)
-		data.atk      = roundi(base_atk * mult)
-		data.defense  = roundi(base_def * mult)
-		enemy_cats.append(data)
+	var enemy := CatData.from_json_file("res://data/default/cats/test_enemy.json")
+	if enemy:
+		enemy.max_hp = roundi(base_hp * mult)
+		enemy.atk = roundi(base_atk * mult)
+		enemy.defense = roundi(base_def * mult)
+		enemy_cats.append(enemy)
 	else:
-		push_error("DungeonBattleScene: 無法載入 test_enemy")
+		push_error("DungeonBattleScene: 無法載入 test_enemy。")
 
 	if player_cats.is_empty() or enemy_cats.is_empty():
-		push_error("DungeonBattleScene: 貓咪資料不足")
+		push_error("DungeonBattleScene: 戰鬥資料不足。")
 		return
 
 	_refresh_skill_bar_names(player_cats)
 
 	var simulator := BattleSimulator.new()
 	var events := simulator.simulate(player_cats, enemy_cats)
-	_battle_manager.setup(events, player_cats, enemy_cats,
-			_player_team, _enemy_team, _timer_label, _skill_bar)
+	_battle_manager.setup(events, player_cats, enemy_cats, _player_team, _enemy_team, _timer_label, _skill_bar)
 
 
 func _on_skip_pressed() -> void:
 	_battle_manager.skip_to_end()
 
-
-# ── 戰鬥結果 ──────────────────────────────────
 
 func _on_battle_finished(result: String) -> void:
 	if result == "WIN":
@@ -378,30 +362,45 @@ func _on_battle_finished(result: String) -> void:
 
 
 func _handle_win() -> void:
-	var daily_free: int  = int(GameState.dungeon_config.get("daily_free_tickets", 2))
-	var event_bonus: int = int(GameState.dungeon_config.get("event_bonus_tickets", 0))
-	GameState.dungeon_data.consume_ticket(_dungeon_id, daily_free + event_bonus)
-	GameState.dungeon_data.update_max_level(_dungeon_id, _dungeon_level)
-	var rewards: Dictionary = PlayerDungeonData.calculate_rewards(_dungeon_cfg, _dungeon_level)
-	PlayerDungeonData.apply_rewards(GameState.player_data, rewards)
-	GameState.save_all()
-	_show_reward_popup(_dungeon_level, rewards)
+	if _result_submit_inflight:
+		return
+
+	_result_submit_inflight = true
+	ApiClient.complete_dungeon_challenge(int(_dungeon_id), _dungeon_level, _on_complete_challenge)
+
+
+func _on_complete_challenge(success: bool, data: Variant, error: Dictionary) -> void:
+	_result_submit_inflight = false
+
+	if success and data is Dictionary:
+		var payload: Dictionary = data
+		var overview: Variant = payload.get("overview", {})
+		if overview is Dictionary:
+			GameState.apply_dungeon_overview(overview)
+		var rewards: Variant = payload.get("reward", {})
+		_show_reward_popup(_dungeon_level, rewards if rewards is Dictionary else {})
+		return
+
+	var message := String(error.get("message", "挑戰結算失敗。"))
+	DialogManager.show_info("挑戰結算失敗", message, func():
+		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
+	)
 
 
 func _show_reward_popup(level: int, rewards: Dictionary) -> void:
-	var lines: Array = ["Lv.%d 通關獎勵：" % level]
-	if rewards.get("cat_food", 0) > 0:
-		lines.append("  普通乾糧 ×%d" % rewards["cat_food"])
-	if rewards.get("special_cat_food", 0) > 0:
-		lines.append("  特殊乾糧 ×%d" % rewards["special_cat_food"])
-	if rewards.get("diamonds", 0) > 0:
-		lines.append("  💎 鑽石 ×%d" % rewards["diamonds"])
-	if rewards.get("trap_cages", 0) > 0:
-		lines.append("  誘捕籠 ×%d" % rewards["trap_cages"])
-	if rewards.get("whisker_shards", 0) > 0:
-		lines.append("  鬍鬚 ×%d" % rewards["whisker_shards"])
+	var lines: Array = ["Lv.%d 獲得獎勵：" % level]
+	if int(rewards.get("catFood", 0)) > 0:
+		lines.append("  普通乾糧 ×%d" % int(rewards.get("catFood", 0)))
+	if int(rewards.get("specialCatFood", 0)) > 0:
+		lines.append("  特殊乾糧 ×%d" % int(rewards.get("specialCatFood", 0)))
+	if int(rewards.get("diamonds", 0)) > 0:
+		lines.append("  鑽石 ×%d" % int(rewards.get("diamonds", 0)))
+	if int(rewards.get("trapCages", 0)) > 0:
+		lines.append("  誘捕籠 ×%d" % int(rewards.get("trapCages", 0)))
+	if int(rewards.get("whiskerShards", 0)) > 0:
+		lines.append("  鬍鬚碎片 ×%d" % int(rewards.get("whiskerShards", 0)))
 
-	DialogManager.show_info("挑戰成功！", "\n".join(lines), func():
+	DialogManager.show_info("挑戰完成", "\n".join(lines), func():
 		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
 	)
 
