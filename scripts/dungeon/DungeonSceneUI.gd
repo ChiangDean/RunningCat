@@ -8,21 +8,21 @@ static func build_ui(scene) -> void:
 	bg.size = Vector2(scene.SW, scene.SH)
 	scene.add_child(bg)
 
-	var layer := CanvasLayer.new()
-	scene.add_child(layer)
+	scene._ui_layer = CanvasLayer.new()
+	scene.add_child(scene._ui_layer)
 
-	var root_vbox := VBoxContainer.new()
-	root_vbox.name = "RootVBox"
-	root_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root_vbox.add_theme_constant_override("separation", 16)
-	root_vbox.offset_left = 20
-	root_vbox.offset_top = 40
-	root_vbox.offset_right = -20
-	root_vbox.offset_bottom = -20
-	layer.add_child(root_vbox)
+	scene._root_vbox = VBoxContainer.new()
+	scene._root_vbox.name = "RootVBox"
+	scene._root_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scene._root_vbox.add_theme_constant_override("separation", 16)
+	scene._root_vbox.offset_left = 20
+	scene._root_vbox.offset_top = 40
+	scene._root_vbox.offset_right = -20
+	scene._root_vbox.offset_bottom = -20
+	scene._ui_layer.add_child(scene._root_vbox)
 
 	var top_row := HBoxContainer.new()
-	root_vbox.add_child(top_row)
+	scene._root_vbox.add_child(top_row)
 
 	var back_btn := Button.new()
 	back_btn.text = "返回"
@@ -41,13 +41,13 @@ static func build_ui(scene) -> void:
 	spacer.custom_minimum_size = Vector2(100.0, 50.0)
 	top_row.add_child(spacer)
 
-	root_vbox.add_child(HSeparator.new())
+	scene._root_vbox.add_child(HSeparator.new())
 
-	var list := VBoxContainer.new()
-	list.name = "DungeonList"
-	list.add_theme_constant_override("separation", 14)
-	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(list)
+	scene._dungeon_list = VBoxContainer.new()
+	scene._dungeon_list.name = "DungeonList"
+	scene._dungeon_list.add_theme_constant_override("separation", 14)
+	scene._dungeon_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scene._root_vbox.add_child(scene._dungeon_list)
 
 	rebuild_dungeon_panels(scene)
 
@@ -55,8 +55,10 @@ static func build_ui(scene) -> void:
 static func rebuild_dungeon_panels(scene) -> void:
 	scene._dungeon_panels.clear()
 
-	var root_vbox: VBoxContainer = scene.get_node("CanvasLayer/RootVBox")
-	var list: VBoxContainer = root_vbox.get_node("DungeonList")
+	var list: VBoxContainer = scene._dungeon_list
+	if not is_instance_valid(list):
+		return
+
 	for child in list.get_children():
 		child.queue_free()
 
