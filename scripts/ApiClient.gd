@@ -77,6 +77,16 @@ func claim_achievement(achievement_id: int, callback: Callable) -> void:
 	_api_post("scooper/achievement/claim", {"achievementId": achievement_id}, callback)
 
 
+# ── Config / Team API ────────────────────────────────────────
+
+func get_teams(callback: Callable) -> void:
+	_api_get("config/teams", callback)
+
+
+func replace_team(team_type_key: String, members: Array, callback: Callable) -> void:
+	_api_put("config/teams/%s" % team_type_key, {"members": members}, callback)
+
+
 # ── Core request methods ─────────────────────────────────────
 
 func _api_get(path: String, callback: Callable) -> void:
@@ -85,6 +95,18 @@ func _api_get(path: String, callback: Callable) -> void:
 
 func _api_post(path: String, body: Dictionary, callback: Callable) -> void:
 	_enqueue_request(path, HTTPClient.METHOD_POST, body, callback)
+
+
+func _api_put(path: String, body: Dictionary, callback: Callable) -> void:
+	_enqueue_request(path, HTTPClient.METHOD_PUT, body, callback)
+
+
+func _api_delete(path: String, callback: Callable) -> void:
+	_enqueue_request(path, HTTPClient.METHOD_DELETE, {}, callback)
+
+
+func _api_patch(path: String, body: Dictionary, callback: Callable) -> void:
+	_enqueue_request(path, HTTPClient.METHOD_PATCH, body, callback)
 
 
 func _enqueue_request(path: String, method: int, body: Dictionary, callback: Callable) -> void:
@@ -122,7 +144,10 @@ func _dispatch(slot: int, entry: Dictionary) -> void:
 		"Authorization: Bearer %s" % GameState.get_access_token(),
 	])
 
-	if method == HTTPClient.METHOD_POST:
+	var has_body := method == HTTPClient.METHOD_POST \
+			or method == HTTPClient.METHOD_PUT \
+			or method == HTTPClient.METHOD_PATCH
+	if has_body:
 		headers.append("Content-Type: application/json")
 		var body_text := JSON.stringify(entry["body"])
 		var error := _pool[slot].request(url, headers, method, body_text)

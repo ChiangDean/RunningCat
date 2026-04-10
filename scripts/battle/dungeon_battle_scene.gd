@@ -312,7 +312,11 @@ func _start_battle() -> void:
 
 	var player_cats: Array = []
 	for i in range(GameState.player_team.size()):
-		var cat_id: String = GameState.player_team[i]
+		var player_cat_id: int = GameState.player_team[i]
+		var cat_id: String = GameState.get_cat_file_id(player_cat_id)
+		if cat_id.is_empty():
+			push_error("DungeonBattleScene: 無法解析 playerCatId %d 的本地貓咪檔名" % player_cat_id)
+			continue
 		var path := "res://data/default/cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:

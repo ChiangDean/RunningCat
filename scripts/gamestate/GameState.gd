@@ -1,17 +1,25 @@
 extends Node
 
+## 全局遊戲狀態 AutoLoad，跨場景共享。
+## 子模組透過 preload 載入：
+##   FileUtils  — 檔案讀寫工具（GameStateFileUtils）
+##   CacheIO    — JSON 快取讀寫（GameStateCacheIO）
+##   BossStage  — Boss 關卡進度純計算（GameStateBossStage）
+
+const FileUtils = preload("res://scripts/gamestate/GameStateFileUtils.gd")
+const CacheIO   = preload("res://scripts/gamestate/GameStateCacheIO.gd")
+const BossStage = preload("res://scripts/gamestate/GameStateBossStage.gd")
+
 const AUTH_SESSION_PATH := "user://auth_session.json"
 const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
 const LEGACY_PLAYER_DATA_PATH := PlayerData.LEGACY_SAVE_PATH
 const LEGACY_PLAYER_DUNGEON_DATA_PATH := PlayerDungeonData.SAVE_PATH
 const LEGACY_PLAYER_ARENA_DATA_PATH := PlayerArenaData.SAVE_PATH
 const LEGACY_PLAYER_CAT_DIR_PATH := PlayerCatData.SAVE_DIR
-const SCOOPER_CACHE_DIR := "user://player_data/scooper"
 
 var api_base_url: String = ""
 var auth_session: Dictionary = {}
 
-## 全局遊戲狀態，跨場景共享
 signal achievements_changed
 
 # ── 玩家資源 & 強化存檔 ──────────────────────
@@ -33,16 +41,19 @@ func clear_auth_session() -> void:
 
 
 func clear_persisted_player_state() -> void:
-	_delete_file_if_exists(PLAYER_DATA_PATH)
-	_delete_file_if_exists(LEGACY_PLAYER_DATA_PATH)
-	_delete_file_if_exists(LEGACY_PLAYER_DUNGEON_DATA_PATH)
-	_delete_file_if_exists(LEGACY_PLAYER_ARENA_DATA_PATH)
-	_delete_files_in_directory(LEGACY_PLAYER_CAT_DIR_PATH)
+	FileUtils.delete_file_if_exists(PLAYER_DATA_PATH)
+	FileUtils.delete_file_if_exists(LEGACY_PLAYER_DATA_PATH)
+	FileUtils.delete_file_if_exists(LEGACY_PLAYER_DUNGEON_DATA_PATH)
+	FileUtils.delete_file_if_exists(LEGACY_PLAYER_ARENA_DATA_PATH)
+	FileUtils.delete_files_in_directory(LEGACY_PLAYER_CAT_DIR_PATH)
+	FileUtils.delete_files_in_directory(CacheIO.CONFIG_CACHE_DIR)
 
 	player_data = PlayerData.new()
 	_player_cat_cache = {}
-	player_team = ["milk_cat", "milk_cat", "milk_cat"]
+	player_team = []
 	skill_delays = {}
+	player_cats_data = []
+	teams_data = {}
 	current_global_stage = 1
 	boss_available = false
 	dungeon_battle_id = ""
@@ -129,23 +140,23 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	# ── 解析並快取 catalog 資料 ──
 	var eq_cat: Variant = data.get("equipmentCatalog", [])
 	scooper_equipment_catalog = eq_cat if eq_cat is Array else []
-	_save_catalog_cache("equipment_catalog", scooper_equipment_catalog)
+	CacheIO.save_catalog("equipment_catalog", scooper_equipment_catalog)
 
 	var mem_cat: Variant = data.get("memoryCatalog", [])
 	scooper_memory_catalog = mem_cat if mem_cat is Array else []
-	_save_catalog_cache("memory_catalog", scooper_memory_catalog)
+	CacheIO.save_catalog("memory_catalog", scooper_memory_catalog)
 
 	var tr_cat: Variant = data.get("treasureCatalog", [])
 	scooper_treasure_catalog = tr_cat if tr_cat is Array else []
-	_save_catalog_cache("treasure_catalog", scooper_treasure_catalog)
+	CacheIO.save_catalog("treasure_catalog", scooper_treasure_catalog)
 
 	var ach_cat: Variant = data.get("achievementCatalog", [])
 	scooper_achievement_catalog = ach_cat if ach_cat is Array else []
-	_save_catalog_cache("achievement_catalog", scooper_achievement_catalog)
+	CacheIO.save_catalog("achievement_catalog", scooper_achievement_catalog)
 
 	var ab_cat: Variant = data.get("abilityCatalog", [])
 	scooper_ability_catalog = ab_cat if ab_cat is Array else []
-	_save_catalog_cache("ability_catalog", scooper_ability_catalog)
+	CacheIO.save_catalog("ability_catalog", scooper_ability_catalog)
 
 	# ── 解析並快取 live scooper data ──
 	var s_profile: Variant = data.get("scooperProfile", {})
@@ -167,12 +178,22 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	if s_achievement is Array:
 		update_scooper_achievement(s_achievement)
 
+	# ── Config 資料（貓咪 + 隊伍）──
+	var p_cats: Variant = data.get("playerCats", [])
+	if p_cats is Array:
+		update_player_cats(p_cats)
+	var p_teams: Variant = data.get("playerTeams", [])
+	if p_teams is Array:
+		update_player_teams(p_teams)
+		var boss_team: Dictionary = teams_data.get("Boss", {})
+		var boss_members: Array = boss_team.get("members", [])
+		player_team = boss_members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
+
 
 func _save_auth_session() -> void:
 	var file := FileAccess.open(AUTH_SESSION_PATH, FileAccess.WRITE)
 	if file == null:
 		return
-
 	file.store_string(JSON.stringify({
 		"api_base_url": api_base_url,
 		"session": auth_session,
@@ -181,35 +202,8 @@ func _save_auth_session() -> void:
 
 
 func _delete_auth_session_file() -> void:
-	_delete_file_if_exists(AUTH_SESSION_PATH)
+	FileUtils.delete_file_if_exists(AUTH_SESSION_PATH)
 
-
-func _delete_file_if_exists(path: String) -> void:
-	if not FileAccess.file_exists(path):
-		return
-
-	var absolute_path := ProjectSettings.globalize_path(path)
-	DirAccess.remove_absolute(absolute_path)
-
-
-func _delete_files_in_directory(path: String) -> void:
-	var absolute_path := ProjectSettings.globalize_path(path)
-	if not DirAccess.dir_exists_absolute(absolute_path):
-		return
-
-	var directory := DirAccess.open(path)
-	if directory == null:
-		return
-
-	directory.list_dir_begin()
-	while true:
-		var entry_name := directory.get_next()
-		if entry_name == "":
-			break
-		if entry_name == "." or entry_name == ".." or directory.current_is_dir():
-			continue
-		directory.remove(entry_name)
-	directory.list_dir_end()
 
 ## 目前擁有的貓咪 ID 列表（從 player_data 讀取）
 func get_owned_cats() -> Array:
@@ -229,18 +223,22 @@ func add_owned_cat(cat_id: String) -> void:
 	if added:
 		refresh_achievements()
 
+
 # ── 玩家配置 ──────────────────────────────────
-var player_team: Array = ["milk_cat", "milk_cat", "milk_cat"]
-var skill_delays: Dictionary = {}
+var player_team: Array = []
+var skill_delays: Dictionary = {}  ## DEPRECATED: 延遲改由 teams_data 管理
+
+# ── Config 快取（Bootstrap 時寫入 user://config/）──────────────────────
+## 玩家擁有的貓咪清單（來自後端 PlayerCat，含 playerCatId、catalogId、displayName 等）
+var player_cats_data: Array = []
+## 所有隊伍設定（key = teamType 字串，value = teamResponse Dict）
+var teams_data: Dictionary = {}
 
 # ── 關卡進度（單一數字記錄）──────────────────────
 ## 全局關卡編號（1 起算），單一數字即可還原所有進度資訊
-## 每個 Boss 關 = 4 個遭遇戰 + 1 個 Boss，共 5 格
-## 範例：1=1-1, 2=1-2, 3=1-3, 4=1-4, 5=1-BOSS, 6=2-1, 50=10-BOSS
 var current_global_stage: int = 1
 ## Boss 失敗後為 true，顯示「挑戰 Boss」按鈕
 var boss_available: bool = false
-
 
 # ── 地下城戰鬥狀態 ────────────────────────────
 var dungeon_battle_id: String = ""
@@ -254,9 +252,8 @@ var boss_config: Dictionary = {}
 
 # ── 競技場狀態 ────────────────────────────────
 var arena_data: PlayerArenaData
-## 競技場當前對戰資訊（進入戰鬥前設定，戰鬥結束後讀取）
-var arena_opponent: Dictionary = {}   # { player_id, player_name, score, rank_name, defense_team }
-var arena_config: Dictionary = {}     # 由 config 讀取的競技場設定（賽季日期、購買費用等）
+var arena_opponent: Dictionary = {}
+var arena_config: Dictionary = {}
 
 # ── 掛機系統 ──────────────────────────────────
 var idle_config: Dictionary = {}
@@ -289,176 +286,152 @@ var scooper_memory_data: Array = []
 var scooper_treasure_data: Array = []
 var scooper_achievement_data: Array = []
 
-# ── 常數 ──────────────────────────────────────
+
 func _ready() -> void:
 	player_data = PlayerData.load_or_default()
 	current_global_stage = player_data.current_stage
-	dungeon_config = _load_json("res://data/default/dungeon_config.json")
-	boss_config = _load_json("res://data/default/boss_config.json")
+	dungeon_config = FileUtils.load_json("res://data/default/dungeon_config.json")
+	boss_config = FileUtils.load_json("res://data/default/boss_config.json")
 	dungeon_data = PlayerDungeonData.load_or_default()
 	dungeon_data.check_daily_reset(int(dungeon_config.get("daily_free_tickets", 2)))
 	for cat_id: String in player_data.owned_cat_ids:
 		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
-	arena_config = _load_json("res://data/default/arena_config.json")
+	arena_config = FileUtils.load_json("res://data/default/arena_config.json")
 	arena_data = PlayerArenaData.load_or_create()
 	arena_data.season_end_date = arena_config.get("season_end_date", arena_data.season_end_date)
 	arena_data.check_daily_reset()
 	arena_data.check_season_reset()
-	# 以 boss_team 作為預設出戰隊伍
 	if not player_data.boss_team.is_empty():
 		player_team = player_data.boss_team.duplicate()
-	# 掛機系統：載入設定與隨機種子
-	idle_config = _load_json("res://data/default/idle_config.json")
+	idle_config = FileUtils.load_json("res://data/default/idle_config.json")
 	_idle_rng.randomize()
-	# 裝備系統：載入設定與隨機種子
-	equipment_config = _load_json("res://data/default/equipment_config.json")
+	equipment_config = FileUtils.load_json("res://data/default/equipment_config.json")
 	_equip_rng.randomize()
-	special_ability_config = _load_json("res://data/default/ability_config.json")
+	special_ability_config = FileUtils.load_json("res://data/default/ability_config.json")
 	_special_ability_rng.randomize()
-	memory_config = _load_json("res://data/default/memory_config.json")
-	treasure_config = _load_json("res://data/default/treasure_config.json")
-	shop_bundle_config = _load_json("res://data/default/shop_bundle_config.json")
-	achievement_config = _load_json("res://data/default/achievement_config.json")
-	# 載入 API catalog 快取（fallback 到空陣列）
-	scooper_equipment_catalog = _load_catalog_cache("equipment_catalog")
-	scooper_memory_catalog = _load_catalog_cache("memory_catalog")
-	scooper_treasure_catalog = _load_catalog_cache("treasure_catalog")
-	scooper_achievement_catalog = _load_catalog_cache("achievement_catalog")
-	scooper_ability_catalog = _load_catalog_cache("ability_catalog")
-	# 載入 scooper live data 快取
-	scooper_profile_data = _load_scooper_cache_dict("profile")
-	scooper_equipment_data = _load_scooper_cache_array("equipment")
-	scooper_ability_data = _load_scooper_cache_array("ability")
-	scooper_memory_data = _load_scooper_cache_array("memory")
-	scooper_treasure_data = _load_scooper_cache_array("treasure")
-	scooper_achievement_data = _load_scooper_cache_array("achievement")
-	# 首次啟動時初始化計時起點（往後只有領取時才會重設）
+	memory_config = FileUtils.load_json("res://data/default/memory_config.json")
+	treasure_config = FileUtils.load_json("res://data/default/treasure_config.json")
+	shop_bundle_config = FileUtils.load_json("res://data/default/shop_bundle_config.json")
+	achievement_config = FileUtils.load_json("res://data/default/achievement_config.json")
+	scooper_equipment_catalog = CacheIO.load_catalog("equipment_catalog")
+	scooper_memory_catalog = CacheIO.load_catalog("memory_catalog")
+	scooper_treasure_catalog = CacheIO.load_catalog("treasure_catalog")
+	scooper_achievement_catalog = CacheIO.load_catalog("achievement_catalog")
+	scooper_ability_catalog = CacheIO.load_catalog("ability_catalog")
+	scooper_profile_data = CacheIO.load_scooper_dict("profile")
+	scooper_equipment_data = CacheIO.load_scooper_array("equipment")
+	scooper_ability_data = CacheIO.load_scooper_array("ability")
+	scooper_memory_data = CacheIO.load_scooper_array("memory")
+	scooper_treasure_data = CacheIO.load_scooper_array("treasure")
+	scooper_achievement_data = CacheIO.load_scooper_array("achievement")
+	player_cats_data = CacheIO.load_config_array("player_cats")
+	var cached_teams := CacheIO.load_config_array("teams")
+	if not cached_teams.is_empty():
+		update_player_teams(cached_teams)
+		var boss_team: Dictionary = teams_data.get("Boss", {})
+		var boss_members: Array = boss_team.get("members", [])
+		if not boss_members.is_empty():
+			player_team = boss_members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
 	if player_data.last_quit_time == 0:
 		player_data.last_quit_time = Time.get_unix_time_from_system()
 		player_data.save()
 	refresh_achievements(false)
 
 
-static func _load_json(path: String) -> Dictionary:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		push_error("GameState: 無法開啟 " + path)
-		return {}
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		file.close()
-		push_error("GameState: JSON 解析失敗 " + path)
-		return {}
-	file.close()
-	return json.get_data()
-
-
-func _save_catalog_cache(catalog_name: String, data: Array) -> void:
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://catalog"))
-	var path := "user://catalog/%s.json" % catalog_name
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		push_error("GameState: 無法寫入 catalog 快取 " + path)
-		return
-	file.store_string(JSON.stringify(data))
-	file.close()
-
-
-func _load_catalog_cache(catalog_name: String) -> Array:
-	var path := "user://catalog/%s.json" % catalog_name
-	if not FileAccess.file_exists(path):
-		return []
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return []
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		file.close()
-		return []
-	file.close()
-	var result: Variant = json.get_data()
-	return result if result is Array else []
-
-
-# ── Scooper 快取讀寫 ────────────────────────────────
-
-func _save_scooper_cache(cache_name: String, data: Variant) -> void:
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SCOOPER_CACHE_DIR))
-	var path := "%s/%s.json" % [SCOOPER_CACHE_DIR, cache_name]
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		push_error("GameState: 無法寫入 scooper 快取 " + path)
-		return
-	file.store_string(JSON.stringify(data))
-	file.close()
-
-
-func _load_scooper_cache_array(cache_name: String) -> Array:
-	var path := "%s/%s.json" % [SCOOPER_CACHE_DIR, cache_name]
-	if not FileAccess.file_exists(path):
-		return []
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return []
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		file.close()
-		return []
-	file.close()
-	var result: Variant = json.get_data()
-	return result if result is Array else []
-
-
-func _load_scooper_cache_dict(cache_name: String) -> Dictionary:
-	var path := "%s/%s.json" % [SCOOPER_CACHE_DIR, cache_name]
-	if not FileAccess.file_exists(path):
-		return {}
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return {}
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		file.close()
-		return {}
-	file.close()
-	var result: Variant = json.get_data()
-	return result if result is Dictionary else {}
-
+# ── Scooper 快取更新 ────────────────────────────────
 
 ## 更新鏟屎官 profile 快取（記憶體 + 本地檔案）
 func update_scooper_profile(data: Dictionary) -> void:
 	scooper_profile_data = data
-	_save_scooper_cache("profile", data)
-
+	CacheIO.save_scooper("profile", data)
 
 ## 更新裝備快取（記憶體 + 本地檔案）
 func update_scooper_equipment(data: Array) -> void:
 	scooper_equipment_data = data
-	_save_scooper_cache("equipment", data)
-
+	CacheIO.save_scooper("equipment", data)
 
 ## 更新特殊能力快取（記憶體 + 本地檔案）
 func update_scooper_ability(data: Array) -> void:
 	scooper_ability_data = data
-	_save_scooper_cache("ability", data)
-
+	CacheIO.save_scooper("ability", data)
 
 ## 更新回憶快取（記憶體 + 本地檔案）
 func update_scooper_memory(data: Array) -> void:
 	scooper_memory_data = data
-	_save_scooper_cache("memory", data)
-
+	CacheIO.save_scooper("memory", data)
 
 ## 更新寶藏快取（記憶體 + 本地檔案）
 func update_scooper_treasure(data: Array) -> void:
 	scooper_treasure_data = data
-	_save_scooper_cache("treasure", data)
-
+	CacheIO.save_scooper("treasure", data)
 
 ## 更新成就快取（記憶體 + 本地檔案）
 func update_scooper_achievement(data: Array) -> void:
 	scooper_achievement_data = data
-	_save_scooper_cache("achievement", data)
+	CacheIO.save_scooper("achievement", data)
+
+
+# ── Config 快取讀寫（保留供 ConfigScene 直接呼叫）─────
+
+func _save_config_cache(cache_name: String, data: Variant) -> void:
+	CacheIO.save_config(cache_name, data)
+
+func _load_config_cache_array(cache_name: String) -> Array:
+	return CacheIO.load_config_array(cache_name)
+
+
+## 更新玩家貓咪清單快取（記憶體 + 本地檔案）
+func update_player_cats(data: Array) -> void:
+	player_cats_data = data
+	CacheIO.save_config("player_cats", data)
+
+
+## 更新隊伍快取（記憶體 + 本地檔案）
+func update_player_teams(data: Array) -> void:
+	teams_data = {}
+	for team: Variant in data:
+		if team is Dictionary:
+			var team_type: String = String(team.get("teamType", ""))
+			if team_type != "":
+				teams_data[team_type] = team
+	CacheIO.save_config("teams", data)
+
+
+## 取得指定隊伍資料（teamType 如 "Boss", "Dungeon", "ArenaAttack", "ArenaDefense"）
+func get_team(team_type: String) -> Dictionary:
+	return teams_data.get(team_type, {"teamType": team_type, "members": []})
+
+
+## 取得可用貓咪列表（已擁有）
+func get_config_owned_cats() -> Array:
+	return player_cats_data.filter(func(c: Dictionary) -> bool: return bool(c.get("isOwned", false)))
+
+
+## 取得 playerCatId → 貓咪名稱 的對應（供顯示用）
+func get_player_cat_display_name(player_cat_id: int) -> String:
+	for cat: Variant in player_cats_data:
+		if cat is Dictionary and int(cat.get("playerCatId", -1)) == player_cat_id:
+			return String(cat.get("displayName", ""))
+	return ""
+
+
+## playerCatId (int) → 本地 JSON 檔名（如 "black_cat"）
+## 由 player_cats_data 中的 catCatalogId 對應 CAT_FILE_MAP
+const _CAT_FILE_MAP: Dictionary = {
+	1: "black_cat",
+	2: "calico_cat",
+	3: "milk_cat",
+	4: "ninja_cat",
+	5: "orange_cat",
+	7: "tuxedo_cat",
+}
+
+func get_cat_file_id(player_cat_id: int) -> String:
+	for cat: Variant in player_cats_data:
+		if cat is Dictionary and int(cat.get("playerCatId", -1)) == player_cat_id:
+			var catalog_id: int = int(cat.get("catCatalogId", 0))
+			return String(_CAT_FILE_MAP.get(catalog_id, ""))
+	return ""
 
 
 ## 取得貓咪強化存檔（找不到時自動建立預設值）
@@ -502,122 +475,6 @@ func get_achievement_state(achievement_id: String) -> Dictionary:
 	}
 
 
-func get_achievement_display_groups() -> Dictionary:
-	refresh_achievements(false)
-	var active: Array = []
-	var claimed: Array = []
-	var claimable_count := 0
-	var completed_count := 0
-	var items: Array = get_all_achievements()
-	for i in range(items.size()):
-		var item: Dictionary = items[i]
-		var entry := _build_achievement_display_entry(item, i)
-		if entry.is_empty():
-			continue
-		if entry.get("completed", false):
-			completed_count += 1
-		if entry.get("claimable", false):
-			claimable_count += 1
-		if entry.get("claimed", false):
-			claimed.append(entry)
-		else:
-			active.append(entry)
-
-	active.sort_custom(Callable(self, "_compare_active_achievement_entries"))
-	claimed.sort_custom(Callable(self, "_compare_claimed_achievement_entries"))
-
-	return {
-		"active": active,
-		"claimed": claimed,
-		"claimable_count": claimable_count,
-		"completed_count": completed_count,
-		"total_count": items.size(),
-	}
-
-
-func has_unclaimed_achievements() -> bool:
-	return get_unclaimed_achievement_count() > 0
-
-
-func get_unclaimed_achievement_count() -> int:
-	refresh_achievements(false)
-	var count := 0
-	for item: Dictionary in get_all_achievements():
-		var state := get_achievement_state(item.get("id", ""))
-		if state.get("completed", false) and not state.get("claimed", false):
-			count += 1
-	return count
-
-
-## DEPRECATED: 成就改由後端管理
-func refresh_achievements(show_notifications: bool = true) -> Array[String]:
-	push_warning("DEPRECATED: refresh_achievements() — achievements are now managed by the backend API")
-	var newly_completed: Array[String] = []
-	var changed := false
-	for item: Dictionary in get_all_achievements():
-		var achievement_id: String = item.get("id", "")
-		if achievement_id == "":
-			continue
-		var state := get_achievement_state(achievement_id)
-		if state.get("completed", false):
-			continue
-		var progress := get_achievement_progress(item)
-		if not progress.get("met", false):
-			continue
-		state["completed"] = true
-		state["completed_at"] = _now_string()
-		player_data.achievement_states[achievement_id] = state
-		newly_completed.append(item.get("name", achievement_id))
-		changed = true
-
-	if changed:
-		player_data.save()
-		emit_signal("achievements_changed")
-
-	if show_notifications and not newly_completed.is_empty():
-		_queue_achievement_popup(newly_completed)
-
-	return newly_completed
-
-
-## DEPRECATED: 使用 ApiClient.claim_achievement() 取代
-func claim_achievement(achievement_id: String) -> Dictionary:
-	push_warning("DEPRECATED: claim_achievement() — use ApiClient.claim_achievement() instead")
-	var item := get_achievement_item(achievement_id)
-	if item.is_empty():
-		return { "success": false, "error": "找不到成就" }
-
-	refresh_achievements(false)
-	var state := get_achievement_state(achievement_id)
-	if not state.get("completed", false):
-		return { "success": false, "error": "成就尚未達成" }
-	if state.get("claimed", false):
-		return { "success": false, "error": "成就獎勵已領取" }
-
-	for reward: Dictionary in item.get("rewards", []):
-		var validation := _validate_achievement_reward(reward)
-		if not validation.get("success", false):
-			return validation
-
-	var grant_results: Array = []
-	for reward: Dictionary in item.get("rewards", []):
-		var grant_result := _grant_achievement_reward(reward)
-		if not grant_result.get("success", false):
-			return grant_result
-		grant_results.append(grant_result)
-
-	state["claimed"] = true
-	state["claimed_at"] = _now_string()
-	player_data.achievement_states[achievement_id] = state
-	player_data.save()
-	emit_signal("achievements_changed")
-	return {
-		"success": true,
-		"achievement": item,
-		"granted": grant_results,
-	}
-
-
 func get_achievement_progress(item: Dictionary) -> Dictionary:
 	var condition_type: String = item.get("condition_type", "")
 	var target: int = int(item.get("condition_value", 0))
@@ -658,174 +515,35 @@ func get_achievement_progress(item: Dictionary) -> Dictionary:
 	}
 
 
-func format_achievement_rewards(rewards: Array) -> String:
-	var parts: Array[String] = []
-	for reward: Dictionary in rewards:
-		parts.append(_format_achievement_reward(reward))
-	return "、".join(parts)
+## DEPRECATED: 成就改由後端管理，但仍保留供 EnhanceScene 呼叫
+func refresh_achievements(show_notifications: bool = true) -> Array[String]:
+	push_warning("DEPRECATED: refresh_achievements() — achievements are now managed by the backend API")
+	var newly_completed: Array[String] = []
+	var changed := false
+	for item: Dictionary in get_all_achievements():
+		var achievement_id: String = item.get("id", "")
+		if achievement_id == "":
+			continue
+		var state := get_achievement_state(achievement_id)
+		if state.get("completed", false):
+			continue
+		var progress := get_achievement_progress(item)
+		if not progress.get("met", false):
+			continue
+		state["completed"] = true
+		state["completed_at"] = FileUtils.now_string()
+		player_data.achievement_states[achievement_id] = state
+		newly_completed.append(item.get("name", achievement_id))
+		changed = true
 
+	if changed:
+		player_data.save()
+		emit_signal("achievements_changed")
 
-func _build_achievement_display_entry(item: Dictionary, config_order: int) -> Dictionary:
-	var achievement_id: String = item.get("id", "")
-	if achievement_id == "":
-		return {}
-	var state := get_achievement_state(achievement_id)
-	var progress := get_achievement_progress(item)
-	var entry: Dictionary = item.duplicate(true)
-	entry["config_order"] = config_order
-	entry["completed"] = state.get("completed", false)
-	entry["claimed"] = state.get("claimed", false)
-	entry["completed_at"] = state.get("completed_at", "")
-	entry["claimed_at"] = state.get("claimed_at", "")
-	entry["claimable"] = state.get("completed", false) and not state.get("claimed", false)
-	entry["condition_text"] = progress.get("condition_text", "")
-	entry["progress_current"] = progress.get("current", 0)
-	entry["progress_target"] = progress.get("target", 0)
-	entry["progress_text"] = progress.get("progress_text", "")
-	entry["reward_text"] = format_achievement_rewards(item.get("rewards", []))
-	return entry
+	if show_notifications and not newly_completed.is_empty():
+		_queue_achievement_popup(newly_completed)
 
-
-func _compare_active_achievement_entries(a: Dictionary, b: Dictionary) -> bool:
-	var a_claimable: bool = bool(a.get("claimable", false))
-	var b_claimable: bool = bool(b.get("claimable", false))
-	if a_claimable != b_claimable:
-		return a_claimable and not b_claimable
-	return int(a.get("config_order", 0)) < int(b.get("config_order", 0))
-
-
-func _compare_claimed_achievement_entries(a: Dictionary, b: Dictionary) -> bool:
-	var a_time: String = a.get("claimed_at", "")
-	var b_time: String = b.get("claimed_at", "")
-	if a_time == b_time:
-		return int(a.get("config_order", 0)) < int(b.get("config_order", 0))
-	return a_time > b_time
-
-
-func _get_highest_cat_level() -> int:
-	var highest := 0
-	for cat_id: String in player_data.owned_cat_ids:
-		highest = maxi(highest, get_player_cat(cat_id).cat_food_level)
-	return highest
-
-
-func _get_highest_cat_rank() -> int:
-	var highest := 0
-	for cat_id: String in player_data.owned_cat_ids:
-		highest = maxi(highest, get_player_cat(cat_id).rank)
-	return highest
-
-
-func _validate_achievement_reward(reward: Dictionary) -> Dictionary:
-	match reward.get("type", ""):
-		"special_ability":
-			if _get_special_ability_item(reward.get("id", "")).is_empty():
-				return { "success": false, "error": "成就獎勵的特殊能力不存在" }
-		"treasure":
-			if _get_treasure_item(reward.get("id", "")).is_empty():
-				return { "success": false, "error": "成就獎勵的寶藏不存在" }
-		_:
-			pass
-	return { "success": true }
-
-
-## DEPRECATED: 獎勵改由後端發放
-func _grant_achievement_reward(reward: Dictionary) -> Dictionary:
-	push_warning("DEPRECATED: _grant_achievement_reward() — rewards are now granted by the backend API")
-	var reward_type: String = reward.get("type", "")
-	match reward_type:
-		"gold":
-			var gold_amount: int = int(reward.get("amount", 0))
-			player_data.gold += gold_amount
-			return { "success": true, "text": "金幣 ×%d" % gold_amount }
-		"diamonds":
-			var diamond_amount: int = int(reward.get("amount", 0))
-			player_data.diamonds += diamond_amount
-			return { "success": true, "text": "鑽石 ×%d" % diamond_amount }
-		"cat_food":
-			var cat_food_amount: int = int(reward.get("amount", 0))
-			player_data.cat_food += cat_food_amount
-			return { "success": true, "text": "貓糧 ×%d" % cat_food_amount }
-		"special_cat_food":
-			var special_food_amount: int = int(reward.get("amount", 0))
-			player_data.special_cat_food += special_food_amount
-			return { "success": true, "text": "特殊乾糧 ×%d" % special_food_amount }
-		"whisker_shards":
-			var whisker_amount: int = int(reward.get("amount", 0))
-			player_data.whisker_shards += whisker_amount
-			return { "success": true, "text": "鬍鬚 ×%d" % whisker_amount }
-		"memory_shards":
-			var memory_amount: int = int(reward.get("amount", 0))
-			player_data.memory_shards += memory_amount
-			return { "success": true, "text": "回憶碎片 ×%d" % memory_amount }
-		"trap_cages":
-			var cage_amount: int = int(reward.get("amount", 0))
-			player_data.trap_cages += cage_amount
-			return { "success": true, "text": "誘捕籠 ×%d" % cage_amount }
-		"special_ability":
-			var ability_id: String = reward.get("id", "")
-			if player_data.special_ability_ids.has(ability_id):
-				var compensation: Dictionary = reward.get("duplicate_compensation", {})
-				if compensation.is_empty():
-					return { "success": true, "text": "特殊能力 %s（已擁有）" % ability_id }
-				var compensation_result := _grant_achievement_reward(compensation)
-				if not compensation_result.get("success", false):
-					return compensation_result
-				var ability_name: String = _get_special_ability_item(ability_id).get("name", ability_id)
-				return {
-					"success": true,
-					"text": "%s 已擁有，改發 %s" % [ability_name, compensation_result.get("text", "")],
-				}
-			var ability_result := grant_special_ability(ability_id)
-			if not ability_result.get("success", false):
-				return ability_result
-			return {
-				"success": true,
-				"text": "特殊能力「%s」" % ability_result.get("ability", {}).get("name", ability_id),
-			}
-		"treasure":
-			var treasure_id: String = reward.get("id", "")
-			var quantity: int = int(reward.get("amount", 1))
-			var treasure_result := grant_treasure(treasure_id, quantity)
-			if not treasure_result.get("success", false):
-				return treasure_result
-			return {
-				"success": true,
-				"text": "寶藏「%s」×%d" % [
-					treasure_result.get("treasure", {}).get("name", treasure_id),
-					quantity,
-				],
-			}
-		_:
-			return { "success": false, "error": "不支援的成就獎勵類型：%s" % reward_type }
-
-
-func _format_achievement_reward(reward: Dictionary) -> String:
-	match reward.get("type", ""):
-		"gold":
-			return "金幣 ×%d" % int(reward.get("amount", 0))
-		"diamonds":
-			return "鑽石 ×%d" % int(reward.get("amount", 0))
-		"cat_food":
-			return "貓糧 ×%d" % int(reward.get("amount", 0))
-		"special_cat_food":
-			return "特殊乾糧 ×%d" % int(reward.get("amount", 0))
-		"whisker_shards":
-			return "鬍鬚 ×%d" % int(reward.get("amount", 0))
-		"memory_shards":
-			return "回憶碎片 ×%d" % int(reward.get("amount", 0))
-		"trap_cages":
-			return "誘捕籠 ×%d" % int(reward.get("amount", 0))
-		"special_ability":
-			var ability_id: String = reward.get("id", "")
-			var ability_name: String = _get_special_ability_item(ability_id).get("name", ability_id)
-			return "特殊能力「%s」" % ability_name
-		"treasure":
-			var treasure_id: String = reward.get("id", "")
-			var treasure_name: String = _get_treasure_item(treasure_id).get("name", treasure_id)
-			return "寶藏「%s」×%d" % [treasure_name, int(reward.get("amount", 1))]
-		_:
-			return str(reward)
+	return newly_completed
 
 
 func _queue_achievement_popup(titles: Array[String]) -> void:
@@ -855,135 +573,74 @@ func _flush_achievement_popup() -> void:
 	lines.append("可前往「鏟屎官 > 成就」領取獎勵。")
 	DialogManager.show_info("成就達成", "\n".join(lines))
 
-## 每個 Boss 關含幾個普通遭遇戰（不含 Boss）
 
-# boss_config 存取輔助
-func _get_boss_config_int(key: String, default_val: int) -> int:
-	return int(boss_config.get(key, default_val))
-func _get_boss_config_float(key: String, default_val: float) -> float:
-	return float(boss_config.get(key, default_val))
-func _get_boss_config_array(key: String, default_val: Array) -> Array:
-	return boss_config.get(key, default_val)
+func _get_highest_cat_level() -> int:
+	var highest := 0
+	for cat_id: String in player_data.owned_cat_ids:
+		highest = maxi(highest, get_player_cat(cat_id).cat_food_level)
+	return highest
 
-# ── 進度輔助計算 ───────────────────────────────
 
-## 當前 Boss 關序號（全局，1 起算）
-## 1-1 ~ 1-BOSS 均屬第 1 個 Boss 關，2-1 ~ 2-BOSS 屬第 2 個，以此類推
+func _get_highest_cat_rank() -> int:
+	var highest := 0
+	for cat_id: String in player_data.owned_cat_ids:
+		highest = maxi(highest, get_player_cat(cat_id).rank)
+	return highest
+
+
+# ── Boss 關卡進度（委派 BossStage）─────────────
+
 func get_boss_stage_number() -> int:
-	var enc = _get_boss_config_int("encounters_per_boss_stage", 4)
-	return ceili(float(current_global_stage) / float(enc + 1))
+	return BossStage.get_boss_stage_number(current_global_stage, boss_config)
 
-## 當前遭遇戰索引（1~4 = 普通遭遇戰，5 = Boss）
 func get_encounter_index() -> int:
-	var enc = _get_boss_config_int("encounters_per_boss_stage", 4)
-	return ((current_global_stage - 1) % (enc + 1)) + 1
+	return BossStage.get_encounter_index(current_global_stage, boss_config)
 
-## 是否目前是 Boss 戰
 func is_current_boss() -> bool:
-	var enc = _get_boss_config_int("encounters_per_boss_stage", 4)
-	return get_encounter_index() == enc + 1
+	return BossStage.is_current_boss(current_global_stage, boss_config)
 
-## Boss 關在當前區域內的序號（1~BOSS_STAGES_PER_ZONE）
 func get_zone_boss_stage() -> int:
-	var bsz = _get_boss_config_int("boss_stages_per_zone", 10)
-	return ((get_boss_stage_number() - 1) % bsz) + 1
+	return BossStage.get_zone_boss_stage(current_global_stage, boss_config)
 
-## 當前所在領地的區域序號（1~ZONES_PER_TERRITORY）
 func get_zone_in_territory() -> int:
-	var bsz = _get_boss_config_int("boss_stages_per_zone", 10)
-	var zpt = _get_boss_config_int("zones_per_territory", 5)
-	var stages_per_territory: int = bsz * zpt
-	return (((get_boss_stage_number() - 1) % stages_per_territory) / bsz) + 1
+	return BossStage.get_zone_in_territory(current_global_stage, boss_config)
 
-## 當前領地序號（1 起算）
 func get_territory_number() -> int:
-	var bsz = _get_boss_config_int("boss_stages_per_zone", 10)
-	var zpt = _get_boss_config_int("zones_per_territory", 5)
-	var stages_per_territory: int = bsz * zpt
-	return ((get_boss_stage_number() - 1) / stages_per_territory) + 1
+	return BossStage.get_territory_number(current_global_stage, boss_config)
 
-# ── 關卡顯示 ──────────────────────────────────
-
-## 顯示格式範例：「新手 I  1-4」、「新手 II  3-BOSS」
 func get_level_display() -> String:
-	var stage_str: String
-	if is_current_boss():
-		stage_str = "%d-BOSS" % get_zone_boss_stage()
-	else:
-		stage_str = "%d-%d" % [get_zone_boss_stage(), get_encounter_index()]
+	return BossStage.get_level_display(current_global_stage, boss_config)
 
-	return "%s %s  %s" % [_get_territory_name(), _get_zone_suffix(), stage_str]
-
-func _get_territory_name() -> String:
-	var t: int = get_territory_number()
-	var arr = _get_boss_config_array("territory_names", ["", "新手", "普通", "高級", "進階", "菁英"])
-	if t < arr.size():
-		return arr[t]
-	return "領地%d" % t
-
-func _get_zone_suffix() -> String:
-	var z: int = get_zone_in_territory()
-	var arr = _get_boss_config_array("zone_suffixes", ["", "I", "II", "III", "IV", "V"])
-	if z < arr.size():
-		return arr[z]
-	return "%d" % z
-
-# ── 難度計算 ───────────────────────────────────
-
-## 回傳當前關卡的敵方數值倍率
-## 普通遭遇戰：每關 +0.3% 複利成長（Stage 軌道）
-## Boss 關：每個 Boss +2% 複利成長（Boss 軌道，與 Stage 分開計算）
 func get_difficulty_multiplier() -> float:
-	var stage_growth = _get_boss_config_float("stage_growth", 1.003)
-	var boss_growth = _get_boss_config_float("boss_growth", 1.02)
-	if is_current_boss():
-		# Boss 軌道：依全局 Boss 關序號計算
-		# 1-BOSS = ×1.020, 10-BOSS = ×1.219, 50-BOSS = ×2.692
-		return pow(boss_growth, get_boss_stage_number())
-	else:
-		# Stage 軌道：依全局關卡編號計算（1-1 = ×1.000）
-		# 1-4 = ×1.009, 10-4 = ×1.136, 50-4 = ×2.064
-		return pow(stage_growth, current_global_stage - 1)
-
-# ── 敵方生成 ───────────────────────────────────
+	return BossStage.get_difficulty_multiplier(current_global_stage, boss_config)
 
 func get_enemy_ids() -> Array:
-	var boss_stage := get_boss_stage_number()
-	var count: int
-	if is_current_boss():
-		# Boss 戰：隨世界推進增加到最多 5 隻
-		count = mini(1 + boss_stage, 5)
-	else:
-		# 普通遭遇戰：較少，每 3 個 Boss 關增加一隻
-		count = mini(1 + (boss_stage - 1) / 3, 5)
-	count = maxi(count, 1)
-	var ids: Array = []
-	for i in range(count):
-		ids.append("test_enemy")
-	return ids
+	return BossStage.get_enemy_ids(current_global_stage, boss_config)
+
 
 # ── 進度邏輯 ──────────────────────────────────
 
-## 勝利後推進到下一關（一律 +1，結構由 current_global_stage 自動計算）
+## 勝利後推進到下一關
 func advance_after_win() -> void:
 	boss_available = false
 	current_global_stage += 1
 	player_data.current_stage = current_global_stage
 	refresh_achievements()
-	player_data.save()  # 即時寫入，確保強制退出時不遺失進度
+	player_data.save()
 
-## Boss 失敗後退回該 Boss 關的第 4 遭遇戰，顯示「挑戰 Boss」按鈕
+## Boss 失敗後退回該 Boss 關的最後遭遇戰，顯示「挑戰 Boss」按鈕
 func on_boss_fail() -> void:
 	var bs: int = get_boss_stage_number()
-	var enc = _get_boss_config_int("encounters_per_boss_stage", 4)
+	var enc := int(boss_config.get("encounters_per_boss_stage", 4))
 	current_global_stage = (bs - 1) * (enc + 1) + enc
 	boss_available = true
 
-## 玩家手動挑戰 Boss（從第 4 遭遇戰跳到 Boss）
+## 玩家手動挑戰 Boss（從最後遭遇戰跳到 Boss）
 func challenge_boss() -> void:
 	var bs: int = get_boss_stage_number()
-	var enc = _get_boss_config_int("encounters_per_boss_stage", 4)
+	var enc := int(boss_config.get("encounters_per_boss_stage", 4))
 	current_global_stage = bs * (enc + 1)
+
 
 # ── 技能延遲 ──────────────────────────────────
 
@@ -1043,13 +700,11 @@ func claim_idle_rewards() -> void:
 	player_data.cat_food       += rewards.get("cat_food", 0)
 	player_data.diamonds       += rewards.get("diamonds", 0)
 	player_data.whisker_shards += rewards.get("whiskers", 0)
-	# 將餘秒保留至下次計算
 	player_data.last_quit_time = Time.get_unix_time_from_system() - remainder_seconds
 	player_data.save()
 
 ## 鏟一次屎：扣除一個屎堆，隨機產出並存檔
-## 回傳產出 dict（exp, memory_shards, whiskers），poop_count 為 0 時回傳空 dict
-## DEPRECATED: 使用 ApiClient.scoop_poop() 取代
+## DEPRECATED: 使用 ApiClient.scoop_poop() 取代（仍保留供 battle_scene 呼叫）
 func scoop_poop() -> Dictionary:
 	push_warning("DEPRECATED: scoop_poop() — use ApiClient.scoop_poop() instead")
 	if player_data.poop_count <= 0:
@@ -1063,7 +718,6 @@ func scoop_poop() -> Dictionary:
 	refresh_achievements()
 	player_data.save()
 	return result
-
 
 ## 檢查並處理鏟屎官升等（可能連續升多級）
 func _check_scooper_level_up() -> void:
@@ -1110,36 +764,12 @@ func get_unowned_special_abilities() -> Array:
 	return result
 
 
-func get_special_ability_draw_cost() -> int:
-	return 0
-
-
 func get_special_ability_speed_cap() -> float:
 	return float(get_special_ability_summary().get("battle_speed_cap", 1.0))
 
 
 func can_skip_battle() -> bool:
 	return bool(get_special_ability_summary().get("battle_skip_unlocked", false))
-
-
-func draw_special_ability(_use_free_ticket: bool) -> Dictionary:
-	return { "success": false, "error": "特殊能力無法抽取，請透過活動、成就或商城禮包取得" }
-
-
-## DEPRECATED: 特殊能力改由後端管理
-func grant_special_ability(ability_id: String) -> Dictionary:
-	push_warning("DEPRECATED: grant_special_ability() — use backend API instead")
-	var item := _get_special_ability_item(ability_id)
-	if item.is_empty():
-		return { "success": false, "error": "特殊能力不存在" }
-	if player_data.special_ability_ids.has(ability_id):
-		return { "success": false, "error": "特殊能力已擁有" }
-	player_data.special_ability_ids.append(ability_id)
-	player_data.save()
-	return {
-		"success": true,
-		"ability": item,
-	}
 
 
 # ── 回憶系統 ──────────────────────────────────
@@ -1164,29 +794,7 @@ func is_memory_unlocked(memory_id: String) -> bool:
 	return player_data.unlocked_memory_ids.has(memory_id)
 
 
-## DEPRECATED: 使用 ApiClient.unlock_memory() 取代
-func unlock_memory(memory_id: String) -> Dictionary:
-	push_warning("DEPRECATED: unlock_memory() — use ApiClient.unlock_memory() instead")
-	var item := _get_memory_item(memory_id)
-	if item.is_empty():
-		return { "success": false, "error": "找不到回憶" }
-	if is_memory_unlocked(memory_id):
-		return { "success": false, "error": "回憶已解鎖" }
-	var cost: int = int(item.get("unlock_cost", 0))
-	if player_data.memory_shards < cost:
-		return { "success": false, "error": "回憶碎片不足（需要 %d）" % cost }
-	player_data.memory_shards -= cost
-	player_data.unlocked_memory_ids.append(memory_id)
-	refresh_achievements()
-	player_data.save()
-	return {
-		"success": true,
-		"memory": item,
-	}
-
-
 func get_memory_bonuses() -> Array:
-	# 優先使用 API 資料
 	if not scooper_memory_data.is_empty():
 		var result: Array = []
 		for item: Dictionary in scooper_memory_data:
@@ -1198,7 +806,6 @@ func get_memory_bonuses() -> Array:
 				"value": float(item.get("bonusValue", 0.0)),
 			})
 		return result
-	# Fallback: 本地設定
 	var result: Array = []
 	for memory_id: String in player_data.unlocked_memory_ids:
 		var item := _get_memory_item(memory_id)
@@ -1312,7 +919,6 @@ func get_treasure_combat_bonuses() -> Array:
 
 
 func get_treasure_effects() -> Array:
-	# 優先使用 API 資料
 	if not scooper_treasure_data.is_empty():
 		var result: Array = []
 		for item: Dictionary in scooper_treasure_data:
@@ -1328,7 +934,6 @@ func get_treasure_effects() -> Array:
 						"value": float(effect.get("value", 0.0)),
 					})
 		return result
-	# Fallback: 本地設定
 	var result: Array = []
 	for treasure_id: String in player_data.treasures.keys():
 		var item := _get_treasure_item(treasure_id)
@@ -1349,7 +954,7 @@ func get_treasure_effects() -> Array:
 	return result
 
 
-## DEPRECATED: 寶藏改由後端管理
+## DEPRECATED: 寶藏改由後端管理（仍保留供 purchase_shop_bundle 使用）
 func grant_treasure(treasure_id: String, quantity: int = 1) -> Dictionary:
 	push_warning("DEPRECATED: grant_treasure() — use backend API instead")
 	var item := _get_treasure_item(treasure_id)
@@ -1359,7 +964,7 @@ func grant_treasure(treasure_id: String, quantity: int = 1) -> Dictionary:
 		return { "success": false, "error": "數量必須大於 0" }
 	var state: Dictionary = player_data.treasures.get(treasure_id, {})
 	state["quantity"] = int(state.get("quantity", 0)) + quantity
-	state["latest_obtained_at"] = _now_string()
+	state["latest_obtained_at"] = FileUtils.now_string()
 	player_data.treasures[treasure_id] = state
 	player_data.save()
 	return {
@@ -1457,145 +1062,8 @@ func is_equipment_owned(equip_id: String) -> bool:
 	return player_data.equipments.has(equip_id)
 
 
-## 購買裝備。回傳 "" 表示成功，否則回傳錯誤訊息
-## DEPRECATED: 使用 ApiClient.purchase_equipment() 取代
-func buy_equipment(equip_id: String) -> String:
-	push_warning("DEPRECATED: buy_equipment() — use ApiClient.purchase_equipment() instead")
-	var item := _get_equip_item(equip_id)
-	if item.is_empty():
-		return "找不到裝備"
-	if is_equipment_owned(equip_id):
-		return "已擁有此裝備"
-	var unlock_level: int = item.get("unlock_level", 1)
-	if player_data.scooper_level < unlock_level:
-		return "鏟屎官等級不足（需要 Lv.%d）" % unlock_level
-	var cost: int = item.get("buy_cost", 0)
-	if player_data.gold < cost:
-		return "金幣不足（需要 %d）" % cost
-	player_data.gold -= cost
-	player_data.equipments[equip_id] = {
-		"level": 0, "exp": 0, "broken": false, "sick_cat_id": ""
-	}
-	refresh_achievements()
-	player_data.save()
-	return ""
-
-
-## 升級裝備。回傳結果 dict：
-## { success, exp, leveled_up, broken, sick_cat_id, error }
-## DEPRECATED: 使用 ApiClient.upgrade_equipment() 取代
-func upgrade_equipment(equip_id: String) -> Dictionary:
-	push_warning("DEPRECATED: upgrade_equipment() — use ApiClient.upgrade_equipment() instead")
-	var item := _get_equip_item(equip_id)
-	if item.is_empty():
-		return { "success": false, "error": "找不到裝備" }
-	if not is_equipment_owned(equip_id):
-		return { "success": false, "error": "尚未購買此裝備" }
-	var state: Dictionary = player_data.equipments[equip_id]
-	if state.get("broken", false):
-		return { "success": false, "error": "裝備已損壞，請先修復" }
-	if state.get("sick_cat_id", "") != "":
-		return { "success": false, "error": "有貓咪生病，請先就醫" }
-	var current_level: int = state.get("level", 0)
-	var max_level: int = player_data.scooper_level
-	if current_level >= max_level:
-		return { "success": false, "error": "已達升級上限（Lv.%d）" % max_level }
-	var cost: int = item.get("upgrade_cost", 300)
-	if player_data.gold < cost:
-		return { "success": false, "error": "金幣不足（需要 %d）" % cost }
-
-	player_data.gold -= cost
-
-	# 隨機取得 0~3 EXP（依設定加權）
-	var exp_weights: Array = item.get("exp_weights", [20, 40, 30, 10])
-	var exp_gained: int = _roll_weighted(exp_weights)
-
-	# 損壞判定
-	var now_broken: bool = _equip_rng.randf() < float(item.get("damage_chance", 0.1))
-
-	# 生病判定（損壞時不觸發）
-	var sick_cat_id := ""
-	if not now_broken:
-		var illness_chance: float = float(item.get("illness_chance", 0.05))
-		if _equip_rng.randf() < illness_chance:
-			var cat_ids: Array = player_data.owned_cat_ids
-			if not cat_ids.is_empty():
-				sick_cat_id = cat_ids[_equip_rng.randi() % cat_ids.size()]
-
-	# 套用 EXP 並檢查升等
-	var exp_per_level: int = int(equipment_config.get("exp_per_level", 10))
-	state["exp"] = state.get("exp", 0) + exp_gained
-	var leveled_up := false
-	while state.get("level", 0) < max_level and state.get("exp", 0) >= exp_per_level:
-		state["exp"] -= exp_per_level
-		state["level"] = state.get("level", 0) + 1
-		leveled_up = true
-
-	state["broken"] = now_broken
-	if sick_cat_id != "":
-		state["sick_cat_id"] = sick_cat_id
-
-	player_data.equipments[equip_id] = state
-	player_data.save()
-
-	return {
-		"success":    true,
-		"exp":        exp_gained,
-		"leveled_up": leveled_up,
-		"broken":     now_broken,
-		"sick_cat_id": sick_cat_id,
-		"error":      ""
-	}
-
-
-## 修復損壞裝備。回傳 "" 表示成功，否則回傳錯誤訊息
-## DEPRECATED: 使用 ApiClient.repair_equipment() 取代
-func repair_equipment(equip_id: String) -> String:
-	push_warning("DEPRECATED: repair_equipment() — use ApiClient.repair_equipment() instead")
-	var item := _get_equip_item(equip_id)
-	if item.is_empty():
-		return "找不到裝備"
-	if not is_equipment_owned(equip_id):
-		return "尚未購買此裝備"
-	var state: Dictionary = player_data.equipments[equip_id]
-	if not state.get("broken", false):
-		return "裝備未損壞"
-	var cost: int = item.get("repair_cost", 200)
-	if player_data.gold < cost:
-		return "金幣不足（需要 %d）" % cost
-	player_data.gold -= cost
-	state["broken"] = false
-	player_data.equipments[equip_id] = state
-	player_data.save()
-	return ""
-
-
-## 替生病的貓咪就醫。回傳 "" 表示成功，否則回傳錯誤訊息
-## DEPRECATED: 使用 ApiClient.treat_equipment() 取代
-func heal_sick_cat(equip_id: String) -> String:
-	push_warning("DEPRECATED: heal_sick_cat() — use ApiClient.treat_equipment() instead")
-	var item := _get_equip_item(equip_id)
-	if item.is_empty():
-		return "找不到裝備"
-	if not is_equipment_owned(equip_id):
-		return "尚未購買此裝備"
-	var state: Dictionary = player_data.equipments[equip_id]
-	if state.get("sick_cat_id", "") == "":
-		return "沒有貓咪需要就醫"
-	var cost: int = item.get("heal_cost", 500)
-	if player_data.gold < cost:
-		return "金幣不足（需要 %d）" % cost
-	player_data.gold -= cost
-	state["sick_cat_id"] = ""
-	player_data.equipments[equip_id] = state
-	player_data.save()
-	return ""
-
-
 ## 取得所有有效裝備加成（非損壞、等級 > 0）
-## 回傳 Array[Dictionary]，每項：{ target, stat, value }
 func get_equipment_bonuses() -> Array:
-	# 優先使用 API 資料
 	if not scooper_equipment_data.is_empty():
 		var result: Array = []
 		for item: Dictionary in scooper_equipment_data:
@@ -1615,61 +1083,27 @@ func get_equipment_bonuses() -> Array:
 		return result
 	# Fallback: 本地設定
 	var result: Array = []
-	var items: Array = equipment_config.get("items", [])
-	for item: Dictionary in items:
-		var equip_id: String = item.get("id", "")
-		if not is_equipment_owned(equip_id):
+	for equip_id: String in player_data.equipments.keys():
+		var item := _get_equip_item(equip_id)
+		if item.is_empty():
 			continue
 		var state: Dictionary = player_data.equipments.get(equip_id, {})
 		if state.get("broken", false):
 			continue
-		var level: int = state.get("level", 0)
+		var level: int = int(state.get("level", 0))
 		if level <= 0:
 			continue
 		var bonus_per_level: float = float(item.get("bonus_per_level", 0.0))
 		result.append({
 			"target": item.get("bonus_target", "all"),
-			"stat":   item.get("bonus_stat",   ""),
+			"stat":   item.get("bonus_stat", ""),
 			"value":  bonus_per_level * level,
 		})
 	return result
 
 
+# ── 私有輔助 ──────────────────────────────────
+
 func _is_combat_bonus_stat(stat: String) -> bool:
-	return stat in [
-		"atk_percent",
-		"def_percent",
-		"max_hp_percent",
-		"crit_rate",
-		"crit_damage",
-		"damage_reduction",
-		"cooldown_reduction",
-	]
-
-
-func _now_string() -> String:
-	var dict: Dictionary = Time.get_datetime_dict_from_system()
-	return "%04d-%02d-%02d %02d:%02d:%02d" % [
-		dict.get("year", 0),
-		dict.get("month", 0),
-		dict.get("day", 0),
-		dict.get("hour", 0),
-		dict.get("minute", 0),
-		dict.get("second", 0),
-	]
-
-
-## 加權隨機：weights 為整數陣列，回傳命中的索引（0-based）
-func _roll_weighted(weights: Array) -> int:
-	var total := 0
-	for w in weights:
-		total += int(w)
-	if total <= 0:
-		return 0
-	var roll := _equip_rng.randi() % total
-	var cumulative := 0
-	for i in range(weights.size()):
-		cumulative += int(weights[i])
-		if roll < cumulative:
-			return i
-	return 0
+	return stat in ["atk_percent", "def_percent", "max_hp_percent",
+			"crit_rate", "crit_damage", "damage_reduction", "cooldown_reduction"]
