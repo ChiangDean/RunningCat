@@ -755,10 +755,12 @@ func _on_logout_pressed() -> void:
 	if _request_in_flight:
 		return
 
+	_logout_dialog_open = true
 	DialogManager.show_confirm(
 		"登出",
-		"確定要登出目前帳號嗎？系統會撤銷 refresh token，並清除本機登入與玩家資料。",
-		Callable(self, "_begin_logout")
+		"您確定要登出嗎？(請注意：若先前為遊客登入，此動作將導致資料無法被找回)",
+		Callable(self, "_begin_logout"),
+		func() -> void: _logout_dialog_open = false
 	)
 
 
