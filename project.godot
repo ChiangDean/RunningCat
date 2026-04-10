@@ -17,7 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-GameState="*res://scripts/GameState.gd"
+GameState="*res://scripts/gamestate/GameState.gd"
 DialogManager="*res://scripts/DialogManager.gd"
 ApiClient="*res://scripts/ApiClient.gd"
 
