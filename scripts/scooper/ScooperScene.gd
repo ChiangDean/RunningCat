@@ -53,10 +53,10 @@ const TAB_DISPLAY: Dictionary = {
 @onready var DialogManager = get_node("/root/DialogManager")
 
 # Tab helpers
-var _scooper_tab     := preload("res://scripts/scooper_tab_scooper.gd").new()
-var _memory_tab      := preload("res://scripts/scooper_tab_memory.gd").new()
-var _treasure_tab    := preload("res://scripts/scooper_tab_treasure.gd").new()
-var _achievement_tab := preload("res://scripts/scooper_tab_achievement.gd").new()
+var _scooper_tab     := preload("res://scripts/scooper/scooper_tab_scooper.gd").new()
+var _memory_tab      := preload("res://scripts/scooper/scooper_tab_memory.gd").new()
+var _treasure_tab    := preload("res://scripts/scooper/scooper_tab_treasure.gd").new()
+var _achievement_tab := preload("res://scripts/scooper/scooper_tab_achievement.gd").new()
 
 
 func _ready() -> void:

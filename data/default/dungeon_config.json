@@ -7,7 +7,7 @@
 	"dungeons": [
 		{
 			"id": "cat_food",
-			"name": "乾糧地下城",
+			"name": "乾糧地城",
 			"enabled": true,
 			"is_limited_event": false,
 			"base_hp": 100,
@@ -24,7 +24,7 @@
 		},
 		{
 			"id": "diamond",
-			"name": "鑽石地下城",
+			"name": "鑽石地城",
 			"enabled": true,
 			"is_limited_event": false,
 			"base_hp": 120,
@@ -41,7 +41,7 @@
 		},
 		{
 			"id": "whisker",
-			"name": "鬍鬚地下城",
+			"name": "鬍鬚地城",
 			"enabled": true,
 			"is_limited_event": false,
 			"base_hp": 110,

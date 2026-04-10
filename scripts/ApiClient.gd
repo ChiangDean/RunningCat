@@ -91,6 +91,22 @@ func get_enhance_overview(callback: Callable) -> void:
 	_api_get("enhance", callback)
 
 
+func get_dungeon_overview(callback: Callable) -> void:
+	_api_get("dungeon", callback)
+
+
+func grant_dungeon_ad_ticket(dungeon_id: int, callback: Callable) -> void:
+	_api_post("dungeon/%d/ad-ticket" % dungeon_id, {}, callback)
+
+
+func sweep_dungeon(dungeon_id: int, callback: Callable) -> void:
+	_api_post("dungeon/%d/sweep" % dungeon_id, {}, callback)
+
+
+func complete_dungeon_challenge(dungeon_id: int, target_floor: int, callback: Callable) -> void:
+	_api_post("dungeon/%d/challenge" % dungeon_id, {"targetFloor": target_floor}, callback)
+
+
 func upgrade_cat_food(player_cat_id: int, callback: Callable) -> void:
 	_api_post("enhance/%d/food" % player_cat_id, {}, callback)
 

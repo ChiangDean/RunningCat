@@ -57,8 +57,10 @@ func clear_persisted_player_state() -> void:
 	current_global_stage = 1
 	boss_available = false
 	dungeon_battle_id = ""
+	dungeon_battle_key = ""
 	dungeon_battle_level = 1
 	dungeon_data = PlayerDungeonData.new()
+	dungeon_overview_data = []
 	arena_data = PlayerArenaData.new()
 	arena_opponent = {}
 
@@ -191,6 +193,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 		var boss_team: Dictionary = teams_data.get("Boss", {})
 		var boss_members: Array = boss_team.get("members", [])
 		player_team = boss_members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
+	apply_dungeon_overview(data)
 
 
 func _save_auth_session() -> void:
@@ -255,8 +258,10 @@ var boss_available: bool = false
 
 # ── 地下城戰鬥狀態 ────────────────────────────
 var dungeon_battle_id: String = ""
+var dungeon_battle_key: String = ""
 var dungeon_battle_level: int = 1
 var dungeon_data: PlayerDungeonData
+var dungeon_overview_data: Array = []
 ## 地下城全域設定（啟動時載入一次，供所有場景共用）
 var dungeon_config: Dictionary = {}
 
@@ -307,6 +312,7 @@ func _ready() -> void:
 	boss_config = FileUtils.load_json("res://data/default/boss_config.json")
 	dungeon_data = PlayerDungeonData.load_or_default()
 	dungeon_data.check_daily_reset(int(dungeon_config.get("daily_free_tickets", 2)))
+	update_dungeon_overview(_load_dungeon_cache_array())
 	for cat_id: String in player_data.owned_cat_ids:
 		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
 	arena_config = FileUtils.load_json("res://data/default/arena_config.json")
@@ -402,6 +408,14 @@ func _load_enhance_cache_array() -> Array:
 	return CacheIO.load_config_array("enhance")
 
 
+func _save_dungeon_cache(data: Array) -> void:
+	CacheIO.save_config("dungeon", data)
+
+
+func _load_dungeon_cache_array() -> Array:
+	return CacheIO.load_config_array("dungeon")
+
+
 ## 更新玩家貓咪清單快取（記憶體 + 本地檔案）
 func update_player_cats(data: Array) -> void:
 	player_cats_data = data
@@ -448,6 +462,37 @@ func apply_enhance_overview(data: Dictionary) -> void:
 	if cats is Array:
 		update_enhance(cats)
 	player_data.save()
+
+
+func update_dungeon_overview(data: Array) -> void:
+	dungeon_overview_data = data.duplicate(true)
+	_save_dungeon_cache(dungeon_overview_data)
+
+
+func apply_dungeon_overview(data: Dictionary) -> void:
+	player_data.cat_food = int(data.get("catFood", player_data.cat_food))
+	player_data.special_cat_food = int(data.get("specialCatFood", player_data.special_cat_food))
+	player_data.diamonds = int(data.get("diamonds", player_data.diamonds))
+	player_data.trap_cages = int(data.get("trapCages", player_data.trap_cages))
+	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
+	var dungeons: Variant = data.get("dungeons", [])
+	if dungeons is Array:
+		update_dungeon_overview(dungeons)
+	player_data.save()
+
+
+func get_dungeon_entry_by_id(dungeon_id: int) -> Dictionary:
+	for item: Variant in dungeon_overview_data:
+		if item is Dictionary and int(item.get("dungeonId", 0)) == dungeon_id:
+			return item
+	return {}
+
+
+func get_dungeon_entry_by_key(dungeon_key: String) -> Dictionary:
+	for item: Variant in dungeon_overview_data:
+		if item is Dictionary and String(item.get("key", "")) == dungeon_key:
+			return item
+	return {}
 
 
 ## 更新隊伍快取（記憶體 + 本地檔案）
