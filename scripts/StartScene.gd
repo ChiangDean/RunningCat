@@ -567,7 +567,7 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 		if response_code == 401 and not _logout_revoke_retry and GameState.get_refresh_token() != "":
 			_begin_logout_refresh()
 			return
-		var logout_message := String(error_payload.get("message", "登出失敗，請稍後再試。"))
+		var logout_message = error_payload.get("message") if error_payload.get("message") != null else "登出失敗，請稍後再試。"
 		_set_logout_button_state(true)
 		_set_status(logout_message, true)
 		return
@@ -576,12 +576,12 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 		if response_code == 401 or response_code == 404:
 			_finalize_logout()
 			return
-		var logout_refresh_message := String(error_payload.get("message", "更新登入狀態失敗，請稍後再試。"))
+		var logout_refresh_message = error_payload.get("message") if error_payload.get("message") != null else "更新登入狀態失敗，請稍後再試。"
 		_set_logout_button_state(true)
 		_set_status(logout_refresh_message, true)
 		return
 
-	var message := String(error_payload.get("message", "\u767b\u5165\u5931\u6557\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002"))
+	var message = error_payload.get("message") if error_payload.get("message") != null else "登入失敗，請稍後再試。"
 	_set_status(message, true)
 
 
@@ -868,13 +868,13 @@ func _resolve_api_base_url() -> String:
 	if config.has("api_base_url"):
 		return String(config.get("api_base_url", DEFAULT_API_BASE_URL)).rstrip("/")
 
-	var configured_environment := String(config.get("environment", DEFAULT_ENVIRONMENT))
+	var configured_environment = config.get("environment") if config.get("environment") != null else DEFAULT_ENVIRONMENT
 	var environment_name := _normalize_environment_name(configured_environment)
 	var environments_variant: Variant = config.get("environments", {})
 	var environments: Dictionary = environments_variant if environments_variant is Dictionary else {}
 	var environment_variant: Variant = environments.get(environment_name, {})
 	var environment_config: Dictionary = environment_variant if environment_variant is Dictionary else {}
-	var api_base_url := String(environment_config.get("api_base_url", DEFAULT_API_BASE_URL))
+	var api_base_url = environment_config.get("api_base_url") if environment_config.get("api_base_url") != null else DEFAULT_API_BASE_URL
 	return api_base_url.rstrip("/")
 
 
