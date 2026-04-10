@@ -12,8 +12,13 @@ config_version=5
 
 config/name="RunningCat"
 run/main_scene="res://scenes/StartScene.tscn"
-config/features=PackedStringArray("4.6", "Forward Plus", "Mobile")
+config/features=PackedStringArray("4.6", "C#", "Forward Plus", "Mobile")
 config/icon="res://icon.svg"
+
+[autoload]
+
+GameState="*res://scripts/GameState.gd"
+DialogManager="*res://scripts/DialogManager.gd"
 
 [display]
 
@@ -21,18 +26,17 @@ window/size/viewport_width=720
 window/size/viewport_height=1280
 window/stretch/mode="canvas_items"
 
-[physics]
+[dotnet]
 
-3d/physics_engine="Jolt Physics"
+project/assembly_name="RunningCat"
 
 [gui]
 
 theme/custom="res://resources/default_theme.tres"
 
-[autoload]
+[physics]
 
-GameState="*res://scripts/GameState.gd"
-DialogManager="*res://scripts/DialogManager.gd"
+3d/physics_engine="Jolt Physics"
 
 [rendering]
 
