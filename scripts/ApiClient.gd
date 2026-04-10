@@ -87,6 +87,34 @@ func replace_team(team_type_key: String, members: Array, callback: Callable) -> 
 	_api_put("config/teams/%s" % team_type_key, {"members": members}, callback)
 
 
+func get_enhance_overview(callback: Callable) -> void:
+	_api_get("enhance", callback)
+
+
+func upgrade_cat_food(player_cat_id: int, callback: Callable) -> void:
+	_api_post("enhance/%d/food" % player_cat_id, {}, callback)
+
+
+func upgrade_cat_food_to_max(player_cat_id: int, callback: Callable) -> void:
+	_api_post("enhance/%d/food/max" % player_cat_id, {}, callback)
+
+
+func add_cat_special_point(player_cat_id: int, stat_key: String, callback: Callable) -> void:
+	_api_post("enhance/%d/special/add" % player_cat_id, {"statType": stat_key}, callback)
+
+
+func remove_cat_special_point(player_cat_id: int, stat_key: String, callback: Callable) -> void:
+	_api_post("enhance/%d/special/remove" % player_cat_id, {"statType": stat_key}, callback)
+
+
+func upgrade_cat_rank(player_cat_id: int, callback: Callable) -> void:
+	_api_post("enhance/%d/rank" % player_cat_id, {}, callback)
+
+
+func reset_cat_enhance(player_cat_id: int, callback: Callable) -> void:
+	_api_post("enhance/%d/reset" % player_cat_id, {}, callback)
+
+
 # ── Core request methods ─────────────────────────────────────
 
 func _api_get(path: String, callback: Callable) -> void:

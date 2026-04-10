@@ -182,6 +182,9 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	var p_cats: Variant = data.get("playerCats", [])
 	if p_cats is Array:
 		update_player_cats(p_cats)
+	var p_enhance: Variant = data.get("enhanceCats", [])
+	if p_enhance is Array:
+		update_enhance(p_enhance)
 	var p_teams: Variant = data.get("playerTeams", [])
 	if p_teams is Array:
 		update_player_teams(p_teams)
@@ -207,6 +210,15 @@ func _delete_auth_session_file() -> void:
 
 ## 目前擁有的貓咪 ID 列表（從 player_data 讀取）
 func get_owned_cats() -> Array:
+	if not enhance_data.is_empty():
+		var result: Array = []
+		for item: Variant in enhance_data:
+			if item is Dictionary:
+				var cat_file_id := get_cat_file_id_by_catalog_id(int(item.get("catCatalogId", 0)))
+				if cat_file_id != "":
+					result.append(cat_file_id)
+		if not result.is_empty():
+			return result
 	if player_data == null:
 		return ["milk_cat"]
 	return player_data.owned_cat_ids
@@ -231,6 +243,7 @@ var skill_delays: Dictionary = {}  ## DEPRECATED: 延遲改由 teams_data 管理
 # ── Config 快取（Bootstrap 時寫入 user://config/）──────────────────────
 ## 玩家擁有的貓咪清單（來自後端 PlayerCat，含 playerCatId、catalogId、displayName 等）
 var player_cats_data: Array = []
+var enhance_data: Array = []
 ## 所有隊伍設定（key = teamType 字串，value = teamResponse Dict）
 var teams_data: Dictionary = {}
 
@@ -325,6 +338,7 @@ func _ready() -> void:
 	scooper_treasure_data = CacheIO.load_scooper_array("treasure")
 	scooper_achievement_data = CacheIO.load_scooper_array("achievement")
 	player_cats_data = CacheIO.load_config_array("player_cats")
+	update_enhance(_load_enhance_cache_array())
 	var cached_teams := CacheIO.load_config_array("teams")
 	if not cached_teams.is_empty():
 		update_player_teams(cached_teams)
@@ -380,10 +394,60 @@ func _load_config_cache_array(cache_name: String) -> Array:
 	return CacheIO.load_config_array(cache_name)
 
 
+func _save_enhance_cache(data: Array) -> void:
+	CacheIO.save_config("enhance", data)
+
+
+func _load_enhance_cache_array() -> Array:
+	return CacheIO.load_config_array("enhance")
+
+
 ## 更新玩家貓咪清單快取（記憶體 + 本地檔案）
 func update_player_cats(data: Array) -> void:
 	player_cats_data = data
 	CacheIO.save_config("player_cats", data)
+
+
+func update_enhance(data: Array) -> void:
+	enhance_data = data
+	_save_enhance_cache(data)
+
+	for item: Variant in data:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = item
+		var cat_file_id := get_cat_file_id_by_catalog_id(int(row.get("catCatalogId", 0)))
+		if cat_file_id == "":
+			continue
+		var player_cat: PlayerCatData = get_player_cat(cat_file_id)
+		player_cat.cat_id = cat_file_id
+		player_cat.cat_food_level = int(row.get("catFoodLevel", player_cat.cat_food_level))
+		player_cat.rank = int(row.get("rank", player_cat.rank))
+		player_cat.cat_shards = int(row.get("catShards", player_cat.cat_shards))
+		player_cat.special_food_points = {
+			"hp": int(row.get("hpPoints", 0)),
+			"atk": int(row.get("atkPoints", 0)),
+			"def": int(row.get("defPoints", 0)),
+		}
+
+		for cat_row: Variant in player_cats_data:
+			if cat_row is Dictionary and int(cat_row.get("playerCatId", -1)) == int(row.get("playerCatId", -2)):
+				cat_row["catFoodLevel"] = player_cat.cat_food_level
+				cat_row["rank"] = player_cat.rank
+				break
+	if not player_cats_data.is_empty():
+		CacheIO.save_config("player_cats", player_cats_data)
+
+
+func apply_enhance_overview(data: Dictionary) -> void:
+	player_data.cat_food = int(data.get("catFood", player_data.cat_food))
+	player_data.special_cat_food = int(data.get("specialCatFood", player_data.special_cat_food))
+	player_data.gold = int(data.get("gold", player_data.gold))
+	player_data.diamonds = int(data.get("diamonds", player_data.diamonds))
+	var cats: Variant = data.get("cats", [])
+	if cats is Array:
+		update_enhance(cats)
+	player_data.save()
 
 
 ## 更新隊伍快取（記憶體 + 本地檔案）
@@ -432,6 +496,10 @@ func get_cat_file_id(player_cat_id: int) -> String:
 			var catalog_id: int = int(cat.get("catCatalogId", 0))
 			return String(_CAT_FILE_MAP.get(catalog_id, ""))
 	return ""
+
+
+func get_cat_file_id_by_catalog_id(cat_catalog_id: int) -> String:
+	return String(_CAT_FILE_MAP.get(cat_catalog_id, ""))
 
 
 ## 取得貓咪強化存檔（找不到時自動建立預設值）
