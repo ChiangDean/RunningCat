@@ -8,6 +8,9 @@ const Actions = preload("res://scripts/dungeon/DungeonSceneActions.gd")
 
 var _dungeon_panels: Dictionary = {}
 var _action_inflight := false
+var _ui_layer: CanvasLayer
+var _root_vbox: VBoxContainer
+var _dungeon_list: VBoxContainer
 
 @onready var GameState = get_node("/root/GameState")
 @onready var ApiClient = get_node("/root/ApiClient")
