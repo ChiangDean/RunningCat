@@ -700,12 +700,6 @@ func _update_loading_progress(value: float) -> void:
 func _start_game() -> void:
 	if not _input_ready:
 		return
-
-	GameState.arena_data.update_defense_snapshot(
-		GameState.player_data.arena_defense_team,
-		GameState._player_cat_cache
-	)
-	GameState.arena_data.save()
 	get_tree().change_scene_to_file(BATTLE_SCENE_PATH)
 
 

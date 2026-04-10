@@ -66,6 +66,11 @@ static func load_config_array(cache_name: String) -> Array:
 	return _load_json_array(path)
 
 
+static func load_config_dict(cache_name: String) -> Dictionary:
+	var path := "%s/%s.json" % [CONFIG_CACHE_DIR, cache_name]
+	return _load_json_dict(path)
+
+
 # ── 私有輔助 ──────────────────────────────────
 
 static func _load_json_array(path: String) -> Array:

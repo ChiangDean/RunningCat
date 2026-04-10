@@ -95,6 +95,30 @@ func get_dungeon_overview(callback: Callable) -> void:
 	_api_get("dungeon", callback)
 
 
+func get_arena_overview(excluded_opponent_ids: Array, callback: Callable) -> void:
+	var path := "arena"
+	var filtered_ids: Array[String] = []
+	for opponent_id_variant: Variant in excluded_opponent_ids:
+		var opponent_id := String(opponent_id_variant).strip_edges()
+		if opponent_id != "":
+			filtered_ids.append(opponent_id.uri_encode())
+	if not filtered_ids.is_empty():
+		path += "?excludeOpponentIds=%s" % "&excludeOpponentIds=".join(filtered_ids)
+	_api_get(path, callback)
+
+
+func purchase_arena_tickets(callback: Callable) -> void:
+	_api_post("arena/tickets/purchase", {}, callback)
+
+
+func claim_arena_rank_reward(rank_id: int, callback: Callable) -> void:
+	_api_post("arena/rewards/%d/claim" % rank_id, {}, callback)
+
+
+func complete_arena_battle(opponent_id: String, is_win: bool, callback: Callable) -> void:
+	_api_post("arena/opponents/%s/complete" % opponent_id.uri_encode(), {"isWin": is_win}, callback)
+
+
 func grant_dungeon_ad_ticket(dungeon_id: int, callback: Callable) -> void:
 	_api_post("dungeon/%d/ad-ticket" % dungeon_id, {}, callback)
 
