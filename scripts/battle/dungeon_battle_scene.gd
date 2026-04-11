@@ -324,7 +324,7 @@ func _start_battle() -> void:
 			push_error("DungeonBattleScene: 找不到 playerCatId %d 對應的貓咪資料。" % player_cat_id)
 			continue
 
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
 			if data.active_skill_configs.size() > 0:
@@ -346,7 +346,7 @@ func _start_battle() -> void:
 	var base_atk: float = _dungeon_cfg.get("base_atk", 15.0)
 	var base_def: float = _dungeon_cfg.get("base_def", 5.0)
 
-	var enemy := CatData.from_json_file("res://data/default/cats/test_enemy.json")
+	var enemy := CatData.from_json_file("test_enemy.json")
 	if enemy:
 		enemy.max_hp = roundi(base_hp * mult)
 		enemy.atk = roundi(base_atk * mult)

@@ -51,6 +51,10 @@ var _secondary_button: Button
 var _status_label: Label
 var _logout_revoke_retry := false
 var _logout_dialog_open := false
+var _loading_fill_tween: Tween
+var _loading_percent_tween: Tween
+var _loading_animation_finished := false
+var _bootstrap_completed := false
 
 
 func _ready() -> void:
@@ -64,6 +68,7 @@ func _ready() -> void:
 	if GameState.load_persisted_auth_session():
 		_api_base_url = GameState.api_base_url
 		_sync_logout_button_visibility()
+		_show_loading_state()
 		_begin_authenticated_bootstrap("正在恢復登入...")
 
 
@@ -442,6 +447,7 @@ func _submit_login() -> void:
 	_request_kind = REQUEST_KIND_AUTH
 	_set_auth_interactable(false)
 	_set_status("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...", false)
+	_retain_network_loading_overlay("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...")
 
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -485,6 +491,7 @@ func _submit_register() -> void:
 	_request_kind = REQUEST_KIND_AUTH
 	_set_auth_interactable(false)
 	_set_status("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...", false)
+	_retain_network_loading_overlay("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...")
 
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -502,6 +509,7 @@ func _submit_register() -> void:
 	if error != OK:
 		_request_in_flight = false
 		_set_auth_interactable(true)
+		_release_network_loading_overlay()
 		_set_status("\u7121\u6cd5\u9001\u51fa\u8acb\u6c42\uff0c\u932f\u8aa4\u78bc: %s" % error, true)
 
 
@@ -530,11 +538,14 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 			GameState.set_auth_session(_api_base_url, data)
 			_api_base_url = GameState.api_base_url
 			_sync_logout_button_visibility()
+			if completed_request_kind == REQUEST_KIND_AUTH or _loading_block == null or not _loading_block.visible:
+				_show_loading_state()
 			_begin_authenticated_bootstrap("正在同步玩家資料...")
 			return
 		if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
 			GameState.apply_player_bootstrap(data)
-			_show_loading_state()
+			_bootstrap_completed = true
+			_complete_loading_state()
 			return
 		if completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 			GameState.set_auth_session(GameState.api_base_url, data)
@@ -542,8 +553,10 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 			_begin_logout_revoke()
 			return
 		if completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE:
+			_release_network_loading_overlay()
 			_finalize_logout()
 			return
+		_release_network_loading_overlay()
 		GameState.set_auth_session(_api_base_url, data)
 		_sync_logout_button_visibility()
 		_show_loading_state()
@@ -553,7 +566,14 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 		_begin_refresh_then_bootstrap()
 		return
 
+	if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
+		_abort_loading_state()
+		var bootstrap_message := String(error_payload.get("message", "同步玩家資料失敗，請稍後再試。"))
+		_set_status(bootstrap_message, true)
+		return
+
 	if completed_request_kind == REQUEST_KIND_REFRESH:
+		_abort_loading_state()
 		GameState.clear_auth_session()
 		_api_base_url = _resolve_api_base_url()
 		_sync_logout_button_visibility()
@@ -562,11 +582,13 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 
 	if completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE:
 		if response_code == 404:
+			_release_network_loading_overlay()
 			_finalize_logout()
 			return
 		if response_code == 401 and not _logout_revoke_retry and GameState.get_refresh_token() != "":
 			_begin_logout_refresh()
 			return
+		_release_network_loading_overlay()
 		var logout_message = error_payload.get("message") if error_payload.get("message") != null else "登出失敗，請稍後再試。"
 		_set_logout_button_state(true)
 		_set_status(logout_message, true)
@@ -574,14 +596,17 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 
 	if completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 		if response_code == 401 or response_code == 404:
+			_release_network_loading_overlay()
 			_finalize_logout()
 			return
+		_release_network_loading_overlay()
 		var logout_refresh_message = error_payload.get("message") if error_payload.get("message") != null else "更新登入狀態失敗，請稍後再試。"
 		_set_logout_button_state(true)
 		_set_status(logout_refresh_message, true)
 		return
 
 	var message = error_payload.get("message") if error_payload.get("message") != null else "登入失敗，請稍後再試。"
+	_release_network_loading_overlay()
 	_set_status(message, true)
 
 
@@ -609,6 +634,8 @@ func _begin_authenticated_bootstrap(status_message: String) -> void:
 		_request_in_flight = false
 		_request_kind = ""
 		_set_auth_interactable(true)
+		_abort_loading_state()
+		_release_network_loading_overlay()
 		_set_status("無法同步玩家資料，錯誤碼: %s" % error, true)
 
 
@@ -625,6 +652,7 @@ func _begin_refresh_then_bootstrap() -> void:
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_REFRESH
 	_set_auth_interactable(false)
+	_retain_network_loading_overlay("資料同步中...")
 	_set_status("正在更新登入資訊...", false)
 
 	var headers := PackedStringArray([
@@ -639,11 +667,16 @@ func _begin_refresh_then_bootstrap() -> void:
 		_request_in_flight = false
 		_request_kind = ""
 		_set_auth_interactable(true)
+		_abort_loading_state()
+		_release_network_loading_overlay()
 		_set_status("無法更新登入資訊，錯誤碼: %s" % error, true)
 
 
 func _show_loading_state() -> void:
 	_input_ready = false
+	_bootstrap_completed = false
+	_loading_animation_finished = false
+	_cancel_loading_tweens()
 	_sync_logout_button_visibility()
 	_set_status("", false)
 	if _auth_block != null:
@@ -666,17 +699,31 @@ func _start_fake_loading() -> void:
 	if _loading_fill == null:
 		return
 
-	var tween := create_tween()
-	tween.tween_property(_loading_fill, "size:x", _loading_track_fill_width, 2.0).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
-	tween.finished.connect(_finish_fake_loading)
+	_loading_fill_tween = create_tween()
+	_loading_fill_tween.tween_property(_loading_fill, "size:x", _loading_track_fill_width, 2.0).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
+	_loading_fill_tween.finished.connect(_on_loading_animation_finished)
 
-	var percent_tween := create_tween()
-	percent_tween.tween_method(_update_loading_progress, 0.0, 100.0, 2.0)
+	_loading_percent_tween = create_tween()
+	_loading_percent_tween.tween_method(_update_loading_progress, 0.0, 100.0, 2.0)
 
 
-func _finish_fake_loading() -> void:
+func _on_loading_animation_finished() -> void:
+	_loading_fill_tween = null
+	_loading_percent_tween = null
+	_loading_animation_finished = true
+	if _bootstrap_completed:
+		_complete_loading_state()
+
+
+func _complete_loading_state() -> void:
+	if not _bootstrap_completed or _input_ready:
+		return
+
+	_cancel_loading_tweens()
 	_input_ready = true
 	_sync_logout_button_visibility()
+	if _loading_fill != null:
+		_loading_fill.size.x = _loading_track_fill_width
 	if _loading_label != null:
 		_loading_label.text = "\u8c93\u54aa\u968a\u4f0d\u96c6\u5408\u5b8c\u7562"
 	if _loading_percent_label != null:
@@ -690,6 +737,32 @@ func _finish_fake_loading() -> void:
 		)
 	if _tap_hint != null:
 		_tap_hint.visible = true
+
+
+func _cancel_loading_tweens() -> void:
+	if _loading_fill_tween != null:
+		_loading_fill_tween.kill()
+		_loading_fill_tween = null
+	if _loading_percent_tween != null:
+		_loading_percent_tween.kill()
+		_loading_percent_tween = null
+
+
+func _abort_loading_state() -> void:
+	_cancel_loading_tweens()
+	_bootstrap_completed = false
+	_loading_animation_finished = false
+	if _auth_block != null:
+		_auth_block.visible = true
+	if _loading_block != null:
+		_loading_block.visible = false
+		_loading_block.modulate.a = 1.0
+	if _tap_hint != null:
+		_tap_hint.visible = false
+	if _loading_fill != null:
+		_loading_fill.size.x = 0.0
+	if _loading_percent_label != null:
+		_loading_percent_label.text = "0%"
 
 
 func _update_loading_progress(value: float) -> void:
@@ -724,6 +797,14 @@ func _set_status(message: String, is_error: bool) -> void:
 		return
 	_status_label.text = message
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f") if is_error else Color("46613d"))
+
+
+func _retain_network_loading_overlay(message: String) -> void:
+	pass
+
+
+func _release_network_loading_overlay() -> void:
+	pass
 
 
 func _sync_logout_button_visibility() -> void:
@@ -829,11 +910,15 @@ func _begin_logout_refresh() -> void:
 
 func _finalize_logout() -> void:
 	_logout_dialog_open = false
+	_release_network_loading_overlay()
+	_cancel_loading_tweens()
 	GameState.clear_auth_and_player_state()
 	_api_base_url = _resolve_api_base_url()
 	_request_in_flight = false
 	_request_kind = ""
 	_input_ready = false
+	_bootstrap_completed = false
+	_loading_animation_finished = false
 	_set_auth_interactable(true)
 	_set_logout_button_state(true)
 	_sync_logout_button_visibility()

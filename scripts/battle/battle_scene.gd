@@ -38,7 +38,9 @@ var _level_label: Label
 var _boss_btn: Button
 var _result_display: Label
 var _skill_bar: Control      # 技能列容器
-var _sandbox_btn: Button     # 檢查貓砂盆按鈕
+var _sandbox_btn: Button     # ???????
+var _mail_btn: Button
+var _mail_badge: Label
 
 var _last_result: String = ""
 
@@ -136,6 +138,19 @@ func _build_ui() -> void:
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
 	_skip_btn.visible = GameState.can_skip_battle()
+
+	_mail_btn = _make_button("郵件", Vector2(SW - 200.0, 20.0), Vector2(88.0, 44.0))
+	_ui_layer.add_child(_mail_btn)
+	_mail_btn.pressed.connect(_on_nav_mail)
+
+	_mail_badge = Label.new()
+	_mail_badge.position = Vector2(SW - 128.0, 12.0)
+	_mail_badge.size = Vector2(28.0, 28.0)
+	_mail_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mail_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_mail_badge.add_theme_font_size_override("font_size", 14)
+	_mail_badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	_ui_layer.add_child(_mail_badge)
 
 	# 關卡標籤（與勝敗文字同高）
 	_level_label = _make_label("", Vector2(0.0, STAGE_BTN_Y - 40.0), Vector2(SW, 36.0), 20)
@@ -349,6 +364,7 @@ func _refresh_ui() -> void:
 	_level_label.text = GameState.get_level_display()
 	_boss_btn.visible = GameState.boss_available and not GameState.is_current_boss()
 	_refresh_sandbox_btn()
+	_refresh_mail_badge()
 
 
 func _refresh_sandbox_btn() -> void:
@@ -363,6 +379,17 @@ func _refresh_sandbox_btn() -> void:
 		var m := (elapsed % 3600) / 60
 		var s := elapsed % 60
 		_sandbox_btn.text = "🪣 清理貓砂盆 %02d:%02d:%02d" % [h, m, s]
+
+
+func _refresh_mail_badge() -> void:
+	if _mail_badge == null:
+		return
+	if not GameState.has_mail_red_dot():
+		_mail_badge.visible = false
+		return
+	_mail_badge.visible = true
+	_mail_badge.text = GameState.get_mail_badge_text()
+	_mail_badge.modulate = Color(1.0, 0.28, 0.28, 1.0)
 
 
 # ── 戰鬥邏輯 ─────────────────────────────────
@@ -385,7 +412,7 @@ func _start_battle() -> void:
 		if cat_id.is_empty():
 			push_error("BattleScene: 無法解析 playerCatId %d 的本地貓咪檔名" % player_cat_id)
 			continue
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
 			if data.active_skill_configs.size() > 0:
@@ -404,7 +431,7 @@ func _start_battle() -> void:
 
 	var diff_mult: float = GameState.get_difficulty_multiplier()
 	for cat_id: String in GameState.get_enemy_ids():
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
 			data.max_hp  = roundi(data.max_hp  * diff_mult)
@@ -518,7 +545,7 @@ func _show_sandbox_dialog() -> void:
 	scoop_section.visible = not has_rewards and GameState.player_data.poop_count > 0
 
 	var poop_count_lbl := Label.new()
-	poop_count_lbl.text = "💩 待鏟屎堆：%d 個" % GameState.player_data.poop_count
+	poop_count_lbl.text = "待鏟屎堆：%d 個" % GameState.player_data.poop_count
 	poop_count_lbl.add_theme_font_size_override("font_size", 20)
 	scoop_section.add_child(poop_count_lbl)
 
@@ -577,7 +604,7 @@ func _show_sandbox_dialog() -> void:
 		)
 		vbox.add_child(claim_btn)
 
-	close_ref[0] = DialogManager.show_info_node("🪣 清理貓砂盆", vbox)
+	close_ref[0] = DialogManager.show_info_node("清理貓砂盆", vbox)
 
 
 func _on_nav_config() -> void:
@@ -594,3 +621,7 @@ func _on_nav_activity() -> void:
 
 func _on_nav_shop() -> void:
 	get_tree().change_scene_to_file("res://scenes/ShopScene.tscn")
+
+
+func _on_nav_mail() -> void:
+	get_tree().change_scene_to_file("res://scenes/MailScene.tscn")

@@ -1,16 +1,24 @@
 extends Node
 
-## 統一 HTTP API 客戶端 autoload，供各場景呼叫後端 Scooper API。
-## 使用 HTTPRequest 節點池支援並行請求，內建 401 自動 refresh token 重試。
-
 const POOL_SIZE := 3
 const REQUEST_TIMEOUT := 15.0
+const LOADING_LAYER := 90
+const DEFAULT_LOADING_MESSAGE := "loading."
 
 var _pool: Array[HTTPRequest] = []
 var _busy: Array[bool] = []
 var _pending_queue: Array[Dictionary] = []
 var _refreshing := false
 var _refresh_queue: Array[Dictionary] = []
+
+var _loading_canvas: CanvasLayer
+var _loading_message_label: Label
+var _loading_spinner: Control
+var _spinner_dots: Array[Control] = []
+var _loading_request_count := 0
+var _spinner_time := 0.0
+var _loading_text_phase := 0
+var _loading_text_elapsed := 0.0
 
 
 func _ready() -> void:
@@ -22,8 +30,31 @@ func _ready() -> void:
 		_pool.append(http)
 		_busy.append(false)
 
+	_build_loading_overlay()
+	set_process(false)
 
-# ── Public convenience methods ───────────────────────────────
+
+func _process(delta: float) -> void:
+	if _loading_request_count <= 0 or _loading_spinner == null:
+		return
+
+	_spinner_time += delta * 2.8
+	_loading_text_elapsed += delta
+	_loading_spinner.rotation = _spinner_time
+
+	for i in range(_spinner_dots.size()):
+		var dot := _spinner_dots[i]
+		if dot == null:
+			continue
+		var pulse: float = maxf(0.0, sin(_spinner_time * 2.0 - float(i) * 0.65))
+		var alpha: float = 0.35 + 0.65 * pulse
+		dot.modulate.a = alpha
+
+	if _loading_text_elapsed >= 0.28:
+		_loading_text_elapsed = 0.0
+		_loading_text_phase = (_loading_text_phase + 1) % 3
+		_update_loading_label()
+
 
 func get_scooper_profile(callback: Callable) -> void:
 	_api_get("scooper/profile", callback)
@@ -77,7 +108,29 @@ func claim_achievement(achievement_id: int, callback: Callable) -> void:
 	_api_post("scooper/achievement/claim", {"achievementId": achievement_id}, callback)
 
 
-# ── Config / Team API ────────────────────────────────────────
+func get_mail_summary(callback: Callable) -> void:
+	_api_get("mail/summary", callback)
+
+
+func get_mail_list(callback: Callable, page: int = 1, page_size: int = 20) -> void:
+	_api_get("mail?page=%d&pageSize=%d" % [page, page_size], callback)
+
+
+func get_mail_detail(mail_id: int, callback: Callable) -> void:
+	_api_get("mail/%d" % mail_id, callback)
+
+
+func mark_mail_read(mail_id: int, callback: Callable) -> void:
+	_api_post("mail/%d/read" % mail_id, {}, callback)
+
+
+func claim_mail(mail_id: int, callback: Callable) -> void:
+	_api_post("mail/%d/claim" % mail_id, {}, callback)
+
+
+func claim_all_mails(callback: Callable) -> void:
+	_api_post("mail/claim-all", {}, callback)
+
 
 func get_teams(callback: Callable) -> void:
 	_api_get("config/teams", callback)
@@ -181,7 +234,13 @@ func reset_cat_enhance(player_cat_id: int, callback: Callable) -> void:
 	_api_post("enhance/%d/reset" % player_cat_id, {}, callback)
 
 
-# ── Core request methods ─────────────────────────────────────
+func retain_loading_overlay(_message: String = DEFAULT_LOADING_MESSAGE) -> void:
+	_retain_loading_overlay()
+
+
+func release_loading_overlay() -> void:
+	_release_loading_overlay()
+
 
 func _api_get(path: String, callback: Callable) -> void:
 	_enqueue_request(path, HTTPClient.METHOD_GET, {}, callback)
@@ -203,12 +262,16 @@ func _api_patch(path: String, body: Dictionary, callback: Callable) -> void:
 	_enqueue_request(path, HTTPClient.METHOD_PATCH, body, callback)
 
 
-func _enqueue_request(path: String, method: int, body: Dictionary, callback: Callable) -> void:
+func _enqueue_request(path: String, method: int, body: Dictionary, callback: Callable, track_loading: bool = true) -> void:
+	if track_loading:
+		_retain_loading_overlay()
+
 	var entry := {
 		"path": path,
 		"method": method,
 		"body": body,
 		"callback": callback,
+		"track_loading": track_loading,
 	}
 
 	var slot := _find_free_slot()
@@ -229,10 +292,8 @@ func _dispatch(slot: int, entry: Dictionary) -> void:
 	_busy[slot] = true
 	_pool[slot].set_meta("entry", entry)
 
-	var base_url: String = GameState.api_base_url
-	var url := "%s/%s" % [base_url, entry["path"]]
+	var url := "%s/%s" % [GameState.api_base_url, entry["path"]]
 	var method: int = entry["method"]
-
 	var headers := PackedStringArray([
 		"Accept: application/json",
 		"Authorization: Bearer %s" % GameState.get_access_token(),
@@ -241,20 +302,23 @@ func _dispatch(slot: int, entry: Dictionary) -> void:
 	var has_body := method == HTTPClient.METHOD_POST \
 			or method == HTTPClient.METHOD_PUT \
 			or method == HTTPClient.METHOD_PATCH
+
+	var error := OK
 	if has_body:
 		headers.append("Content-Type: application/json")
-		var body_text := JSON.stringify(entry["body"])
-		var error := _pool[slot].request(url, headers, method, body_text)
-		if error != OK:
-			_busy[slot] = false
-			_invoke_callback(entry["callback"], false, {}, {"code": "HTTP.REQUEST_ERROR", "message": "無法送出請求，錯誤碼: %s" % error})
-			_flush_pending()
+		error = _pool[slot].request(url, headers, method, JSON.stringify(entry["body"]))
 	else:
-		var error := _pool[slot].request(url, headers, method)
-		if error != OK:
-			_busy[slot] = false
-			_invoke_callback(entry["callback"], false, {}, {"code": "HTTP.REQUEST_ERROR", "message": "無法送出請求，錯誤碼: %s" % error})
-			_flush_pending()
+		error = _pool[slot].request(url, headers, method)
+
+	if error != OK:
+		_busy[slot] = false
+		_pool[slot].remove_meta("entry")
+		_invoke_callback(entry["callback"], false, {}, {
+			"code": "HTTP.REQUEST_ERROR",
+			"message": "無法送出請求，錯誤碼: %s" % error,
+		})
+		_release_loading_overlay_if_tracked(entry)
+		_flush_pending()
 
 
 func _on_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, slot: int) -> void:
@@ -263,17 +327,25 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 	_busy[slot] = false
 
 	var callback: Callable = entry.get("callback", Callable())
-
 	var response_text := body.get_string_from_utf8()
 	var json := JSON.new()
+
 	if response_text == "" or json.parse(response_text) != OK:
-		_invoke_callback(callback, false, {}, {"code": "HTTP.PARSE_ERROR", "message": "伺服器回傳格式無法解析。"})
+		_invoke_callback(callback, false, {}, {
+			"code": "HTTP.PARSE_ERROR",
+			"message": "伺服器回傳格式無法解析。",
+		})
+		_release_loading_overlay_if_tracked(entry)
 		_flush_pending()
 		return
 
 	var payload: Variant = json.get_data()
 	if not (payload is Dictionary):
-		_invoke_callback(callback, false, {}, {"code": "HTTP.PARSE_ERROR", "message": "伺服器回傳格式無法解析。"})
+		_invoke_callback(callback, false, {}, {
+			"code": "HTTP.PARSE_ERROR",
+			"message": "伺服器回傳格式無法解析。",
+		})
+		_release_loading_overlay_if_tracked(entry)
 		_flush_pending()
 		return
 
@@ -284,10 +356,10 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 
 	if response_code >= 200 and response_code < 300 and success:
 		_invoke_callback(callback, true, data_variant, {})
+		_release_loading_overlay_if_tracked(entry)
 		_flush_pending()
 		return
 
-	# 401 → auto refresh token and retry
 	if response_code == 401 and GameState.get_refresh_token() != "":
 		_begin_refresh_and_retry(entry)
 		_flush_pending()
@@ -295,14 +367,12 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 
 	var error_dict: Dictionary = error_variant if error_variant is Dictionary else {}
 	_invoke_callback(callback, false, {}, error_dict)
+	_release_loading_overlay_if_tracked(entry)
 	_flush_pending()
 
 
-# ── Token refresh ────────────────────────────────────────────
-
 func _begin_refresh_and_retry(original_entry: Dictionary) -> void:
 	_refresh_queue.append(original_entry)
-
 	if _refreshing:
 		return
 
@@ -313,8 +383,7 @@ func _begin_refresh_and_retry(original_entry: Dictionary) -> void:
 	add_child(http)
 	http.request_completed.connect(_on_refresh_completed.bind(http))
 
-	var base_url: String = GameState.api_base_url
-	var url := "%s/auth/refresh" % base_url
+	var url := "%s/auth/refresh" % GameState.api_base_url
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
 		"Accept: application/json",
@@ -343,17 +412,15 @@ func _on_refresh_completed(_result: int, response_code: int, _headers: PackedStr
 
 	var envelope: Dictionary = payload
 	var success := bool(envelope.get("success", false))
-
 	if response_code >= 200 and response_code < 300 and success:
 		var data_variant: Variant = envelope.get("data", {})
 		var data: Dictionary = data_variant if data_variant is Dictionary else {}
 		GameState.set_auth_session(GameState.api_base_url, data)
 
-		# Retry all queued requests
 		var queued := _refresh_queue.duplicate()
 		_refresh_queue.clear()
 		for entry: Dictionary in queued:
-			_enqueue_request(entry["path"], entry["method"], entry["body"], entry["callback"])
+			_enqueue_request(entry["path"], entry["method"], entry["body"], entry["callback"], false)
 		return
 
 	_on_refresh_failed()
@@ -365,13 +432,15 @@ func _on_refresh_failed() -> void:
 	_refresh_queue.clear()
 
 	for entry: Dictionary in queued:
-		_invoke_callback(entry.get("callback", Callable()), false, {}, {"code": "AUTH.SESSION_EXPIRED", "message": "登入已過期，請重新登入。"})
+		_invoke_callback(entry.get("callback", Callable()), false, {}, {
+			"code": "AUTH.SESSION_EXPIRED",
+			"message": "登入已過期，請重新登入。",
+		})
+		_release_loading_overlay_if_tracked(entry)
 
 	GameState.clear_auth_and_player_state()
 	get_tree().change_scene_to_file("res://scenes/StartScene.tscn")
 
-
-# ── Helpers ──────────────────────────────────────────────────
 
 func _invoke_callback(callback: Callable, success: bool, data: Variant, error: Dictionary) -> void:
 	if callback.is_valid():
@@ -385,3 +454,98 @@ func _flush_pending() -> void:
 			break
 		var entry: Dictionary = _pending_queue.pop_front()
 		_dispatch(slot, entry)
+
+
+func _release_loading_overlay_if_tracked(entry: Dictionary) -> void:
+	if bool(entry.get("track_loading", true)):
+		_release_loading_overlay()
+
+
+func _retain_loading_overlay() -> void:
+	_loading_request_count += 1
+	_ensure_loading_overlay()
+	_loading_text_phase = 0
+	_loading_text_elapsed = 0.0
+	_update_loading_label()
+	if _loading_canvas != null:
+		_loading_canvas.visible = true
+	set_process(true)
+
+
+func _release_loading_overlay() -> void:
+	_loading_request_count = max(_loading_request_count - 1, 0)
+	if _loading_request_count > 0:
+		return
+	if _loading_canvas != null:
+		_loading_canvas.visible = false
+	set_process(false)
+
+
+func _ensure_loading_overlay() -> void:
+	if _loading_canvas == null:
+		_build_loading_overlay()
+
+
+func _build_loading_overlay() -> void:
+	if _loading_canvas != null:
+		return
+
+	_loading_canvas = CanvasLayer.new()
+	_loading_canvas.layer = LOADING_LAYER
+	_loading_canvas.visible = false
+	add_child(_loading_canvas)
+
+	var overlay := ColorRect.new()
+	overlay.color = Color(0.0, 0.0, 0.0, 0.42)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_loading_canvas.add_child(overlay)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_loading_canvas.add_child(center)
+
+	var content := VBoxContainer.new()
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 14)
+	center.add_child(content)
+
+	_loading_spinner = Control.new()
+	_loading_spinner.custom_minimum_size = Vector2(84.0, 84.0)
+	_loading_spinner.pivot_offset = _loading_spinner.custom_minimum_size * 0.5
+	_loading_spinner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(_loading_spinner)
+	_build_spinner_dots()
+
+	_loading_message_label = Label.new()
+	_loading_message_label.text = DEFAULT_LOADING_MESSAGE
+	_loading_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_loading_message_label.add_theme_font_size_override("font_size", 24)
+	_loading_message_label.add_theme_color_override("font_color", Color("f7f1e7"))
+	content.add_child(_loading_message_label)
+
+
+func _build_spinner_dots() -> void:
+	_spinner_dots.clear()
+	if _loading_spinner == null:
+		return
+
+	var ring_center := _loading_spinner.custom_minimum_size * 0.5
+	var radius := 24.0
+	var dot_size := Vector2(12.0, 12.0)
+	for i in range(8):
+		var dot := ColorRect.new()
+		var angle := TAU * float(i) / 8.0
+		dot.color = Color("f7f1e7")
+		dot.size = dot_size
+		dot.position = ring_center + Vector2(cos(angle), sin(angle)) * radius - dot_size * 0.5
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_loading_spinner.add_child(dot)
+		_spinner_dots.append(dot)
+
+
+func _update_loading_label() -> void:
+	if _loading_message_label == null:
+		return
+	_loading_message_label.text = "loading%s" % ".".repeat(_loading_text_phase + 1)
