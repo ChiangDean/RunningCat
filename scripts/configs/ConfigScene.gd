@@ -199,7 +199,7 @@ func _make_team_slot_row(slot_index: int, member: Dictionary) -> HBoxContainer:
 	row.add_theme_constant_override("separation", 12)
 
 	var is_filled := not member.is_empty()
-	var cat_name: String = String(member.get("catDisplayName", "")) if is_filled else ""
+	var cat_name: String = str(member.get("catDisplayName", "")) if is_filled else ""
 	var cat_lv: int = int(member.get("catFoodLevel", 1)) if is_filled else 1
 	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
 	var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
@@ -286,7 +286,7 @@ func _make_cat_row(cat: Dictionary, in_team_ids: Array) -> HBoxContainer:
 	row.add_theme_constant_override("separation", 12)
 
 	var player_cat_id: int = int(cat.get("playerCatId", 0))
-	var display_name: String = String(cat.get("displayName", ""))
+	var display_name: String = str(cat.get("displayName", ""))
 	var lv: int = int(cat.get("catFoodLevel", 1))
 
 	var name_lbl := Label.new()
@@ -321,7 +321,7 @@ func _build_member_from_player_cat(player_cat_id: int) -> Dictionary:
 			"slotNo": 0,
 			"playerCatId": player_cat_id,
 			"catCatalogId": int(cat.get("catCatalogId", 0)),
-			"catDisplayName": String(cat.get("displayName", "")),
+			"catDisplayName": str(cat.get("displayName", "")),
 			"catFoodLevel": int(cat.get("catFoodLevel", 1)),
 			"rank": int(cat.get("rank", 0)),
 			"initialDelaySeconds": 0.0,
@@ -426,7 +426,7 @@ func _on_save_team_pressed() -> void:
 		if data is Dictionary:
 			var team_response := data as Dictionary
 			_apply_team_update(team_response)
-			var saved_type_key := _team_scene_type_to_key(String(team_response.get("teamType", "")))
+			var saved_type_key := _team_scene_type_to_key(str(team_response.get("teamType", "")))
 			if saved_type_key != "":
 				_reset_team_draft(saved_type_key, team_response)
 
@@ -442,7 +442,7 @@ func _team_scene_type_to_key(team_type: String) -> String:
 
 
 func _apply_team_update(team_response: Dictionary) -> void:
-	var type_str: String = String(team_response.get("teamType", ""))
+	var type_str: String = str(team_response.get("teamType", ""))
 	if type_str == "":
 		return
 

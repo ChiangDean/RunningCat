@@ -229,7 +229,7 @@ func _init_skill_slots() -> void:
 		var cat: CatData = _player_cats[i]
 		var max_cd := 0.0
 		if cat.active_skills_data.size() > 0:
-			var skill_id := String(cat.active_skills_data[0].get("id", ""))
+			var skill_id := str(cat.active_skills_data[0].get("id", ""))
 			max_cd = float(cat.active_skills_data[0].get("cooldown", 5.0))
 			var initial_delay: float = float(cat.active_skills_data[0].get("initial_delay", 0))
 			_skill_slots.append({
@@ -275,12 +275,12 @@ func _refresh_skill_slot_ui(i: int, slot: Dictionary) -> void:
 	var max_cd: float = slot["max_cd"]
 	var remaining: float = slot["remaining_cd"]
 	var buff_rem: float = slot["buff_remaining"]
-	var skill_id := String(slot.get("skill_id", ""))
+	var skill_id := str(slot.get("skill_id", ""))
 
 	# 技能圖示
 	var icon_rect: TextureRect = slot_node.get_node_or_null("Icon")
 	if icon_rect:
-		var icon_path := String(SKILL_ICON_PATHS.get(skill_id, ""))
+		var icon_path := str(SKILL_ICON_PATHS.get(skill_id, ""))
 		if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 			icon_rect.texture = load(icon_path)
 			icon_rect.visible = true

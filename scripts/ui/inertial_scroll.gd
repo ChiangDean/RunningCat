@@ -86,9 +86,9 @@ func _get_scroll() -> float:
 
 func _set_scroll(v: float) -> void:
 	if axis == "vertical":
-		target.set_v_scroll(v)
+		target.set_v_scroll(roundi(v))
 	else:
-		target.set_h_scroll(v)
+		target.set_h_scroll(roundi(v))
 
 func _get_max_scroll() -> float:
 	# Use actual rendered sizes — most accurate and avoids scrollbar timing issues
@@ -288,7 +288,7 @@ func _fade_scrollbar():
 
 	is_scrolling = false
 
-func _do_haptic_feedback(direction: int) -> void:
+func _do_haptic_feedback(_direction: int) -> void:
 	var now_us = Time.get_ticks_usec()
 	if now_us - _last_haptic_us < HAPTIC_COOLDOWN_MS * 1000:
 		return

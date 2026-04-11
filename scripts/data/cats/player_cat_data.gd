@@ -60,7 +60,7 @@ static func special_food_next_cost(total_points_allocated: int) -> int:
 ## 代換回 T（total_points_allocated = n+1）：T*(T+1)/2
 ## 範例：已分配 3 點 → 1+2+3 = 6 → 3*4/2 = 6
 static func special_food_total_spent(total_points_allocated: int) -> int:
-	return total_points_allocated * (total_points_allocated + 1) / 2
+	return (total_points_allocated * (total_points_allocated + 1)) >> 1
 
 
 # ── 查詢輔助 ──────────────────────────────────────────

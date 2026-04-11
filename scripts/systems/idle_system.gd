@@ -6,8 +6,10 @@ extends RefCounted
 
 ## 依當前關卡與鏟屎官等級計算每小時產出速率
 static func calculate_rates(config: Dictionary, current_stage: int, scooper_level: int) -> Dictionary:
-	var stage_tiers: int  = current_stage / int(config.get("stage_bonus_interval",        50))
-	var whisker_tiers: int = current_stage / int(config.get("whisker_stage_bonus_interval", 150))
+	var stage_interval := float(int(config.get("stage_bonus_interval", 50)))
+	var whisker_interval := float(int(config.get("whisker_stage_bonus_interval", 150)))
+	var stage_tiers: int = floori(float(current_stage) / stage_interval)
+	var whisker_tiers: int = floori(float(current_stage) / whisker_interval)
 
 	return {
 		"gold": (int(config.get("base_gold_per_hour", 1000))
@@ -32,11 +34,11 @@ static func calculate_rewards(complete_minutes: int, rates: Dictionary) -> Dicti
 	if complete_minutes <= 0:
 		return {"gold": 0, "poop": 0, "cat_food": 0, "diamonds": 0, "whiskers": 0}
 	return {
-		"gold":     rates.get("gold",     0) * complete_minutes / 60,
-		"poop":     rates.get("poop",     0) * complete_minutes / 60,
-		"cat_food": rates.get("cat_food", 0) * complete_minutes / 60,
-		"diamonds": rates.get("diamonds", 0) * complete_minutes / 60,
-		"whiskers": rates.get("whiskers", 0) * complete_minutes / 60,
+		"gold": floori(float(rates.get("gold", 0)) * float(complete_minutes) / 60.0),
+		"poop": floori(float(rates.get("poop", 0)) * float(complete_minutes) / 60.0),
+		"cat_food": floori(float(rates.get("cat_food", 0)) * float(complete_minutes) / 60.0),
+		"diamonds": floori(float(rates.get("diamonds", 0)) * float(complete_minutes) / 60.0),
+		"whiskers": floori(float(rates.get("whiskers", 0)) * float(complete_minutes) / 60.0),
 	}
 
 ## 鏟一次屎的隨機掉落，機率依鏟屎官等級動態計算
@@ -50,7 +52,7 @@ static func scoop_once(config: Dictionary, rng: RandomNumberGenerator, scooper_l
 	var mem_chance: float = (
 		float(config.get("scoop_memory_shard_base_chance", 0.0001))
 		+ float(config.get("scoop_memory_shard_chance_per_two_scooper_levels", 0.0001))
-		  * float(scooper_level / 2)   # 整數除法，每兩級才加一次
+		  * floorf(float(scooper_level) / 2.0)   # 整數除法，每兩級才加一次
 	)
 	if rng.randf() < mem_chance:
 		result["memory_shards"] = 1

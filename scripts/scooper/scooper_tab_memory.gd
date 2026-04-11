@@ -226,13 +226,13 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 
 func _show_memory_dialog(scene: Control, item: Dictionary, unlocked: bool) -> void:
 	var lines: Array[String] = [
-		String(item.get("description", "")),
+		str(item.get("description", "")),
 		"",
 		"效果：%s" % _memory_bonus_desc(item),
 		"解鎖需求：回憶碎片 %d" % int(item.get("unlockCost", 0)),
 		"目前狀態：%s" % ("已解鎖" if unlocked else "未解鎖"),
 	]
-	scene.DialogManager.show_info(String(item.get("displayName", "")), "\n".join(lines))
+	scene.DialogManager.show_info(str(item.get("displayName", "")), "\n".join(lines))
 
 
 func _confirm_unlock_memory(scene: Control, memory_id: int, memory_item: Dictionary) -> void:
@@ -252,7 +252,7 @@ func _confirm_unlock_memory(scene: Control, memory_id: int, memory_item: Diction
 			scene.ApiClient.unlock_memory(memory_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
 				scene._api_in_flight = false
 				if not ok:
-					scene.DialogManager.show_info("解鎖失敗", String(err.get("message", "操作失敗")))
+					scene.DialogManager.show_info("解鎖失敗", str(err.get("message", "操作失敗")))
 					return
 				var result: Dictionary = data if data is Dictionary else {}
 				scene.GameState.player_data.memory_shards = int(result.get("remainingMemoryShards", scene.GameState.player_data.memory_shards))

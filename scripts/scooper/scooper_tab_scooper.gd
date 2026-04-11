@@ -219,7 +219,7 @@ func _show_ability_dialog(scene: Control, item: Dictionary) -> void:
 	if source_text != "":
 		lines.append("")
 		lines.append(source_text)
-	scene.DialogManager.show_info(String(item.get("displayName", "")), "\n".join(lines))
+	scene.DialogManager.show_info(str(item.get("displayName", "")), "\n".join(lines))
 
 
 func _refresh_scoop_ui(scene: Control) -> void:
@@ -437,7 +437,7 @@ func _do_equipment_action(scene: Control, action: String, equip_id: int) -> void
 	var callback := func(ok: bool, data: Variant, err: Dictionary) -> void:
 		scene._api_in_flight = false
 		if not ok:
-			scene.DialogManager.show_info("%s失敗" % label, String(err.get("message", "操作失敗")))
+			scene.DialogManager.show_info("%s失敗" % label, str(err.get("message", "操作失敗")))
 			return
 
 		var result: Dictionary = data if data is Dictionary else {}

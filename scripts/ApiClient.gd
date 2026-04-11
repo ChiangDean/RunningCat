@@ -461,8 +461,13 @@ func _on_refresh_failed() -> void:
 
 
 func _invoke_callback(callback: Callable, success: bool, data: Variant, error: Dictionary) -> void:
-	if callback.is_valid():
-		callback.call(success, data, error)
+	if callback.is_null():
+		return
+	if callback.is_standard():
+		var target := instance_from_id(callback.get_object_id())
+		if target == null or not is_instance_valid(target):
+			return
+	callback.call(success, data, error)
 
 
 func _flush_pending() -> void:

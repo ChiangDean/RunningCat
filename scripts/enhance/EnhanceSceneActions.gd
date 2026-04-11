@@ -42,7 +42,7 @@ static func on_enhance_action_completed(
 			scene.GameState.refresh_achievements()
 		return
 
-	var message := String(error.get("message", "強化操作失敗"))
+	var message := str(error.get("message", "強化操作失敗"))
 	DialogManager.show_info("強化失敗", message)
 	scene._refresh_all_labels()
 

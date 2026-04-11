@@ -164,13 +164,13 @@ func _populate_mail_list() -> void:
 		if not (item_variant is Dictionary):
 			continue
 		var item: Dictionary = item_variant
-		var title := String(item.get("title", "未命名郵件"))
+		var title := str(item.get("title", "未命名郵件"))
 		var label := title
 		if not bool(item.get("isClaimed", false)) and bool(item.get("hasAttachment", false)):
 			label = "獎 " + label
 		if not bool(item.get("isRead", false)):
 			label = "● " + label
-		if String(item.get("status", "")) == "Expired":
+		if str(item.get("status", "")) == "Expired":
 			label += " [已過期]"
 		_mail_list.add_item(label)
 
@@ -212,17 +212,17 @@ func _render_detail(detail: Dictionary) -> void:
 		_claim_btn.text = "領取"
 		return
 
-	_detail_title.text = String(detail.get("title", "未命名郵件"))
+	_detail_title.text = str(detail.get("title", "未命名郵件"))
 	var expire_text := "無"
 	var expire_variant: Variant = detail.get("expireAtUtc", null)
 	if expire_variant != null:
-		expire_text = String(expire_variant).substr(0, 19)
+		expire_text = str(expire_variant).substr(0, 19)
 	_detail_meta.text = "類型：%s | 狀態：%s | 到期：%s" % [
-		String(detail.get("mailType", "")),
-		String(detail.get("status", "")),
+		str(detail.get("mailType", "")),
+		str(detail.get("status", "")),
 		expire_text
 	]
-	_detail_content.text = String(detail.get("content", ""))
+	_detail_content.text = str(detail.get("content", ""))
 
 	var attachments_variant: Variant = detail.get("attachments", [])
 	var attachments: Array = attachments_variant if attachments_variant is Array else []
@@ -237,9 +237,9 @@ func _render_detail(detail: Dictionary) -> void:
 		var prefix := "已領取" if bool(attachment.get("isClaimed", false)) else "可領取"
 		row.text = "%s %s x%d\n%s" % [
 			prefix,
-			String(attachment.get("displayName", attachment.get("rewardType", ""))),
+			str(attachment.get("displayName", attachment.get("rewardType", ""))),
 			int(attachment.get("quantity", 0)),
-			String(attachment.get("description", ""))
+			str(attachment.get("description", ""))
 		]
 		_attachment_box.add_child(row)
 
@@ -299,7 +299,7 @@ func _render_reward_dialog(rewards: Variant, title: String) -> void:
 				continue
 			var reward: Dictionary = reward_variant
 			lines.append("%s x%d" % [
-				String(reward.get("displayName", reward.get("rewardType", ""))),
+				str(reward.get("displayName", reward.get("rewardType", ""))),
 				int(reward.get("quantity", 0))
 			])
 	if lines.is_empty():

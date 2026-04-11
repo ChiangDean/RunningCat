@@ -15,7 +15,7 @@ static func on_dungeon_overview_completed(scene, success: bool, data: Variant, e
 		scene._rebuild_dungeon_panels()
 		return
 
-	var message := String(error.get("message", "取得地城資料失敗。"))
+	var message := str(error.get("message", "取得地城資料失敗。"))
 	DialogManager.show_info("地城資料失敗", message)
 	scene._rebuild_dungeon_panels()
 
@@ -31,13 +31,13 @@ static func on_dungeon_action_completed(scene, success: bool, data: Variant, err
 
 		var reward: Variant = response.get("reward", {})
 		if reward is Dictionary and not (reward as Dictionary).is_empty():
-			var run_type := String(response.get("runType", ""))
+			var run_type := str(response.get("runType", ""))
 			var target_floor := int(response.get("targetFloor", 0))
 			var header := "掃蕩完成" if run_type == "Sweep" else "挑戰完成"
 			scene._show_reward_popup(header, target_floor, reward)
 		return
 
-	var message := String(error.get("message", "地城操作失敗。"))
+	var message := str(error.get("message", "地城操作失敗。"))
 	DialogManager.show_info("地城操作失敗", message)
 	scene._rebuild_dungeon_panels()
 
@@ -73,7 +73,7 @@ static func on_challenge_pressed(scene, dungeon_id: int) -> void:
 		return
 
 	scene.GameState.dungeon_battle_id = str(dungeon_id)
-	scene.GameState.dungeon_battle_key = String(dungeon.get("key", ""))
+	scene.GameState.dungeon_battle_key = str(dungeon.get("key", ""))
 	scene.GameState.dungeon_battle_level = int(dungeon.get("maxClearedFloor", 0)) + 1
 
 	var dungeon_team: Array = scene.GameState.player_data.dungeon_team

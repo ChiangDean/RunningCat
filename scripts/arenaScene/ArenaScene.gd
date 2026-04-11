@@ -182,8 +182,8 @@ func _apply_overview(overview: Dictionary) -> void:
 	_score_label.text = "積分：%d" % Helpers.get_current_score(_overview)
 	_ticket_label.text = "競技券：%d" % Helpers.get_current_tickets(_overview)
 	_season_label.text = "%s｜結束日 %s" % [
-		String(_overview.get("seasonDisplayName", "目前賽季")),
-		String(_overview.get("seasonEndDate", "-"))
+		str(_overview.get("seasonDisplayName", "目前賽季")),
+		str(_overview.get("seasonEndDate", "-"))
 	]
 	_attack_team_label.text = "攻擊隊伍：%s" % Helpers.format_team_names_from_team("ArenaAttack", "Boss", "未設定，將改用 Boss 隊伍")
 	_defense_team_label.text = "防守隊伍：%s" % Helpers.format_team_names_from_team("ArenaDefense", "", "未設定防守隊伍")
@@ -218,13 +218,13 @@ func _build_opponent_card(opponent: Dictionary) -> Control:
 	box.add_child(title_row)
 
 	var name_label := Label.new()
-	name_label.text = String(opponent.get("playerName", "未知對手"))
+	name_label.text = str(opponent.get("playerName", "未知對手"))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.add_theme_font_size_override("font_size", 22)
 	title_row.add_child(name_label)
 
 	var score_label := Label.new()
-	score_label.text = "%s  %d" % [String(opponent.get("rankName", "青銅 III")), int(opponent.get("score", 0))]
+	score_label.text = "%s  %d" % [str(opponent.get("rankName", "青銅 III")), int(opponent.get("score", 0))]
 	score_label.add_theme_font_size_override("font_size", 18)
 	title_row.add_child(score_label)
 
@@ -283,7 +283,7 @@ func _claim_rank_reward(rank_id: int) -> void:
 			GameState.update_arena(overview)
 			_apply_overview(overview)
 		_show_dialog("牌位獎勵", "已領取 %s：%s" % [
-			String(response.get("rankName", "牌位獎勵")),
+			str(response.get("rankName", "牌位獎勵")),
 			Helpers.format_rewards(response.get("rewards", []))
 		])
 	)
@@ -320,7 +320,7 @@ func _get_current_opponent_ids() -> Array:
 		if not (opponent_variant is Dictionary):
 			continue
 		var opponent: Dictionary = opponent_variant
-		var opponent_id := String(opponent.get("opponentId", "")).strip_edges()
+		var opponent_id := str(opponent.get("opponentId", "")).strip_edges()
 		if opponent_id != "":
 			ids.append(opponent_id)
 	return ids

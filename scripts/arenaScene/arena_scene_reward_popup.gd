@@ -20,7 +20,7 @@ static func show(scene: Control, overview: Dictionary, claim_callback: Callable)
 		list.add_child(row)
 
 		var name_label := Label.new()
-		name_label.text = String(rank.get("displayName", "未知牌位"))
+		name_label.text = str(rank.get("displayName", "未知牌位"))
 		name_label.custom_minimum_size = Vector2(120.0, 0.0)
 		name_label.add_theme_font_size_override("font_size", 18)
 		row.add_child(name_label)

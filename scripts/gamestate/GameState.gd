@@ -997,7 +997,6 @@ func get_achievement_progress(item: Dictionary) -> Dictionary:
 
 ## DEPRECATED: 成就改由後端管理，但仍保留供 EnhanceScene 呼叫
 func refresh_achievements(show_notifications: bool = true) -> Array[String]:
-	push_warning("DEPRECATED: refresh_achievements() - achievements are now managed by the backend API")
 	var newly_completed: Array[String] = []
 	var changed := false
 	for item: Dictionary in get_all_achievements():
@@ -1145,7 +1144,7 @@ func get_idle_elapsed_seconds() -> int:
 
 ## 可領取的完整分鐘數（即時計算）
 func get_idle_complete_minutes() -> int:
-	return get_idle_elapsed_seconds() / 60
+	return floori(float(get_idle_elapsed_seconds()) / 60.0)
 
 ## 是否已累積至少一分鐘可領取（即時計算）
 func has_pending_idle_rewards() -> bool:
@@ -1179,7 +1178,7 @@ func claim_idle_rewards() -> void:
 	player_data.cat_food       += rewards.get("cat_food", 0)
 	player_data.diamonds       += rewards.get("diamonds", 0)
 	player_data.whisker_shards += rewards.get("whiskers", 0)
-	player_data.last_quit_time = Time.get_unix_time_from_system() - remainder_seconds
+	player_data.last_quit_time = int(Time.get_unix_time_from_system()) - remainder_seconds
 	player_data.save()
 
 ## 鏟一次屎：扣除一個屎堆，隨機產出並存檔
@@ -1277,8 +1276,8 @@ func set_chat_connection_state(state: String) -> void:
 
 
 func apply_chat_summary(summary: Dictionary) -> void:
-	chat_endpoint = String(summary.get("chatEndpoint", chat_endpoint))
-	chat_token = String(summary.get("chatToken", chat_token))
+	chat_endpoint = str(summary.get("chatEndpoint", chat_endpoint))
+	chat_token = str(summary.get("chatToken", chat_token))
 	chat_guild_available = bool(summary.get("guildChatAvailable", false))
 	chat_last_snapshot_at_unix = Time.get_unix_time_from_system()
 	if summary.has("unreadSystemCount"):
@@ -1300,7 +1299,7 @@ func apply_chat_summary(summary: Dictionary) -> void:
 			if not (item is Dictionary):
 				continue
 			var channel: Dictionary = item
-			var channel_key := String(channel.get("channelKey", "")).to_lower()
+			var channel_key := str(channel.get("channelKey", "")).to_lower()
 			if channel_key == "":
 				continue
 			chat_unread_counts[channel_key] = int(channel.get("unreadCount", 0))
@@ -1333,9 +1332,9 @@ func set_chat_unread_count(channel_key: String, count: int) -> void:
 
 func append_chat_message_envelope(channel_key: String, sequence: int, message: Dictionary) -> void:
 	var target := get_chat_messages(channel_key)
-	var message_id := String(message.get("messageId", ""))
+	var message_id := str(message.get("messageId", ""))
 	for existing: Dictionary in target:
-		if String(existing.get("messageId", "")) == message_id and message_id != "":
+		if str(existing.get("messageId", "")) == message_id and message_id != "":
 			return
 
 	var entry := message.duplicate(true)
@@ -1381,7 +1380,7 @@ func _trim_chat_channel(channel_key: String) -> void:
 	var cutoff := Time.get_unix_time_from_system() - (24 * 60 * 60)
 	var filtered: Array = []
 	for item: Dictionary in target:
-		var sent_at := String(item.get("sentAtUtc", ""))
+		var sent_at := str(item.get("sentAtUtc", ""))
 		var unix_time := Time.get_unix_time_from_datetime_string(sent_at) if sent_at != "" else 0
 		if unix_time == 0 or unix_time >= cutoff:
 			filtered.append(item)
@@ -1420,16 +1419,16 @@ func is_memory_unlocked(memory_id: String) -> bool:
 
 func get_memory_bonuses() -> Array:
 	if not scooper_memory_data.is_empty():
-		var result: Array = []
+		var live_result: Array = []
 		for item: Dictionary in scooper_memory_data:
 			if not bool(item.get("isUnlocked", false)):
 				continue
-			result.append({
+			live_result.append({
 				"target": str(item.get("bonusTarget", "All")).to_lower(),
 				"stat": str(item.get("bonusStatType", "")),
 				"value": float(item.get("bonusValue", 0.0)),
 			})
-		return result
+		return live_result
 	var result: Array = []
 	for memory_id: String in player_data.unlocked_memory_ids:
 		var item := _get_memory_item(memory_id)
@@ -1671,7 +1670,7 @@ func is_equipment_owned(equip_id: String) -> bool:
 ## 取得所有有效裝備加成（非損壞、等級 > 0）
 func get_equipment_bonuses() -> Array:
 	if not scooper_equipment_data.is_empty():
-		var result: Array = []
+		var live_result: Array = []
 		for item: Dictionary in scooper_equipment_data:
 			if not bool(item.get("isOwned", false)):
 				continue
@@ -1681,14 +1680,14 @@ func get_equipment_bonuses() -> Array:
 			if level <= 0:
 				continue
 			var bonus_per_level: float = float(item.get("bonusPerLevel", 0.0))
-			result.append({
+			live_result.append({
 				"target": str(item.get("bonusTarget", "All")).to_lower(),
 				"stat":   str(item.get("bonusStat", "")),
 				"value":  bonus_per_level * level,
 			})
-		return result
+		return live_result
 	# Fallback: 本地設定
-	var result: Array = []
+	var fallback_result: Array = []
 	for equip_id: String in player_data.equipments.keys():
 		var item := _get_equip_item(equip_id)
 		if item.is_empty():
@@ -1700,12 +1699,12 @@ func get_equipment_bonuses() -> Array:
 		if level <= 0:
 			continue
 		var bonus_per_level: float = float(item.get("bonus_per_level", 0.0))
-		result.append({
+		fallback_result.append({
 			"target": item.get("bonus_target", "all"),
 			"stat":   item.get("bonus_stat", ""),
 			"value":  bonus_per_level * level,
 		})
-	return result
+	return fallback_result
 
 
 # ── 私有輔助 ──────────────────────────────────

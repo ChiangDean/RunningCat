@@ -114,18 +114,18 @@ func _handle_payload(packet: String) -> void:
 	if not (payload is Dictionary):
 		return
 	var data: Dictionary = payload
-	var event_type := String(data.get("eventType", ""))
+	var event_type := str(data.get("eventType", ""))
 	match event_type:
 		"chat.connected":
 			_reconnect_attempts = 0
 			GameState.set_chat_connection_state("connected")
 		"chat.message.received", "chat.message.replay":
-			var channel_key := String(data.get("channelKey", data.get("channel", "world"))).to_lower()
+			var channel_key := str(data.get("channelKey", data.get("channel", "world"))).to_lower()
 			var message_variant: Variant = data.get("message", {})
 			if message_variant is Dictionary:
 				GameState.append_chat_message_envelope(channel_key, int(data.get("sequence", 0)), message_variant)
 		"chat.unread.sync":
-			GameState.set_chat_unread_count(String(data.get("channelKey", "")).to_lower(), int(data.get("unreadCount", 0)))
+			GameState.set_chat_unread_count(str(data.get("channelKey", "")).to_lower(), int(data.get("unreadCount", 0)))
 		"chat.pong":
 			pass
 		"chat.error":

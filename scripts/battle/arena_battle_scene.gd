@@ -121,7 +121,7 @@ func _build_ui() -> void:
 	const HALF := SW / 2.0
 
 	var my_name_lbl := _make_label(
-		String(my_overview.get("playerName", GameState.player_data.player_name)),
+		str(my_overview.get("playerName", GameState.player_data.player_name)),
 		Vector2(10.0, HEADER_Y),
 		Vector2(HALF - 30.0, 26.0),
 		18
@@ -130,7 +130,7 @@ func _build_ui() -> void:
 	_ui_layer.add_child(my_name_lbl)
 
 	var my_rank_lbl := _make_label(
-		"%s  %d" % [String(my_overview.get("rankName", "青銅 III")), int(my_overview.get("score", 0))],
+		"%s  %d" % [str(my_overview.get("rankName", "青銅 III")), int(my_overview.get("score", 0))],
 		Vector2(10.0, HEADER_Y + 28.0),
 		Vector2(HALF - 30.0, 22.0),
 		14
@@ -145,7 +145,7 @@ func _build_ui() -> void:
 	_ui_layer.add_child(vs_lbl)
 
 	var opp_name_lbl := _make_label(
-		String(_opponent.get("playerName", "未知對手")),
+		str(_opponent.get("playerName", "未知對手")),
 		Vector2(HALF + 20.0, HEADER_Y),
 		Vector2(HALF - 30.0, 26.0),
 		18
@@ -154,7 +154,7 @@ func _build_ui() -> void:
 	_ui_layer.add_child(opp_name_lbl)
 
 	var opp_rank_lbl := _make_label(
-		"%s  %d" % [String(_opponent.get("rankName", "青銅 III")), opp_score],
+		"%s  %d" % [str(_opponent.get("rankName", "青銅 III")), opp_score],
 		Vector2(HALF + 20.0, HEADER_Y + 28.0),
 		Vector2(HALF - 30.0, 22.0),
 		14
@@ -395,10 +395,10 @@ func _handle_result(is_win: bool) -> void:
 		return
 	_settling = true
 
-	ApiClient.complete_arena_battle(String(_opponent.get("opponentId", "")), is_win, func(success: bool, data: Variant, error: Dictionary) -> void:
+	ApiClient.complete_arena_battle(str(_opponent.get("opponentId", "")), is_win, func(success: bool, data: Variant, error: Dictionary) -> void:
 		_settling = false
 		if not success or not (data is Dictionary):
-			DialogManager.show_info("競技場結算", String(error.get("message", "競技場結算失敗。")), func() -> void:
+			DialogManager.show_info("競技場結算", str(error.get("message", "競技場結算失敗。")), func() -> void:
 				get_tree().change_scene_to_file("res://scenes/ArenaScene.tscn")
 			)
 			return
@@ -414,7 +414,7 @@ func _show_result_popup(response: Dictionary) -> void:
 	var is_win := bool(response.get("isWin", false))
 	var delta := int(response.get("scoreDelta", 0))
 	var new_score := int(response.get("newScore", 0))
-	var rank_name := String(response.get("rankName", "青銅 III"))
+	var rank_name := str(response.get("rankName", "青銅 III"))
 	var delta_str := ("+%d" % delta) if delta >= 0 else "%d" % delta
 
 	const POPUP_W := 440.0
