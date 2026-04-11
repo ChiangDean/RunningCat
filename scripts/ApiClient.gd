@@ -131,6 +131,24 @@ func claim_mail(mail_id: int, callback: Callable) -> void:
 func claim_all_mails(callback: Callable) -> void:
 	_api_post("mail/claim-all", {}, callback)
 
+func get_chat_summary(callback: Callable) -> void:
+	_api_get("chat/summary", callback)
+
+
+func get_chat_history(channel_key: String, before_seq: int, page_size: int, callback: Callable) -> void:
+	var query := "chat/history?channelKey=%s&pageSize=%d" % [channel_key.uri_encode(), page_size]
+	if before_seq > 0:
+		query += "&beforeSequence=%d" % before_seq
+	_api_get(query, callback)
+
+
+func post_chat_message(channel_key: String, content: String, callback: Callable) -> void:
+	_api_post("chat/messages", {"channelKey": channel_key, "content": content}, callback)
+
+
+func post_chat_read(channel_key: String, last_read_sequence: int, callback: Callable) -> void:
+	_api_post("chat/read", {"channelKey": channel_key, "lastReadSequence": last_read_sequence}, callback)
+
 
 func get_teams(callback: Callable) -> void:
 	_api_get("config/teams", callback)
