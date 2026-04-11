@@ -22,6 +22,9 @@ var _scoop_cd_label: Label
 var _scoop_result_label: Label
 const SCOOP_COOLDOWN := 0.5
 var _scoop_cooldown_remaining := 0.0
+var _equipment_upgrade_cooldowns: Dictionary = {}
+var _equipment_upgrade_button_refs: Dictionary = {}
+var _equipment_upgrade_gain_map: Dictionary = {}
 var _ability_list: VBoxContainer
 var _equip_list: VBoxContainer  # 裝備列表容器，行動後重建
 var _memory_summary_label: Label
@@ -160,6 +163,7 @@ func _rebuild_tab_content() -> void:
 	_scoop_overlay = null
 	_scoop_cd_label = null
 	_scoop_result_label = null
+	_equipment_upgrade_button_refs.clear()
 	_ability_list = null
 	_equip_list  = null
 	_memory_summary_label = null

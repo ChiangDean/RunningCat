@@ -56,28 +56,28 @@ func _process(delta: float) -> void:
 		_update_loading_label()
 
 
-func get_scooper_profile(callback: Callable) -> void:
-	_api_get("scooper/profile", callback)
+func get_scooper_profile(callback: Callable, track_loading: bool = true) -> void:
+	_api_get("scooper/profile", callback, track_loading)
 
 
-func scoop_poop(count: int, callback: Callable) -> void:
-	_api_post("scooper/profile/scoop", {"count": count}, callback)
+func scoop_poop(count: int, callback: Callable, track_loading: bool = true) -> void:
+	_api_post("scooper/profile/scoop", {"count": count}, callback, track_loading)
 
 
 func claim_idle_rewards(callback: Callable) -> void:
 	_api_post("scooper/profile/claim-idle", {}, callback)
 
 
-func get_equipment_list(callback: Callable) -> void:
-	_api_get("scooper/equipment", callback)
+func get_equipment_list(callback: Callable, track_loading: bool = true) -> void:
+	_api_get("scooper/equipment", callback, track_loading)
 
 
 func purchase_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/purchase", {"equipmentId": equipment_id}, callback)
 
 
-func upgrade_equipment(equipment_id: int, callback: Callable) -> void:
-	_api_post("scooper/equipment/upgrade", {"equipmentId": equipment_id}, callback)
+func upgrade_equipment(equipment_id: int, callback: Callable, track_loading: bool = true) -> void:
+	_api_post("scooper/equipment/upgrade", {"equipmentId": equipment_id}, callback, track_loading)
 
 
 func repair_equipment(equipment_id: int, callback: Callable) -> void:
@@ -104,16 +104,16 @@ func get_treasures(callback: Callable) -> void:
 	_api_get("scooper/treasure", callback)
 
 
-func get_achievements(callback: Callable) -> void:
-	_api_get("scooper/achievement", callback)
+func get_achievements(callback: Callable, track_loading: bool = true) -> void:
+	_api_get("scooper/achievement", callback, track_loading)
 
 
 func claim_achievement(achievement_id: int, callback: Callable) -> void:
 	_api_post("scooper/achievement/claim", {"achievementId": achievement_id}, callback)
 
 
-func get_authenticated_bootstrap(callback: Callable) -> void:
-	_api_get("auth/bootstrap", callback)
+func get_authenticated_bootstrap(callback: Callable, track_loading: bool = true) -> void:
+	_api_get("auth/bootstrap", callback, track_loading)
 
 
 func get_mail_summary(callback: Callable) -> void:
@@ -268,12 +268,12 @@ func release_loading_overlay() -> void:
 	_release_loading_overlay()
 
 
-func _api_get(path: String, callback: Callable) -> void:
-	_enqueue_request(path, HTTPClient.METHOD_GET, {}, callback)
+func _api_get(path: String, callback: Callable, track_loading: bool = true) -> void:
+	_enqueue_request(path, HTTPClient.METHOD_GET, {}, callback, track_loading)
 
 
-func _api_post(path: String, body: Dictionary, callback: Callable) -> void:
-	_enqueue_request(path, HTTPClient.METHOD_POST, body, callback)
+func _api_post(path: String, body: Dictionary, callback: Callable, track_loading: bool = true) -> void:
+	_enqueue_request(path, HTTPClient.METHOD_POST, body, callback, track_loading)
 
 
 func _api_put(path: String, body: Dictionary, callback: Callable) -> void:
