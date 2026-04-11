@@ -73,6 +73,11 @@ func clear_auth_and_player_state() -> void:
 	clear_persisted_player_state()
 
 
+func _cleanup_legacy_runtime_save_files() -> void:
+	FileUtils.delete_file_if_exists(LEGACY_PLAYER_DUNGEON_DATA_PATH)
+	FileUtils.delete_file_if_exists(LEGACY_PLAYER_ARENA_DATA_PATH)
+
+
 func load_persisted_auth_session() -> bool:
 	if not FileAccess.file_exists(AUTH_SESSION_PATH):
 		return false
@@ -318,20 +323,18 @@ var shop_data: Dictionary = {}
 
 
 func _ready() -> void:
+	_cleanup_legacy_runtime_save_files()
 	player_data = PlayerData.load_or_default()
 	current_global_stage = player_data.current_stage
 	dungeon_config = FileUtils.load_json("res://data/default/dungeon_config.json")
 	boss_config = FileUtils.load_json("res://data/default/boss_config.json")
-	dungeon_data = PlayerDungeonData.load_or_default()
-	dungeon_data.check_daily_reset(int(dungeon_config.get("daily_free_tickets", 2)))
+	dungeon_data = PlayerDungeonData.new()
 	update_dungeon_overview(_load_dungeon_cache_array())
 	for cat_id: String in player_data.owned_cat_ids:
 		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
 	arena_config = FileUtils.load_json("res://data/default/arena_config.json")
-	arena_data = PlayerArenaData.load_or_create()
+	arena_data = PlayerArenaData.new()
 	arena_data.season_end_date = arena_config.get("season_end_date", arena_data.season_end_date)
-	arena_data.check_daily_reset()
-	arena_data.check_season_reset()
 	arena_overview_data = CacheIO.load_config_dict("arena")
 	if not player_data.boss_team.is_empty():
 		player_team = player_data.boss_team.duplicate()
@@ -643,9 +646,6 @@ func get_player_cat(cat_id: String) -> PlayerCatData:
 func save_all() -> void:
 	player_data.current_stage = current_global_stage
 	player_data.save()
-	dungeon_data.save()
-	arena_data.save()
-	arena_data.flush_to_leaderboard()
 	for cat_id: String in _player_cat_cache:
 		_player_cat_cache[cat_id].save()
 

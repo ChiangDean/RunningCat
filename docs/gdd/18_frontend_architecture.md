@@ -312,7 +312,7 @@ Important persisted paths used by frontend architecture:
 - `user://config/*.json`
 - `user://player_data/scooper/*.json`
 
-Other player save data is also persisted via `PlayerData`, `PlayerArenaData`, `PlayerDungeonData`, and per-cat save files.
+Player-specific runtime persistence should flow through `PlayerData`, per-cat save files, and `GameState` cache files under `user://`. Arena and dungeon overview state should not read from repo-local save JSON.
 
 Project rule: persistent local runtime data must use `user://`, not `res://`.
 
