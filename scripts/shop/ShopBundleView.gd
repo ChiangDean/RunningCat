@@ -174,14 +174,12 @@ func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> 
 		DialogManager.show_info("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u79ae\u5305\u5931\u6557\u3002"))
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
-	var overview: Variant = payload.get("overview", {})
-	if overview is Dictionary:
-		GameState.update_shop(overview)
-	var treasures_variant: Variant = payload.get("scooperTreasures", [])
-	if treasures_variant is Array:
-		GameState.update_scooper_treasure(treasures_variant)
-	_rebuild()
 	emit_signal("request_refresh")
+	var owner := get_parent()
+	if owner != null and owner.has_method("get_parent"):
+		var scene := owner.get_parent()
+		if scene != null and scene.has_method("refresh_from_bootstrap"):
+			scene.refresh_from_bootstrap(false)
 	var reward_lines: Array[String] = []
 	var rewards_variant: Variant = payload.get("grantedRewards", [])
 	if rewards_variant is Array:

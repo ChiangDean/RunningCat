@@ -99,12 +99,12 @@ func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> 
 	if not success:
 		DialogManager.show_info("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u8a98\u6355\u7c60\u5931\u6557\u3002"))
 		return
-	var payload: Dictionary = data if data is Dictionary else {}
-	var overview: Variant = payload.get("overview", {})
-	if overview is Dictionary:
-		GameState.update_shop(overview)
-	_rebuild()
 	emit_signal("request_refresh")
+	var owner := get_parent()
+	if owner != null and owner.has_method("get_parent"):
+		var scene := owner.get_parent()
+		if scene != null and scene.has_method("refresh_from_bootstrap"):
+			scene.refresh_from_bootstrap(false)
 	DialogManager.show_info("\u8cfc\u8cb7\u6210\u529f", "\u5df2\u6210\u529f\u8cfc\u8cb7\u8a98\u6355\u7c60\u3002")
 
 

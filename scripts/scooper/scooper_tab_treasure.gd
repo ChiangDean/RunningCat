@@ -39,12 +39,6 @@ func build(scene: Control) -> void:
 		_refresh_treasure_tab(scene)
 	else:
 		scene._show_loading_in(scene._treasure_list)
-	scene.ApiClient.get_treasures(func(ok: bool, data: Variant, _err: Dictionary) -> void:
-		if ok and data is Array:
-			scene.GameState.update_scooper_treasure(data)
-		if scene._current_tab == "treasure":
-			_refresh_treasure_tab(scene)
-	)
 
 
 func _refresh_treasure_tab(scene: Control) -> void:

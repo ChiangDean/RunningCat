@@ -40,13 +40,6 @@ func build(scene: Control) -> void:
 		scene._refresh_tab_button_labels()
 	else:
 		scene._show_loading_in(scene._achievement_list)
-	scene.ApiClient.get_achievements(func(ok: bool, data: Variant, _err: Dictionary) -> void:
-		if ok and data is Array:
-			scene.GameState.update_scooper_achievement(data)
-		if scene._current_tab == "achievement":
-			_refresh_achievement_tab(scene)
-			scene._refresh_tab_button_labels()
-	)
 
 
 func _refresh_achievement_tab(scene: Control) -> void:
@@ -285,18 +278,9 @@ func _claim_achievement(scene: Control, achievement_id: int) -> void:
 			]
 		)
 
-		# 重拉成就、profile
-		scene.ApiClient.get_achievements(func(a_ok: bool, a_data: Variant, _a_err: Dictionary) -> void:
-			if a_ok and a_data is Array:
-				scene.GameState.update_scooper_achievement(a_data)
-			if scene._current_tab == "achievement":
-				_refresh_achievement_tab(scene)
-				scene._refresh_tab_button_labels()
-		)
-		scene.ApiClient.get_scooper_profile(func(p_ok: bool, p_data: Variant, _p_err: Dictionary) -> void:
-			if p_ok and p_data is Dictionary:
-				scene.GameState.update_scooper_profile(p_data)
-				scene._apply_profile_to_player_data(p_data)
+		scene.refresh_from_bootstrap(func(refresh_ok: bool, _refresh_data: Variant, refresh_err: Dictionary) -> void:
+			if not refresh_ok:
+				scene.DialogManager.show_info("同步失敗", str(refresh_err.get("message", "成就資料同步失敗")))
 		)
 	)
 
