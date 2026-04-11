@@ -108,6 +108,30 @@ func claim_achievement(achievement_id: int, callback: Callable) -> void:
 	_api_post("scooper/achievement/claim", {"achievementId": achievement_id}, callback)
 
 
+func get_mail_summary(callback: Callable) -> void:
+	_api_get("mail/summary", callback)
+
+
+func get_mail_list(callback: Callable, page: int = 1, page_size: int = 20) -> void:
+	_api_get("mail?page=%d&pageSize=%d" % [page, page_size], callback)
+
+
+func get_mail_detail(mail_id: int, callback: Callable) -> void:
+	_api_get("mail/%d" % mail_id, callback)
+
+
+func mark_mail_read(mail_id: int, callback: Callable) -> void:
+	_api_post("mail/%d/read" % mail_id, {}, callback)
+
+
+func claim_mail(mail_id: int, callback: Callable) -> void:
+	_api_post("mail/%d/claim" % mail_id, {}, callback)
+
+
+func claim_all_mails(callback: Callable) -> void:
+	_api_post("mail/claim-all", {}, callback)
+
+
 func get_teams(callback: Callable) -> void:
 	_api_get("config/teams", callback)
 
