@@ -1,39 +1,21 @@
 class_name PlayerDungeonData
 extends Resource
 
-## 玩家地下城進度存檔
-## 新增地下城只需在 dungeon_config.json 中加入，舊存檔讀取時會自動補上預設值
-
-# TODO(auth-persistence-migration): Move dungeon save persistence to `user://` with legacy fallback + one-time migration.
-# Remove this marker after the `res://` save path has been retired.
+# Legacy path kept only so GameState can clean up older files.
 const SAVE_PATH: String = "res://data/saves/player_dungeons.json"
 
-## 每個地下城的進度記錄
-## key: dungeon_id (String)
-## value: {
-##   "max_level": int,      最高通關關卡
-##   "tickets": int,        當前卷數（每日重置為 daily_free_tickets）
-##   "ad_views_used": int,  今日已看廣告次數（每日重置為 0）
-## }
 var dungeons: Dictionary = {}
-
-## 上次每日重置的日期（UTC+8，YYYY-MM-DD）
 var last_reset_date: String = ""
 
 
-# ── 每日重置 ───────────────────────────────────
-
-## 檢查並執行每日重置（UTC+8 午夜）
-## 應在遊戲啟動時呼叫一次，需傳入 daily_free_tickets 作為重置後的卷數基準
 func check_daily_reset(daily_free: int) -> void:
 	var today := _today_utc8()
 	if last_reset_date == today:
 		return
 	last_reset_date = today
 	for key: String in dungeons:
-		dungeons[key]["tickets"]       = daily_free
+		dungeons[key]["tickets"] = daily_free
 		dungeons[key]["ad_views_used"] = 0
-	save()
 
 
 static func _today_utc8() -> String:
@@ -43,31 +25,25 @@ static func _today_utc8() -> String:
 	return "%04d-%02d-%02d" % [dict["year"], dict["month"], dict["day"]]
 
 
-# ── 進度查詢 ───────────────────────────────────
-
-## 取得指定地下城的進度（找不到時自動建立預設值）
 func get_dungeon(dungeon_id: String, daily_free: int = 2) -> Dictionary:
 	if not dungeons.has(dungeon_id):
 		dungeons[dungeon_id] = {
-			"max_level":    0,
-			"tickets":      daily_free,
+			"max_level": 0,
+			"tickets": daily_free,
 			"ad_views_used": 0,
 		}
 	return dungeons[dungeon_id]
 
 
-## 當前卷數
 func get_tickets(dungeon_id: String, daily_free: int) -> int:
 	return get_dungeon(dungeon_id, daily_free).get("tickets", daily_free)
 
 
-## 今日剩餘可看廣告次數
 func get_ad_views_remaining(dungeon_id: String, ad_per_type: int) -> int:
 	var d: Dictionary = get_dungeon(dungeon_id)
 	return maxi(0, ad_per_type - d.get("ad_views_used", 0))
 
 
-## 消耗一張卷（回傳 false 若無卷）
 func consume_ticket(dungeon_id: String, daily_free: int) -> bool:
 	var d: Dictionary = get_dungeon(dungeon_id, daily_free)
 	if d.get("tickets", 0) <= 0:
@@ -76,17 +52,15 @@ func consume_ticket(dungeon_id: String, daily_free: int) -> bool:
 	return true
 
 
-## 看廣告後獲得一張卷（回傳 false 若已達今日上限）
 func grant_ad_ticket(dungeon_id: String, ad_per_type: int, daily_free: int) -> bool:
 	if get_ad_views_remaining(dungeon_id, ad_per_type) <= 0:
 		return false
 	var d: Dictionary = get_dungeon(dungeon_id, daily_free)
 	d["ad_views_used"] = d.get("ad_views_used", 0) + 1
-	d["tickets"]       = d.get("tickets", 0) + 1
+	d["tickets"] = d.get("tickets", 0) + 1
 	return true
 
 
-## 計算指定地下城在指定關卡的獎勵
 static func calculate_rewards(dungeon_cfg: Dictionary, level: int) -> Dictionary:
 	var r: Dictionary = dungeon_cfg.get("rewards", {})
 	var rewards: Dictionary = {}
@@ -114,35 +88,22 @@ static func calculate_rewards(dungeon_cfg: Dictionary, level: int) -> Dictionary
 	return rewards
 
 
-## 將獎勵套用至 PlayerData
 static func apply_rewards(pd: PlayerData, rewards: Dictionary) -> void:
-	pd.cat_food         += rewards.get("cat_food",         0)
+	pd.cat_food += rewards.get("cat_food", 0)
 	pd.special_cat_food += rewards.get("special_cat_food", 0)
-	pd.diamonds         += rewards.get("diamonds",         0)
-	pd.trap_cages       += rewards.get("trap_cages",       0)
-	pd.whisker_shards   += rewards.get("whisker_shards",   0)
+	pd.diamonds += rewards.get("diamonds", 0)
+	pd.trap_cages += rewards.get("trap_cages", 0)
+	pd.whisker_shards += rewards.get("whisker_shards", 0)
 
 
-## 更新最高通關關卡（僅在新紀錄時更新）
 func update_max_level(dungeon_id: String, level: int) -> void:
 	var d: Dictionary = get_dungeon(dungeon_id)
 	if level > d.get("max_level", 0):
 		d["max_level"] = level
 
 
-# ── 載入 ───────────────────────────────────────
-
 static func load_or_default() -> PlayerDungeonData:
-	if not FileAccess.file_exists(SAVE_PATH):
-		return PlayerDungeonData.new()
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		file.close()
-		push_error("PlayerDungeonData: 存檔解析失敗，使用預設值")
-		return PlayerDungeonData.new()
-	file.close()
-	return _from_dict(json.get_data())
+	return PlayerDungeonData.new()
 
 
 static func _from_dict(data: Dictionary) -> PlayerDungeonData:
@@ -152,27 +113,20 @@ static func _from_dict(data: Dictionary) -> PlayerDungeonData:
 	for key: String in saved:
 		var entry: Dictionary = saved[key]
 		pd.dungeons[key] = {
-			"max_level":    entry.get("max_level",    0),
-			"tickets":      entry.get("tickets",      2),
+			"max_level": entry.get("max_level", 0),
+			"tickets": entry.get("tickets", 2),
 			"ad_views_used": entry.get("ad_views_used", 0),
 		}
 	return pd
 
 
-# ── 儲存 ───────────────────────────────────────
-
 func save() -> void:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null:
-		push_error("PlayerDungeonData: 無法寫入存檔：" + SAVE_PATH)
-		return
-	file.store_string(JSON.stringify(_to_dict(), "\t"))
-	file.close()
+	return
 
 
 func _to_dict() -> Dictionary:
 	return {
 		"schema_version": 1,
 		"last_reset_date": last_reset_date,
-		"dungeons":        dungeons,
+		"dungeons": dungeons,
 	}
