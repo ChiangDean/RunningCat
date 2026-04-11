@@ -15,7 +15,7 @@ var _load_more_button: Button
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(620, 820)
+	custom_minimum_size = Vector2(620, 900)
 	_build_ui()
 	GameState.chat_connection_state_changed.connect(_on_connection_state_changed)
 	GameState.chat_messages_changed.connect(_on_messages_changed)

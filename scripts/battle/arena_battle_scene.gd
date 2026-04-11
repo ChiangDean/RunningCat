@@ -371,7 +371,7 @@ func _start_battle() -> void:
 
 	if player_cats.is_empty() or enemy_cats.is_empty():
 		DialogManager.show_info("競技場", "隊伍資料不足，無法開始對戰。", func() -> void:
-			get_tree().change_scene_to_file("res://scenes/ArenaScene.tscn")
+			SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
 		)
 		return
 
@@ -399,7 +399,7 @@ func _handle_result(is_win: bool) -> void:
 		_settling = false
 		if not success or not (data is Dictionary):
 			DialogManager.show_info("競技場結算", str(error.get("message", "競技場結算失敗。")), func() -> void:
-				get_tree().change_scene_to_file("res://scenes/ArenaScene.tscn")
+				SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
 			)
 			return
 		var response: Dictionary = data
@@ -470,9 +470,9 @@ func _show_result_popup(response: Dictionary) -> void:
 		if event is InputEventMouseButton and event.pressed:
 			area.queue_free()
 			popup.queue_free()
-			get_tree().change_scene_to_file("res://scenes/ArenaScene.tscn")
+			SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
 	)
 
 
 func _on_retreat_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ArenaScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")

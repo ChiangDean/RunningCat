@@ -147,8 +147,8 @@ func _on_back_pressed() -> void:
 	if _current_view != "menu":
 		_show_menu()
 		return
-	get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
+	SceneNavigator.return_to_battle()
 
 
 func _open_gacha_scene() -> void:
-	get_tree().change_scene_to_file("res://scenes/GachaScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/GachaScene.tscn")

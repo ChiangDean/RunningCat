@@ -29,7 +29,7 @@ var _enemy_team: Node2D
 var _battle_manager: BattleManager
 
 # ── UI 節點 ───────────────────────────────────
-var _ui_layer: CanvasLayer
+var _ui_layer: Control
 var _timer_label: Label
 var _speed_1x: Button
 var _speed_2x: Button
@@ -115,7 +115,9 @@ func _build_battle_area() -> void:
 
 
 func _build_ui() -> void:
-	_ui_layer = CanvasLayer.new()
+	_ui_layer = Control.new()
+	_ui_layer.name = "BattleUiLayer"
+	_ui_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_ui_layer)
 
 	# 速度按鈕
@@ -508,7 +510,7 @@ func _apply_equipment_bonuses(data: CatData) -> void:
 
 
 func _on_nav_scooper() -> void:
-	get_tree().change_scene_to_file("res://scenes/ScooperScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/ScooperScene.tscn")
 
 
 ## 顯示貓砂盆互動視窗：掛機獎勵領取（完整分鐘）+ 屎堆鏟除
@@ -621,27 +623,36 @@ func _show_sandbox_dialog() -> void:
 
 
 func _on_nav_config() -> void:
-	get_tree().change_scene_to_file("res://scenes/ConfigScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/ConfigScene.tscn")
 
 
 func _on_nav_enhance() -> void:
-	get_tree().change_scene_to_file("res://scenes/EnhanceScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/EnhanceScene.tscn")
 
 
 func _on_nav_activity() -> void:
-	get_tree().change_scene_to_file("res://scenes/ActivityScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/ActivityScene.tscn")
 
 
 func _on_nav_shop() -> void:
-	get_tree().change_scene_to_file("res://scenes/ShopScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/ShopScene.tscn")
 
 
 func _on_nav_mail() -> void:
-	get_tree().change_scene_to_file("res://scenes/MailScene.tscn")
+	var mail_view: Control = load("res://scenes/MailScene.tscn").instantiate()
+	if mail_view.has_method("set_close_action"):
+		var close_dialog := [Callable()]
+		mail_view.set_close_action(func() -> void:
+			if close_dialog[0].is_valid():
+				close_dialog[0].call()
+		)
+		close_dialog[0] = DialogManager.show_info_node("郵件", mail_view, Callable(), "large")
+	else:
+		DialogManager.show_info_node("郵件", mail_view, Callable(), "large")
 
 func _open_chat() -> void:
 	var chat_view: Control = CHAT_SCENE.instantiate()
-	DialogManager.show_info_node("Chat", chat_view)
+	DialogManager.show_info_node("Chat", chat_view, Callable(), "large")
 
 
 func _refresh_chat_badge() -> void:

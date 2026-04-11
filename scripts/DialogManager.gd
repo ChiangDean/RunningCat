@@ -13,6 +13,8 @@
 extends Node
 
 const _PANEL_MIN_W := 480.0
+const _PANEL_W_MEDIUM := 560.0
+const _PANEL_W_LARGE := 640.0
 const _PANEL_MIN_H := 0.0
 const _FONT_TITLE   := 22
 const _FONT_CONTENT := 18
@@ -24,16 +26,16 @@ const _INERTIAL_SCROLL := preload("res://scripts/ui/inertial_scroll.gd")
 
 # ── 公開 API ────────────────────────────────────────────
 
-func show_info(title: String, text: String, on_close: Callable = Callable()) -> Callable:
+func show_info(title: String, text: String, on_close: Callable = Callable(), width_size: String = "small") -> Callable:
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.add_theme_font_size_override("font_size", _FONT_CONTENT)
-	return _build(title, lbl, false, on_close, Callable())
+	return _build(title, lbl, false, on_close, Callable(), "確定", "取消", width_size)
 
 
 ## 回傳一個 Callable，呼叫它可從外部主動關閉這個 dialog
-func show_info_node(title: String, content: Control, on_close: Callable = Callable()) -> Callable:
+func show_info_node(title: String, content: Control, on_close: Callable = Callable(), width_size: String = "small") -> Callable:
 	# If the content is a ScrollContainer, attach the inertial scroller helper so touch drag has inertia/bounce
 	if content is ScrollContainer:
 		# Prefer calling the registered class; fallback to the preloaded script if needed
@@ -41,7 +43,7 @@ func show_info_node(title: String, content: Control, on_close: Callable = Callab
 			InertialScroller.attach(content)
 		elif _INERTIAL_SCROLL != null:
 			_INERTIAL_SCROLL.attach(content)
-	return _build(title, content, false, on_close, Callable())
+	return _build(title, content, false, on_close, Callable(), "確定", "取消", width_size)
 
 
 func show_confirm(
@@ -50,13 +52,50 @@ func show_confirm(
 		on_confirm: Callable,
 		on_cancel: Callable = Callable(),
 		ok_text: String = "確定",
-		cancel_text: String = "取消"
+		cancel_text: String = "取消",
+		width_size: String = "small"
 ) -> Callable:
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.add_theme_font_size_override("font_size", _FONT_CONTENT)
-	return _build(title, lbl, true, on_confirm, on_cancel, ok_text, cancel_text)
+	return _build(title, lbl, true, on_confirm, on_cancel, ok_text, cancel_text, width_size)
+
+
+func _resolve_panel_width(width_size: String) -> float:
+	match width_size.to_lower():
+		"medium":
+			return _PANEL_W_MEDIUM
+		"large":
+			return _PANEL_W_LARGE
+		_:
+			return _PANEL_MIN_W
+
+
+func _measure_label_min_size(label: Label, content_width: float) -> Vector2:
+	var font: Font = label.get_theme_font("font")
+	var font_size := label.get_theme_font_size("font_size")
+	if font == null:
+		return Vector2(content_width, 4.0 * 24.0)
+
+	var line_height := font.get_height(font_size)
+	var measured_lines := 0
+	for raw_line: String in label.text.split("\n", false):
+		var line_text := raw_line if raw_line != "" else " "
+		var line_width := font.get_string_size(line_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		measured_lines += maxi(1, ceili(line_width / maxf(1.0, content_width)))
+
+	measured_lines = maxi(measured_lines, 1)
+	return Vector2(content_width, measured_lines * line_height)
+
+
+func _get_content_min_size(content: Control, content_width: float) -> Vector2:
+	if content is Label:
+		return _measure_label_min_size(content as Label, content_width)
+
+	var min_size := content.get_combined_minimum_size()
+	min_size.x = maxf(min_size.x, content_width)
+	return min_size
 
 
 # ── 內部建構 ────────────────────────────────────────────
@@ -69,8 +108,15 @@ func _build(
 		on_ok: Callable,
 		on_cancel: Callable,
 		ok_text: String = "確定",
-		cancel_text: String = "取消"
+		cancel_text: String = "取消",
+		width_size: String = "small"
 ) -> Callable:
+	var panel_width := _resolve_panel_width(width_size)
+	var content_width := panel_width - 32.0
+	if content is Label or content is RichTextLabel:
+		content.custom_minimum_size.x = content_width
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
 	var canvas := CanvasLayer.new()
 	canvas.layer = 100
 	add_child(canvas)
@@ -102,11 +148,12 @@ func _build(
 	var dialog_stack := VBoxContainer.new()
 	dialog_stack.alignment = BoxContainer.ALIGNMENT_CENTER
 	dialog_stack.add_theme_constant_override("separation", 10)
+	dialog_stack.custom_minimum_size.x = panel_width
 	center.add_child(dialog_stack)
 
 	# 主面板（吸收點擊，避免穿透到 overlay）
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(_PANEL_MIN_W, _PANEL_MIN_H)
+	panel.custom_minimum_size = Vector2(panel_width, _PANEL_MIN_H)
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.12, 0.12, 0.12, 0.98)
 	panel_style.border_width_left = 2
@@ -130,6 +177,8 @@ func _build(
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
 	margin.add_child(vbox)
+	var hint_lbl: Label = null
+	var btn_row: HBoxContainer = null
 
 	# 標題列
 	var title_row := HBoxContainer.new()
@@ -158,7 +207,7 @@ func _build(
 	vbox.add_child(content)
 
 	if not is_confirm:
-		var hint_lbl := Label.new()
+		hint_lbl = Label.new()
 		hint_lbl.text = "點擊任意處關閉視窗"
 		hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		hint_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -167,21 +216,10 @@ func _build(
 		dialog_stack.add_child(hint_lbl)
 
 	if is_confirm:
-		var btn_row := HBoxContainer.new()
+		btn_row = HBoxContainer.new()
 		btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
 		btn_row.add_theme_constant_override("separation", 16)
 		vbox.add_child(btn_row)
-
-		var ok_btn := Button.new()
-		ok_btn.text = ok_text
-		ok_btn.custom_minimum_size = Vector2(110.0, 44.0)
-		ok_btn.add_theme_font_size_override("font_size", _FONT_BTN)
-		ok_btn.pressed.connect(func() -> void:
-			canvas.queue_free()
-			if on_ok.is_valid():
-				on_ok.call()
-		)
-		btn_row.add_child(ok_btn)
 
 		var cancel_btn := Button.new()
 		cancel_btn.text = cancel_text
@@ -192,6 +230,29 @@ func _build(
 			if on_cancel.is_valid():
 				on_cancel.call()
 		)
+		var ok_btn := Button.new()
+		ok_btn.text = ok_text
+		ok_btn.custom_minimum_size = Vector2(110.0, 44.0)
+		ok_btn.add_theme_font_size_override("font_size", _FONT_BTN)
+		ok_btn.pressed.connect(func() -> void:
+			canvas.queue_free()
+			if on_ok.is_valid():
+				on_ok.call()
+		)
+		btn_row.add_child(ok_btn)
 		btn_row.add_child(cancel_btn)
 
+	var content_min := _get_content_min_size(content, content_width)
+	var title_min := title_row.get_combined_minimum_size()
+	var button_min := btn_row.get_combined_minimum_size() if is_confirm else Vector2.ZERO
+	var hint_min := hint_lbl.get_combined_minimum_size() if not is_confirm else Vector2.ZERO
+	var vertical_gap := 12.0
+	var body_height := title_min.y + content_min.y
+	if is_confirm:
+		body_height += vertical_gap + button_min.y
+	panel.custom_minimum_size = Vector2(
+		panel_width,
+		maxf(_PANEL_MIN_H, body_height + 32.0)
+	)
+	dialog_stack.custom_minimum_size = Vector2(panel.custom_minimum_size.x, panel.custom_minimum_size.y + hint_min.y + (10.0 if not is_confirm else 0.0))
 	return func() -> void: canvas.queue_free()

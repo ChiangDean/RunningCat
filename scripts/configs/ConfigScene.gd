@@ -496,4 +496,4 @@ func _on_back_pressed() -> void:
 	var boss_team: Dictionary = GameState.get_team("Boss")
 	var boss_members: Array = boss_team.get("members", [])
 	GameState.player_team = boss_members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
-	get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
+	SceneNavigator.return_to_battle()

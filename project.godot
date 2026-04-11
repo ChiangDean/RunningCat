@@ -21,6 +21,7 @@ GameState="*res://scripts/gamestate/GameState.gd"
 DialogManager="*res://scripts/DialogManager.gd"
 ApiClient="*res://scripts/ApiClient.gd"
 ChatRealtimeClient="*res://scripts/chat/ChatRealtimeClient.gd"
+SceneNavigator="*res://scripts/navigation/SceneNavigator.gd"
 
 [display]
 

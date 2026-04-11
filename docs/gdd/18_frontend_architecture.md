@@ -14,6 +14,7 @@ This document describes the current frontend architecture of `MeowPartyDashClien
 - Primary language: GDScript
 - .NET project exists for Godot integration, but current gameplay/frontend logic is implemented in GDScript
 - Main entry scene: `res://scenes/StartScene.tscn`
+- Home shell scene: `res://scenes/HomeShellScene.tscn`
 - Theme resource: `res://resources/default_theme.tres`
 - Runtime viewport baseline: `720 x 1280`
 
@@ -32,6 +33,8 @@ Defined in `project.godot`:
   - `GameState = res://scripts/gamestate/GameState.gd`
   - `DialogManager = res://scripts/DialogManager.gd`
   - `ApiClient = res://scripts/ApiClient.gd`
+  - `ChatRealtimeClient = res://scripts/chat/ChatRealtimeClient.gd`
+  - `SceneNavigator = res://scripts/navigation/SceneNavigator.gd`
 
 ### 2.2 Start Flow
 
@@ -61,6 +64,7 @@ Project rule from `AGENTS.md`: preserve the established visual identity of `Star
 Contains top-level scene entry files such as:
 
 - `StartScene.tscn`
+- `HomeShellScene.tscn`
 - `BattleScene.tscn`
 - `ActivityScene.tscn`
 - `DungeonScene.tscn`
@@ -373,27 +377,29 @@ Do not manually patch many labels from raw response if the feature already has a
 
 ## 8. Navigation Map
 
-Current high-level navigation is scene-to-scene via `get_tree().change_scene_to_file(...)`.
+Current high-level navigation uses `HomeShellScene` for the main home loop, plus direct `get_tree().change_scene_to_file(...)` for dedicated flows.
 
 Common flow:
 
-- `StartScene` -> `BattleScene`
-- `BattleScene` bottom nav opens:
+- `StartScene` -> `HomeShellScene`
+- `HomeShellScene` keeps `BattleScene` mounted in the background
+- `BattleScene` bottom nav opens home overlays through `SceneNavigator`:
   - `ScooperScene`
   - `ConfigScene`
   - `EnhanceScene`
   - `ActivityScene`
   - `ShopScene`
+  - `MailScene`
+- `ActivityScene` can open `DungeonScene` and `ArenaScene` as deeper home overlays
+- `ShopScene` can open `GachaScene` as another home overlay
 - `ActivityScene` opens:
   - `DungeonScene`
   - `ArenaScene`
-- `ShopScene` can open:
-  - `GachaScene`
 - battle-specific routes also open:
   - `ArenaBattleScene`
   - `DungeonBattleScene`
 
-There is no central router object. Navigation is currently distributed across scene scripts.
+`SceneNavigator` coordinates the home overlays, while dedicated battle/activity routes still change scenes directly when leaving the home shell.
 
 ---
 

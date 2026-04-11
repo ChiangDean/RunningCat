@@ -1,6 +1,5 @@
 extends Control
 
-const BATTLE_SCENE_PATH := "res://scenes/BattleScene.tscn"
 const HERO_IMAGE := preload("res://assets/sprites/ui/start_scene_homey_v1.png")
 const TITLE_TEXT := "\u55b5\u55b5\u885d\u649e\u6d3e\u5c0d"
 const SUBTITLE_TEXT := "\u93df\u5c4e\u5b98\u4e5f\u60f3\u7576\u8c93"
@@ -773,7 +772,7 @@ func _update_loading_progress(value: float) -> void:
 func _start_game() -> void:
 	if not _input_ready:
 		return
-	get_tree().change_scene_to_file(BATTLE_SCENE_PATH)
+	SceneNavigator.enter_home_shell()
 
 
 func _input(event: InputEvent) -> void:
