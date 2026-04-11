@@ -40,7 +40,7 @@ func _build_ui() -> void:
 	root.add_child(top_row)
 
 	var back_button := Button.new()
-	back_button.text = "\u8fd4\u56de"
+	back_button.text = "返回"
 	back_button.custom_minimum_size = Vector2(100.0, 50.0)
 	back_button.pressed.connect(func() -> void:
 		get_tree().change_scene_to_file("res://scenes/ShopScene.tscn")
@@ -48,7 +48,7 @@ func _build_ui() -> void:
 	top_row.add_child(back_button)
 
 	var title := Label.new()
-	title.text = "\u8a98\u6355"
+	title.text = "誘捕"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 36)
@@ -70,7 +70,7 @@ func _build_ui() -> void:
 	root.add_child(HSeparator.new())
 
 	var pull_intro := Label.new()
-	pull_intro.text = "\u9078\u64c7\u672c\u6b21\u8981\u9032\u884c\u7684\u8a98\u6355\u6b21\u6578\u3002"
+	pull_intro.text = "選擇本次要進行的誘捕次數。"
 	pull_intro.add_theme_font_size_override("font_size", 20)
 	root.add_child(pull_intro)
 
@@ -79,9 +79,9 @@ func _build_ui() -> void:
 	root.add_child(options_row)
 
 	for option in [
-		{"count": 1, "label": "\u55ae\u62bd"},
-		{"count": 11, "label": "\u5341\u4e00\u62bd"},
-		{"count": 35, "label": "\u4e09\u5341\u4e94\u62bd"},
+		{"count": 1, "label": "單抽"},
+		{"count": 11, "label": "十一抽"},
+		{"count": 35, "label": "三十五抽"},
 	]:
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(0.0, 82.0)
@@ -101,7 +101,7 @@ func _build_ui() -> void:
 	root.add_child(_free_button)
 
 	var hint := Label.new()
-	hint.text = "\u82e5\u8a98\u6355\u7c60\u4e0d\u8db3\uff0c\u5f8c\u7aef\u6703\u4f9d\u898f\u5247\u6539\u4ee5\u947d\u77f3\u88dc\u8db3\u3002"
+	hint.text = "若誘捕籠不足，後端會依規則改以鑽石補足。"
 	hint.add_theme_font_size_override("font_size", 18)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(hint)
@@ -114,7 +114,7 @@ func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
 			_render_overview()
 			return
 		if show_error_dialog:
-			DialogManager.show_info("\u8b80\u53d6\u5931\u6557", str(error.get("message", "\u7121\u6cd5\u53d6\u5f97\u8a98\u6355\u8cc7\u6599\u3002")))
+			DialogManager.show_info("讀取失敗", str(error.get("message", "無法取得誘捕資料。")))
 	)
 
 
@@ -123,15 +123,15 @@ func _render_overview() -> void:
 	var technique_level := int(overview.get("techniqueLevel", 0))
 	var total_pulls := int(overview.get("totalPulls", 0))
 	var next_required := int(overview.get("nextTechniqueLevelRequiredPulls", 0))
-	var next_text := "\u5df2\u9054\u76ee\u524d\u6700\u9ad8\u7b49\u7d1a"
+	var next_text := "已達目前最高等級"
 	if next_required > total_pulls:
-		next_text = "\u8ddd\u96e2\u4e0b\u4e00\u7d1a\u9084\u5dee %d \u62bd" % (next_required - total_pulls)
-	_overview_label.text = "\u6280\u5de7\u7b49\u7d1a Lv.%d\n\u7d2f\u8a08\u8a98\u6355 %d \u62bd\n%s" % [
+		next_text = "距離下一級還差 %d 抽" % (next_required - total_pulls)
+	_overview_label.text = "技巧等級 Lv.%d\n累計誘捕 %d 抽\n%s" % [
 		technique_level,
 		total_pulls,
 		next_text,
 	]
-	_currency_label.text = "\u947d\u77f3 %d  |  \u8a98\u6355\u7c60 %d" % [
+	_currency_label.text = "鑽石 %d  |  誘捕籠 %d" % [
 		GameState.player_data.diamonds,
 		GameState.player_data.trap_cages,
 	]
@@ -141,32 +141,32 @@ func _render_overview() -> void:
 	for index in range(_pull_buttons.size()):
 		var button := _pull_buttons[index]
 		if index >= options.size():
-			button.text = "\u65b9\u6848 %d" % (index + 1)
+			button.text = "方案 %d" % (index + 1)
 			button.disabled = true
 			continue
 		var option: Dictionary = options[index]
 		var count := int(option.get("pullCount", 0))
 		var required_cages := int(option.get("requiredTrapCages", 0))
 		var diamond_cost := int(option.get("diamondCost", 0))
-		button.text = "%d \u62bd\n\u8a98\u6355\u7c60 %d / \u947d\u77f3 %d" % [count, required_cages, diamond_cost]
+		button.text = "%d 抽\n誘捕籠 %d / 鑽石 %d" % [count, required_cages, diamond_cost]
 		button.disabled = false
 
 	var has_used_free_pull_today := bool(overview.get("hasUsedFreePullToday", false))
 	var free_pull_count := int(overview.get("freePullCount", 0))
 	if has_used_free_pull_today:
-		_free_button.text = "\u4eca\u65e5\u514d\u8cbb\u8a98\u6355\u5df2\u4f7f\u7528"
+		_free_button.text = "今日免費誘捕已使用"
 		_free_button.disabled = true
 	else:
-		_free_button.text = "\u514d\u8cbb\u8a98\u6355 x%d" % maxi(free_pull_count, 1)
+		_free_button.text = "免費誘捕 x%d" % maxi(free_pull_count, 1)
 		_free_button.disabled = false
 
 
 func _request_pull(pull_count: int, use_free_pull: bool) -> void:
-	var title := "\u9032\u884c\u8a98\u6355"
-	var message := "\u662f\u5426\u9032\u884c %d \u62bd\uff1f" % pull_count
+	var title := "進行誘捕"
+	var message := "是否進行 %d 抽？" % pull_count
 	if use_free_pull:
-		title = "\u514d\u8cbb\u8a98\u6355"
-		message = "\u662f\u5426\u4f7f\u7528\u4eca\u65e5\u514d\u8cbb\u8a98\u6355\uff1f"
+		title = "免費誘捕"
+		message = "是否使用今日免費誘捕？"
 	DialogManager.show_confirm(title, message, func() -> void:
 		_api_client.perform_gacha_pull(pull_count, use_free_pull, true, _on_pull_completed)
 	)
@@ -178,12 +178,13 @@ func _on_pull_button_pressed(pull_count: int) -> void:
 
 func _on_pull_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success:
-		DialogManager.show_info("\u8a98\u6355\u5931\u6557", str(error.get("message", "\u7121\u6cd5\u5b8c\u6210\u672c\u6b21\u8a98\u6355\u3002")))
+		DialogManager.show_info("誘捕失敗", str(error.get("message", "無法完成本次誘捕。")))
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
 	var results_variant: Variant = payload.get("results", [])
 	var results: Array = results_variant if results_variant is Array else []
-	refresh_from_bootstrap(false)
+	GameState.apply_gacha_pull_response(payload)
+	_render_overview()
 	_show_results(results)
 
 
@@ -195,4 +196,4 @@ func _show_results(results: Array) -> void:
 	panel.setup(results)
 	scroll.add_child(panel)
 
-	DialogManager.show_info_node("\u8a98\u6355\u7d50\u679c", scroll)
+	DialogManager.show_info_node("誘捕結果", scroll)

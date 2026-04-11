@@ -19,7 +19,7 @@ func _build_row(result: Dictionary) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 
-	var rarity := str(result.get("rarityDisplayName", result.get("rarityType", "\u7a00\u6709\u5ea6")))
+	var rarity := str(result.get("rarityDisplayName", result.get("rarityType", "稀有度")))
 	var rarity_label := Label.new()
 	rarity_label.text = "[%s]" % rarity
 	rarity_label.custom_minimum_size = Vector2(110.0, 0.0)
@@ -28,7 +28,7 @@ func _build_row(result: Dictionary) -> Control:
 	row.add_child(rarity_label)
 
 	var cat_label := Label.new()
-	cat_label.text = str(result.get("catDisplayName", "\u672a\u77e5\u8c93\u54aa"))
+	cat_label.text = str(result.get("catDisplayName", "未知貓咪"))
 	cat_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cat_label.add_theme_font_size_override("font_size", 22)
 	row.add_child(cat_label)
@@ -39,7 +39,7 @@ func _build_row(result: Dictionary) -> Control:
 		state_label.add_theme_color_override("font_color", Color(0.36, 1.0, 0.62, 1.0))
 	else:
 		state_label.text = "%s +%d" % [
-			str(result.get("duplicateRewardDisplayName", "\u788e\u7247")),
+			str(result.get("duplicateRewardDisplayName", "碎片")),
 			int(result.get("duplicateRewardAmount", 0)),
 		]
 		state_label.add_theme_color_override("font_color", Color(0.92, 0.82, 0.52, 1.0))
