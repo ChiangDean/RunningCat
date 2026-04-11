@@ -771,6 +771,24 @@ func update_gacha(data: Dictionary) -> void:
 	player_data.save()
 
 
+func apply_gacha_pull_response(data: Dictionary) -> void:
+	var wallet_variant: Variant = data.get("wallet", {})
+	if wallet_variant is Dictionary and not (wallet_variant as Dictionary).is_empty():
+		apply_wallet_snapshot(wallet_variant)
+
+	var overview_variant: Variant = data.get("overview", {})
+	if overview_variant is Dictionary and not (overview_variant as Dictionary).is_empty():
+		update_gacha(overview_variant)
+
+	var player_cats_variant: Variant = data.get("playerCats", [])
+	if player_cats_variant is Array:
+		update_player_cats(player_cats_variant)
+
+	var enhance_cats_variant: Variant = data.get("enhanceCats", [])
+	if enhance_cats_variant is Array:
+		update_enhance(enhance_cats_variant)
+
+
 func update_shop(data: Dictionary) -> void:
 	shop_data = data.duplicate(true)
 	shop_bundle_config = {"bundles": shop_data.get("bundles", [])}
