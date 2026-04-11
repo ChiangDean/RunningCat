@@ -1,8 +1,0 @@
-{
-	"max_team_size": 5,
-	"season_end_date": "2026-04-30",
-	"ticket_purchase_costs": [60, 120, 240, 480, 960],
-	"daily_free_tickets": 10,
-	"max_daily_purchases": 5,
-	"tickets_per_purchase": 3
-}

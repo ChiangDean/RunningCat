@@ -38,7 +38,7 @@ var _level_label: Label
 var _boss_btn: Button
 var _result_display: Label
 var _skill_bar: Control      # 技能列容器
-var _sandbox_btn: Button     # 檢查貓砂盆按鈕
+var _sandbox_btn: Button     # ???????
 var _mail_btn: Button
 var _mail_badge: Label
 
@@ -412,7 +412,7 @@ func _start_battle() -> void:
 		if cat_id.is_empty():
 			push_error("BattleScene: 無法解析 playerCatId %d 的本地貓咪檔名" % player_cat_id)
 			continue
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
 			if data.active_skill_configs.size() > 0:
@@ -431,7 +431,7 @@ func _start_battle() -> void:
 
 	var diff_mult: float = GameState.get_difficulty_multiplier()
 	for cat_id: String in GameState.get_enemy_ids():
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
 			data.max_hp  = roundi(data.max_hp  * diff_mult)
@@ -545,7 +545,7 @@ func _show_sandbox_dialog() -> void:
 	scoop_section.visible = not has_rewards and GameState.player_data.poop_count > 0
 
 	var poop_count_lbl := Label.new()
-	poop_count_lbl.text = "💩 待鏟屎堆：%d 個" % GameState.player_data.poop_count
+	poop_count_lbl.text = "待鏟屎堆：%d 個" % GameState.player_data.poop_count
 	poop_count_lbl.add_theme_font_size_override("font_size", 20)
 	scoop_section.add_child(poop_count_lbl)
 
@@ -604,7 +604,7 @@ func _show_sandbox_dialog() -> void:
 		)
 		vbox.add_child(claim_btn)
 
-	close_ref[0] = DialogManager.show_info_node("🪣 清理貓砂盆", vbox)
+	close_ref[0] = DialogManager.show_info_node("清理貓砂盆", vbox)
 
 
 func _on_nav_config() -> void:

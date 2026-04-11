@@ -1,30 +1,22 @@
 extends Node
 
-## 全局遊戲狀態 AutoLoad，跨場景共享。
-## 子模組透過 preload 載入：
-##   FileUtils  — 檔案讀寫工具（GameStateFileUtils）
-##   CacheIO    — JSON 快取讀寫（GameStateCacheIO）
-##   BossStage  — Boss 關卡進度純計算（GameStateBossStage）
-
+## Global AutoLoad state.
+## FileUtils manages user:// cleanup, CacheIO manages bootstrap caches, BossStage handles boss-stage rules.
 const FileUtils = preload("res://scripts/gamestate/GameStateFileUtils.gd")
 const CacheIO   = preload("res://scripts/gamestate/GameStateCacheIO.gd")
 const BossStage = preload("res://scripts/gamestate/GameStateBossStage.gd")
 
 const AUTH_SESSION_PATH := "user://auth_session.json"
 const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
-const LEGACY_PLAYER_DATA_PATH := PlayerData.LEGACY_SAVE_PATH
-const LEGACY_PLAYER_DUNGEON_DATA_PATH := PlayerDungeonData.SAVE_PATH
-const LEGACY_PLAYER_ARENA_DATA_PATH := PlayerArenaData.SAVE_PATH
-const LEGACY_PLAYER_CAT_DIR_PATH := PlayerCatData.SAVE_DIR
 
 var api_base_url: String = ""
 var auth_session: Dictionary = {}
 
 signal achievements_changed
 
-# ── 玩家資源 & 強化存檔 ──────────────────────
+# Primary player state and runtime caches.
 var player_data: PlayerData
-## 已載入的貓咪強化存檔快取，key = cat_id
+## Player cat enhancement cache. key = cat_id.
 var _player_cat_cache: Dictionary = {}
 
 
@@ -42,10 +34,6 @@ func clear_auth_session() -> void:
 
 func clear_persisted_player_state() -> void:
 	FileUtils.delete_file_if_exists(PLAYER_DATA_PATH)
-	FileUtils.delete_file_if_exists(LEGACY_PLAYER_DATA_PATH)
-	FileUtils.delete_file_if_exists(LEGACY_PLAYER_DUNGEON_DATA_PATH)
-	FileUtils.delete_file_if_exists(LEGACY_PLAYER_ARENA_DATA_PATH)
-	FileUtils.delete_files_in_directory(LEGACY_PLAYER_CAT_DIR_PATH)
 	FileUtils.delete_files_in_directory(CacheIO.CONFIG_CACHE_DIR)
 
 	player_data = PlayerData.new()
@@ -74,11 +62,6 @@ func clear_persisted_player_state() -> void:
 func clear_auth_and_player_state() -> void:
 	clear_auth_session()
 	clear_persisted_player_state()
-
-
-func _cleanup_legacy_runtime_save_files() -> void:
-	FileUtils.delete_file_if_exists(LEGACY_PLAYER_DUNGEON_DATA_PATH)
-	FileUtils.delete_file_if_exists(LEGACY_PLAYER_ARENA_DATA_PATH)
 
 
 func load_persisted_auth_session() -> bool:
@@ -154,6 +137,40 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 		update_mail_list(mail_inbox)
 		update_selected_mail({})
 	player_data.save()
+
+	var cat_cat: Variant = data.get("catCatalog", [])
+	cat_catalog = cat_cat if cat_cat is Array else []
+	CacheIO.save_catalog("cat_catalog", cat_catalog)
+
+	var active_skill_cat: Variant = data.get("activeSkillCatalog", [])
+	active_skill_catalog = active_skill_cat if active_skill_cat is Array else []
+	CacheIO.save_catalog("active_skill_catalog", active_skill_catalog)
+
+	var passive_skill_cat: Variant = data.get("passiveSkillCatalog", [])
+	passive_skill_catalog = passive_skill_cat if passive_skill_cat is Array else []
+	CacheIO.save_catalog("passive_skill_catalog", passive_skill_catalog)
+
+	var gacha_cfg: Variant = data.get("gachaConfig", {})
+	gacha_config = gacha_cfg if gacha_cfg is Dictionary else {}
+	CacheIO.save_config("gacha_static", gacha_config)
+
+	var dungeon_cfg: Variant = data.get("dungeonConfig", {})
+	dungeon_config = dungeon_cfg if dungeon_cfg is Dictionary else {}
+	CacheIO.save_config("dungeon_static", dungeon_config)
+
+	var boss_cfg: Variant = data.get("bossConfig", {})
+	boss_config = boss_cfg if boss_cfg is Dictionary else {}
+	CacheIO.save_config("boss_static", boss_config)
+
+	var idle_cfg: Variant = data.get("idleConfig", {})
+	idle_config = idle_cfg if idle_cfg is Dictionary else {}
+	CacheIO.save_config("idle_static", idle_config)
+
+	var arena_cfg: Variant = data.get("arenaConfig", {})
+	arena_config = arena_cfg if arena_cfg is Dictionary else {}
+	CacheIO.save_config("arena_static", arena_config)
+
+	_rebuild_cached_static_configs()
 
 	# ── 解析並快取 catalog 資料 ──
 	var eq_cat: Variant = data.get("equipmentCatalog", [])
@@ -231,7 +248,6 @@ func _save_auth_session() -> void:
 
 func _delete_auth_session_file() -> void:
 	FileUtils.delete_file_if_exists(AUTH_SESSION_PATH)
-
 
 ## 目前擁有的貓咪 ID 列表（從 player_data 讀取）
 func get_owned_cats() -> Array:
@@ -311,6 +327,11 @@ var shop_bundle_config: Dictionary = {}
 var achievement_config: Dictionary = {}
 var _pending_achievement_popup_titles: Array[String] = []
 var _achievement_popup_scheduled: bool = false
+var cat_catalog: Array = []
+var active_skill_catalog: Array = []
+var passive_skill_catalog: Array = []
+var gacha_config: Dictionary = {}
+var _cat_file_map: Dictionary = {}
 
 # ── API 目錄快取（Bootstrap 時寫入 user://catalog/）──────
 var scooper_equipment_catalog: Array = []
@@ -334,36 +355,34 @@ var selected_mail_data: Dictionary = {}
 
 
 func _ready() -> void:
-	_cleanup_legacy_runtime_save_files()
 	player_data = PlayerData.load_or_default()
 	current_global_stage = player_data.current_stage
-	dungeon_config = FileUtils.load_json("res://data/default/dungeon_config.json")
-	boss_config = FileUtils.load_json("res://data/default/boss_config.json")
+	cat_catalog = CacheIO.load_catalog("cat_catalog")
+	active_skill_catalog = CacheIO.load_catalog("active_skill_catalog")
+	passive_skill_catalog = CacheIO.load_catalog("passive_skill_catalog")
+	dungeon_config = CacheIO.load_config_dict("dungeon_static")
+	boss_config = CacheIO.load_config_dict("boss_static")
+	arena_config = CacheIO.load_config_dict("arena_static")
+	idle_config = CacheIO.load_config_dict("idle_static")
+	gacha_config = CacheIO.load_config_dict("gacha_static")
 	dungeon_data = PlayerDungeonData.new()
 	update_dungeon_overview(_load_dungeon_cache_array())
 	for cat_id: String in player_data.owned_cat_ids:
 		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
-	arena_config = FileUtils.load_json("res://data/default/arena_config.json")
 	arena_data = PlayerArenaData.new()
 	arena_data.season_end_date = arena_config.get("season_end_date", arena_data.season_end_date)
 	arena_overview_data = CacheIO.load_config_dict("arena")
 	if not player_data.boss_team.is_empty():
 		player_team = player_data.boss_team.duplicate()
-	idle_config = FileUtils.load_json("res://data/default/idle_config.json")
 	_idle_rng.randomize()
-	equipment_config = FileUtils.load_json("res://data/default/equipment_config.json")
 	_equip_rng.randomize()
-	special_ability_config = FileUtils.load_json("res://data/default/ability_config.json")
 	_special_ability_rng.randomize()
-	memory_config = FileUtils.load_json("res://data/default/memory_config.json")
-	treasure_config = FileUtils.load_json("res://data/default/treasure_config.json")
-	shop_bundle_config = FileUtils.load_json("res://data/default/shop_bundle_config.json")
-	achievement_config = FileUtils.load_json("res://data/default/achievement_config.json")
 	scooper_equipment_catalog = CacheIO.load_catalog("equipment_catalog")
 	scooper_memory_catalog = CacheIO.load_catalog("memory_catalog")
 	scooper_treasure_catalog = CacheIO.load_catalog("treasure_catalog")
 	scooper_achievement_catalog = CacheIO.load_catalog("achievement_catalog")
 	scooper_ability_catalog = CacheIO.load_catalog("ability_catalog")
+	_rebuild_cached_static_configs()
 	scooper_profile_data = CacheIO.load_scooper_dict("profile")
 	scooper_equipment_data = CacheIO.load_scooper_array("equipment")
 	scooper_ability_data = CacheIO.load_scooper_array("ability")
@@ -372,6 +391,7 @@ func _ready() -> void:
 	scooper_achievement_data = CacheIO.load_scooper_array("achievement")
 	gacha_data = CacheIO.load_config_dict("gacha")
 	shop_data = CacheIO.load_config_dict("shop")
+	shop_bundle_config = {"bundles": shop_data.get("bundles", [])}
 	player_cats_data = CacheIO.load_config_array("player_cats")
 	update_enhance(_load_enhance_cache_array())
 	var cached_teams := CacheIO.load_config_array("teams")
@@ -385,6 +405,142 @@ func _ready() -> void:
 		player_data.last_quit_time = Time.get_unix_time_from_system()
 		player_data.save()
 	refresh_achievements(false)
+
+
+func _rebuild_cached_static_configs() -> void:
+	_rebuild_cat_file_map()
+	equipment_config = _build_equipment_config()
+	special_ability_config = _build_special_ability_config()
+	memory_config = _build_memory_config()
+	treasure_config = _build_treasure_config()
+	achievement_config = _build_achievement_config()
+	shop_bundle_config = {"bundles": shop_data.get("bundles", [])}
+
+
+func _build_equipment_config() -> Dictionary:
+	var items: Array = []
+	for item: Variant in scooper_equipment_catalog:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = item
+		items.append({
+			"id": str(row.get("equipmentId", "")),
+			"display_name": str(row.get("displayName", "")),
+			"unlock_level": int(row.get("unlockLevel", 0)),
+			"purchase_cost": int(row.get("purchaseCost", 0)),
+			"repair_cost": int(row.get("repairCost", 0)),
+			"treat_cost": int(row.get("treatCost", 0)),
+			"bonus_stat": _to_snake_case(str(row.get("bonusStat", ""))),
+			"bonus_target": _to_snake_case(str(row.get("bonusTarget", "All"))),
+			"bonus_per_level": float(row.get("bonusPerLevel", 0.0)),
+		})
+	return {"items": items}
+
+
+func _build_special_ability_config() -> Dictionary:
+	var items: Array = []
+	for item: Variant in scooper_ability_catalog:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = item
+		items.append({
+			"id": str(row.get("abilityId", "")),
+			"display_name": str(row.get("displayName", "")),
+			"description": str(row.get("description", "")),
+			"effect_type": _to_snake_case(str(row.get("effectType", ""))),
+			"value": row.get("effectValue", 0),
+			"source_text": str(row.get("sourceText", "")),
+		})
+	return {"items": items}
+
+
+func _build_memory_config() -> Dictionary:
+	var items: Array = []
+	for item: Variant in scooper_memory_catalog:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = item
+		items.append({
+			"id": str(row.get("memoryId", "")),
+			"display_name": str(row.get("displayName", "")),
+			"description": str(row.get("description", "")),
+			"image_path": str(row.get("imagePath", "")),
+			"unlock_cost": int(row.get("unlockCost", 0)),
+			"bonus_stat": _to_snake_case(str(row.get("bonusStatType", ""))),
+			"bonus_target": _to_snake_case(str(row.get("bonusTarget", "All"))),
+			"bonus_value": float(row.get("bonusValue", 0.0)),
+		})
+	return {"items": items}
+
+
+func _build_treasure_config() -> Dictionary:
+	var items: Array = []
+	for item: Variant in scooper_treasure_catalog:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = item
+		var effects: Array = []
+		for effect_variant: Variant in row.get("effects", []):
+			if not (effect_variant is Dictionary):
+				continue
+			var effect: Dictionary = effect_variant
+			effects.append({
+				"target": _to_snake_case(str(effect.get("targetScope", "All"))),
+				"stat": _to_snake_case(str(effect.get("statType", ""))),
+				"value": float(effect.get("value", 0.0)),
+			})
+		items.append({
+			"id": str(row.get("treasureId", "")),
+			"display_name": str(row.get("displayName", "")),
+			"description": str(row.get("description", "")),
+			"source_text": str(row.get("sourceText", "")),
+			"effects": effects,
+		})
+	return {"items": items}
+
+
+func _build_achievement_config() -> Dictionary:
+	var items: Array = []
+	for item: Variant in scooper_achievement_catalog:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = item
+		items.append({
+			"id": str(row.get("achievementId", "")),
+			"display_name": str(row.get("displayName", "")),
+			"category_type": _to_snake_case(str(row.get("categoryType", ""))),
+			"condition_type": _to_snake_case(str(row.get("conditionType", ""))),
+			"condition_value": int(row.get("conditionValue", 0)),
+			"rewards": row.get("rewards", []),
+		})
+	return {"items": items}
+
+
+func _to_snake_case(value: String) -> String:
+	var result := ""
+	for i in range(value.length()):
+		var ch := value[i]
+		if i > 0 and ch >= "A" and ch <= "Z":
+			result += "_"
+		result += ch.to_lower()
+	return result
+
+
+func get_cat_catalog_item(cat_id: String) -> Dictionary:
+	for item: Variant in cat_catalog:
+		if item is Dictionary and str(item.get("id", "")) == cat_id:
+			return item
+	return {}
+
+
+func get_skill_catalog_item(skill_id: String) -> Dictionary:
+	for item: Variant in passive_skill_catalog:
+		if item is Dictionary and str(item.get("id", "")) == skill_id:
+			return item
+	for item: Variant in active_skill_catalog:
+		if item is Dictionary and str(item.get("id", "")) == skill_id:
+			return item
+	return {}
 
 
 # ── Scooper 快取更新 ────────────────────────────────
@@ -530,7 +686,7 @@ func _merge_mail_into_list(mail_data: Dictionary) -> void:
 		return
 
 
-# ── Config 快取讀寫（保留供 ConfigScene 直接呼叫）─────
+# ?? Config ???????? ConfigScene ??????????
 
 func _save_config_cache(cache_name: String, data: Variant) -> void:
 	CacheIO.save_config(cache_name, data)
@@ -563,7 +719,7 @@ func _save_shop_cache(data: Dictionary) -> void:
 	CacheIO.save_config("shop", data)
 
 
-## 更新玩家貓咪清單快取（記憶體 + 本地檔案）
+## ?????????????? + ?????
 func update_player_cats(data: Array) -> void:
 	player_cats_data = data
 	CacheIO.save_config("player_cats", data)
@@ -599,6 +755,7 @@ func update_gacha(data: Dictionary) -> void:
 
 func update_shop(data: Dictionary) -> void:
 	shop_data = data.duplicate(true)
+	shop_bundle_config = {"bundles": shop_data.get("bundles", [])}
 	_save_shop_cache(shop_data)
 	if player_data == null:
 		return
@@ -717,27 +874,29 @@ func get_player_cat_display_name(player_cat_id: int) -> String:
 	return ""
 
 
-## playerCatId (int) → 本地 JSON 檔名（如 "black_cat"）
-## 由 player_cats_data 中的 catCatalogId 對應 CAT_FILE_MAP
-const _CAT_FILE_MAP: Dictionary = {
-	1: "black_cat",
-	2: "calico_cat",
-	3: "milk_cat",
-	4: "ninja_cat",
-	5: "orange_cat",
-	7: "tuxedo_cat",
-}
+## playerCatId (int) ? ?? JSON ???? "black_cat"?
+## ? player_cats_data ?? catCatalogId ???????
+func _rebuild_cat_file_map() -> void:
+	_cat_file_map = {}
+	for item: Variant in cat_catalog:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = item
+		var catalog_id := int(row.get("catalog_id", row.get("catalogId", 0)))
+		var file_id := str(row.get("id", ""))
+		if catalog_id > 0 and file_id != "":
+			_cat_file_map[catalog_id] = file_id
 
 func get_cat_file_id(player_cat_id: int) -> String:
 	for cat: Variant in player_cats_data:
 		if cat is Dictionary and int(cat.get("playerCatId", -1)) == player_cat_id:
 			var catalog_id: int = int(cat.get("catCatalogId", 0))
-			return str(_CAT_FILE_MAP.get(catalog_id, ""))
+			return str(_cat_file_map.get(catalog_id, ""))
 	return ""
 
 
 func get_cat_file_id_by_catalog_id(cat_catalog_id: int) -> String:
-	return str(_CAT_FILE_MAP.get(cat_catalog_id, ""))
+	return str(_cat_file_map.get(cat_catalog_id, ""))
 
 
 ## 取得貓咪強化存檔（找不到時自動建立預設值）
@@ -820,7 +979,7 @@ func get_achievement_progress(item: Dictionary) -> Dictionary:
 
 ## DEPRECATED: 成就改由後端管理，但仍保留供 EnhanceScene 呼叫
 func refresh_achievements(show_notifications: bool = true) -> Array[String]:
-	push_warning("DEPRECATED: refresh_achievements() — achievements are now managed by the backend API")
+	push_warning("DEPRECATED: refresh_achievements() - achievements are now managed by the backend API")
 	var newly_completed: Array[String] = []
 	var changed := false
 	for item: Dictionary in get_all_achievements():
@@ -892,7 +1051,6 @@ func _get_highest_cat_rank() -> int:
 
 
 # ── Boss 關卡進度（委派 BossStage）─────────────
-
 func get_boss_stage_number() -> int:
 	return BossStage.get_boss_stage_number(current_global_stage, boss_config)
 
@@ -1009,7 +1167,7 @@ func claim_idle_rewards() -> void:
 ## 鏟一次屎：扣除一個屎堆，隨機產出並存檔
 ## DEPRECATED: 使用 ApiClient.scoop_poop() 取代（仍保留供 battle_scene 呼叫）
 func scoop_poop() -> Dictionary:
-	push_warning("DEPRECATED: scoop_poop() — use ApiClient.scoop_poop() instead")
+	push_warning("DEPRECATED: scoop_poop() - use ApiClient.scoop_poop() instead")
 	if player_data.poop_count <= 0:
 		return {}
 	player_data.poop_count -= 1
@@ -1232,8 +1390,8 @@ func get_treasure_effects() -> Array:
 			for _i in range(quantity):
 				for effect: Dictionary in effects:
 					result.append({
-				"target": str(effect.get("targetElementType", "all")).to_lower(),
-				"stat": str(effect.get("statType", "")),
+						"target": str(effect.get("targetElementType", "all")).to_lower(),
+						"stat": str(effect.get("statType", "")),
 						"value": float(effect.get("value", 0.0)),
 					})
 		return result
@@ -1259,7 +1417,7 @@ func get_treasure_effects() -> Array:
 
 ## DEPRECATED: 寶藏改由後端管理（仍保留供 purchase_shop_bundle 使用）
 func grant_treasure(treasure_id: String, quantity: int = 1) -> Dictionary:
-	push_warning("DEPRECATED: grant_treasure() — use backend API instead")
+	push_warning("DEPRECATED: grant_treasure() - use backend API instead")
 	var item := _get_treasure_item(treasure_id)
 	if item.is_empty():
 		return { "success": false, "error": "找不到寶藏" }
@@ -1279,6 +1437,7 @@ func grant_treasure(treasure_id: String, quantity: int = 1) -> Dictionary:
 
 
 # ── 商城禮包 ──────────────────────────────────
+
 
 func _get_shop_bundle_item(bundle_id: String) -> Dictionary:
 	var bundles_variant: Variant = shop_data.get("bundles", [])
@@ -1387,6 +1546,7 @@ func get_equipment_bonuses() -> Array:
 
 
 # ── 私有輔助 ──────────────────────────────────
+
 
 func _is_combat_bonus_stat(stat: String) -> bool:
 	return stat in ["atk_percent", "def_percent", "max_hp_percent",

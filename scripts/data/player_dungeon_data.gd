@@ -1,9 +1,6 @@
 class_name PlayerDungeonData
 extends Resource
 
-# Legacy path kept only so GameState can clean up older files.
-const SAVE_PATH: String = "res://data/saves/player_dungeons.json"
-
 var dungeons: Dictionary = {}
 var last_reset_date: String = ""
 
