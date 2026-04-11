@@ -6,6 +6,7 @@ extends Node2D
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
 
 const MAX_CATS_ON_FIELD: int = 5
+const CHAT_SCENE := preload("res://scenes/chat/ChatScene.tscn")
 
 const SW := 720.0
 const SH := 1280.0
@@ -42,6 +43,8 @@ var _sandbox_btn: Button     # ???????
 var _mail_btn: Button
 var _mail_badge: Label
 
+var _chat_btn: Button
+var _chat_badge: Label
 var _last_result: String = ""
 
 
@@ -138,6 +141,16 @@ func _build_ui() -> void:
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
 	_skip_btn.visible = GameState.can_skip_battle()
+	_chat_btn = _make_button("Chat", Vector2(SW - 300.0, 20.0), Vector2(90.0, 44.0))
+	_chat_btn.pressed.connect(_open_chat)
+	_ui_layer.add_child(_chat_btn)
+	_chat_badge = _make_label("", Vector2(SW - 222.0, 18.0), Vector2(22.0, 20.0), 12)
+	_chat_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ui_layer.add_child(_chat_badge)
+	GameState.chat_unread_changed.connect(func(_channel_key: String, _count: int) -> void:
+		_refresh_chat_badge()
+	)
+	_refresh_chat_badge()
 
 	_mail_btn = _make_button("郵件", Vector2(SW - 200.0, 20.0), Vector2(88.0, 44.0))
 	_ui_layer.add_child(_mail_btn)
@@ -625,3 +638,15 @@ func _on_nav_shop() -> void:
 
 func _on_nav_mail() -> void:
 	get_tree().change_scene_to_file("res://scenes/MailScene.tscn")
+
+func _open_chat() -> void:
+	var chat_view: Control = CHAT_SCENE.instantiate()
+	DialogManager.show_info_node("Chat", chat_view)
+
+
+func _refresh_chat_badge() -> void:
+	if _chat_badge == null:
+		return
+	var unread := GameState.get_chat_total_unread()
+	_chat_badge.visible = unread > 0
+	_chat_badge.text = str(mini(unread, 99))

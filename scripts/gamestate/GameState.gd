@@ -13,11 +13,25 @@ var api_base_url: String = ""
 var auth_session: Dictionary = {}
 
 signal achievements_changed
+signal chat_connection_state_changed(state: String)
+signal chat_messages_changed(channel_key: String)
+signal chat_unread_changed(channel_key: String, count: int)
 
 # Primary player state and runtime caches.
 var player_data: PlayerData
 ## Player cat enhancement cache. key = cat_id.
 var _player_cat_cache: Dictionary = {}
+var chat_connection_state: String = "disconnected"
+var chat_world_messages: Array = []
+var chat_system_messages: Array = []
+var chat_guild_messages: Array = []
+var chat_unread_counts: Dictionary = {"system": 0, "world": 0, "guild": 0}
+var chat_last_received_seq_by_channel: Dictionary = {"system": 0, "world": 0, "guild": 0}
+var chat_last_snapshot_at_unix: int = 0
+var chat_guild_context: Dictionary = {}
+var chat_endpoint: String = ""
+var chat_token: String = ""
+var chat_guild_available: bool = false
 
 
 func set_auth_session(base_url: String, session: Dictionary) -> void:
@@ -57,6 +71,7 @@ func clear_persisted_player_state() -> void:
 	arena_overview_data = {}
 	gacha_data = {}
 	shop_data = {}
+	clear_chat_state()
 
 
 func clear_auth_and_player_state() -> void:
@@ -233,6 +248,9 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	var shop_overview: Variant = data.get("shopOverview", {})
 	if shop_overview is Dictionary and not (shop_overview as Dictionary).is_empty():
 		update_shop(shop_overview)
+	var chat_summary_variant: Variant = data.get("chatSummary", {})
+	if chat_summary_variant is Dictionary:
+		apply_chat_summary(chat_summary_variant)
 
 
 func _save_auth_session() -> void:
@@ -1231,6 +1249,151 @@ func get_special_ability_speed_cap() -> float:
 
 func can_skip_battle() -> bool:
 	return bool(get_special_ability_summary().get("battle_skip_unlocked", false))
+
+
+func clear_chat_state() -> void:
+	chat_connection_state = "disconnected"
+	chat_world_messages = []
+	chat_system_messages = []
+	chat_guild_messages = []
+	chat_unread_counts = {"system": 0, "world": 0, "guild": 0}
+	chat_last_received_seq_by_channel = {"system": 0, "world": 0, "guild": 0}
+	chat_last_snapshot_at_unix = 0
+	chat_guild_context = {}
+	chat_endpoint = ""
+	chat_token = ""
+	chat_guild_available = false
+	emit_signal("chat_connection_state_changed", chat_connection_state)
+	for channel_key: String in ["system", "world", "guild"]:
+		emit_signal("chat_messages_changed", channel_key)
+		emit_signal("chat_unread_changed", channel_key, 0)
+
+
+func set_chat_connection_state(state: String) -> void:
+	if chat_connection_state == state:
+		return
+	chat_connection_state = state
+	emit_signal("chat_connection_state_changed", chat_connection_state)
+
+
+func apply_chat_summary(summary: Dictionary) -> void:
+	chat_endpoint = String(summary.get("chatEndpoint", chat_endpoint))
+	chat_token = String(summary.get("chatToken", chat_token))
+	chat_guild_available = bool(summary.get("guildChatAvailable", false))
+	chat_last_snapshot_at_unix = Time.get_unix_time_from_system()
+	if summary.has("unreadSystemCount"):
+		chat_unread_counts["system"] = int(summary.get("unreadSystemCount", 0))
+		emit_signal("chat_unread_changed", "system", int(chat_unread_counts["system"]))
+	if summary.has("unreadWorldCount"):
+		chat_unread_counts["world"] = int(summary.get("unreadWorldCount", 0))
+		emit_signal("chat_unread_changed", "world", int(chat_unread_counts["world"]))
+	if summary.has("unreadGuildCount"):
+		chat_unread_counts["guild"] = int(summary.get("unreadGuildCount", 0))
+		emit_signal("chat_unread_changed", "guild", int(chat_unread_counts["guild"]))
+	if summary.has("worldHistoryCursor"):
+		chat_last_received_seq_by_channel["world"] = int(summary.get("worldHistoryCursor", 0))
+	if summary.has("guildHistoryCursor"):
+		chat_last_received_seq_by_channel["guild"] = int(summary.get("guildHistoryCursor", 0))
+	var channels_variant: Variant = summary.get("channels", [])
+	if channels_variant is Array:
+		for item: Variant in channels_variant:
+			if not (item is Dictionary):
+				continue
+			var channel: Dictionary = item
+			var channel_key := String(channel.get("channelKey", "")).to_lower()
+			if channel_key == "":
+				continue
+			chat_unread_counts[channel_key] = int(channel.get("unreadCount", 0))
+			chat_last_received_seq_by_channel[channel_key] = int(channel.get("latestSequence", 0))
+			emit_signal("chat_unread_changed", channel_key, int(chat_unread_counts[channel_key]))
+
+
+func get_chat_messages(channel_key: String) -> Array:
+	match channel_key:
+		"system":
+			return chat_system_messages
+		"guild":
+			return chat_guild_messages
+		_:
+			return chat_world_messages
+
+
+func get_chat_latest_sequence(channel_key: String) -> int:
+	return int(chat_last_received_seq_by_channel.get(channel_key, 0))
+
+
+func get_chat_total_unread() -> int:
+	return int(chat_unread_counts.get("system", 0)) + int(chat_unread_counts.get("world", 0)) + int(chat_unread_counts.get("guild", 0))
+
+
+func set_chat_unread_count(channel_key: String, count: int) -> void:
+	chat_unread_counts[channel_key] = maxi(0, count)
+	emit_signal("chat_unread_changed", channel_key, int(chat_unread_counts[channel_key]))
+
+
+func append_chat_message_envelope(channel_key: String, sequence: int, message: Dictionary) -> void:
+	var target := get_chat_messages(channel_key)
+	var message_id := String(message.get("messageId", ""))
+	for existing: Dictionary in target:
+		if String(existing.get("messageId", "")) == message_id and message_id != "":
+			return
+
+	var entry := message.duplicate(true)
+	entry["sequence"] = sequence
+	target.append(entry)
+	target.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("sequence", 0)) < int(b.get("sequence", 0))
+	)
+	_trim_chat_channel(channel_key)
+	chat_last_received_seq_by_channel[channel_key] = maxi(int(chat_last_received_seq_by_channel.get(channel_key, 0)), sequence)
+	emit_signal("chat_messages_changed", channel_key)
+
+
+func replace_chat_history(channel_key: String, messages: Array) -> void:
+	var target: Array = []
+	for item: Variant in messages:
+		if not (item is Dictionary):
+			continue
+		var envelope: Dictionary = item
+		var message: Dictionary = envelope.get("message", {})
+		var entry := message.duplicate(true)
+		entry["sequence"] = int(envelope.get("sequence", 0))
+		target.append(entry)
+	target.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("sequence", 0)) < int(b.get("sequence", 0))
+	)
+	match channel_key:
+		"system":
+			chat_system_messages = target
+		"guild":
+			chat_guild_messages = target
+		_:
+			chat_world_messages = target
+	_trim_chat_channel(channel_key)
+	if not target.is_empty():
+		chat_last_received_seq_by_channel[channel_key] = int(target[-1].get("sequence", 0))
+	emit_signal("chat_messages_changed", channel_key)
+
+
+func _trim_chat_channel(channel_key: String) -> void:
+	var target := get_chat_messages(channel_key)
+	var limit := 200 if channel_key == "world" else 100
+	var cutoff := Time.get_unix_time_from_system() - (24 * 60 * 60)
+	var filtered: Array = []
+	for item: Dictionary in target:
+		var sent_at := String(item.get("sentAtUtc", ""))
+		var unix_time := Time.get_unix_time_from_datetime_string(sent_at) if sent_at != "" else 0
+		if unix_time == 0 or unix_time >= cutoff:
+			filtered.append(item)
+	while filtered.size() > limit:
+		filtered.pop_front()
+	match channel_key:
+		"system":
+			chat_system_messages = filtered
+		"guild":
+			chat_guild_messages = filtered
+		_:
+			chat_world_messages = filtered
 
 
 # ── 回憶系統 ──────────────────────────────────
