@@ -24,6 +24,8 @@ func _ready() -> void:
 	_build_ui()
 	if not GameState.arena_overview_data.is_empty():
 		_apply_overview(GameState.arena_overview_data)
+	if _has_cached_opponents(GameState.arena_overview_data):
+		return
 	_refresh_overview([])
 
 
@@ -312,6 +314,11 @@ func _on_purchase_pressed() -> void:
 
 func _show_dialog(title_text: String, body_text: String) -> void:
 	DialogManager.show_info(title_text, body_text)
+
+
+func _has_cached_opponents(overview: Dictionary) -> bool:
+	var opponents_variant: Variant = overview.get("opponents", [])
+	return opponents_variant is Array and not (opponents_variant as Array).is_empty()
 
 
 func _get_current_opponent_ids() -> Array:

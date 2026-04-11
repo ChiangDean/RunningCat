@@ -39,16 +39,6 @@ func build(scene: Control) -> void:
 		_refresh_memory_tab(scene)
 	else:
 		scene._show_loading_in(scene._memory_list)
-	_fetch_memory_data(scene)
-
-
-func _fetch_memory_data(scene: Control) -> void:
-	scene.ApiClient.get_memories(func(ok: bool, data: Variant, _err: Dictionary) -> void:
-		if ok and data is Array:
-			scene.GameState.update_scooper_memory(data)
-		if scene._current_tab == "memory":
-			_refresh_memory_tab(scene)
-	)
 
 
 func _refresh_memory_tab(scene: Control) -> void:
@@ -264,7 +254,10 @@ func _confirm_unlock_memory(scene: Control, memory_id: int, memory_item: Diction
 						_memory_bonus_desc(memory_item),
 					]
 				)
-				_fetch_memory_data(scene)
+				scene.refresh_from_bootstrap(func(refresh_ok: bool, _refresh_data: Variant, refresh_err: Dictionary) -> void:
+					if not refresh_ok:
+						scene.DialogManager.show_info("同步失敗", str(refresh_err.get("message", "回憶資料同步失敗")))
+				)
 			)
 	)
 

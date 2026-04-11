@@ -17,7 +17,6 @@ var _current_view: String = "menu"
 func _ready() -> void:
 	_build_ui()
 	_refresh_currency()
-	call_deferred("_refresh_shop_overview", false)
 
 
 func _build_ui() -> void:
@@ -108,11 +107,10 @@ func _show_bundle_view() -> void:
 	view.setup()
 
 
-func _refresh_shop_overview(show_error_dialog: bool) -> void:
-	_api_client.get_shop_overview(func(success: bool, data: Variant, error: Dictionary) -> void:
-		if success:
-			if data is Dictionary:
-				GameState.update_shop(data)
+func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
+	_api_client.get_authenticated_bootstrap(func(success: bool, data: Variant, error: Dictionary) -> void:
+		if success and data is Dictionary:
+			GameState.apply_player_bootstrap(data)
 			_refresh_currency()
 			if _current_view == "trap_cages":
 				_show_trap_cage_view()

@@ -209,6 +209,22 @@ func _apply_profile_to_player_data(profile: Dictionary) -> void:
 	_refresh_resource_label()
 
 
+func refresh_from_bootstrap(on_completed: Callable = Callable()) -> void:
+	ApiClient.get_authenticated_bootstrap(func(ok: bool, data: Variant, err: Dictionary) -> void:
+		if ok and data is Dictionary:
+			GameState.apply_player_bootstrap(data)
+			_refresh_resource_label()
+			if _tab_content != null:
+				_rebuild_tab_content()
+		elif not on_completed.is_null():
+			on_completed.call(false, {}, err)
+			return
+
+		if not on_completed.is_null():
+			on_completed.call(ok, data, err)
+	)
+
+
 # ── 資源列更新 ─────────────────────────────────────────────
 
 func _refresh_resource_label() -> void:

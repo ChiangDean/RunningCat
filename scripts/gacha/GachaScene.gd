@@ -16,7 +16,6 @@ var _pull_buttons: Array[Button] = []
 func _ready() -> void:
 	_build_ui()
 	_render_overview()
-	call_deferred("_refresh_overview", false)
 
 
 func _build_ui() -> void:
@@ -108,11 +107,10 @@ func _build_ui() -> void:
 	root.add_child(hint)
 
 
-func _refresh_overview(show_error_dialog: bool) -> void:
-	_api_client.get_gacha_overview(func(success: bool, data: Variant, error: Dictionary) -> void:
-		if success:
-			if data is Dictionary:
-				GameState.update_gacha(data)
+func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
+	_api_client.get_authenticated_bootstrap(func(success: bool, data: Variant, error: Dictionary) -> void:
+		if success and data is Dictionary:
+			GameState.apply_player_bootstrap(data)
 			_render_overview()
 			return
 		if show_error_dialog:
@@ -183,18 +181,9 @@ func _on_pull_completed(success: bool, data: Variant, error: Dictionary) -> void
 		DialogManager.show_info("\u8a98\u6355\u5931\u6557", str(error.get("message", "\u7121\u6cd5\u5b8c\u6210\u672c\u6b21\u8a98\u6355\u3002")))
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
-	var overview: Variant = payload.get("overview", {})
-	if overview is Dictionary:
-		GameState.update_gacha(overview)
-	var player_cats: Variant = payload.get("playerCats", [])
-	if player_cats is Array:
-		GameState.update_player_cats(player_cats)
-	var enhance_cats: Variant = payload.get("enhanceCats", [])
-	if enhance_cats is Array:
-		GameState.update_enhance(enhance_cats)
-	_render_overview()
 	var results_variant: Variant = payload.get("results", [])
 	var results: Array = results_variant if results_variant is Array else []
+	refresh_from_bootstrap(false)
 	_show_results(results)
 
 

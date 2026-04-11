@@ -92,7 +92,6 @@ func build(scene: Control) -> void:
 
 	# 先用本地快取資料渲染，再拉 API 更新
 	_refresh_scooper_tab_from_local(scene)
-	_fetch_scooper_tab_data(scene)
 
 
 func process(scene: Control, delta: float) -> void:
@@ -100,29 +99,6 @@ func process(scene: Control, delta: float) -> void:
 		return
 	scene._scoop_cooldown_remaining = maxf(0.0, scene._scoop_cooldown_remaining - delta)
 	_refresh_scoop_ui(scene)
-
-
-func _fetch_scooper_tab_data(scene: Control) -> void:
-	scene.ApiClient.get_scooper_profile(func(ok: bool, data: Variant, err: Dictionary) -> void:
-		if ok and data is Dictionary:
-			scene.GameState.update_scooper_profile(data)
-			scene._apply_profile_to_player_data(data)
-		if scene._current_tab == "scooper":
-			_refresh_scooper_profile_ui(scene)
-			_refresh_scoop_ui(scene)
-	)
-	scene.ApiClient.get_abilities(func(ok: bool, data: Variant, err: Dictionary) -> void:
-		if ok and data is Array:
-			scene.GameState.update_scooper_ability(data)
-		if scene._current_tab == "scooper":
-			_refresh_ability_ui(scene)
-	)
-	scene.ApiClient.get_equipment_list(func(ok: bool, data: Variant, err: Dictionary) -> void:
-		if ok and data is Array:
-			scene.GameState.update_scooper_equipment(data)
-		if scene._current_tab == "scooper":
-			_rebuild_equip_list(scene)
-	)
 
 
 func _refresh_scooper_tab_from_local(scene: Control) -> void:
@@ -281,8 +257,14 @@ func _on_scoop_pressed(scene: Control) -> void:
 			scene._scoop_result_label.text = _format_scoop_result(result)
 
 		scene._scoop_cooldown_remaining = scene.SCOOP_COOLDOWN
-		_refresh_scooper_profile_ui(scene)
-		_refresh_scoop_ui(scene)
+		scene.refresh_from_bootstrap(func(refresh_ok: bool, _refresh_data: Variant, refresh_err: Dictionary) -> void:
+			if not refresh_ok:
+				var msg: String = refresh_err.get("message") if refresh_err.get("message") != null else "鏟屎官資料同步失敗"
+				if scene._scoop_result_label != null:
+					scene._scoop_result_label.text = msg
+				_refresh_scooper_profile_ui(scene)
+				_refresh_scoop_ui(scene)
+		)
 	)
 
 
@@ -472,18 +454,9 @@ func _do_equipment_action(scene: Control, action: String, equip_id: int) -> void
 
 
 func _refresh_resource_after_action(scene: Control) -> void:
-	scene.ApiClient.get_scooper_profile(func(ok: bool, data: Variant, _err: Dictionary) -> void:
-		if ok and data is Dictionary:
-			scene.GameState.update_scooper_profile(data)
-			scene._apply_profile_to_player_data(data)
-		if scene._current_tab == "scooper":
-			_refresh_scooper_profile_ui(scene)
-	)
-	scene.ApiClient.get_equipment_list(func(ok: bool, data: Variant, _err: Dictionary) -> void:
-		if ok and data is Array:
-			scene.GameState.update_scooper_equipment(data)
-		if scene._current_tab == "scooper":
-			_rebuild_equip_list(scene)
+	scene.refresh_from_bootstrap(func(ok: bool, _data: Variant, err: Dictionary) -> void:
+		if not ok:
+			scene.DialogManager.show_info("同步失敗", str(err.get("message", "鏟屎官資料同步失敗")))
 	)
 
 

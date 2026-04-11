@@ -108,6 +108,10 @@ func claim_achievement(achievement_id: int, callback: Callable) -> void:
 	_api_post("scooper/achievement/claim", {"achievementId": achievement_id}, callback)
 
 
+func get_authenticated_bootstrap(callback: Callable) -> void:
+	_api_get("auth/bootstrap", callback)
+
+
 func get_mail_summary(callback: Callable) -> void:
 	_api_get("mail/summary", callback)
 
