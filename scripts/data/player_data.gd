@@ -5,7 +5,6 @@ extends Resource
 ## 新增欄位只需加上預設值，舊存檔讀取時不會壞掉
 
 const SAVE_PATH: String = "user://player_data.json"
-const LEGACY_SAVE_PATH: String = "res://data/saves/player_data.json"
 
 # ── 資源 ──────────────────────────────────────────────
 var cat_food: int = 0
@@ -93,10 +92,9 @@ static func _today_string() -> String:
 # ── 載入 ───────────────────────────────────────────────
 
 static func load_or_default() -> PlayerData:
-	var load_path := SAVE_PATH if FileAccess.file_exists(SAVE_PATH) else LEGACY_SAVE_PATH
-	if not FileAccess.file_exists(load_path):
+	if not FileAccess.file_exists(SAVE_PATH):
 		return PlayerData.new()
-	var file := FileAccess.open(load_path, FileAccess.READ)
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	var json := JSON.new()
 	if json.parse(file.get_as_text()) != OK:
 		file.close()

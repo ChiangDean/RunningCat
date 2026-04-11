@@ -12,10 +12,11 @@ static func summarize(owned_ids: Array, config: Dictionary) -> Dictionary:
 
 	var items: Array = config.get("items", [])
 	for item: Dictionary in items:
-		if not owned_ids.has(item.get("id", "")):
+		var item_id := str(item.get("id", item.get("abilityId", "")))
+		if not owned_ids.has(item_id) and not owned_ids.has(int(item_id)):
 			continue
-		var effect_type: String = item.get("effect_type", "")
-		var value = item.get("value", 0)
+		var effect_type: String = str(item.get("effect_type", item.get("effectType", ""))).to_snake_case()
+		var value = item.get("value", item.get("effectValue", 0))
 		match effect_type:
 			"idle_reward_multiplier":
 				summary["idle_reward_multiplier"] += float(value)

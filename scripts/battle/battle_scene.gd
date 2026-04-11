@@ -365,7 +365,7 @@ func _start_battle() -> void:
 		if cat_id.is_empty():
 			push_error("BattleScene: 無法解析 playerCatId %d 的本地貓咪檔名" % player_cat_id)
 			continue
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := "res://cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
 			if data.active_skill_configs.size() > 0:
@@ -384,7 +384,7 @@ func _start_battle() -> void:
 
 	var diff_mult: float = GameState.get_difficulty_multiplier()
 	for cat_id: String in GameState.get_enemy_ids():
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := "res://cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
 			data.max_hp  = roundi(data.max_hp  * diff_mult)

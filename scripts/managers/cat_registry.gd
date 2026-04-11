@@ -5,7 +5,7 @@ extends Node
 ## 新增貓咪類型只需在 _type_map 加一行，不需改其他程式碼
 ## 新增貓咪角色只需新增 JSON 檔案
 
-const CAT_DATA_PATH: String = "res://data/default/cats/"
+const CAT_DATA_PATH: String = "res://cats/"
 
 ## 類型對照表：cat_type 字串 → GDScript 類別
 ## 新增特殊型只需在此加入一行
@@ -47,7 +47,7 @@ func register_type(type_name: String, cat_class) -> void:
 
 # 共用：名稱+等級
 static func get_cat_display_name_with_lv(cat_id: String, lv: int) -> String:
-	var data := CatData.from_json_file("res://data/default/cats/" + cat_id + ".json")
+	var data := CatData.from_json_file("res://cats/" + cat_id + ".json")
 	if data != null:
 		return "%sLv%d" % [data.display_name, lv]
 	return "%sLv%d" % [cat_id, lv]

@@ -9,13 +9,10 @@ extends Node
 const FileUtils = preload("res://scripts/gamestate/GameStateFileUtils.gd")
 const CacheIO   = preload("res://scripts/gamestate/GameStateCacheIO.gd")
 const BossStage = preload("res://scripts/gamestate/GameStateBossStage.gd")
+const StaticGameData = preload("res://scripts/data/static_game_data.gd")
 
 const AUTH_SESSION_PATH := "user://auth_session.json"
 const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
-const LEGACY_PLAYER_DATA_PATH := PlayerData.LEGACY_SAVE_PATH
-const LEGACY_PLAYER_DUNGEON_DATA_PATH := PlayerDungeonData.SAVE_PATH
-const LEGACY_PLAYER_ARENA_DATA_PATH := PlayerArenaData.SAVE_PATH
-const LEGACY_PLAYER_CAT_DIR_PATH := PlayerCatData.SAVE_DIR
 
 var api_base_url: String = ""
 var auth_session: Dictionary = {}
@@ -42,10 +39,9 @@ func clear_auth_session() -> void:
 
 func clear_persisted_player_state() -> void:
 	FileUtils.delete_file_if_exists(PLAYER_DATA_PATH)
-	FileUtils.delete_file_if_exists(LEGACY_PLAYER_DATA_PATH)
-	FileUtils.delete_file_if_exists(LEGACY_PLAYER_DUNGEON_DATA_PATH)
-	FileUtils.delete_file_if_exists(LEGACY_PLAYER_ARENA_DATA_PATH)
-	FileUtils.delete_files_in_directory(LEGACY_PLAYER_CAT_DIR_PATH)
+	FileUtils.delete_file_if_exists(PlayerDungeonData.SAVE_PATH)
+	FileUtils.delete_file_if_exists(PlayerArenaData.SAVE_PATH)
+	FileUtils.delete_files_in_directory(PlayerCatData.SAVE_DIR)
 	FileUtils.delete_files_in_directory(CacheIO.CONFIG_CACHE_DIR)
 
 	player_data = PlayerData.new()
@@ -320,14 +316,14 @@ var shop_data: Dictionary = {}
 func _ready() -> void:
 	player_data = PlayerData.load_or_default()
 	current_global_stage = player_data.current_stage
-	dungeon_config = FileUtils.load_json("res://data/default/dungeon_config.json")
-	boss_config = FileUtils.load_json("res://data/default/boss_config.json")
+	dungeon_config = StaticGameData.get_config("dungeon")
+	boss_config = StaticGameData.get_config("boss")
 	dungeon_data = PlayerDungeonData.load_or_default()
 	dungeon_data.check_daily_reset(int(dungeon_config.get("daily_free_tickets", 2)))
 	update_dungeon_overview(_load_dungeon_cache_array())
 	for cat_id: String in player_data.owned_cat_ids:
 		_player_cat_cache[cat_id] = PlayerCatData.load_or_default(cat_id)
-	arena_config = FileUtils.load_json("res://data/default/arena_config.json")
+	arena_config = StaticGameData.get_config("arena")
 	arena_data = PlayerArenaData.load_or_create()
 	arena_data.season_end_date = arena_config.get("season_end_date", arena_data.season_end_date)
 	arena_data.check_daily_reset()
@@ -335,16 +331,16 @@ func _ready() -> void:
 	arena_overview_data = CacheIO.load_config_dict("arena")
 	if not player_data.boss_team.is_empty():
 		player_team = player_data.boss_team.duplicate()
-	idle_config = FileUtils.load_json("res://data/default/idle_config.json")
+	idle_config = StaticGameData.get_config("idle")
 	_idle_rng.randomize()
-	equipment_config = FileUtils.load_json("res://data/default/equipment_config.json")
+	equipment_config = {}
 	_equip_rng.randomize()
-	special_ability_config = FileUtils.load_json("res://data/default/ability_config.json")
+	special_ability_config = {}
 	_special_ability_rng.randomize()
-	memory_config = FileUtils.load_json("res://data/default/memory_config.json")
-	treasure_config = FileUtils.load_json("res://data/default/treasure_config.json")
-	shop_bundle_config = FileUtils.load_json("res://data/default/shop_bundle_config.json")
-	achievement_config = FileUtils.load_json("res://data/default/achievement_config.json")
+	memory_config = {}
+	treasure_config = {}
+	shop_bundle_config = {}
+	achievement_config = {}
 	scooper_equipment_catalog = CacheIO.load_catalog("equipment_catalog")
 	scooper_memory_catalog = CacheIO.load_catalog("memory_catalog")
 	scooper_treasure_catalog = CacheIO.load_catalog("treasure_catalog")
@@ -645,7 +641,6 @@ func save_all() -> void:
 	player_data.save()
 	dungeon_data.save()
 	arena_data.save()
-	arena_data.flush_to_leaderboard()
 	for cat_id: String in _player_cat_cache:
 		_player_cat_cache[cat_id].save()
 
@@ -653,12 +648,13 @@ func save_all() -> void:
 # ── 成就系統 ──────────────────────────────────
 
 func get_all_achievements() -> Array:
-	return achievement_config.get("items", [])
+	return scooper_achievement_data if not scooper_achievement_data.is_empty() else scooper_achievement_catalog
 
 
 func get_achievement_item(achievement_id: String) -> Dictionary:
 	for item: Dictionary in get_all_achievements():
-		if item.get("id", "") == achievement_id:
+		var item_id := str(item.get("id", item.get("achievementId", "")))
+		if item_id == achievement_id or int(item_id) == int(achievement_id):
 			return item
 	return {}
 
@@ -674,8 +670,8 @@ func get_achievement_state(achievement_id: String) -> Dictionary:
 
 
 func get_achievement_progress(item: Dictionary) -> Dictionary:
-	var condition_type: String = item.get("condition_type", "")
-	var target: int = int(item.get("condition_value", 0))
+	var condition_type: String = str(item.get("condition_type", item.get("conditionType", ""))).to_snake_case()
+	var target: int = int(item.get("condition_value", item.get("conditionValue", 0)))
 	var current := 0
 	var condition_text := ""
 
@@ -731,7 +727,7 @@ func refresh_achievements(show_notifications: bool = true) -> Array[String]:
 		state["completed"] = true
 		state["completed_at"] = FileUtils.now_string()
 		player_data.achievement_states[achievement_id] = state
-		newly_completed.append(item.get("name", achievement_id))
+		newly_completed.append(str(item.get("name", item.get("displayName", achievement_id))))
 		changed = true
 
 	if changed:
@@ -933,15 +929,16 @@ func _notification(what: int) -> void:
 
 
 func _get_special_ability_item(ability_id: String) -> Dictionary:
-	var items: Array = special_ability_config.get("items", [])
+	var items: Array = scooper_ability_catalog
 	for item: Dictionary in items:
-		if item.get("id", "") == ability_id:
+		var item_id := str(item.get("id", item.get("abilityId", "")))
+		if item_id == ability_id or int(item_id) == int(ability_id):
 			return item
 	return {}
 
 
 func get_special_ability_summary() -> Dictionary:
-	return SpecialAbilitySystem.summarize(player_data.special_ability_ids, special_ability_config)
+	return SpecialAbilitySystem.summarize(player_data.special_ability_ids, {"items": scooper_ability_catalog})
 
 
 func get_owned_special_abilities() -> Array:
@@ -956,8 +953,9 @@ func get_owned_special_abilities() -> Array:
 func get_unowned_special_abilities() -> Array:
 	var result: Array = []
 	var owned := player_data.special_ability_ids
-	for item: Dictionary in special_ability_config.get("items", []):
-		if not owned.has(item.get("id", "")):
+	for item: Dictionary in scooper_ability_catalog:
+		var item_id := str(item.get("id", item.get("abilityId", "")))
+		if not owned.has(item_id) and not owned.has(int(item_id)):
 			result.append(item)
 	return result
 
@@ -973,15 +971,16 @@ func can_skip_battle() -> bool:
 # ── 回憶系統 ──────────────────────────────────
 
 func _get_memory_item(memory_id: String) -> Dictionary:
-	var items: Array = memory_config.get("items", [])
+	var items: Array = scooper_memory_catalog
 	for item: Dictionary in items:
-		if item.get("id", "") == memory_id:
+		var item_id := str(item.get("id", item.get("memoryId", "")))
+		if item_id == memory_id or int(item_id) == int(memory_id):
 			return item
 	return {}
 
 
 func get_all_memories() -> Array:
-	return memory_config.get("items", [])
+	return scooper_memory_catalog
 
 
 func get_memory_item(memory_id: String) -> Dictionary:
@@ -1010,9 +1009,9 @@ func get_memory_bonuses() -> Array:
 		if item.is_empty():
 			continue
 		result.append({
-			"target": item.get("bonus_target", "all"),
-			"stat": item.get("bonus_stat", ""),
-			"value": float(item.get("bonus_value", 0.0)),
+			"target": str(item.get("bonusTarget", "All")).to_lower(),
+			"stat": str(item.get("bonusStatType", "")),
+			"value": float(item.get("bonusValue", 0.0)),
 		})
 	return result
 
@@ -1053,15 +1052,16 @@ func apply_player_combat_bonuses(data: CatData) -> void:
 # ── 寶藏系統 ──────────────────────────────────
 
 func _get_treasure_item(treasure_id: String) -> Dictionary:
-	var items: Array = treasure_config.get("items", [])
+	var items: Array = scooper_treasure_catalog
 	for item: Dictionary in items:
-		if item.get("id", "") == treasure_id:
+		var item_id := str(item.get("id", item.get("treasureId", "")))
+		if item_id == treasure_id or int(item_id) == int(treasure_id):
 			return item
 	return {}
 
 
 func get_all_treasures() -> Array:
-	return treasure_config.get("items", [])
+	return scooper_treasure_catalog
 
 
 func get_treasure_item(treasure_id: String) -> Dictionary:
@@ -1229,9 +1229,10 @@ func purchase_shop_bundle(_bundle_id: Variant) -> Dictionary:
 
 ## 根據 ID 取得裝備設定項目（找不到回傳空 dict）
 func _get_equip_item(equip_id: String) -> Dictionary:
-	var items: Array = equipment_config.get("items", [])
+	var items: Array = scooper_equipment_catalog
 	for item: Dictionary in items:
-		if item.get("id", "") == equip_id:
+		var item_id := str(item.get("id", item.get("equipmentId", "")))
+		if item_id == equip_id or int(item_id) == int(equip_id):
 			return item
 	return {}
 
@@ -1272,10 +1273,10 @@ func get_equipment_bonuses() -> Array:
 		var level: int = int(state.get("level", 0))
 		if level <= 0:
 			continue
-		var bonus_per_level: float = float(item.get("bonus_per_level", 0.0))
+		var bonus_per_level: float = float(item.get("bonusPerLevel", 0.0))
 		result.append({
-			"target": item.get("bonus_target", "all"),
-			"stat":   item.get("bonus_stat", ""),
+			"target": str(item.get("bonusTarget", "All")).to_lower(),
+			"stat":   str(item.get("bonusStat", "")),
 			"value":  bonus_per_level * level,
 		})
 	return result

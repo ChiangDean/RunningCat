@@ -139,7 +139,7 @@
 
 戰鬥加成（`get_equipment_bonuses()`、`get_memory_bonuses()`、`get_treasure_combat_bonuses()`）在 `GameState` 中實作。
 
-優先讀取 [API] 即時資料（`scooper_equipment_data`、`scooper_memory_data`、`scooper_treasure_data`），fallback 至本地 `res://data/default/` JSON 設定。
+優先讀取 [API] 即時資料（`scooper_equipment_data`、`scooper_memory_data`、`scooper_treasure_data`），fallback 至 bootstrap/catalog 快取與前端內建靜態定義。
 
 由於 [Bootstrap] 時已將 live data 持久化至本地快取，啟動時即可載入，戰鬥加成不再依賴玩家是否曾進入 [鏟屎官] 頁面。
 

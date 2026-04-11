@@ -119,7 +119,7 @@ static func rebuild_detail_panel(scene) -> void:
 		return
 
 	var player_cat: PlayerCatData = scene.GameState.get_player_cat(scene._selected_cat_id)
-	var cat_data := CatData.from_json_file("res://data/default/cats/" + scene._selected_cat_id + ".json")
+	var cat_data := CatData.from_json_file("res://cats/" + scene._selected_cat_id + ".json")
 	if cat_data == null:
 		return
 

@@ -8,7 +8,7 @@ static func refresh_all_labels(scene) -> void:
 		return
 
 	var player_cat: PlayerCatData = scene.GameState.get_player_cat(scene._selected_cat_id)
-	var cat_data := CatData.from_json_file("res://data/default/cats/" + scene._selected_cat_id + ".json")
+	var cat_data := CatData.from_json_file("res://cats/" + scene._selected_cat_id + ".json")
 	if cat_data == null:
 		return
 
@@ -150,7 +150,7 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 	var rank: int = player_cat.rank
 
 	for sid: String in cat_data.passive_skill_ids:
-		var skill_d := CatData._read_skill_json("res://data/default/skills/passive/" + sid + ".json")
+		var skill_d := CatData._read_skill_json("res://skills/passive/" + sid + ".json")
 		if skill_d.is_empty():
 			continue
 		var row := HBoxContainer.new()
@@ -264,7 +264,7 @@ static func stat_display_label(stat: String, eff_type: String) -> String:
 
 
 static func get_display_name(cat_id: String) -> String:
-	var data := CatData.from_json_file("res://data/default/cats/" + cat_id + ".json")
+	var data := CatData.from_json_file("res://cats/" + cat_id + ".json")
 	if data != null:
 		return data.display_name
 	return cat_id

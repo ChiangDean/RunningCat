@@ -8,13 +8,13 @@
 
 ## 一、[Bootstrap] 與 [user://] 快取資料
 
-### 1-A. 本地靜態設定（`res://data/default/`）
+### 1-A. 前端內建靜態設定（`StaticGameData`）
 
 以下資料仍由客戶端內建 JSON 提供，主要用於戰鬥參數與本地 fallback。
 
 | 檔案路徑 | 內容 | 用途 |
 |----------|------|------|
-| `res://data/default/dungeon_config.json` | 地下城靜態設定（key、名稱、敵方基礎能力、倍率、獎勵公式） | 地下城戰鬥參數、本地 fallback |
+| `scripts/data/static_game_data.gd` | 地下城靜態設定（key、名稱、敵方基礎能力、倍率、獎勵公式） | 地下城戰鬥參數、本地 fallback |
 
 ### 1-B. [Dungeon Overview] 快取（玩家即時資料）
 
@@ -216,4 +216,3 @@
 | `scripts/dungeon/DungeonSceneActions.gd` | 地下城操作行為 |
 | `scripts/battle/dungeon_battle_scene.gd` | 地下城戰鬥與挑戰結算 |
 | `data/default/dungeon_config.json` | 地下城靜態設定 |
-

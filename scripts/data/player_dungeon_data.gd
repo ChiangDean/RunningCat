@@ -4,9 +4,7 @@ extends Resource
 ## 玩家地下城進度存檔
 ## 新增地下城只需在 dungeon_config.json 中加入，舊存檔讀取時會自動補上預設值
 
-# TODO(auth-persistence-migration): Move dungeon save persistence to `user://` with legacy fallback + one-time migration.
-# Remove this marker after the `res://` save path has been retired.
-const SAVE_PATH: String = "res://data/saves/player_dungeons.json"
+const SAVE_PATH: String = "user://player_dungeons.json"
 
 ## 每個地下城的進度記錄
 ## key: dungeon_id (String)

@@ -313,7 +313,7 @@ func _start_battle() -> void:
 		var cat_id := GameState.get_cat_file_id(player_cat_id)
 		if cat_id.is_empty():
 			continue
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := "res://cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data == null:
 			continue
@@ -336,7 +336,7 @@ func _start_battle() -> void:
 		var cat_id := GameState.get_cat_file_id_by_catalog_id(int(member.get("catCatalogId", 0)))
 		if cat_id.is_empty():
 			continue
-		var path := "res://data/default/cats/" + cat_id + ".json"
+		var path := "res://cats/" + cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data == null:
 			continue
