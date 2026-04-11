@@ -200,12 +200,7 @@ func _process(delta: float) -> void:
 
 
 func _apply_profile_to_player_data(profile: Dictionary) -> void:
-	GameState.player_data.scooper_level = int(profile.get("scooperLevel", GameState.player_data.scooper_level))
-	GameState.player_data.scooper_exp = int(profile.get("scooperExp", GameState.player_data.scooper_exp))
-	GameState.player_data.gold = int(profile.get("gold", GameState.player_data.gold))
-	GameState.player_data.poop_count = int(profile.get("poopCount", GameState.player_data.poop_count))
-	GameState.player_data.memory_shards = int(profile.get("memoryShards", GameState.player_data.memory_shards))
-	GameState.player_data.whisker_shards = int(profile.get("whiskers", GameState.player_data.whisker_shards))
+	GameState.update_scooper_profile(profile)
 	_refresh_resource_label()
 
 

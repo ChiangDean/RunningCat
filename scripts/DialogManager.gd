@@ -116,6 +116,7 @@ func _build(
 	if content is Label or content is RichTextLabel:
 		content.custom_minimum_size.x = content_width
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.size_flags_vertical = 0
 
 	var canvas := CanvasLayer.new()
 	canvas.layer = 100
@@ -149,11 +150,13 @@ func _build(
 	dialog_stack.alignment = BoxContainer.ALIGNMENT_CENTER
 	dialog_stack.add_theme_constant_override("separation", 10)
 	dialog_stack.custom_minimum_size.x = panel_width
+	dialog_stack.size_flags_vertical = 0
 	center.add_child(dialog_stack)
 
 	# 主面板（吸收點擊，避免穿透到 overlay）
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(panel_width, _PANEL_MIN_H)
+	panel.size_flags_vertical = 0
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.12, 0.12, 0.12, 0.98)
 	panel_style.border_width_left = 2
@@ -170,12 +173,14 @@ func _build(
 	dialog_stack.add_child(panel)
 
 	var margin := MarginContainer.new()
+	margin.size_flags_vertical = 0
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 16)
 	panel.add_child(margin)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
+	vbox.size_flags_vertical = 0
 	margin.add_child(vbox)
 	var hint_lbl: Label = null
 	var btn_row: HBoxContainer = null
@@ -183,6 +188,7 @@ func _build(
 	# 標題列
 	var title_row := HBoxContainer.new()
 	title_row.add_theme_constant_override("separation", 8)
+	title_row.size_flags_vertical = 0
 	vbox.add_child(title_row)
 
 	var title_lbl := Label.new()
@@ -254,5 +260,30 @@ func _build(
 		panel_width,
 		maxf(_PANEL_MIN_H, body_height + 32.0)
 	)
+	panel.size = panel.custom_minimum_size
 	dialog_stack.custom_minimum_size = Vector2(panel.custom_minimum_size.x, panel.custom_minimum_size.y + hint_min.y + (10.0 if not is_confirm else 0.0))
+	call_deferred("_fit_dialog_to_content", panel, margin, vbox, dialog_stack, hint_lbl, panel_width)
 	return func() -> void: canvas.queue_free()
+
+
+func _fit_dialog_to_content(
+		panel: PanelContainer,
+		margin: MarginContainer,
+		vbox: VBoxContainer,
+		dialog_stack: VBoxContainer,
+		hint_lbl: Label,
+		panel_width: float
+) -> void:
+	if not is_instance_valid(panel) or not is_instance_valid(margin) or not is_instance_valid(vbox) or not is_instance_valid(dialog_stack):
+		return
+
+	var body_height := vbox.get_combined_minimum_size().y
+	var panel_height := maxf(_PANEL_MIN_H, body_height + 32.0)
+	panel.custom_minimum_size = Vector2(panel_width, panel_height)
+	panel.size = panel.custom_minimum_size
+
+	var hint_height := 0.0
+	if is_instance_valid(hint_lbl):
+		hint_height = hint_lbl.get_combined_minimum_size().y + 10.0
+
+	dialog_stack.custom_minimum_size = Vector2(panel_width, panel_height + hint_height)

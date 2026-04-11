@@ -565,8 +565,17 @@ func get_skill_catalog_item(skill_id: String) -> Dictionary:
 
 ## 更新鏟屎官 profile 快取（記憶體 + 本地檔案）
 func update_scooper_profile(data: Dictionary) -> void:
-	scooper_profile_data = data
-	CacheIO.save_scooper("profile", data)
+	scooper_profile_data = data.duplicate(true)
+	CacheIO.save_scooper("profile", scooper_profile_data)
+	if player_data == null:
+		return
+	player_data.scooper_level = int(scooper_profile_data.get("scooperLevel", player_data.scooper_level))
+	player_data.scooper_exp = int(scooper_profile_data.get("scooperExp", player_data.scooper_exp))
+	player_data.gold = int(scooper_profile_data.get("gold", player_data.gold))
+	player_data.poop_count = int(scooper_profile_data.get("poopCount", player_data.poop_count))
+	player_data.memory_shards = int(scooper_profile_data.get("memoryShards", player_data.memory_shards))
+	player_data.whisker_shards = int(scooper_profile_data.get("whiskers", player_data.whisker_shards))
+	player_data.save()
 
 ## 更新裝備快取（記憶體 + 本地檔案）
 func update_scooper_equipment(data: Array) -> void:
@@ -638,6 +647,14 @@ func apply_wallet_snapshot(data: Dictionary) -> void:
 	player_data.poop_count = int(data.get("poopCount", player_data.poop_count))
 	player_data.memory_shards = int(data.get("memoryShards", player_data.memory_shards))
 	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
+	player_data.save()
+
+
+func apply_idle_claim_response(data: Dictionary) -> void:
+	var wallet_snapshot: Variant = data.get("walletSnapshot", {})
+	if wallet_snapshot is Dictionary:
+		apply_wallet_snapshot(wallet_snapshot)
+	player_data.last_quit_time = int(data.get("lastQuitTimeUnixSeconds", player_data.last_quit_time))
 	player_data.save()
 
 

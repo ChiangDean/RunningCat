@@ -250,21 +250,19 @@ func _on_scoop_pressed(scene: Control) -> void:
 		var result: Dictionary = data if data is Dictionary else {}
 		var updated_profile: Variant = result.get("updatedProfile", {})
 		if updated_profile is Dictionary:
-			scene.GameState.update_scooper_profile(updated_profile)
 			scene._apply_profile_to_player_data(updated_profile)
 
 		if scene._scoop_result_label != null:
 			scene._scoop_result_label.text = _format_scoop_result(result)
 
 		scene._scoop_cooldown_remaining = scene.SCOOP_COOLDOWN
-		scene.refresh_from_bootstrap(func(refresh_ok: bool, _refresh_data: Variant, refresh_err: Dictionary) -> void:
-			if not refresh_ok:
-				var msg: String = refresh_err.get("message") if refresh_err.get("message") != null else "鏟屎官資料同步失敗"
-				if scene._scoop_result_label != null:
-					scene._scoop_result_label.text = msg
-				_refresh_scooper_profile_ui(scene)
-				_refresh_scoop_ui(scene)
+		scene.ApiClient.get_achievements(func(achievements_ok: bool, achievements_data: Variant, _achievements_err: Dictionary) -> void:
+			if achievements_ok and achievements_data is Array:
+				scene.GameState.update_scooper_achievement(achievements_data)
+				scene._refresh_tab_button_labels()
 		)
+		_refresh_scooper_profile_ui(scene)
+		_refresh_scoop_ui(scene)
 	)
 
 
