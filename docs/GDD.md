@@ -1,4 +1,4 @@
-# RunningCat Game Design Document
+# MeowPartyDashClient Game Design Document
 
 > 更新日期：2026-04-10
 > 文件索引總表
