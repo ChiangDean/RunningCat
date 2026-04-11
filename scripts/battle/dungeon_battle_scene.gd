@@ -1,6 +1,8 @@
 class_name DungeonBattleScene
 extends Node2D
 
+const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+
 var MAX_CATS_ON_FIELD: int = 5
 
 const SW := 720.0
@@ -58,13 +60,21 @@ func _build_scene() -> void:
 
 
 func _build_background() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.10, 0.08, 0.15, 1.0)
+	var bg := TextureRect.new()
+	bg.texture = BATTLE_BG_TEXTURE
+	bg.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.size = Vector2(SW, SH)
 	add_child(bg)
 
+	var bg_tint := ColorRect.new()
+	bg_tint.color = Color(0.09, 0.05, 0.12, 0.28)
+	bg_tint.size = Vector2(SW, SH)
+	add_child(bg_tint)
+
 	var ground := ColorRect.new()
-	ground.color = Color(0.18, 0.15, 0.22, 1.0)
+	ground.color = Color(0.15, 0.11, 0.16, 0.52)
 	ground.position = Vector2(0.0, BATTLE_Y)
 	ground.size = Vector2(SW, NAV_Y - BATTLE_Y)
 	add_child(ground)
@@ -177,6 +187,16 @@ func _make_skill_slot(idx: int) -> Control:
 	bg.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
 	bg.color = Color(0.15, 0.10, 0.20, 1.0)
 	slot.add_child(bg)
+
+	var icon := TextureRect.new()
+	icon.name = "Icon"
+	icon.position = Vector2(10.0, 8.0)
+	icon.size = Vector2(SKILL_SLOT_W - 20.0, SKILL_SLOT_H - 36.0)
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.visible = false
+	slot.add_child(icon)
 
 	var name_lbl := Label.new()
 	name_lbl.name = "NameLabel"

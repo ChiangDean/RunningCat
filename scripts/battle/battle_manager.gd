@@ -3,6 +3,15 @@ extends Node
 
 ## 控制戰鬥視覺播放：速度切換、跳過、重播
 
+const SKILL_ICON_PATHS := {
+	"milk_shield": "res://assets/sprites/ui/skill_icons/shield_v1.png",
+	"orange_charge": "res://assets/sprites/ui/skill_icons/impact_v1.png",
+	"tuxedo_counter": "res://assets/sprites/ui/skill_icons/counter_v1.png",
+	"ninja_shadow": "res://assets/sprites/ui/skill_icons/strike_v1.png",
+	"black_ambush": "res://assets/sprites/ui/skill_icons/strike_v1.png",
+	"calico_dash": "res://assets/sprites/ui/skill_icons/dash_v1.png",
+}
+
 signal battle_finished(result: String)
 
 # 事件序列（來自 BattleSimulator）
@@ -220,12 +229,14 @@ func _init_skill_slots() -> void:
 		var cat: CatData = _player_cats[i]
 		var max_cd := 0.0
 		if cat.active_skills_data.size() > 0:
+			var skill_id := String(cat.active_skills_data[0].get("id", ""))
 			max_cd = float(cat.active_skills_data[0].get("cooldown", 5.0))
 			var initial_delay: float = float(cat.active_skills_data[0].get("initial_delay", 0))
 			_skill_slots.append({
 				"max_cd": max_cd,
 				"remaining_cd": initial_delay if initial_delay > 0.0 else max_cd,
 				"buff_remaining": 0.0,
+				"skill_id": skill_id,
 				"skill_name": cat.active_skills_data[0].get("display_name", ""),
 			})
 		else:
@@ -233,6 +244,7 @@ func _init_skill_slots() -> void:
 				"max_cd": 0.0,
 				"remaining_cd": 0.0,
 				"buff_remaining": 0.0,
+				"skill_id": "",
 				"skill_name": "",
 			})
 
@@ -263,6 +275,18 @@ func _refresh_skill_slot_ui(i: int, slot: Dictionary) -> void:
 	var max_cd: float = slot["max_cd"]
 	var remaining: float = slot["remaining_cd"]
 	var buff_rem: float = slot["buff_remaining"]
+	var skill_id := String(slot.get("skill_id", ""))
+
+	# 技能圖示
+	var icon_rect: TextureRect = slot_node.get_node_or_null("Icon")
+	if icon_rect:
+		var icon_path := String(SKILL_ICON_PATHS.get(skill_id, ""))
+		if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+			icon_rect.texture = load(icon_path)
+			icon_rect.visible = true
+		else:
+			icon_rect.texture = null
+			icon_rect.visible = false
 
 	# 冷卻遮罩
 	var overlay: ColorRect = slot_node.get_node_or_null("Overlay")
@@ -270,7 +294,7 @@ func _refresh_skill_slot_ui(i: int, slot: Dictionary) -> void:
 		if max_cd > 0.0 and remaining > 0.0:
 			overlay.visible = true
 			var ratio := remaining / max_cd
-			overlay.size.y = slot_node.size.y * ratio
+			overlay.size.y = (slot_node.size.y - 24.0) * ratio
 		else:
 			overlay.visible = false
 
