@@ -527,7 +527,6 @@ func _show_sandbox_dialog() -> void:
 	# ── 掛機獎勵區 ────────────────────────────────────────
 	var rewards_section := VBoxContainer.new()
 	rewards_section.add_theme_constant_override("separation", 6)
-	rewards_section.visible = has_rewards
 
 	if has_rewards:
 		var h := complete_minutes / 60
@@ -552,12 +551,12 @@ func _show_sandbox_dialog() -> void:
 				lbl.add_theme_font_size_override("font_size", 18)
 				rewards_section.add_child(lbl)
 
-	vbox.add_child(rewards_section)
+	if has_rewards:
+		vbox.add_child(rewards_section)
 
 	# ── 鏟屎互動區 ────────────────────────────────────────
 	var scoop_section := VBoxContainer.new()
 	scoop_section.add_theme_constant_override("separation", 8)
-	scoop_section.visible = not has_rewards and GameState.player_data.poop_count > 0
 
 	var poop_count_lbl := Label.new()
 	poop_count_lbl.text = "待鏟屎堆：%d 個" % GameState.player_data.poop_count
@@ -575,22 +574,41 @@ func _show_sandbox_dialog() -> void:
 	scoop_btn.custom_minimum_size = Vector2(160.0, 52.0)
 	scoop_btn.disabled = GameState.player_data.poop_count <= 0
 	scoop_btn.pressed.connect(func() -> void:
-		var r := GameState.scoop_poop()
-		var remaining := GameState.player_data.poop_count
-		poop_count_lbl.text = "💩 待鏟屎堆：%d 個" % remaining
-		var parts := []
-		if r.get("exp", 0) > 0:
-			parts.append("EXP +%d" % r["exp"])
-		if r.get("memory_shards", 0) > 0:
-			parts.append("回憶碎片 +%d" % r["memory_shards"])
-		if r.get("whiskers", 0) > 0:
-			parts.append("鬍鬚 +%d" % r["whiskers"])
-		result_lbl.text = "（空手而歸）" if parts.is_empty() else "獲得：" + "、".join(parts)
-		scoop_btn.disabled = remaining <= 0
-		_refresh_sandbox_btn()
+		if scoop_btn.disabled:
+			return
+		scoop_btn.disabled = true
+		result_lbl.text = ""
+		ApiClient.scoop_poop(1, func(ok: bool, data: Variant, err: Dictionary) -> void:
+			if not ok:
+				result_lbl.text = str(err.get("message", "鏟屎失敗"))
+				scoop_btn.disabled = GameState.player_data.poop_count <= 0
+				return
+
+			var result: Dictionary = data if data is Dictionary else {}
+			var updated_profile: Variant = result.get("updatedProfile", {})
+			if updated_profile is Dictionary:
+				GameState.update_scooper_profile(updated_profile)
+
+			var remaining := GameState.player_data.poop_count
+			poop_count_lbl.text = "💩 待鏟屎堆：%d 個" % remaining
+			var parts: Array[String] = []
+			var exp_gained := int(result.get("expGained", 0))
+			if exp_gained > 0:
+				parts.append("EXP +%d" % exp_gained)
+			var memory_shards_gained := int(result.get("memoryShardsGained", 0))
+			if memory_shards_gained > 0:
+				parts.append("回憶碎片 +%d" % memory_shards_gained)
+			var whiskers_gained := int(result.get("WhiskersGained", result.get("whiskersGained", 0)))
+			if whiskers_gained > 0:
+				parts.append("鬍鬚 +%d" % whiskers_gained)
+			result_lbl.text = "（空手而歸）" if parts.is_empty() else "獲得：" + "、".join(parts)
+			scoop_btn.disabled = remaining <= 0
+			_refresh_sandbox_btn()
+		)
 	)
 	scoop_section.add_child(scoop_btn)
-	vbox.add_child(scoop_section)
+	if not has_rewards and GameState.player_data.poop_count > 0:
+		vbox.add_child(scoop_section)
 
 	# ── 領取按鈕 ───────────────────────────────────────────
 	var close_ref := [Callable()]
@@ -600,22 +618,32 @@ func _show_sandbox_dialog() -> void:
 		claim_btn.text = "領取獎勵"
 		claim_btn.custom_minimum_size = Vector2(200.0, 52.0)
 		claim_btn.pressed.connect(func() -> void:
-			var claimed := rewards.duplicate()
-			GameState.claim_idle_rewards()
-			close_ref[0].call()
-			_refresh_sandbox_btn()
-			var lines := []
-			for entry: Array in [
-				["💰 金幣",   "gold"],
-				["💩 屎堆",   "poop"],
-				["🍖 貓糧",   "cat_food"],
-				["💎 鑽石",   "diamonds"],
-				["🐱 鬍鬚",   "whiskers"],
-			]:
-				var val: int = claimed.get(entry[1], 0)
-				if val > 0:
-					lines.append("  %s  +%d" % [entry[0], val])
-			DialogManager.show_info("領取成功！", "\n".join(lines))
+			claim_btn.disabled = true
+			ApiClient.claim_idle_rewards(func(ok: bool, data: Variant, err: Dictionary) -> void:
+				claim_btn.disabled = false
+				if not ok:
+					DialogManager.show_info("領取失敗", str(err.get("message", "掛機獎勵領取失敗")))
+					return
+
+				var response: Dictionary = data if data is Dictionary else {}
+				GameState.apply_idle_claim_response(response)
+				close_ref[0].call()
+				_refresh_sandbox_btn()
+
+				var claimed: Dictionary = response.get("rewards", {})
+				var lines: Array[String] = []
+				for entry: Array in [
+					["💰 金幣",   "gold"],
+					["💩 屎堆",   "poop"],
+					["🍖 貓糧",   "cat_food"],
+					["💎 鑽石",   "diamonds"],
+					["🐱 鬍鬚",   "whiskers"],
+				]:
+					var val: int = int(claimed.get(entry[1], 0))
+					if val > 0:
+						lines.append("  %s  +%d" % [entry[0], val])
+				DialogManager.show_info("領取成功！", "\n".join(lines))
+			)
 		)
 		vbox.add_child(claim_btn)
 

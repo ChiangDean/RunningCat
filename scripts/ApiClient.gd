@@ -64,6 +64,10 @@ func scoop_poop(count: int, callback: Callable) -> void:
 	_api_post("scooper/profile/scoop", {"count": count}, callback)
 
 
+func claim_idle_rewards(callback: Callable) -> void:
+	_api_post("scooper/profile/claim-idle", {}, callback)
+
+
 func get_equipment_list(callback: Callable) -> void:
 	_api_get("scooper/equipment", callback)
 
