@@ -1,7 +1,5 @@
 extends Control
 
-const BATTLE_SCENE_PATH := "res://scenes/BattleScene.tscn"
-
 var _summary_label: Label
 var _mail_list: ItemList
 var _detail_title: Label
@@ -11,10 +9,12 @@ var _attachment_box: VBoxContainer
 var _claim_btn: Button
 var _claim_all_btn: Button
 var _status_label: Label
+var _close_action: Callable = Callable()
 
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	custom_minimum_size = Vector2(620, 900)
 	_build_ui()
 	_refresh_summary()
 	_populate_mail_list()
@@ -23,6 +23,10 @@ func _ready() -> void:
 		_on_mail_selected(0)
 	else:
 		_render_detail({})
+
+
+func set_close_action(action: Callable) -> void:
+	_close_action = action
 
 
 func _build_ui() -> void:
@@ -51,7 +55,10 @@ func _build_ui() -> void:
 	back_btn.text = "返回"
 	back_btn.custom_minimum_size = Vector2(92, 48)
 	back_btn.pressed.connect(func() -> void:
-		get_tree().change_scene_to_file(BATTLE_SCENE_PATH)
+		if _close_action.is_valid():
+			_close_action.call()
+		else:
+			SceneNavigator.return_to_battle()
 	)
 	header.add_child(back_btn)
 
@@ -304,7 +311,7 @@ func _render_reward_dialog(rewards: Variant, title: String) -> void:
 			])
 	if lines.is_empty():
 		lines.append("沒有可顯示的獎勵。")
-	DialogManager.show_info(title, "\n".join(lines))
+	DialogManager.show_info(title, "\n".join(lines), Callable(), "large")
 
 
 func _refresh_summary() -> void:

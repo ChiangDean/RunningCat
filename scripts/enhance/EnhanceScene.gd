@@ -149,7 +149,7 @@ func _make_separator() -> HSeparator:
 
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
+	SceneNavigator.return_to_battle()
 
 
 func _get_selected_player_cat_id() -> int:

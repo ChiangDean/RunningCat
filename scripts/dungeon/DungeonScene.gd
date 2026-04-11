@@ -72,4 +72,4 @@ func _get_local_dungeon_cfg(dungeon_key: String) -> Dictionary:
 
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ActivityScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/ActivityScene.tscn")

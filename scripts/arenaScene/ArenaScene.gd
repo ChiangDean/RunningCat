@@ -61,7 +61,7 @@ func _build_ui() -> void:
 	var back_button := Button.new()
 	back_button.text = "返回"
 	back_button.custom_minimum_size = Vector2(100.0, 50.0)
-	back_button.pressed.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/ActivityScene.tscn"))
+	back_button.pressed.connect(func() -> void: SceneNavigator.open_overlay_scene("res://scenes/ActivityScene.tscn"))
 	top_row.add_child(back_button)
 
 	var title := Label.new()

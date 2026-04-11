@@ -378,7 +378,7 @@ func _on_battle_finished(result: String) -> void:
 	else:
 		_show_result_text("敗北", Color(1.0, 0.3, 0.3, 1.0), 310.0)
 		await get_tree().create_timer(1.0).timeout
-		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
+		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
 
 
 func _handle_win() -> void:
@@ -403,7 +403,7 @@ func _on_complete_challenge(success: bool, data: Variant, error: Dictionary) -> 
 
 	var message := str(error.get("message", "挑戰結算失敗。"))
 	DialogManager.show_info("挑戰結算失敗", message, func():
-		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
+		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
 	)
 
 
@@ -421,7 +421,7 @@ func _show_reward_popup(level: int, rewards: Dictionary) -> void:
 		lines.append("  鬍鬚碎片 ×%d" % int(rewards.get("whiskerShards", 0)))
 
 	DialogManager.show_info("挑戰完成", "\n".join(lines), func():
-		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
+		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
 	)
 
 
@@ -433,4 +433,4 @@ func _show_result_text(text: String, color: Color, y: float) -> void:
 
 
 func _on_retreat_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
+	SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
