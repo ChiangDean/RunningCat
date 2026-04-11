@@ -1,9 +1,7 @@
 class_name PlayerArenaData
 extends Resource
 
-# Legacy paths kept only for cleanup and compatibility markers.
-const SAVE_PATH: String = "res://data/saves/player_arena.json"
-const ARENA_DATA_PATH: String = "res://data/arena/arena_data.json"
+const ARENA_DATA_PATH: String = "user://arena_data.json"
 
 const DAILY_FREE_TICKETS: int = 10
 const MAX_DAILY_PURCHASES: int = 5

@@ -455,14 +455,14 @@ func _apply_team_update(team_response: Dictionary) -> void:
 
 
 func _show_skill_popup(cat_file_id: String) -> void:
-	var cat_data := CatData.from_json_file("res://data/default/cats/" + cat_file_id + ".json")
+	var cat_data := CatData.from_json_file(cat_file_id + ".json")
 	if cat_data == null:
 		return
 
 	var lines: Array = [cat_data.display_name + " 技能"]
 
 	for sid: String in cat_data.passive_skill_ids:
-		var skill_d := CatData._read_skill_json("res://data/default/skills/passive/" + sid + ".json")
+		var skill_d := CatData._read_skill_json(sid)
 		if not skill_d.is_empty():
 			lines.append("被動：%s" % skill_d.get("display_name", sid))
 			lines.append("  " + skill_d.get("description", ""))

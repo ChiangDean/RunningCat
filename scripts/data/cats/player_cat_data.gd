@@ -5,9 +5,8 @@ extends Resource
 ## 只記錄「玩家改變了什麼」，不重複存 default 的原始數值
 ## 執行時搭配 CatData（default）合併計算出實際數值
 
-# TODO(auth-persistence-migration): Move player cat saves to `user://` with legacy fallback + one-time migration.
-# Remove this marker after the `res://` save path has been retired.
-const SAVE_DIR: String = "res://data/saves/player_cats/"
+const SAVE_DIR: String = "user://player_cats/"
+const LEGACY_SAVE_DIR: String = "res://data/saves/player_cats/"
 const MAX_CAT_FOOD_LEVEL: int = 30
 
 # ── 識別 ──────────────────────────────────────────────
@@ -122,11 +121,15 @@ func to_dict() -> Dictionary:
 
 static func load_or_default(p_cat_id: String) -> PlayerCatData:
 	var path := SAVE_DIR + p_cat_id + ".json"
-	if not FileAccess.file_exists(path):
+	var legacy_path := LEGACY_SAVE_DIR + p_cat_id + ".json"
+	var load_path := path
+	if not FileAccess.file_exists(load_path):
+		load_path = legacy_path
+	if not FileAccess.file_exists(load_path):
 		var p := PlayerCatData.new()
 		p.cat_id = p_cat_id
 		return p
-	var file := FileAccess.open(path, FileAccess.READ)
+	var file := FileAccess.open(load_path, FileAccess.READ)
 	var json := JSON.new()
 	if json.parse(file.get_as_text()) != OK:
 		file.close()
@@ -134,11 +137,15 @@ static func load_or_default(p_cat_id: String) -> PlayerCatData:
 		p.cat_id = p_cat_id
 		return p
 	file.close()
-	return from_dict(json.get_data())
+	var player_cat := from_dict(json.get_data())
+	if load_path == legacy_path:
+		player_cat.save()
+	return player_cat
 
 
 func save() -> void:
 	var path := SAVE_DIR + cat_id + ".json"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SAVE_DIR))
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		push_error("PlayerCatData: 無法寫入存檔：" + path)
