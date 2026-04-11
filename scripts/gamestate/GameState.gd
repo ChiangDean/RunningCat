@@ -54,6 +54,9 @@ func clear_persisted_player_state() -> void:
 	skill_delays = {}
 	player_cats_data = []
 	teams_data = {}
+	mail_summary_data = {}
+	mail_list_data = []
+	selected_mail_data = {}
 	current_global_stage = 1
 	boss_available = false
 	dungeon_battle_id = ""
@@ -145,6 +148,11 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	player_data.last_free_pull_date = data.get("lastFreePullDate") if data.get("lastFreePullDate") != null else player_data.last_free_pull_date
 	player_data.current_stage = int(data.get("currentStage", player_data.current_stage))
 	current_global_stage = player_data.current_stage
+	update_mail_summary(data.get("mailSummary", {}))
+	var mail_inbox: Variant = data.get("mailInbox", [])
+	if mail_inbox is Array:
+		update_mail_list(mail_inbox)
+		update_selected_mail({})
 	player_data.save()
 
 	# ── 解析並快取 catalog 資料 ──
@@ -320,6 +328,9 @@ var scooper_treasure_data: Array = []
 var scooper_achievement_data: Array = []
 var gacha_data: Dictionary = {}
 var shop_data: Dictionary = {}
+var mail_summary_data: Dictionary = {}
+var mail_list_data: Array = []
+var selected_mail_data: Dictionary = {}
 
 
 func _ready() -> void:
@@ -423,6 +434,100 @@ func update_arena(data: Dictionary) -> void:
 	player_data.cat_food = int(arena_overview_data.get("catFood", player_data.cat_food))
 	player_data.special_cat_food = int(arena_overview_data.get("specialCatFood", player_data.special_cat_food))
 	player_data.save()
+
+
+func update_mail_summary(data: Dictionary) -> void:
+	mail_summary_data = {
+		"unreadCount": int(data.get("unreadCount", 0)),
+		"claimableCount": int(data.get("claimableCount", 0)),
+		"totalCount": int(data.get("totalCount", 0)),
+	}
+
+
+func update_mail_list(data: Array) -> void:
+	mail_list_data = data.duplicate(true)
+
+
+func update_selected_mail(data: Dictionary) -> void:
+	selected_mail_data = data.duplicate(true)
+	if not selected_mail_data.is_empty():
+		_merge_mail_into_list(selected_mail_data)
+
+
+func apply_wallet_snapshot(data: Dictionary) -> void:
+	player_data.gold = int(data.get("gold", player_data.gold))
+	player_data.diamonds = int(data.get("diamonds", player_data.diamonds))
+	player_data.trap_points = int(data.get("trapPoints", player_data.trap_points))
+	player_data.cat_food = int(data.get("catFood", player_data.cat_food))
+	player_data.special_cat_food = int(data.get("specialCatFood", player_data.special_cat_food))
+	player_data.trap_cages = int(data.get("trapCages", player_data.trap_cages))
+	player_data.poop_count = int(data.get("poopCount", player_data.poop_count))
+	player_data.memory_shards = int(data.get("memoryShards", player_data.memory_shards))
+	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
+	player_data.save()
+
+
+func has_mail_red_dot() -> bool:
+	return int(mail_summary_data.get("unreadCount", 0)) > 0 or int(mail_summary_data.get("claimableCount", 0)) > 0
+
+
+func get_mail_badge_text() -> String:
+	var total := int(mail_summary_data.get("unreadCount", 0)) + int(mail_summary_data.get("claimableCount", 0))
+	if total <= 0:
+		return ""
+	return "99+" if total > 99 else str(total)
+
+
+func mark_mail_read_local(mail_id: int) -> void:
+	for item: Dictionary in mail_list_data:
+		if int(item.get("mailId", 0)) != mail_id:
+			continue
+		if not bool(item.get("isRead", false)):
+			item["isRead"] = true
+			update_mail_summary({
+				"unreadCount": maxi(0, int(mail_summary_data.get("unreadCount", 0)) - 1),
+				"claimableCount": int(mail_summary_data.get("claimableCount", 0)),
+				"totalCount": int(mail_summary_data.get("totalCount", 0)),
+			})
+		break
+	if int(selected_mail_data.get("mailId", 0)) == mail_id:
+		selected_mail_data["isRead"] = true
+
+
+func mark_mail_claimed_local(mail_id: int) -> void:
+	for item: Dictionary in mail_list_data:
+		if int(item.get("mailId", 0)) != mail_id:
+			continue
+		item["isClaimed"] = true
+		item["status"] = "Claimed"
+		break
+	if int(selected_mail_data.get("mailId", 0)) == mail_id:
+		selected_mail_data["isClaimed"] = true
+		selected_mail_data["status"] = "Claimed"
+		for attachment: Dictionary in selected_mail_data.get("attachments", []):
+			attachment["isClaimed"] = true
+
+
+func mark_mail_claimed_many_local(mail_ids: Array) -> void:
+	for mail_id: Variant in mail_ids:
+		mark_mail_claimed_local(int(mail_id))
+
+
+func _merge_mail_into_list(mail_data: Dictionary) -> void:
+	var mail_id := int(mail_data.get("mailId", 0))
+	if mail_id <= 0:
+		return
+	for i in range(mail_list_data.size()):
+		var item: Dictionary = mail_list_data[i]
+		if int(item.get("mailId", 0)) != mail_id:
+			continue
+		item["title"] = mail_data.get("title", item.get("title", ""))
+		item["previewText"] = mail_data.get("previewText", item.get("previewText", ""))
+		item["isRead"] = bool(mail_data.get("isRead", item.get("isRead", false)))
+		item["isClaimed"] = bool(mail_data.get("isClaimed", item.get("isClaimed", false)))
+		item["status"] = mail_data.get("status", item.get("status", ""))
+		mail_list_data[i] = item
+		return
 
 
 # ── Config 快取讀寫（保留供 ConfigScene 直接呼叫）─────
