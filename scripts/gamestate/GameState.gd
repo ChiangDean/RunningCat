@@ -64,6 +64,8 @@ func clear_persisted_player_state() -> void:
 	arena_data = PlayerArenaData.new()
 	arena_opponent = {}
 	arena_overview_data = {}
+	gacha_data = {}
+	shop_data = {}
 
 
 func clear_auth_and_player_state() -> void:
@@ -106,11 +108,11 @@ func load_persisted_auth_session() -> bool:
 
 
 func get_access_token() -> String:
-	return String(auth_session.get("accessToken", "")).strip_edges()
+	return str(auth_session.get("accessToken", "")).strip_edges()
 
 
 func get_refresh_token() -> String:
-	return String(auth_session.get("refreshToken", "")).strip_edges()
+	return str(auth_session.get("refreshToken", "")).strip_edges()
 
 
 func apply_player_bootstrap(data: Dictionary) -> void:
@@ -195,6 +197,12 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 		var boss_members: Array = boss_team.get("members", [])
 		player_team = boss_members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
 	apply_dungeon_overview(data)
+	var gacha_overview: Variant = data.get("gachaOverview", {})
+	if gacha_overview is Dictionary and not (gacha_overview as Dictionary).is_empty():
+		update_gacha(gacha_overview)
+	var shop_overview: Variant = data.get("shopOverview", {})
+	if shop_overview is Dictionary and not (shop_overview as Dictionary).is_empty():
+		update_shop(shop_overview)
 
 
 func _save_auth_session() -> void:
@@ -305,6 +313,8 @@ var scooper_ability_data: Array = []
 var scooper_memory_data: Array = []
 var scooper_treasure_data: Array = []
 var scooper_achievement_data: Array = []
+var gacha_data: Dictionary = {}
+var shop_data: Dictionary = {}
 
 
 func _ready() -> void:
@@ -346,6 +356,8 @@ func _ready() -> void:
 	scooper_memory_data = CacheIO.load_scooper_array("memory")
 	scooper_treasure_data = CacheIO.load_scooper_array("treasure")
 	scooper_achievement_data = CacheIO.load_scooper_array("achievement")
+	gacha_data = CacheIO.load_config_dict("gacha")
+	shop_data = CacheIO.load_config_dict("shop")
 	player_cats_data = CacheIO.load_config_array("player_cats")
 	update_enhance(_load_enhance_cache_array())
 	var cached_teams := CacheIO.load_config_array("teams")
@@ -400,9 +412,9 @@ func update_arena(data: Dictionary) -> void:
 	if player_data == null:
 		return
 	if arena_overview_data.get("playerName") != null:
-		player_data.player_name = String(arena_overview_data.get("playerName", player_data.player_name))
+		player_data.player_name = str(arena_overview_data.get("playerName", player_data.player_name))
 	if arena_overview_data.get("playerPublicId") != null:
-		player_data.player_public_id = String(arena_overview_data.get("playerPublicId", player_data.player_public_id))
+		player_data.player_public_id = str(arena_overview_data.get("playerPublicId", player_data.player_public_id))
 	player_data.diamonds = int(arena_overview_data.get("diamonds", player_data.diamonds))
 	player_data.trap_cages = int(arena_overview_data.get("trapCages", player_data.trap_cages))
 	player_data.cat_food = int(arena_overview_data.get("catFood", player_data.cat_food))
@@ -435,10 +447,64 @@ func _load_dungeon_cache_array() -> Array:
 	return CacheIO.load_config_array("dungeon")
 
 
+func _save_gacha_cache(data: Dictionary) -> void:
+	CacheIO.save_config("gacha", data)
+
+
+func _save_shop_cache(data: Dictionary) -> void:
+	CacheIO.save_config("shop", data)
+
+
 ## 更新玩家貓咪清單快取（記憶體 + 本地檔案）
 func update_player_cats(data: Array) -> void:
 	player_cats_data = data
 	CacheIO.save_config("player_cats", data)
+	var owned_cat_ids: Array = []
+	for item: Variant in data:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = item
+		if not bool(row.get("isOwned", false)):
+			continue
+		var cat_file_id := get_cat_file_id_by_catalog_id(int(row.get("catCatalogId", 0)))
+		if cat_file_id != "" and not owned_cat_ids.has(cat_file_id):
+			owned_cat_ids.append(cat_file_id)
+	if owned_cat_ids.is_empty():
+		owned_cat_ids = ["milk_cat"]
+	player_data.owned_cat_ids = owned_cat_ids
+	player_data.save()
+
+
+func update_gacha(data: Dictionary) -> void:
+	gacha_data = data.duplicate(true)
+	_save_gacha_cache(gacha_data)
+	if player_data == null:
+		return
+	player_data.diamonds = int(gacha_data.get("diamonds", player_data.diamonds))
+	player_data.trap_cages = int(gacha_data.get("trapCages", player_data.trap_cages))
+	player_data.total_pulls = int(gacha_data.get("totalPulls", player_data.total_pulls))
+	player_data.free_pull_count = int(gacha_data.get("freePullCount", player_data.free_pull_count))
+	if gacha_data.get("lastFreePullDate") != null:
+		player_data.last_free_pull_date = str(gacha_data.get("lastFreePullDate", player_data.last_free_pull_date))
+	player_data.save()
+
+
+func update_shop(data: Dictionary) -> void:
+	shop_data = data.duplicate(true)
+	_save_shop_cache(shop_data)
+	if player_data == null:
+		return
+	player_data.diamonds = int(shop_data.get("diamonds", player_data.diamonds))
+	player_data.trap_cages = int(shop_data.get("trapCages", player_data.trap_cages))
+	var purchase_counts: Dictionary = {}
+	var bundles_variant: Variant = shop_data.get("bundles", [])
+	if bundles_variant is Array:
+		for item: Variant in bundles_variant:
+			if item is Dictionary:
+				var bundle: Dictionary = item
+				purchase_counts[str(bundle.get("bundleId", ""))] = int(bundle.get("purchaseCount", 0))
+	player_data.bundle_purchase_counts = purchase_counts
+	player_data.save()
 
 
 func update_enhance(data: Array) -> void:
@@ -509,7 +575,7 @@ func get_dungeon_entry_by_id(dungeon_id: int) -> Dictionary:
 
 func get_dungeon_entry_by_key(dungeon_key: String) -> Dictionary:
 	for item: Variant in dungeon_overview_data:
-		if item is Dictionary and String(item.get("key", "")) == dungeon_key:
+		if item is Dictionary and str(item.get("key", "")) == dungeon_key:
 			return item
 	return {}
 
@@ -519,7 +585,7 @@ func update_player_teams(data: Array) -> void:
 	teams_data = {}
 	for team: Variant in data:
 		if team is Dictionary:
-			var team_type: String = String(team.get("teamType", ""))
+			var team_type: String = str(team.get("teamType", ""))
 			if team_type != "":
 				teams_data[team_type] = team
 	CacheIO.save_config("teams", data)
@@ -539,7 +605,7 @@ func get_config_owned_cats() -> Array:
 func get_player_cat_display_name(player_cat_id: int) -> String:
 	for cat: Variant in player_cats_data:
 		if cat is Dictionary and int(cat.get("playerCatId", -1)) == player_cat_id:
-			return String(cat.get("displayName", ""))
+			return str(cat.get("displayName", ""))
 	return ""
 
 
@@ -558,12 +624,12 @@ func get_cat_file_id(player_cat_id: int) -> String:
 	for cat: Variant in player_cats_data:
 		if cat is Dictionary and int(cat.get("playerCatId", -1)) == player_cat_id:
 			var catalog_id: int = int(cat.get("catCatalogId", 0))
-			return String(_CAT_FILE_MAP.get(catalog_id, ""))
+			return str(_CAT_FILE_MAP.get(catalog_id, ""))
 	return ""
 
 
 func get_cat_file_id_by_catalog_id(cat_catalog_id: int) -> String:
-	return String(_CAT_FILE_MAP.get(cat_catalog_id, ""))
+	return str(_CAT_FILE_MAP.get(cat_catalog_id, ""))
 
 
 ## 取得貓咪強化存檔（找不到時自動建立預設值）
@@ -602,8 +668,8 @@ func get_achievement_state(achievement_id: String) -> Dictionary:
 	return {
 		"completed": bool(state.get("completed", false)),
 		"claimed": bool(state.get("claimed", false)),
-		"completed_at": String(state.get("completed_at", "")),
-		"claimed_at": String(state.get("claimed_at", "")),
+		"completed_at": str(state.get("completed_at", "")),
+		"claimed_at": str(state.get("claimed_at", "")),
 	}
 
 
@@ -933,8 +999,8 @@ func get_memory_bonuses() -> Array:
 			if not bool(item.get("isUnlocked", false)):
 				continue
 			result.append({
-				"target": String(item.get("bonusTarget", "All")).to_lower(),
-				"stat": String(item.get("bonusStatType", "")),
+				"target": str(item.get("bonusTarget", "All")).to_lower(),
+				"stat": str(item.get("bonusStatType", "")),
 				"value": float(item.get("bonusValue", 0.0)),
 			})
 		return result
@@ -1029,7 +1095,7 @@ func get_owned_treasures() -> Array:
 		entry["latest_obtained_at"] = state.get("latest_obtained_at", "")
 		result.append(entry)
 	result.sort_custom(func(a, b):
-		return String(a.get("latest_obtained_at", "")) > String(b.get("latest_obtained_at", ""))
+		return str(a.get("latest_obtained_at", "")) > str(b.get("latest_obtained_at", ""))
 	)
 	return result
 
@@ -1061,8 +1127,8 @@ func get_treasure_effects() -> Array:
 			for _i in range(quantity):
 				for effect: Dictionary in effects:
 					result.append({
-						"target": String(effect.get("targetElementType", "all")).to_lower(),
-						"stat": String(effect.get("statType", "")),
+				"target": str(effect.get("targetElementType", "all")).to_lower(),
+				"stat": str(effect.get("statType", "")),
 						"value": float(effect.get("value", 0.0)),
 					})
 		return result
@@ -1110,72 +1176,53 @@ func grant_treasure(treasure_id: String, quantity: int = 1) -> Dictionary:
 # ── 商城禮包 ──────────────────────────────────
 
 func _get_shop_bundle_item(bundle_id: String) -> Dictionary:
-	var items: Array = shop_bundle_config.get("items", [])
-	for item: Dictionary in items:
-		if item.get("id", "") == bundle_id:
-			return item
+	var bundles_variant: Variant = shop_data.get("bundles", [])
+	if bundles_variant is Array:
+		for item: Variant in bundles_variant:
+			if item is Dictionary and str(item.get("bundleId", "")) == bundle_id:
+				return item
 	return {}
 
 
 func get_shop_bundle_categories() -> Array:
-	return shop_bundle_config.get("categories", [])
+	var categories_variant: Variant = shop_data.get("categories", [])
+	return categories_variant if categories_variant is Array else []
 
 
-func get_shop_bundles_by_category(category_id: String) -> Array:
+func get_shop_bundles_by_category(category_id: Variant) -> Array:
 	var result: Array = []
-	for item: Dictionary in shop_bundle_config.get("items", []):
-		if item.get("category", "") == category_id:
-			result.append(item)
+	var bundles_variant: Variant = shop_data.get("bundles", [])
+	if bundles_variant is Array:
+		for item: Variant in bundles_variant:
+			if item is Dictionary and str(item.get("categoryId", "")) == str(category_id):
+				result.append(item)
 	return result
 
 
-func get_bundle_purchase_count(bundle_id: String) -> int:
-	return int(player_data.bundle_purchase_counts.get(bundle_id, 0))
+func get_bundle_purchase_count(bundle_id: Variant) -> int:
+	var bundle := _get_shop_bundle_item(str(bundle_id))
+	if not bundle.is_empty():
+		return int(bundle.get("purchaseCount", 0))
+	return int(player_data.bundle_purchase_counts.get(str(bundle_id), 0))
 
 
-func can_purchase_bundle(bundle_id: String) -> Dictionary:
-	var item := _get_shop_bundle_item(bundle_id)
+func can_purchase_bundle(bundle_id: Variant) -> Dictionary:
+	var item := _get_shop_bundle_item(str(bundle_id))
 	if item.is_empty():
 		return { "success": false, "error": "找不到禮包" }
-	var purchase_limit: int = int(item.get("purchase_limit", 1))
-	var purchased: int = get_bundle_purchase_count(bundle_id)
+	var purchase_limit: int = int(item.get("purchaseLimit", 1))
+	var purchased: int = get_bundle_purchase_count(str(bundle_id))
 	if purchase_limit >= 0 and purchased >= purchase_limit:
 		return { "success": false, "error": "已達購買上限" }
-	var diamond_cost: int = int(item.get("diamond_cost", 0))
+	var diamond_cost: int = int(item.get("priceAmount", 0))
 	if player_data.diamonds < diamond_cost:
 		return { "success": false, "error": "鑽石不足（需要 %d）" % diamond_cost }
 	return { "success": true, "bundle": item }
 
 
-func purchase_shop_bundle(bundle_id: String) -> Dictionary:
-	var check := can_purchase_bundle(bundle_id)
-	if not check.get("success", false):
-		return check
-	var item: Dictionary = check.get("bundle", {})
-	var rewards: Array = item.get("rewards", [])
-	var granted: Array = []
-	player_data.diamonds -= int(item.get("diamond_cost", 0))
-	player_data.bundle_purchase_counts[bundle_id] = get_bundle_purchase_count(bundle_id) + 1
-	for reward: Dictionary in rewards:
-		if reward.get("type", "") != "treasure":
-			continue
-		var treasure_id: String = reward.get("id", "")
-		var quantity: int = int(reward.get("quantity", 1))
-		var result := grant_treasure(treasure_id, quantity)
-		if result.get("success", false):
-			granted.append({
-				"id": treasure_id,
-				"name": result.get("treasure", {}).get("name", treasure_id),
-				"quantity": quantity,
-				"total_quantity": result.get("total_quantity", quantity),
-			})
-	player_data.save()
-	return {
-		"success": true,
-		"bundle": item,
-		"granted": granted,
-		"purchase_count": get_bundle_purchase_count(bundle_id),
-	}
+func purchase_shop_bundle(_bundle_id: Variant) -> Dictionary:
+	push_warning("DEPRECATED: purchase_shop_bundle() 請改用 ApiClient.purchase_shop_bundle()")
+	return { "success": false, "error": "請改用後端 API 購買禮包" }
 
 
 # ── 裝備系統 ──────────────────────────────────
@@ -1208,8 +1255,8 @@ func get_equipment_bonuses() -> Array:
 				continue
 			var bonus_per_level: float = float(item.get("bonusPerLevel", 0.0))
 			result.append({
-				"target": String(item.get("bonusTarget", "All")).to_lower(),
-				"stat":   String(item.get("bonusStat", "")),
+				"target": str(item.get("bonusTarget", "All")).to_lower(),
+				"stat":   str(item.get("bonusStat", "")),
 				"value":  bonus_per_level * level,
 			})
 		return result

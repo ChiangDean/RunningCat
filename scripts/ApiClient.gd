@@ -95,11 +95,37 @@ func get_dungeon_overview(callback: Callable) -> void:
 	_api_get("dungeon", callback)
 
 
+func get_gacha_overview(callback: Callable) -> void:
+	_api_get("gacha", callback)
+
+
+func perform_gacha_pull(pull_count: int, use_free_pull: bool, spend_trap_cages_first: bool, callback: Callable) -> void:
+	_api_post("gacha/pull", {
+		"pullCount": pull_count,
+		"useFreePull": use_free_pull,
+		"spendTrapCagesFirst": spend_trap_cages_first,
+	}, callback)
+
+
+func get_shop_overview(callback: Callable) -> void:
+	_api_get("shop", callback)
+
+
+func purchase_trap_cages(trap_cage_count: int, callback: Callable) -> void:
+	_api_post("shop/trap-cages/purchase", {
+		"trapCageCount": trap_cage_count,
+	}, callback)
+
+
+func purchase_shop_bundle(bundle_id: int, callback: Callable) -> void:
+	_api_post("shop/bundles/%d/purchase" % bundle_id, {}, callback)
+
+
 func get_arena_overview(excluded_opponent_ids: Array, callback: Callable) -> void:
 	var path := "arena"
 	var filtered_ids: Array[String] = []
 	for opponent_id_variant: Variant in excluded_opponent_ids:
-		var opponent_id := String(opponent_id_variant).strip_edges()
+		var opponent_id := str(opponent_id_variant).strip_edges()
 		if opponent_id != "":
 			filtered_ids.append(opponent_id.uri_encode())
 	if not filtered_ids.is_empty():
