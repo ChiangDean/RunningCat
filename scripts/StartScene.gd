@@ -568,7 +568,7 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 
 	if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
 		_abort_loading_state()
-		var bootstrap_message := String(error_payload.get("message", "同步玩家資料失敗，請稍後再試。"))
+		var bootstrap_message := str(error_payload.get("message", "同步玩家資料失敗，請稍後再試。"))
 		_set_status(bootstrap_message, true)
 		return
 
@@ -799,7 +799,7 @@ func _set_status(message: String, is_error: bool) -> void:
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f") if is_error else Color("46613d"))
 
 
-func _retain_network_loading_overlay(message: String) -> void:
+func _retain_network_loading_overlay(_message: String) -> void:
 	pass
 
 
@@ -945,7 +945,7 @@ func _finalize_logout() -> void:
 func _resolve_api_base_url() -> String:
 	var config := _load_runtime_config()
 	if config.has("api_base_url"):
-		return String(config.get("api_base_url", DEFAULT_API_BASE_URL)).rstrip("/")
+		return str(config.get("api_base_url", DEFAULT_API_BASE_URL)).rstrip("/")
 
 	var configured_environment = config.get("environment") if config.get("environment") != null else DEFAULT_ENVIRONMENT
 	var environment_name := _normalize_environment_name(configured_environment)

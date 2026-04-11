@@ -233,7 +233,7 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 		var completed_at: String = entry.get("completedAtUtc") if entry.get("completedAtUtc") != null else "-"
 		time_lbl.text = "完成時間：%s" % completed_at
 		if is_claimed:
-			time_lbl.text += "　領取時間：%s" % String(entry.get("claimedAtUtc", "-"))
+			time_lbl.text += "　領取時間：%s" % str(entry.get("claimedAtUtc", "-"))
 		time_lbl.add_theme_font_size_override("font_size", 15)
 		time_lbl.add_theme_color_override("font_color", Color(0.66, 0.66, 0.66, 1.0))
 		card.add_child(time_lbl)
@@ -267,7 +267,7 @@ func _claim_achievement(scene: Control, achievement_id: int) -> void:
 	scene.ApiClient.claim_achievement(achievement_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
 		scene._api_in_flight = false
 		if not ok:
-			scene.DialogManager.show_info("領取失敗", String(err.get("message", "操作失敗")))
+			scene.DialogManager.show_info("領取失敗", str(err.get("message", "操作失敗")))
 			return
 
 		var result: Dictionary = data if data is Dictionary else {}
@@ -280,7 +280,7 @@ func _claim_achievement(scene: Control, achievement_id: int) -> void:
 		scene.DialogManager.show_info(
 			"領取成功",
 			"%s\n\n%s" % [
-				String(result.get("message", "")),
+				str(result.get("message", "")),
 				"\n".join(lines),
 			]
 		)

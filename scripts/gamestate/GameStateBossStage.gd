@@ -35,7 +35,7 @@ static func get_zone_in_territory(current_stage: int, boss_cfg: Dictionary) -> i
 	var bsz := _bsz(boss_cfg)
 	var zpt := _zpt(boss_cfg)
 	var stages_per_territory: int = bsz * zpt
-	return (((get_boss_stage_number(current_stage, boss_cfg) - 1) % stages_per_territory) / bsz) + 1
+	return floori(float(((get_boss_stage_number(current_stage, boss_cfg) - 1) % stages_per_territory)) / float(bsz)) + 1
 
 
 ## 當前領地序號（1 起算）
@@ -43,7 +43,7 @@ static func get_territory_number(current_stage: int, boss_cfg: Dictionary) -> in
 	var bsz := _bsz(boss_cfg)
 	var zpt := _zpt(boss_cfg)
 	var stages_per_territory: int = bsz * zpt
-	return ((get_boss_stage_number(current_stage, boss_cfg) - 1) / stages_per_territory) + 1
+	return floori(float(get_boss_stage_number(current_stage, boss_cfg) - 1) / float(stages_per_territory)) + 1
 
 
 # ── 關卡顯示 ──────────────────────────────────
@@ -99,7 +99,7 @@ static func get_enemy_ids(current_stage: int, boss_cfg: Dictionary) -> Array:
 	if is_current_boss(current_stage, boss_cfg):
 		count = mini(1 + boss_stage, 5)
 	else:
-		count = mini(1 + (boss_stage - 1) / 3, 5)
+		count = mini(1 + floori(float(boss_stage - 1) / 3.0), 5)
 	count = maxi(count, 1)
 	var ids: Array = []
 	for i in range(count):

@@ -96,7 +96,7 @@ func _on_load_more_pressed() -> void:
 func _load_history(channel_key: String, before_seq: int) -> void:
 	ApiClient.get_chat_history(channel_key, before_seq, 50, func(success: bool, data: Variant, error: Dictionary) -> void:
 		if not success:
-			_hint_label.text = String(error.get("message", "Failed to load chat history."))
+			_hint_label.text = str(error.get("message", "Failed to load chat history."))
 			return
 		var payload: Dictionary = data if data is Dictionary else {}
 		var messages_variant: Variant = payload.get("messages", [])
@@ -118,7 +118,7 @@ func _submit_message() -> void:
 		if success:
 			_input.text = ""
 		else:
-			_hint_label.text = String(error.get("message", "Failed to send chat message."))
+			_hint_label.text = str(error.get("message", "Failed to send chat message."))
 	)
 
 

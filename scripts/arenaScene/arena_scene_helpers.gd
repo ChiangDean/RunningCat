@@ -46,18 +46,18 @@ static func format_rewards(rewards: Array) -> String:
 		var quantity := int(reward.get("quantity", 0))
 		if quantity <= 0:
 			continue
-		var label := _get_reward_type_label(String(reward.get("rewardType", "")))
+		var label := _get_reward_type_label(str(reward.get("rewardType", "")))
 		parts.append("%s x%d" % [label, quantity])
 	return "、".join(parts) if not parts.is_empty() else "無獎勵"
 
 
 static func build_error_message(error: Dictionary) -> String:
-	var message := String(error.get("message", "")).strip_edges()
+	var message := str(error.get("message", "")).strip_edges()
 	return message if message != "" else "請稍後再試。"
 
 
 static func get_current_rank(overview: Dictionary) -> String:
-	return String(overview.get("rankName", "青銅 III"))
+	return str(overview.get("rankName", "青銅 III"))
 
 
 static func get_current_score(overview: Dictionary) -> int:

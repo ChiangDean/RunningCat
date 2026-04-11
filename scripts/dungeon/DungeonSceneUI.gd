@@ -87,7 +87,7 @@ static func refresh_panel(scene, dungeon_id: int) -> void:
 	var max_floor := int(dungeon.get("maxClearedFloor", 0))
 	var ticket_count := int(dungeon.get("remainingTicketCount", 0))
 	var ad_count := int(dungeon.get("remainingAdTicketCount", 0))
-	var display_name := String(dungeon.get("displayName", "地城"))
+	var display_name := str(dungeon.get("displayName", "地城"))
 
 	var floor_label: Label = entry["floor_label"]
 	floor_label.text = "最高通關：%s" % ("Lv.%d" % max_floor if max_floor > 0 else "尚未通關")
@@ -128,12 +128,12 @@ static func _build_dungeon_panel(scene, dungeon: Dictionary) -> PanelContainer:
 	panel.add_child(vbox)
 
 	var name_label := Label.new()
-	name_label.text = String(dungeon.get("displayName", "地城"))
+	name_label.text = str(dungeon.get("displayName", "地城"))
 	name_label.add_theme_font_size_override("font_size", 26)
 	vbox.add_child(name_label)
 
 	var desc_label := Label.new()
-	desc_label.text = String(dungeon.get("description", ""))
+	desc_label.text = str(dungeon.get("description", ""))
 	desc_label.add_theme_font_size_override("font_size", 18)
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(desc_label)

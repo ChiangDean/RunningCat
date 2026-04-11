@@ -149,7 +149,7 @@ static func _load_leaderboard() -> Dictionary:
 	return {}
 
 
-static func _save_leaderboard(data: Dictionary) -> void:
+static func _save_leaderboard(_data: Dictionary) -> void:
 	return
 
 

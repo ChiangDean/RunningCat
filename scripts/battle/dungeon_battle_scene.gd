@@ -401,7 +401,7 @@ func _on_complete_challenge(success: bool, data: Variant, error: Dictionary) -> 
 		_show_reward_popup(_dungeon_level, rewards if rewards is Dictionary else {})
 		return
 
-	var message := String(error.get("message", "挑戰結算失敗。"))
+	var message := str(error.get("message", "挑戰結算失敗。"))
 	DialogManager.show_info("挑戰結算失敗", message, func():
 		get_tree().change_scene_to_file("res://scenes/DungeonScene.tscn")
 	)
