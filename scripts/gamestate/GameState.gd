@@ -239,9 +239,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	var p_teams: Variant = data.get("playerTeams", [])
 	if p_teams is Array:
 		update_player_teams(p_teams)
-		var boss_team: Dictionary = teams_data.get("Boss", {})
-		var boss_members: Array = boss_team.get("members", [])
-		player_team = boss_members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
+		apply_active_team_from_config("Boss")
 	apply_dungeon_overview(data)
 	var gacha_overview: Variant = data.get("gachaOverview", {})
 	if gacha_overview is Dictionary and not (gacha_overview as Dictionary).is_empty():
@@ -416,10 +414,7 @@ func _ready() -> void:
 	var cached_teams := CacheIO.load_config_array("teams")
 	if not cached_teams.is_empty():
 		update_player_teams(cached_teams)
-		var boss_team: Dictionary = teams_data.get("Boss", {})
-		var boss_members: Array = boss_team.get("members", [])
-		if not boss_members.is_empty():
-			player_team = boss_members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
+		apply_active_team_from_config("Boss")
 	if player_data.last_quit_time == 0:
 		player_data.last_quit_time = Time.get_unix_time_from_system()
 		player_data.save()
@@ -932,6 +927,48 @@ func update_player_teams(data: Array) -> void:
 ## 取得指定隊伍資料（teamType 如 "Boss", "Dungeon", "ArenaAttack", "ArenaDefense"）
 func get_team(team_type: String) -> Dictionary:
 	return teams_data.get(team_type, {"teamType": team_type, "members": []})
+
+
+func apply_active_team_from_config(team_type: String) -> void:
+	var team: Dictionary = get_team(team_type)
+	var members: Array = team.get("members", [])
+	var ordered_members: Array = []
+	ordered_members.resize(members.size())
+	for index: int in range(members.size()):
+		ordered_members[index] = {}
+
+	for member_variant: Variant in members:
+		if not (member_variant is Dictionary):
+			continue
+		var member: Dictionary = member_variant as Dictionary
+		if member.is_empty():
+			continue
+		var slot_no: int = int(member.get("slotNo", -1))
+		if slot_no < 0 or slot_no >= ordered_members.size():
+			slot_no = _find_first_empty_team_slot(ordered_members)
+			if slot_no < 0:
+				continue
+		ordered_members[slot_no] = member
+
+	player_team.clear()
+	skill_delays.clear()
+	for slot_index: int in range(ordered_members.size()):
+		var ordered_member_variant: Variant = ordered_members[slot_index]
+		if not (ordered_member_variant is Dictionary):
+			continue
+		var ordered_member: Dictionary = ordered_member_variant as Dictionary
+		if ordered_member.is_empty():
+			continue
+		player_team.append(int(ordered_member.get("playerCatId", 0)))
+		skill_delays[slot_index] = clampi(int(round(float(ordered_member.get("initialDelaySeconds", 0.0)))), 0, 9)
+
+
+func _find_first_empty_team_slot(members: Array) -> int:
+	for index: int in range(members.size()):
+		var member_variant: Variant = members[index]
+		if member_variant is Dictionary and (member_variant as Dictionary).is_empty():
+			return index
+	return -1
 
 
 ## 取得可用貓咪列表（已擁有）

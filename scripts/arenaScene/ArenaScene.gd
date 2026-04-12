@@ -265,6 +265,7 @@ func _on_reroll_pressed() -> void:
 
 
 func _on_challenge_pressed(opponent: Dictionary) -> void:
+	var effective_team_type: String = Helpers.get_effective_team_type("ArenaAttack", "Boss")
 	var attack_team := Helpers.get_team_member_player_cat_ids("ArenaAttack", "Boss")
 	if attack_team.is_empty():
 		_show_dialog("競技場", "請先在配置頁設定競技場攻擊隊伍或 Boss 隊伍。")
@@ -272,7 +273,10 @@ func _on_challenge_pressed(opponent: Dictionary) -> void:
 	if Helpers.get_current_tickets(_overview) <= 0:
 		_show_dialog("競技場", "競技券不足。")
 		return
-	GameState.player_team = attack_team
+	if effective_team_type != "":
+		GameState.apply_active_team_from_config(effective_team_type)
+	else:
+		GameState.player_team = attack_team
 	GameState.arena_opponent = opponent.duplicate(true)
 	get_tree().change_scene_to_file("res://scenes/ArenaBattleScene.tscn")
 

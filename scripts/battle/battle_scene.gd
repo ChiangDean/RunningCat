@@ -966,6 +966,11 @@ func _start_battle() -> void:
 			_player_team, _enemy_team, _timer_label, _skill_bar)
 
 
+func restart_with_latest_team() -> void:
+	GameState.apply_active_team_from_config("Boss")
+	_start_battle()
+
+
 func _on_skip_pressed() -> void:
 	_battle_manager.skip_to_end()
 
