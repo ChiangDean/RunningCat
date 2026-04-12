@@ -2,32 +2,37 @@ extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
-## 寶藏 Tab — 寶藏收藏列表
-
 
 func build(scene: Control) -> void:
-	var title := Label.new()
-	title.text = "寶藏收藏"
-	title.add_theme_font_size_override("font_size", 28)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	scene._tab_content.add_child(title)
+	var summary_row: HBoxContainer = HBoxContainer.new()
+	summary_row.add_theme_constant_override("separation", 10)
+	scene._tab_content.add_child(summary_row)
+
+	var section_label: Label = Label.new()
+	section_label.text = UiText.SCOOPER_TAB_TREASURE
+	section_label.add_theme_font_size_override("font_size", 18)
+	summary_row.add_child(section_label)
+
+	var section_line: HSeparator = HSeparator.new()
+	section_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	summary_row.add_child(section_line)
 
 	scene._treasure_summary_label = Label.new()
-	scene._treasure_summary_label.add_theme_font_size_override("font_size", 18)
-	scene._treasure_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	scene._tab_content.add_child(scene._treasure_summary_label)
+	scene._treasure_summary_label.text = ""
+	scene._treasure_summary_label.visible = false
+	summary_row.add_child(scene._treasure_summary_label)
 
-	var hint := Label.new()
-	hint.text = "商城禮包取得的寶藏會直接納入收藏，重複取得會重複生效。"
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", 16)
-	hint.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75, 1.0))
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	scene._tab_content.add_child(hint)
+	var total_bonus_btn: Button = Button.new()
+	total_bonus_btn.text = UiText.SCOOPER_TREASURE_TOTAL_BONUS
+	total_bonus_btn.custom_minimum_size = Vector2(120.0, 40.0)
+	total_bonus_btn.pressed.connect(func() -> void:
+		_show_total_bonus_dialog(scene)
+	)
+	summary_row.add_child(total_bonus_btn)
 
 	scene._tab_content.add_child(scene._make_separator())
 
-	var scroll := ScrollContainer.new()
+	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scene._tab_content.add_child(scroll)
 	scene._treasure_scroller = InertialScroller.attach(scroll, "vertical")
@@ -37,110 +42,71 @@ func build(scene: Control) -> void:
 	scene._treasure_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(scene._treasure_list)
 
-	if not scene.GameState.scooper_treasure_data.is_empty():
-		_refresh_treasure_tab(scene)
-	else:
-		scene._show_loading_in(scene._treasure_list)
+	_refresh_treasure_tab(scene)
 
 
 func _refresh_treasure_tab(scene: Control) -> void:
 	var items: Array = scene.GameState.scooper_treasure_data
-	if scene._treasure_summary_label != null:
-		var total_types: int = items.size()
-		var total_quantity := 0
-		for item: Dictionary in items:
-			total_quantity += int(item.get("quantity", 0))
-		scene._treasure_summary_label.text = "已收藏：%d 種　總持有：%d 件" % [total_types, total_quantity]
-
 	if scene._treasure_list == null:
 		return
 
-	for child in scene._treasure_list.get_children():
+	for child: Node in scene._treasure_list.get_children():
 		child.queue_free()
 
 	if items.is_empty():
-		var empty_lbl := Label.new()
-		empty_lbl.text = "目前還沒有收藏到任何寶藏"
+		var empty_lbl: Label = Label.new()
+		empty_lbl.text = UiText.SCOOPER_TREASURE_EMPTY
 		empty_lbl.add_theme_font_size_override("font_size", 18)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		scene._treasure_list.add_child(empty_lbl)
 		return
 
+	var first_item: bool = true
 	for item: Dictionary in items:
+		if not first_item:
+			scene._treasure_list.add_child(scene._make_separator())
 		scene._treasure_list.add_child(_make_treasure_card(scene, item))
+		first_item = false
 
 
 func _make_treasure_card(scene: Control, item: Dictionary) -> Control:
-	var accent := _get_treasure_placeholder_color(item)
-
-	var panel := PanelContainer.new()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.16, 0.18, 0.22, 1.0)
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.border_color = accent
-	style.corner_radius_top_left = 10
-	style.corner_radius_top_right = 10
-	style.corner_radius_bottom_left = 10
-	style.corner_radius_bottom_right = 10
-	panel.add_theme_stylebox_override("panel", style)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_bottom", 14)
+	var accent: Color = _get_treasure_placeholder_color(item)
+	var panel: PanelContainer = scene._make_card_panel(accent)
+	var margin: MarginContainer = scene._make_card_margin()
 	panel.add_child(margin)
 
-	var card := VBoxContainer.new()
+	var card: VBoxContainer = VBoxContainer.new()
 	card.add_theme_constant_override("separation", 8)
 	margin.add_child(card)
 
-	var header := HBoxContainer.new()
+	var header: HBoxContainer = HBoxContainer.new()
 	header.add_theme_constant_override("separation", 8)
 	card.add_child(header)
 
-	var treasure_texture := AssetResolver.load_texture(AssetResolver.resolve_catalog_path(item.get("imagePath", "")))
+	var treasure_texture: Texture2D = AssetResolver.load_texture(AssetResolver.resolve_catalog_path(item.get("imagePath", "")))
 	if treasure_texture != null:
 		header.add_child(AssetResolver.create_icon_rect(treasure_texture, Vector2(52.0, 52.0)))
 
-	var title_lbl := Label.new()
-	title_lbl.text = item.get("displayName") if item.get("displayName") != null else ""
+	var title_lbl: Label = Label.new()
+	title_lbl.text = str(item.get("displayName", ""))
 	title_lbl.add_theme_font_size_override("font_size", 22)
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title_lbl)
 
-	var qty := Label.new()
+	var qty: Label = Label.new()
 	qty.text = "x%d" % int(item.get("quantity", 0))
 	qty.add_theme_font_size_override("font_size", 18)
 	qty.add_theme_color_override("font_color", accent)
 	header.add_child(qty)
 
-	var desc := Label.new()
-	desc.text = item.get("description") if item.get("description") != null else ""
+	var desc: Label = Label.new()
+	desc.text = str(item.get("description", ""))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.add_theme_font_size_override("font_size", 16)
-	desc.add_theme_color_override("font_color", Color(0.78, 0.78, 0.78, 1.0))
+	desc.add_theme_color_override("font_color", Color(0.80, 0.80, 0.80, 1.0))
 	card.add_child(desc)
 
-	var source := Label.new()
-	source.text = item.get("sourceText") if item.get("sourceText") != null else ""
-	source.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	source.add_theme_font_size_override("font_size", 15)
-	source.add_theme_color_override("font_color", Color(0.74, 0.82, 0.92, 1.0))
-	card.add_child(source)
-
-	var time_lbl := Label.new()
-	var obtained_at: String = item.get("latestObtainedAtUtc") if item.get("latestObtainedAtUtc") != null else ""
-	time_lbl.text = "最近取得：%s" % (obtained_at if obtained_at != "" else "-")
-	time_lbl.add_theme_font_size_override("font_size", 15)
-	time_lbl.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 1.0))
-	card.add_child(time_lbl)
-
-	var bonus := Label.new()
+	var bonus: Label = Label.new()
 	bonus.text = _treasure_bonus_desc(item)
 	bonus.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	bonus.add_theme_font_size_override("font_size", 17)
@@ -158,31 +124,70 @@ func _treasure_bonus_desc(item: Dictionary) -> String:
 
 
 func _format_treasure_effect(effect: Dictionary) -> String:
-	var target: String = effect.get("targetElementType") if effect.get("targetElementType") != null else "all"
-	var target_str: String = "全隊" if target.to_lower() == "all" else "%s系" % target
-	var stat: String = effect.get("statType") if effect.get("statType") != null else ""
+	var target: String = str(effect.get("targetElementType", "all"))
+	var target_str: String = UiText.SCOOPER_EQUIPMENT_BONUS_ALL if target.to_lower() == "all" else target
+	var stat: String = str(effect.get("statType", ""))
 	var value: float = float(effect.get("value", 0.0))
 	match stat:
 		"atk_percent", "AtkPercent":
-			return "%s ATK +%.1f%%" % [target_str, value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "ATK", value * 100.0]
 		"def_percent", "DefPercent":
-			return "%s DEF +%.1f%%" % [target_str, value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "DEF", value * 100.0]
 		"max_hp_percent", "MaxHpPercent":
-			return "%s HP +%.1f%%" % [target_str, value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "HP", value * 100.0]
 		"crit_rate", "CritRate":
-			return "%s 暴擊率 +%.1f%%" % [target_str, value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "CRIT", value * 100.0]
 		"crit_damage", "CritDamage":
-			return "%s 暴擊傷害 +%.1f%%" % [target_str, value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "CRIT DMG", value * 100.0]
 		"damage_reduction", "DamageReduction":
-			return "%s 減傷 +%.1f%%" % [target_str, value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "DMG RED", value * 100.0]
 		"cooldown_reduction", "CooldownReduction":
-			return "%s 技能 CD -%.1f%%" % [target_str, value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "CD RED", value * 100.0]
 		"idle_poop_percent", "IdlePoopPercent":
-			return "掛機屎堆 +%.1f%%" % [value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [UiText.SCOOPER_EQUIPMENT_BONUS_ALL, UiText.REWARD_POOP, value * 100.0]
 		_:
 			return "%s %s %.2f" % [target_str, stat, value]
 
 
 func _get_treasure_placeholder_color(item: Dictionary) -> Color:
-	var raw_color: String = item.get("placeholderColor") if item.get("placeholderColor") != null else "#6B7280"
-	return Color.from_string(raw_color, Color(0.42, 0.45, 0.5, 1.0))
+	var raw_color: String = str(item.get("placeholderColor", "#6B7280"))
+	return Color.from_string(raw_color, Color(0.42, 0.45, 0.50, 1.0))
+
+
+func _show_total_bonus_dialog(scene: Control) -> void:
+	var totals: Dictionary = {}
+	for item: Dictionary in scene.GameState.scooper_treasure_data:
+		var quantity: int = int(item.get("quantity", 0))
+		if quantity <= 0:
+			continue
+		for effect: Dictionary in item.get("effects", []):
+			var key: String = "%s|%s" % [str(effect.get("targetElementType", "all")).to_lower(), str(effect.get("statType", ""))]
+			totals[key] = float(totals.get(key, 0.0)) + float(effect.get("value", 0.0)) * quantity
+
+	var content: VBoxContainer = VBoxContainer.new()
+	content.custom_minimum_size = Vector2(420.0, 0.0)
+	content.add_theme_constant_override("separation", 8)
+
+	if totals.is_empty():
+		var empty_label: Label = Label.new()
+		empty_label.text = UiText.SCOOPER_TREASURE_EMPTY
+		empty_label.add_theme_font_size_override("font_size", 18)
+		content.add_child(empty_label)
+	else:
+		var keys: Array = totals.keys()
+		keys.sort()
+		for key_variant: Variant in keys:
+			var key: String = str(key_variant)
+			var parts: PackedStringArray = key.split("|")
+			var effect: Dictionary = {
+				"targetElementType": parts[0],
+				"statType": parts[1],
+				"value": float(totals[key]),
+			}
+			var line: Label = Label.new()
+			line.text = _format_treasure_effect(effect)
+			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			line.add_theme_font_size_override("font_size", 17)
+			content.add_child(line)
+
+	scene.DialogManager.show_info_node(UiText.SCOOPER_TREASURE_TOTAL_BONUS_TITLE, content, Callable(), "medium")

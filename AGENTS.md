@@ -12,4 +12,5 @@
 - Persistent local runtime data such as login session and player save files must use `user://`, not `res://`.
 - Treat auth/session `roleType`, `role`, and `permissions` as explicit API string contract values. Do not infer frontend authority from numeric enum ordering.
 - Preserve original file encoding when editing client files with Chinese text. Treat repo GDScript/docs as `UTF-8`, and avoid shell rewrite flows that can re-encode text into mojibake such as `é...`, `?��`, or corrupted `%` lines.
+- In GDScript, declare variables with explicit strong types; do not rely on inferred typing from `var name := ...` in project code changes.
 - When new stable project-specific constraints are discovered during work, record them here so future changes stay consistent.

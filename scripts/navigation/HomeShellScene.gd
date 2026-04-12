@@ -1,6 +1,7 @@
 extends Control
 
 const BATTLE_SCENE := preload("res://scenes/BattleScene.tscn")
+const OVERLAY_BOTTOM_RESERVE := 0.0
 
 var _battle_scene: Node
 var _overlay_root: Control
@@ -30,11 +31,17 @@ func show_overlay_scene(scene_path: String) -> void:
 
 	var overlay := packed_scene.instantiate()
 	_overlay_root.mouse_filter = Control.MOUSE_FILTER_STOP
-	_overlay_root.add_child(overlay)
+	var overlay_wrapper := Control.new()
+	overlay_wrapper.name = "OverlayWrapper"
+	overlay_wrapper.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay_wrapper.clip_contents = true
+	overlay_wrapper.mouse_filter = Control.MOUSE_FILTER_STOP
+	_overlay_root.add_child(overlay_wrapper)
+	overlay_wrapper.add_child(overlay)
 	_attach_ui_click_sfx(overlay)
 	if overlay is Control:
 		overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		overlay.set_deferred("size", get_viewport_rect().size)
+		overlay.set_deferred("size", overlay_wrapper.size)
 
 
 func clear_overlay_scene() -> void:
@@ -50,6 +57,8 @@ func _build_shell() -> void:
 	_overlay_root = Control.new()
 	_overlay_root.name = "OverlayRoot"
 	_overlay_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_overlay_root.offset_bottom = -OVERLAY_BOTTOM_RESERVE
+	_overlay_root.clip_contents = true
 	_overlay_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay_root)
 

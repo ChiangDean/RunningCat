@@ -1,19 +1,24 @@
 class_name ScooperScene
 extends Control
 
-## 鏟屎官主頁面，含四個 Tab：鏟屎官、回憶、寶藏、成就
-## 所有資料操作透過 ApiClient 呼叫後端 API，不再使用本地 JSON 設定。
-
 const SW := 720.0
 const SH := 1280.0
+const BOTTOM_DOCK_H := 112.0
+const HOME_MAIN_NAV_H := 110.0
+const CONTENT_TOP_GAP := 150.0
+const PANEL_FILL := Color(0.08, 0.07, 0.08, 0.94)
+const PANEL_BORDER := Color(0.80, 0.67, 0.42, 0.95)
+const CARD_FILL := Color(0.16, 0.15, 0.18, 0.96)
+const CARD_BORDER := Color(0.50, 0.43, 0.30, 0.92)
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
-var _current_tab: String = "scooper"
-var _tab_btns: Dictionary = {}    # tab_key -> Button
+var _current_tab: String = "equipment"
+var _tab_btns: Dictionary = {}
+var _tab_header_title: Label
+var _tab_header_desc: Label
 var _tab_content: VBoxContainer
 var _resource_label: Label
 
-# 鏟屎官 Tab 的動態節點引用（切換 Tab 時會清空）
 var _level_label: Label
 var _exp_bar: ProgressBar
 var _exp_label: Label
@@ -22,42 +27,41 @@ var _scoop_overlay: ColorRect
 var _scoop_cd_label: Label
 var _scoop_result_label: Label
 const SCOOP_COOLDOWN := 0.5
-var _scoop_cooldown_remaining := 0.0
+var _scoop_cooldown_remaining: float = 0.0
+var _equipment_upgrade_cooldown_remaining: float = 0.0
+var _equipment_action_cooldown_remaining: float = 0.0
+var _equipment_action_cooldown_duration: float = 0.5
+var _equipment_cooldown_equipment_id: int = 0
+var _equipment_cooldown_action: String = ""
+var _equipment_cooldown_nodes: Array[Dictionary] = []
 var _ability_list: VBoxContainer
-var _equip_list: VBoxContainer  # 裝備列表容器，行動後重建
+var _equip_list: VBoxContainer
 var _memory_summary_label: Label
 var _memory_list: VBoxContainer
 var _treasure_summary_label: Label
 var _treasure_list: VBoxContainer
 var _achievement_summary_label: Label
 var _achievement_list: VBoxContainer
+var _achievement_feedback_label: Label
 var _ability_scroller: InertialScroller
 var _equip_scroller: InertialScroller
 var _memory_scroller: InertialScroller
 var _treasure_scroller: InertialScroller
 var _achievement_scroller: InertialScroller
 var _achievement_claimed_expanded: bool = false
-
-# API 請求鎖定狀態
 var _api_in_flight: bool = false
 
-const TAB_KEYS: Array = ["scooper", "memory", "treasure", "achievement"]
-const TAB_DISPLAY: Dictionary = {
-	"scooper":     "鏟屎官",
-	"memory":      "回憶",
-	"treasure":    "寶藏",
-	"achievement": "成就",
-}
+const TAB_KEYS: Array = ["equipment", "ability", "memory", "treasure", "achievement"]
 
 @onready var GameState = get_node("/root/GameState")
 @onready var ApiClient = get_node("/root/ApiClient")
 @onready var DialogManager = get_node("/root/DialogManager")
 
-# Tab helpers
-var _scooper_tab     := preload("res://scripts/scooper/scooper_tab_scooper.gd").new()
-var _memory_tab      := preload("res://scripts/scooper/scooper_tab_memory.gd").new()
-var _treasure_tab    := preload("res://scripts/scooper/scooper_tab_treasure.gd").new()
-var _achievement_tab := preload("res://scripts/scooper/scooper_tab_achievement.gd").new()
+var _equipment_tab: RefCounted = preload("res://scripts/scooper/scooper_tab_scooper.gd").new()
+var _ability_tab: RefCounted = preload("res://scripts/scooper/scooper_tab_ability.gd").new()
+var _memory_tab: RefCounted = preload("res://scripts/scooper/scooper_tab_memory.gd").new()
+var _treasure_tab: RefCounted = preload("res://scripts/scooper/scooper_tab_treasure.gd").new()
+var _achievement_tab: RefCounted = preload("res://scripts/scooper/scooper_tab_achievement.gd").new()
 
 
 func _ready() -> void:
@@ -69,83 +73,146 @@ func _build_ui() -> void:
 	var bg := AssetResolver.make_fullscreen_background("scooper")
 	add_child(bg)
 
-	var layer := CanvasLayer.new()
-	add_child(layer)
+	var dim := ColorRect.new()
+	dim.color = Color(0.04, 0.03, 0.05, 0.34)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(dim)
 
-	var root_vbox := VBoxContainer.new()
-	root_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root_vbox.add_theme_constant_override("separation", 14)
-	root_vbox.offset_left   = 20
-	root_vbox.offset_top    = 40
-	root_vbox.offset_right  = -20
-	root_vbox.offset_bottom = -20
-	layer.add_child(root_vbox)
+	var content_panel := PanelContainer.new()
+	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content_panel.offset_left = 20.0
+	content_panel.offset_top = CONTENT_TOP_GAP
+	content_panel.offset_right = -20.0
+	content_panel.offset_bottom = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H + 12.0)
+	content_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 18))
+	add_child(content_panel)
 
-	# ── 頂部列：返回 + 標題 ─────────────────────────────────
-	var top_row := HBoxContainer.new()
-	root_vbox.add_child(top_row)
+	var content_margin := MarginContainer.new()
+	content_margin.add_theme_constant_override("margin_left", 18)
+	content_margin.add_theme_constant_override("margin_top", 18)
+	content_margin.add_theme_constant_override("margin_right", 18)
+	content_margin.add_theme_constant_override("margin_bottom", 18)
+	content_panel.add_child(content_margin)
 
-	var back_btn := Button.new()
-	back_btn.text = "返回"
-	back_btn.custom_minimum_size = Vector2(100.0, 50.0)
-	back_btn.pressed.connect(_on_back_pressed)
-	top_row.add_child(back_btn)
+	var content_vbox := VBoxContainer.new()
+	content_vbox.add_theme_constant_override("separation", 12)
+	content_margin.add_child(content_vbox)
 
-	var title := Label.new()
-	title.text = "鏟屎官"
-	title.add_theme_font_size_override("font_size", 36)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	top_row.add_child(title)
+	_tab_header_title = Label.new()
+	_tab_header_title.add_theme_font_size_override("font_size", 34)
+	content_vbox.add_child(_tab_header_title)
 
-	# 對稱佔位，讓標題保持置中
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(100.0, 50.0)
-	top_row.add_child(spacer)
+	_tab_header_desc = Label.new()
+	_tab_header_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tab_header_desc.add_theme_font_size_override("font_size", 18)
+	_tab_header_desc.add_theme_color_override("font_color", Color(0.90, 0.88, 0.82, 0.92))
+	content_vbox.add_child(_tab_header_desc)
 
-	# ── 資源列 ──────────────────────────────────────────────
 	_resource_label = Label.new()
-	_resource_label.add_theme_font_size_override("font_size", 20)
-	root_vbox.add_child(_resource_label)
+	_resource_label.add_theme_font_size_override("font_size", 18)
+	_resource_label.add_theme_color_override("font_color", Color(0.92, 0.86, 0.72, 1.0))
+	content_vbox.add_child(_resource_label)
 	_refresh_resource_label()
 
-	root_vbox.add_child(_make_separator())
+	content_vbox.add_child(_make_separator())
 
-	# ── Tab 切換列 ─────────────────────────────────────────
-	var tab_row := HBoxContainer.new()
-	tab_row.add_theme_constant_override("separation", 6)
-	root_vbox.add_child(tab_row)
-
-	for tab_key: String in TAB_KEYS:
-		var btn := Button.new()
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.custom_minimum_size = Vector2(0.0, 48.0)
-		btn.add_theme_font_size_override("font_size", 18)
-		btn.pressed.connect(func(): _switch_tab(tab_key))
-		tab_row.add_child(btn)
-		_tab_btns[tab_key] = btn
-
-	root_vbox.add_child(_make_separator())
-
-	# ── Tab 內容區（佔滿剩餘空間） ─────────────────────────
 	_tab_content = VBoxContainer.new()
 	_tab_content.add_theme_constant_override("separation", 12)
 	_tab_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(_tab_content)
+	content_vbox.add_child(_tab_content)
+
+	var back_panel: PanelContainer = PanelContainer.new()
+	back_panel.anchor_left = 0.0
+	back_panel.anchor_top = 1.0
+	back_panel.anchor_right = 0.0
+	back_panel.anchor_bottom = 1.0
+	back_panel.offset_left = 20.0
+	back_panel.offset_top = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H)
+	back_panel.offset_right = 128.0
+	back_panel.offset_bottom = -HOME_MAIN_NAV_H
+	back_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 16))
+	add_child(back_panel)
+
+	var back_margin: MarginContainer = MarginContainer.new()
+	back_margin.add_theme_constant_override("margin_left", 12)
+	back_margin.add_theme_constant_override("margin_top", 12)
+	back_margin.add_theme_constant_override("margin_right", 12)
+	back_margin.add_theme_constant_override("margin_bottom", 12)
+	back_panel.add_child(back_margin)
+
+	var back_btn: Button = Button.new()
+	back_btn.text = UiText.SCOOPER_BACK
+	back_btn.custom_minimum_size = Vector2(84.0, 56.0)
+	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	back_btn.add_theme_font_size_override("font_size", 20)
+	back_btn.pressed.connect(_on_back_pressed)
+	back_margin.add_child(back_btn)
+
+	var dock_panel: PanelContainer = PanelContainer.new()
+	dock_panel.anchor_left = 0.0
+	dock_panel.anchor_top = 1.0
+	dock_panel.anchor_right = 1.0
+	dock_panel.anchor_bottom = 1.0
+	dock_panel.offset_left = 136.0
+	dock_panel.offset_top = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H)
+	dock_panel.offset_right = -20.0
+	dock_panel.offset_bottom = -HOME_MAIN_NAV_H
+	dock_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 16))
+	add_child(dock_panel)
+
+	var dock_margin: MarginContainer = MarginContainer.new()
+	dock_margin.add_theme_constant_override("margin_left", 12)
+	dock_margin.add_theme_constant_override("margin_top", 12)
+	dock_margin.add_theme_constant_override("margin_right", 12)
+	dock_margin.add_theme_constant_override("margin_bottom", 12)
+	dock_panel.add_child(dock_margin)
+
+	var dock_row: HBoxContainer = HBoxContainer.new()
+	dock_row.add_theme_constant_override("separation", 8)
+	dock_margin.add_child(dock_row)
+
+	for tab_key: String in TAB_KEYS:
+		var btn: Button = Button.new()
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.custom_minimum_size = Vector2(0.0, 56.0)
+		btn.add_theme_font_size_override("font_size", 20)
+		btn.pressed.connect(func() -> void:
+			_switch_tab(tab_key)
+		)
+		dock_row.add_child(btn)
+		_tab_btns[tab_key] = btn
 
 	_refresh_tab_button_labels()
-	_switch_tab("scooper")
+	_switch_tab(_current_tab)
 
 
-# ── Tab 切換 ───────────────────────────────────────────────
+func _process(delta: float) -> void:
+	if _equipment_action_cooldown_remaining > 0.0:
+		var previous_action_remaining: float = _equipment_action_cooldown_remaining
+		_equipment_action_cooldown_remaining = maxf(0.0, _equipment_action_cooldown_remaining - delta)
+		if previous_action_remaining > 0.0 and _equipment_action_cooldown_remaining <= 0.0 and _current_tab == "equipment":
+			_equipment_tab.call("_refresh_equipment_tab", self)
+	if _equipment_upgrade_cooldown_remaining > 0.0:
+		var previous_remaining: float = _equipment_upgrade_cooldown_remaining
+		_equipment_upgrade_cooldown_remaining = maxf(0.0, _equipment_upgrade_cooldown_remaining - delta)
+		if previous_remaining > 0.0 and _equipment_upgrade_cooldown_remaining <= 0.0 and _current_tab == "equipment":
+			_equipment_tab.call("_refresh_equipment_tab", self)
+	_equipment_tab.process(self, delta)
+
 
 func _switch_tab(tab_key: String) -> void:
+	if not TAB_KEYS.has(tab_key):
+		return
 	_current_tab = tab_key
 	_refresh_tab_button_labels()
-	# 選中 Tab 正常亮度，其餘偏暗
-	for key: String in _tab_btns:
+	_refresh_tab_header()
+	for key: String in _tab_btns.keys():
 		var btn: Button = _tab_btns[key]
-		btn.modulate = Color(1.0, 1.0, 1.0, 1.0) if key == tab_key else Color(0.6, 0.6, 0.6, 1.0)
+		if btn == null:
+			continue
+		var is_active: bool = key == tab_key
+		btn.modulate = Color(1.0, 0.95, 0.82, 1.0) if is_active else Color(0.65, 0.65, 0.68, 1.0)
+		btn.add_theme_font_size_override("font_size", 22 if is_active else 20)
 	_rebuild_tab_content()
 
 
@@ -153,20 +220,22 @@ func _rebuild_tab_content() -> void:
 	for child in _tab_content.get_children():
 		child.queue_free()
 	_level_label = null
-	_exp_bar     = null
-	_exp_label   = null
+	_exp_bar = null
+	_exp_label = null
 	_scoop_button = null
 	_scoop_overlay = null
 	_scoop_cd_label = null
 	_scoop_result_label = null
+	_equipment_cooldown_nodes.clear()
 	_ability_list = null
-	_equip_list  = null
+	_equip_list = null
 	_memory_summary_label = null
 	_memory_list = null
 	_treasure_summary_label = null
 	_treasure_list = null
 	_achievement_summary_label = null
 	_achievement_list = null
+	_achievement_feedback_label = null
 	_ability_scroller = null
 	_equip_scroller = null
 	_memory_scroller = null
@@ -174,28 +243,70 @@ func _rebuild_tab_content() -> void:
 	_achievement_scroller = null
 
 	match _current_tab:
-		"scooper":     _scooper_tab.build(self)
-		"memory":      _memory_tab.build(self)
-		"treasure":    _treasure_tab.build(self)
-		"achievement": _achievement_tab.build(self)
+		"equipment":
+			_equipment_tab.build(self)
+		"ability":
+			_ability_tab.build(self)
+		"memory":
+			_memory_tab.build(self)
+		"treasure":
+			_treasure_tab.build(self)
+		"achievement":
+			_achievement_tab.build(self)
+
+
+func _refresh_tab_header() -> void:
+	var meta: Dictionary = _get_tab_meta(_current_tab)
+	_tab_header_title.text = str(meta.get("title", UiText.SCOOPER_PAGE_TITLE))
+	_tab_header_desc.text = str(meta.get("description", ""))
 
 
 func _refresh_tab_button_labels() -> void:
-	var unclaimed_count := 0
-	for item: Dictionary in GameState.scooper_achievement_data:
-		if bool(item.get("isCompleted", false)) and not bool(item.get("isClaimed", false)):
-			unclaimed_count += 1
 	for tab_key: String in _tab_btns.keys():
 		var btn: Button = _tab_btns[tab_key]
 		if btn == null:
 			continue
-		btn.text = TAB_DISPLAY[tab_key]
-		if tab_key == "achievement" and unclaimed_count > 0:
-			btn.text += " ●"
+		btn.text = str(_get_tab_meta(tab_key).get("label", tab_key))
 
 
-func _process(delta: float) -> void:
-	_scooper_tab.process(self, delta)
+func _get_tab_meta(tab_key: String) -> Dictionary:
+	match tab_key:
+		"equipment":
+			return {
+				"label": UiText.SCOOPER_TAB_EQUIPMENT,
+				"title": UiText.SCOOPER_TAB_EQUIPMENT,
+				"description": UiText.SCOOPER_DESC_EQUIPMENT,
+			}
+		"ability":
+			return {
+				"label": UiText.SCOOPER_TAB_ABILITY,
+				"title": UiText.SCOOPER_TAB_ABILITY,
+				"description": UiText.SCOOPER_DESC_ABILITY,
+			}
+		"memory":
+			return {
+				"label": UiText.SCOOPER_TAB_MEMORY,
+				"title": UiText.SCOOPER_TAB_MEMORY,
+				"description": UiText.SCOOPER_DESC_MEMORY,
+			}
+		"treasure":
+			return {
+				"label": UiText.SCOOPER_TAB_TREASURE,
+				"title": UiText.SCOOPER_TAB_TREASURE,
+				"description": UiText.SCOOPER_DESC_TREASURE,
+			}
+		"achievement":
+			return {
+				"label": UiText.SCOOPER_TAB_ACHIEVEMENT,
+				"title": UiText.SCOOPER_TAB_ACHIEVEMENT,
+				"description": UiText.SCOOPER_DESC_ACHIEVEMENT,
+			}
+		_:
+			return {
+				"label": UiText.SCOOPER_PAGE_TITLE,
+				"title": UiText.SCOOPER_PAGE_TITLE,
+				"description": "",
+			}
 
 
 func _apply_profile_to_player_data(profile: Dictionary) -> void:
@@ -219,29 +330,90 @@ func refresh_from_bootstrap(on_completed: Callable = Callable()) -> void:
 	)
 
 
-# ── 資源列更新 ─────────────────────────────────────────────
-
 func _refresh_resource_label() -> void:
-	_resource_label.text = "💰 金幣：%d　💩 屎堆：%d" % [
+	_resource_label.text = UiText.SCOOPER_RESOURCE_FORMAT % [
 		GameState.player_data.gold,
 		GameState.player_data.poop_count,
+		GameState.player_data.memory_shards,
 	]
 
-
-# ── 輔助 ───────────────────────────────────────────────────
 
 func _make_separator() -> HSeparator:
 	return HSeparator.new()
 
 
 func _show_loading_in(container: VBoxContainer) -> void:
-	var lbl := Label.new()
-	lbl.text = "載入中..."
+	var lbl: Label = Label.new()
+	lbl.text = UiText.SCOOPER_EQUIPMENT_LOADING
 	lbl.add_theme_font_size_override("font_size", 18)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65, 1.0))
+	lbl.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 1.0))
 	container.add_child(lbl)
 
 
+func _make_card_panel(accent: Color = CARD_BORDER) -> PanelContainer:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _make_panel_style(CARD_FILL, accent, 14))
+	return panel
+
+
+func _make_panel_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = border
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
+	return style
+
+
+func _make_card_margin() -> MarginContainer:
+	var margin: MarginContainer = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 14)
+	return margin
+
+
+func queue_home_reward_floats(entries: Array[Dictionary]) -> void:
+	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
+	if battle_scene != null and battle_scene.has_method("queue_home_reward_floats"):
+		battle_scene.queue_home_reward_floats(entries)
+
+
+func make_reward_float_entry(label: String, amount: int, reward_key: String, color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Dictionary:
+	if color.a <= 0.0:
+		match reward_key:
+			"gold":
+				color = Color(1.0, 0.84, 0.25, 1.0)
+			"diamonds":
+				color = Color(0.35, 0.86, 1.0, 1.0)
+			"poop":
+				color = Color(0.80, 0.58, 0.35, 1.0)
+			"exp":
+				color = Color(0.63, 0.96, 0.54, 1.0)
+			"memory_shards":
+				color = Color(0.87, 0.72, 1.0, 1.0)
+			"whiskers":
+				color = Color(1.0, 0.66, 0.82, 1.0)
+			"cat_food":
+				color = Color(1.0, 0.73, 0.43, 1.0)
+			_:
+				color = Color(0.98, 0.92, 0.76, 1.0)
+	return {
+		"label": label,
+		"amount": amount,
+		"key": reward_key,
+		"color": color,
+	}
+
+
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/BattleScene.tscn")
+	SceneNavigator.return_to_battle()

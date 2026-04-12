@@ -61,6 +61,11 @@ const IDLE_BAR_Y := 1054.0
 const IDLE_BAR_W := 412.0
 const IDLE_BAR_H := 18.0
 const IDLE_PROGRESS_CAP_SECONDS := 8 * 3600.0
+const HOME_SCOOP_PANEL_X := 154.0
+const HOME_SCOOP_PANEL_Y := 1040.0
+const HOME_SCOOP_PANEL_W := 412.0
+const HOME_SCOOP_PANEL_H := 112.0
+const HOME_SCOOP_COOLDOWN := 0.5
 const REWARD_FLOAT_START_Y := 620.0
 const REWARD_FLOAT_RISE := 168.0
 const REWARD_FLOAT_STEP_DELAY := 0.18
@@ -94,18 +99,30 @@ var _chat_btn: Button
 var _chat_badge: Label
 var _resource_value_labels: Dictionary = {}
 var _stage_task_label: Label
-var _idle_progress_fill: ColorRect
 var _battle_countdown_fill: ColorRect
 var _profile_name_label: Label
 var _profile_level_label: Label
 var _reward_fx_layer: Control
+var _reward_fx_canvas: CanvasLayer
 var _reward_fx_queue: Array[Dictionary] = []
 var _reward_fx_active: bool = false
 var _reward_float_demo_index: int = 0
 var _last_result: String = ""
+var _home_scoop_panel: Control
+var _home_exp_bar: ProgressBar
+var _home_exp_label: Label
+var _home_scoop_button: Button
+var _home_scoop_result_label: Label
+var _home_scoop_overlay: ColorRect
+var _home_scoop_cd_label: Label
+var _home_scoop_cooldown_remaining: float = 0.0
+var _nav_buttons: Dictionary = {}
+var _nav_canvas: CanvasLayer
+var _last_overlay_scene_path: String = ""
 
 
 func _ready() -> void:
+	add_to_group("battle_scene")
 	_build_scene()
 	_start_battle()
 	# Update the idle button text every second.
@@ -125,10 +142,20 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if _battle_countdown_fill == null or _timer_label == null:
-		return
-	var remaining := _timer_label.text.to_float()
-	var fill_ratio := clampf(remaining / 60.0, 0.0, 1.0)
-	_battle_countdown_fill.size.x = 306.0 * fill_ratio
+		pass
+	else:
+		var remaining := _timer_label.text.to_float()
+		var fill_ratio := clampf(remaining / 60.0, 0.0, 1.0)
+		_battle_countdown_fill.size.x = 306.0 * fill_ratio
+
+	if _home_scoop_cooldown_remaining > 0.0:
+		_home_scoop_cooldown_remaining = maxf(0.0, _home_scoop_cooldown_remaining - _delta)
+		_refresh_home_scoop_panel()
+
+	var overlay_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
+	if overlay_scene_path != _last_overlay_scene_path:
+		_last_overlay_scene_path = overlay_scene_path
+		_refresh_main_nav_state()
 
 
 # Scene construction
@@ -332,18 +359,58 @@ func _build_ui() -> void:
 	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
 	_ui_layer.add_child(_sandbox_btn)
 
-	var idle_bar_bg := _make_panel(
-		Vector2((SW - IDLE_BAR_W) / 2.0, IDLE_BAR_Y),
-		Vector2(IDLE_BAR_W, IDLE_BAR_H),
+	_home_scoop_panel = _make_panel(
+		Vector2(HOME_SCOOP_PANEL_X, HOME_SCOOP_PANEL_Y),
+		Vector2(HOME_SCOOP_PANEL_W, HOME_SCOOP_PANEL_H),
 		Color(0.16, 0.11, 0.08, 0.9),
 		Color(0.43, 0.30, 0.18, 1.0)
 	)
-	_ui_layer.add_child(idle_bar_bg)
-	_idle_progress_fill = ColorRect.new()
-	_idle_progress_fill.position = Vector2(3.0, 3.0)
-	_idle_progress_fill.size = Vector2(0.0, IDLE_BAR_H - 6.0)
-	_idle_progress_fill.color = Color(0.95, 0.71, 0.23, 0.92)
-	idle_bar_bg.add_child(_idle_progress_fill)
+	_ui_layer.add_child(_home_scoop_panel)
+
+	var scoop_title := _make_label(UiText.HOME_SCOOPER_EXP_TITLE, Vector2(14.0, 10.0), Vector2(160.0, 22.0), 18)
+	scoop_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_home_scoop_panel.add_child(scoop_title)
+
+	_home_exp_label = _make_label("EXP 0 / 0", Vector2(244.0, 10.0), Vector2(150.0, 22.0), 16)
+	_home_exp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_home_scoop_panel.add_child(_home_exp_label)
+
+	_home_exp_bar = ProgressBar.new()
+	_home_exp_bar.position = Vector2(14.0, 36.0)
+	_home_exp_bar.size = Vector2(HOME_SCOOP_PANEL_W - 28.0, 18.0)
+	_home_exp_bar.min_value = 0
+	_home_exp_bar.show_percentage = false
+	_home_scoop_panel.add_child(_home_exp_bar)
+
+	_home_scoop_result_label = _make_label("", Vector2(14.0, 60.0), Vector2(240.0, 40.0), 15)
+	_home_scoop_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_home_scoop_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_home_scoop_result_label.add_theme_color_override("font_color", Color(0.84, 0.98, 0.80, 1.0))
+	_home_scoop_panel.add_child(_home_scoop_result_label)
+
+	_home_scoop_button = Button.new()
+	_home_scoop_button.text = UiText.HOME_SCOOPER_BUTTON
+	_home_scoop_button.position = Vector2(262.0, 62.0)
+	_home_scoop_button.size = Vector2(136.0, 36.0)
+	_home_scoop_button.add_theme_font_size_override("font_size", 18)
+	_home_scoop_button.modulate = Color(0.97, 0.93, 0.88, 1.0)
+	_home_scoop_button.pressed.connect(UiAudio.play_ui_click)
+	_home_scoop_button.pressed.connect(_on_home_scoop_pressed)
+	_home_scoop_panel.add_child(_home_scoop_button)
+
+	_home_scoop_overlay = ColorRect.new()
+	_home_scoop_overlay.color = Color(0.0, 0.0, 0.0, 0.42)
+	_home_scoop_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_home_scoop_overlay.visible = false
+	_home_scoop_button.add_child(_home_scoop_overlay)
+
+	_home_scoop_cd_label = Label.new()
+	_home_scoop_cd_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_home_scoop_cd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_home_scoop_cd_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_home_scoop_cd_label.add_theme_font_size_override("font_size", 18)
+	_home_scoop_cd_label.visible = false
+	_home_scoop_button.add_child(_home_scoop_cd_label)
 
 	_skip_btn = _make_button("Skip", Vector2(608.0, 1000.0), Vector2(90.0, 40.0))
 	_ui_layer.add_child(_skip_btn)
@@ -359,37 +426,48 @@ func _build_ui() -> void:
 	_result_display.visible = false
 	_ui_layer.add_child(_result_display)
 
-	var nav_bg := _make_panel(
+	_nav_canvas = CanvasLayer.new()
+	_nav_canvas.layer = 20
+	add_child(_nav_canvas)
+
+	var nav_bg: Control = _make_panel(
 		Vector2(0.0, NAV_Y),
 		Vector2(SW, NAV_H),
 		Color(0.11, 0.08, 0.06, 0.94),
 		Color(0.52, 0.40, 0.24, 1.0)
 	)
-	_ui_layer.add_child(nav_bg)
+	_nav_canvas.add_child(nav_bg)
 
 	var nav_items: Array = [
-		[UiText.NAV_SCOOPER, _on_nav_scooper],
-		[UiText.NAV_CONFIG, _on_nav_config],
-		[UiText.NAV_ENHANCE, _on_nav_enhance],
-		[UiText.NAV_ACTIVITY, _on_nav_activity],
-		[UiText.NAV_SHOP, _on_nav_shop],
+		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper],
+		[UiText.NAV_CONFIG, "res://scenes/ConfigScene.tscn", _on_nav_config],
+		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance],
+		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity],
+		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop],
 	]
 	var btn_w := SW / nav_items.size()
 	for i in range(nav_items.size()):
-		var nav_btn := _make_button(
+		var nav_btn: Button = _make_button(
 			nav_items[i][0],
 			Vector2(i * btn_w + 8.0, NAV_Y + 12.0),
 			Vector2(btn_w - 16.0, NAV_H - 24.0)
 		)
-		nav_btn.pressed.connect(nav_items[i][1])
+		nav_btn.pressed.connect(nav_items[i][2])
 		nav_btn.add_theme_font_size_override("font_size", 28)
-		_ui_layer.add_child(nav_btn)
+		_nav_canvas.add_child(nav_btn)
+		_nav_buttons[String(nav_items[i][1])] = nav_btn
+
+	_refresh_main_nav_state()
+
+	_reward_fx_canvas = CanvasLayer.new()
+	_reward_fx_canvas.layer = 99
+	add_child(_reward_fx_canvas)
 
 	_reward_fx_layer = Control.new()
 	_reward_fx_layer.name = "RewardFxLayer"
 	_reward_fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_reward_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_layer.add_child(_reward_fx_layer)
+	_reward_fx_canvas.add_child(_reward_fx_layer)
 
 
 ## Build the centered five-slot skill bar.
@@ -630,6 +708,10 @@ func _queue_reward_floats(entries: Array[Dictionary]) -> void:
 	_play_next_reward_float()
 
 
+func queue_home_reward_floats(entries: Array[Dictionary]) -> void:
+	_queue_reward_floats(entries)
+
+
 func _play_next_reward_float() -> void:
 	if _reward_fx_queue.is_empty():
 		_reward_fx_active = false
@@ -694,7 +776,6 @@ func _play_reward_float_sfx(reward_key: String) -> void:
 		return
 	var player := AudioStreamPlayer.new()
 	player.stream = stream
-	player.volume_db = -20.0
 	add_child(player)
 	player.finished.connect(player.queue_free)
 	player.play()
@@ -737,6 +818,7 @@ func _refresh_ui() -> void:
 	_boss_btn.visible = GameState.boss_available and not GameState.is_current_boss()
 	_refresh_resource_strip()
 	_refresh_sandbox_btn()
+	_refresh_home_scoop_panel()
 	_refresh_mail_badge()
 
 
@@ -754,9 +836,61 @@ func _refresh_sandbox_btn() -> void:
 		var m := (elapsed % 3600) / 60
 		var s := elapsed % 60
 		_sandbox_btn.text = "%s %02d:%02d:%02d" % [UiText.HOME_IDLE_READY, h, m, s]
-	if _idle_progress_fill != null:
-		var fill_ratio := clampf(float(elapsed) / IDLE_PROGRESS_CAP_SECONDS, 0.0, 1.0)
-		_idle_progress_fill.size.x = (IDLE_BAR_W - 6.0) * fill_ratio
+
+
+func _refresh_home_scoop_panel() -> void:
+	if _home_exp_bar == null or _home_exp_label == null or _home_scoop_button == null:
+		return
+
+	var profile: Dictionary = GameState.scooper_profile_data
+	var level: int
+	var exp: int
+	var threshold: int
+	if not profile.is_empty():
+		level = int(profile.get("scooperLevel", GameState.player_data.scooper_level))
+		exp = int(profile.get("scooperExp", GameState.player_data.scooper_exp))
+		threshold = int(profile.get("expThreshold", max((level + 1) * 10, 1)))
+	else:
+		level = GameState.player_data.scooper_level
+		exp = GameState.player_data.scooper_exp
+		threshold = max((level + 1) * int(GameState.idle_config.get("scooper_exp_per_level", 10)), 1)
+
+	_home_exp_bar.max_value = threshold
+	_home_exp_bar.value = exp
+	_home_exp_label.text = "Lv.%d  EXP %d / %d" % [level, exp, threshold]
+
+	var poop_count := GameState.player_data.poop_count
+	var cooling_down := _home_scoop_cooldown_remaining > 0.0
+	_home_scoop_button.disabled = cooling_down or poop_count <= 0
+	_home_scoop_button.text = "%s (%d)" % [UiText.HOME_SCOOPER_BUTTON, poop_count]
+	if poop_count <= 0 and _home_scoop_result_label != null and _home_scoop_result_label.text.is_empty():
+		_home_scoop_result_label.text = UiText.HOME_SCOOPER_EMPTY
+
+	if _home_scoop_overlay != null and _home_scoop_cd_label != null:
+		if cooling_down:
+			var button_size := _home_scoop_button.size
+			var ratio := clampf(_home_scoop_cooldown_remaining / HOME_SCOOP_COOLDOWN, 0.0, 1.0)
+			_home_scoop_overlay.visible = true
+			_home_scoop_overlay.position = Vector2(button_size.x * (1.0 - ratio), 0.0)
+			_home_scoop_overlay.size = Vector2(button_size.x * ratio, button_size.y)
+			_home_scoop_cd_label.visible = false
+			_home_scoop_cd_label.position = Vector2.ZERO
+			_home_scoop_cd_label.size = button_size
+			_home_scoop_cd_label.text = "%.1f" % _home_scoop_cooldown_remaining
+		else:
+			_home_scoop_overlay.visible = false
+			_home_scoop_cd_label.visible = false
+
+
+func _refresh_main_nav_state() -> void:
+	var active_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
+	for scene_path: String in _nav_buttons.keys():
+		var btn: Button = _nav_buttons[scene_path]
+		if btn == null:
+			continue
+		var is_active: bool = scene_path == active_scene_path
+		btn.modulate = Color(1.0, 0.93, 0.76, 1.0) if is_active else Color(0.97, 0.93, 0.88, 1.0)
+		btn.add_theme_font_size_override("font_size", 30 if is_active else 28)
 
 
 func _refresh_mail_badge() -> void:
@@ -841,12 +975,12 @@ func _on_battle_finished(result: String) -> void:
 	var is_boss := GameState.is_current_boss()
 
 	if result == "WIN":
-		_show_result_text("?", Color(0.3, 1.0, 0.4, 1.0), 310.0)
+		_show_result_text(UiText.BATTLE_RESULT_WIN, Color(0.3, 1.0, 0.4, 1.0), 310.0)
 		GameState.advance_after_win()
 		await get_tree().create_timer(1.0).timeout
 		_start_battle()
 	else:
-		_show_result_text("??", Color(1.0, 0.3, 0.3, 1.0), 310.0)
+		_show_result_text(UiText.BATTLE_RESULT_LOSE, Color(1.0, 0.3, 0.3, 1.0), 310.0)
 		if is_boss:
 			GameState.on_boss_fail()
 		await get_tree().create_timer(1.0).timeout
@@ -873,7 +1007,73 @@ func _apply_equipment_bonuses(data: CatData) -> void:
 
 
 func _on_nav_scooper() -> void:
-	SceneNavigator.open_overlay_scene("res://scenes/ScooperScene.tscn")
+	_toggle_overlay_scene("res://scenes/ScooperScene.tscn")
+
+
+func _toggle_overlay_scene(scene_path: String) -> void:
+	SceneNavigator.toggle_overlay_scene(scene_path)
+
+
+func _on_home_scoop_pressed() -> void:
+	if _home_scoop_cooldown_remaining > 0.0 or GameState.player_data.poop_count <= 0:
+		return
+
+	_home_scoop_button.disabled = true
+	_home_scoop_result_label.text = ""
+	ApiClient.scoop_poop(1, func(ok: bool, data: Variant, err: Dictionary) -> void:
+		if not ok:
+			_home_scoop_result_label.text = str(err.get("message", UiText.HOME_SCOOPER_ERROR))
+			_refresh_home_scoop_panel()
+			return
+
+		var result: Dictionary = data if data is Dictionary else {}
+		var updated_profile: Variant = result.get("updatedProfile", {})
+		if updated_profile is Dictionary:
+			GameState.update_scooper_profile(updated_profile)
+
+		var reward_entries := _build_scoop_reward_entries(result)
+		_home_scoop_result_label.text = _format_scoop_result_text(result)
+		_home_scoop_cooldown_remaining = HOME_SCOOP_COOLDOWN
+		if not reward_entries.is_empty():
+			_queue_reward_floats(reward_entries)
+		_refresh_ui()
+	)
+
+
+func _build_scoop_reward_entries(result: Dictionary) -> Array[Dictionary]:
+	var reward_entries: Array[Dictionary] = []
+	var exp_gained := int(result.get("expGained", 0))
+	if exp_gained > 0:
+		reward_entries.append(_make_reward_float_entry(UiText.REWARD_EXP, exp_gained, "exp"))
+
+	var memory_shards_gained := int(result.get("memoryShardsGained", 0))
+	if memory_shards_gained > 0:
+		reward_entries.append(_make_reward_float_entry(UiText.REWARD_MEMORY_SHARDS, memory_shards_gained, "memory_shards"))
+
+	var whiskers_gained := int(result.get("WhiskersGained", result.get("whiskersGained", 0)))
+	if whiskers_gained > 0:
+		reward_entries.append(_make_reward_float_entry(UiText.REWARD_WHISKERS, whiskers_gained, "whiskers"))
+
+	return reward_entries
+
+
+func _format_scoop_result_text(result: Dictionary) -> String:
+	var parts: Array[String] = []
+	var exp_gained := int(result.get("expGained", 0))
+	if exp_gained > 0:
+		parts.append("%s +%d" % [UiText.REWARD_EXP, exp_gained])
+
+	var memory_shards_gained := int(result.get("memoryShardsGained", 0))
+	if memory_shards_gained > 0:
+		parts.append("%s +%d" % [UiText.REWARD_MEMORY_SHARDS, memory_shards_gained])
+
+	var whiskers_gained := int(result.get("WhiskersGained", result.get("whiskersGained", 0)))
+	if whiskers_gained > 0:
+		parts.append("%s +%d" % [UiText.REWARD_WHISKERS, whiskers_gained])
+
+	if parts.is_empty():
+		return UiText.HOME_SANDBOX_NONE_EXTRA
+	return UiText.HOME_SCOOPER_RESULT_PREFIX + " / ".join(parts)
 
 
 ## Show the idle rewards and cleanup dialog.
@@ -975,7 +1175,7 @@ func _show_sandbox_dialog() -> void:
 		)
 	)
 	scoop_section.add_child(scoop_btn)
-	if not has_rewards and GameState.player_data.poop_count > 0:
+	if false:
 		vbox.add_child(scoop_section)
 
 	# Claim rewards action
@@ -1011,23 +1211,23 @@ func _show_sandbox_dialog() -> void:
 		)
 		vbox.add_child(claim_btn)
 
-	close_ref[0] = DialogManager.show_info_node(UiText.HOME_SANDBOX_TITLE, vbox)
+	close_ref[0] = DialogManager.show_info_node(UiText.HOME_IDLE_DIALOG_TITLE, vbox)
 
 
 func _on_nav_config() -> void:
-	SceneNavigator.open_overlay_scene("res://scenes/ConfigScene.tscn")
+	_toggle_overlay_scene("res://scenes/ConfigScene.tscn")
 
 
 func _on_nav_enhance() -> void:
-	SceneNavigator.open_overlay_scene("res://scenes/EnhanceScene.tscn")
+	_toggle_overlay_scene("res://scenes/EnhanceScene.tscn")
 
 
 func _on_nav_activity() -> void:
-	SceneNavigator.open_overlay_scene("res://scenes/ActivityScene.tscn")
+	_toggle_overlay_scene("res://scenes/ActivityScene.tscn")
 
 
 func _on_nav_shop() -> void:
-	SceneNavigator.open_overlay_scene("res://scenes/ShopScene.tscn")
+	_toggle_overlay_scene("res://scenes/ShopScene.tscn")
 
 
 func _on_nav_mail() -> void:
