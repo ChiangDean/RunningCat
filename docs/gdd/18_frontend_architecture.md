@@ -423,12 +423,25 @@ Use this section to find the correct edit surface quickly.
 - `scripts/cats/`
 - `scripts/systems/special_ability_system.gd`
 
+Current behavior notes:
+
+- `BattleScene` is the persistent home battle surface mounted under `HomeShellScene`.
+- `BattleScene.restart_with_latest_team()` is the public hook used when a Boss team save should immediately restart the home battle with the newest confirmed team and delay settings.
+- `BattleManager` must treat cached `CatNode` references defensively because the home battle can now restart while old nodes are being freed.
+
 ### 9.3 Team Config
 
 - `scripts/configs/ConfigScene.gd`
 - `scripts/configs/ConfigConstants.gd`
 - `scripts/gamestate/GameState.gd`
 - related doc: `docs/gdd/15_config_data_architecture.md`
+
+Current behavior notes:
+
+- `ConfigScene` keeps a per-tab draft for `boss`, `dungeon`, `arena_attack`, and `arena_defense`.
+- Team members are slot-based. Removing a member leaves an empty slot instead of compacting later members forward.
+- All four team types now allow editing `initialDelaySeconds`.
+- Saving the Boss tab updates `GameState` and immediately restarts the mounted home `BattleScene`.
 
 ### 9.4 Enhance
 
@@ -453,6 +466,13 @@ Use this section to find the correct edit surface quickly.
 - `scripts/battle/arena_battle_scene.gd`
 - `scripts/gamestate/GameState.gd`
 - related doc: `docs/gdd/17_arena_data_architecture.md`
+
+Current behavior notes:
+
+- Arena overview still comes from `/api/arena`, not from bootstrap.
+- Arena attack battle startup resolves an effective team type in this order: `ArenaAttack`, then `Boss` fallback.
+- Before opening `ArenaBattleScene`, `ArenaScene` applies the chosen confirmed team through `GameState.apply_active_team_from_config(...)` so arena attacks use the saved delay settings.
+- `ArenaDefense` delay is stored through the Config/API contract even though the client does not currently have a local defense battle entrypoint.
 
 ### 9.7 Scooper
 
