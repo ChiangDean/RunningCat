@@ -1,9 +1,24 @@
 class_name BattleScene
 extends Node2D
 
-## 主遊戲畫面：戰鬥 + 底部導覽列
+## Main home scene: battle view plus bottom navigation.
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/home_top_bar_frame.png")
+const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png.png")
+const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
+const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
+const PROFILE_AVATAR_TEXTURE := preload("res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png")
+const REWARD_DEFAULT_SFX := preload("res://assets/audio/sfx/rewards/ui_reward_float_default.mp3")
+const REWARD_SFX_BY_KEY := {
+	"gold": preload("res://assets/audio/sfx/rewards/reward_gold.mp3"),
+	"diamonds": preload("res://assets/audio/sfx/rewards/reward_diamonds.mp3"),
+	"poop": preload("res://assets/audio/sfx/rewards/reward_poop.mp3"),
+	"cat_food": preload("res://assets/audio/sfx/rewards/reward_cat_food.mp3"),
+	"whiskers": preload("res://assets/audio/sfx/rewards/reward_whiskers.mp3"),
+	"exp": preload("res://assets/audio/sfx/rewards/reward_exp.mp3"),
+	"memory_shards": preload("res://assets/audio/sfx/rewards/reward_memory_shards.mp3"),
+}
 
 const MAX_CATS_ON_FIELD: int = 5
 const CHAT_SCENE := preload("res://scenes/chat/ChatScene.tscn")
@@ -14,21 +29,53 @@ const BATTLE_Y := 750.0
 const NAV_H := 110.0
 const NAV_Y := SH - NAV_H
 
-# 技能列高度（BATTLE_Y 正下方）
+# Skill bar baseline positioned just below BATTLE_Y.
 const SKILL_BAR_Y := BATTLE_Y + 10.0
 const SKILL_BAR_H := 100.0
 const SKILL_SLOT_W := 100.0
 const SKILL_SLOT_H := 90.0
 
-# 關卡 / Boss 按鈕放在勝敗文字同高
+# Stage and boss actions stay aligned with the result banner.
 const STAGE_BTN_Y := 310.0
+const TOP_BAR_FRAME_X := 6.0
+const TOP_BAR_FRAME_Y := 42.0
+const TOP_BAR_FRAME_W := 708.0
+const TOP_BAR_FRAME_H := 188.0
+const TOP_BAR_ATLAS_REGION := Rect2(58.0, 270.0, 1420.0, 391.0)
+const RESOURCE_CHIP_W := 92.0
+const RESOURCE_CHIP_H := 30.0
+const TOP_BAR_AVATAR_POS := Vector2(24.0, 18.0)
+const TOP_BAR_AVATAR_SIZE := Vector2(86.0, 86.0)
+const TOP_BAR_NAME_POS := Vector2(176.0, 34.0)
+const TOP_BAR_NAME_SIZE := Vector2(132.0, 22.0)
+const TOP_BAR_LEVEL_POS := Vector2(318.0, 14.0)
+const TOP_BAR_LEVEL_SIZE := Vector2(90.0, 22.0)
+const TOP_BAR_RESOURCE_Y := 99.0
+const ACTION_STACK_X := 560.0
+const ACTION_STACK_Y := 258.0
+const ACTION_STACK_W := 110.0
+const ACTION_STACK_H := 52.0
+const SKILL_PANEL_Y := 844.0
+const SKILL_PANEL_H := 184.0
+const IDLE_BAR_Y := 1054.0
+const IDLE_BAR_W := 412.0
+const IDLE_BAR_H := 18.0
+const IDLE_PROGRESS_CAP_SECONDS := 8 * 3600.0
+const REWARD_FLOAT_START_Y := 620.0
+const REWARD_FLOAT_RISE := 168.0
+const REWARD_FLOAT_STEP_DELAY := 0.18
+const REWARD_FLOAT_DURATION := 0.76
+const REWARD_FLOAT_LABEL_SIZE := Vector2(360.0, 56.0)
+const REWARD_FLOAT_DEFAULT_COLOR := Color(0.98, 0.92, 0.76, 1.0)
+const REWARD_FLOAT_DEMO_ENABLED := false
+const REWARD_FLOAT_DEMO_INTERVAL := 0.3
 
-# ── 戰鬥節點 ─────────────────────────────────
+# Battle nodes
 var _player_team: Node2D
 var _enemy_team: Node2D
 var _battle_manager: BattleManager
 
-# ── UI 節點 ───────────────────────────────────
+# UI nodes
 var _ui_layer: Control
 var _timer_label: Label
 var _speed_1x: Button
@@ -38,28 +85,53 @@ var _skip_btn: Button
 var _level_label: Label
 var _boss_btn: Button
 var _result_display: Label
-var _skill_bar: Control      # 技能列容器
-var _sandbox_btn: Button     # ???????
+var _skill_bar: Control      # Skill bar container
+var _sandbox_btn: Button     # Idle rewards action button
 var _mail_btn: Button
 var _mail_badge: Label
 
 var _chat_btn: Button
 var _chat_badge: Label
+var _resource_value_labels: Dictionary = {}
+var _stage_task_label: Label
+var _idle_progress_fill: ColorRect
+var _battle_countdown_fill: ColorRect
+var _profile_name_label: Label
+var _profile_level_label: Label
+var _reward_fx_layer: Control
+var _reward_fx_queue: Array[Dictionary] = []
+var _reward_fx_active: bool = false
+var _reward_float_demo_index: int = 0
 var _last_result: String = ""
 
 
 func _ready() -> void:
 	_build_scene()
 	_start_battle()
-	# 每秒更新貓砂盆按鈕顯示
+	# Update the idle button text every second.
 	var sandbox_timer := Timer.new()
 	sandbox_timer.wait_time = 1.0
 	sandbox_timer.autostart = true
 	sandbox_timer.timeout.connect(_refresh_sandbox_btn)
 	add_child(sandbox_timer)
 
+	if REWARD_FLOAT_DEMO_ENABLED:
+		var reward_demo_timer := Timer.new()
+		reward_demo_timer.wait_time = REWARD_FLOAT_DEMO_INTERVAL
+		reward_demo_timer.autostart = true
+		reward_demo_timer.timeout.connect(_play_reward_float_demo_tick)
+		add_child(reward_demo_timer)
 
-# ── 建立場景 ──────────────────────────────────
+
+func _process(_delta: float) -> void:
+	if _battle_countdown_fill == null or _timer_label == null:
+		return
+	var remaining := _timer_label.text.to_float()
+	var fill_ratio := clampf(remaining / 60.0, 0.0, 1.0)
+	_battle_countdown_fill.size.x = 306.0 * fill_ratio
+
+
+# Scene construction
 
 func _build_scene() -> void:
 	_build_background()
@@ -120,10 +192,133 @@ func _build_ui() -> void:
 	_ui_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_ui_layer)
 
-	# 速度按鈕
-	_speed_1x = _make_button("1x", Vector2(20.0, 20.0), Vector2(70.0, 44.0))
-	_speed_2x = _make_button("2x", Vector2(95.0, 20.0), Vector2(70.0, 44.0))
-	_speed_3x = _make_button("3x", Vector2(170.0, 20.0), Vector2(70.0, 44.0))
+	var top_bar_root := Control.new()
+	top_bar_root.position = Vector2(TOP_BAR_FRAME_X, TOP_BAR_FRAME_Y)
+	top_bar_root.size = Vector2(TOP_BAR_FRAME_W, TOP_BAR_FRAME_H)
+	_ui_layer.add_child(top_bar_root)
+
+	var top_bar_texture := AtlasTexture.new()
+	top_bar_texture.atlas = HOME_TOP_BAR_TEXTURE
+	top_bar_texture.region = TOP_BAR_ATLAS_REGION
+
+	var top_bar_frame := TextureRect.new()
+	top_bar_frame.position = Vector2.ZERO
+	top_bar_frame.size = top_bar_root.size
+	top_bar_frame.texture = top_bar_texture
+	top_bar_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	top_bar_frame.stretch_mode = TextureRect.STRETCH_SCALE
+	top_bar_frame.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	top_bar_root.add_child(top_bar_frame)
+
+	var avatar_rect := TextureRect.new()
+	avatar_rect.position = TOP_BAR_AVATAR_POS
+	avatar_rect.size = TOP_BAR_AVATAR_SIZE
+	avatar_rect.texture = PROFILE_AVATAR_TEXTURE
+	avatar_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	avatar_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	avatar_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	top_bar_root.add_child(avatar_rect)
+
+	_profile_name_label = _make_label("Scooper", TOP_BAR_NAME_POS, TOP_BAR_NAME_SIZE, 13)
+	_profile_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	top_bar_root.add_child(_profile_name_label)
+
+	_profile_level_label = _make_label("Lv.1", TOP_BAR_LEVEL_POS, TOP_BAR_LEVEL_SIZE, 16)
+	_profile_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	top_bar_root.add_child(_profile_level_label)
+
+	var resource_defs: Array[Dictionary] = [
+		{"key": "gold", "texture": RESOURCE_GOLD_TEXTURE, "x": 418.0},
+		{"key": "diamonds", "texture": RESOURCE_DIAMOND_TEXTURE, "x": 515.0},
+		{"key": "poop", "texture": RESOURCE_POOP_TEXTURE, "x": 611.0},
+	]
+	for entry in resource_defs:
+		var icon_rect := TextureRect.new()
+		icon_rect.position = Vector2(entry["x"], TOP_BAR_RESOURCE_Y)
+		icon_rect.size = Vector2(22.0, 22.0)
+		icon_rect.texture = entry["texture"]
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		top_bar_root.add_child(icon_rect)
+
+		var value_label := _make_label("--", Vector2(entry["x"] + 16.0, TOP_BAR_RESOURCE_Y - 3.0), Vector2(RESOURCE_CHIP_W, RESOURCE_CHIP_H), 13)
+		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		top_bar_root.add_child(value_label)
+		_resource_value_labels[str(entry["key"])] = value_label
+
+	var stage_panel := _make_panel(
+		Vector2(180.0, 246.0),
+		Vector2(360.0, 116.0),
+		Color(0.12, 0.08, 0.06, 0.72),
+		Color(0.66, 0.53, 0.31, 0.92)
+	)
+	_ui_layer.add_child(stage_panel)
+
+	_level_label = _make_label("", Vector2(22.0, 16.0), Vector2(316.0, 34.0), 28)
+	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stage_panel.add_child(_level_label)
+
+	_timer_label = _make_label("60.0", Vector2(22.0, 50.0), Vector2(316.0, 24.0), 20)
+	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stage_panel.add_child(_timer_label)
+
+	var countdown_bar_bg := ColorRect.new()
+	countdown_bar_bg.position = Vector2(26.0, 82.0)
+	countdown_bar_bg.size = Vector2(308.0, 12.0)
+	countdown_bar_bg.color = Color(0.20, 0.14, 0.10, 0.92)
+	stage_panel.add_child(countdown_bar_bg)
+
+	_battle_countdown_fill = ColorRect.new()
+	_battle_countdown_fill.position = Vector2(1.0, 1.0)
+	_battle_countdown_fill.size = Vector2(306.0, 10.0)
+	_battle_countdown_fill.color = Color(0.97, 0.78, 0.28, 0.96)
+	countdown_bar_bg.add_child(_battle_countdown_fill)
+
+	_mail_btn = _make_button(UiText.HOME_MAIL, Vector2(ACTION_STACK_X, ACTION_STACK_Y), Vector2(ACTION_STACK_W, ACTION_STACK_H))
+	_ui_layer.add_child(_mail_btn)
+	_mail_btn.pressed.connect(_on_nav_mail)
+
+	_mail_badge = Label.new()
+	_mail_badge.position = _mail_btn.position + Vector2(ACTION_STACK_W - 24.0, -6.0)
+	_mail_badge.size = Vector2(28.0, 28.0)
+	_mail_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mail_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_mail_badge.add_theme_font_size_override("font_size", 14)
+	_mail_badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	_ui_layer.add_child(_mail_badge)
+
+	_chat_btn = _make_button(UiText.HOME_CHAT, Vector2(ACTION_STACK_X, ACTION_STACK_Y + ACTION_STACK_H + 10.0), Vector2(ACTION_STACK_W, ACTION_STACK_H))
+	_chat_btn.pressed.connect(_open_chat)
+	_ui_layer.add_child(_chat_btn)
+
+	_chat_badge = _make_label("", _chat_btn.position + Vector2(ACTION_STACK_W - 26.0, -4.0), Vector2(24.0, 20.0), 12)
+	_chat_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ui_layer.add_child(_chat_badge)
+	GameState.chat_unread_changed.connect(func(_channel_key: String, _count: int) -> void:
+		_refresh_chat_badge()
+	)
+	_refresh_chat_badge()
+
+	_boss_btn = _make_button(UiText.HOME_BOSS, Vector2(210.0, 264.0), Vector2(300.0, 56.0))
+	_boss_btn.visible = false
+	_ui_layer.add_child(_boss_btn)
+	_boss_btn.pressed.connect(_on_challenge_boss_pressed)
+
+	var skill_panel := _make_panel(
+		Vector2(42.0, SKILL_PANEL_Y),
+		Vector2(SW - 84.0, SKILL_PANEL_H),
+		Color(0.13, 0.09, 0.07, 0.80),
+		Color(0.67, 0.52, 0.29, 0.94)
+	)
+	_ui_layer.add_child(skill_panel)
+
+	_skill_bar = _build_skill_bar()
+	_ui_layer.add_child(_skill_bar)
+
+	_speed_1x = _make_button("1x", Vector2(492.0, SKILL_PANEL_Y + 10.0), Vector2(56.0, 34.0))
+	_speed_2x = _make_button("2x", Vector2(552.0, SKILL_PANEL_Y + 10.0), Vector2(56.0, 34.0))
+	_speed_3x = _make_button("3x", Vector2(612.0, SKILL_PANEL_Y + 10.0), Vector2(56.0, 34.0))
 	_ui_layer.add_child(_speed_1x)
 	_ui_layer.add_child(_speed_2x)
 	_ui_layer.add_child(_speed_3x)
@@ -133,97 +328,77 @@ func _build_ui() -> void:
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 
-	# 計時器
-	_timer_label = _make_label("60.0", Vector2(260.0, 20.0), Vector2(200.0, 50.0), 28)
-	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_ui_layer.add_child(_timer_label)
-
-	# 跳過按鈕
-	_skip_btn = _make_button("跳過", Vector2(SW - 100.0, 20.0), Vector2(80.0, 44.0))
-	_ui_layer.add_child(_skip_btn)
-	_skip_btn.pressed.connect(_on_skip_pressed)
-	_skip_btn.visible = GameState.can_skip_battle()
-	_chat_btn = _make_button("Chat", Vector2(SW - 300.0, 20.0), Vector2(90.0, 44.0))
-	_chat_btn.pressed.connect(_open_chat)
-	_ui_layer.add_child(_chat_btn)
-	_chat_badge = _make_label("", Vector2(SW - 222.0, 18.0), Vector2(22.0, 20.0), 12)
-	_chat_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_ui_layer.add_child(_chat_badge)
-	GameState.chat_unread_changed.connect(func(_channel_key: String, _count: int) -> void:
-		_refresh_chat_badge()
-	)
-	_refresh_chat_badge()
-
-	_mail_btn = _make_button("郵件", Vector2(SW - 200.0, 20.0), Vector2(88.0, 44.0))
-	_ui_layer.add_child(_mail_btn)
-	_mail_btn.pressed.connect(_on_nav_mail)
-
-	_mail_badge = Label.new()
-	_mail_badge.position = Vector2(SW - 128.0, 12.0)
-	_mail_badge.size = Vector2(28.0, 28.0)
-	_mail_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_mail_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_mail_badge.add_theme_font_size_override("font_size", 14)
-	_mail_badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
-	_ui_layer.add_child(_mail_badge)
-
-	# 關卡標籤（與勝敗文字同高）
-	_level_label = _make_label("", Vector2(0.0, STAGE_BTN_Y - 40.0), Vector2(SW, 36.0), 20)
-	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_ui_layer.add_child(_level_label)
-
-	# 挑戰Boss 按鈕（與勝敗文字同高）
-	_boss_btn = _make_button("⚔ 挑戰 Boss",
-			Vector2(SW / 2.0 - 150.0, STAGE_BTN_Y + 10.0), Vector2(300.0, 56.0))
-	_boss_btn.visible = false
-	_ui_layer.add_child(_boss_btn)
-	_boss_btn.pressed.connect(_on_challenge_boss_pressed)
-
-	# 技能列
-	_skill_bar = _build_skill_bar()
-	_ui_layer.add_child(_skill_bar)
-
-	# 底部導覽列背景
-	var nav_bg := ColorRect.new()
-	nav_bg.color = Color(0.1, 0.1, 0.12, 1.0)
-	nav_bg.position = Vector2(0.0, NAV_Y)
-	nav_bg.size = Vector2(SW, NAV_H)
-	_ui_layer.add_child(nav_bg)
-
-	# 導覽按鈕
-	var nav_items: Array = [["鏟屎官", _on_nav_scooper], ["配置", _on_nav_config],
-							["強化", _on_nav_enhance], ["活動", _on_nav_activity],
-							["商店", _on_nav_shop]]
-	var btn_w := SW / nav_items.size()
-	for i in range(nav_items.size()):
-		var nav_btn := _make_button(nav_items[i][0],
-				Vector2(i * btn_w + 10.0, NAV_Y + 10.0),
-				Vector2(btn_w - 20.0, NAV_H - 20.0))
-		nav_btn.pressed.connect(nav_items[i][1])
-		_ui_layer.add_child(nav_btn)
-
-	# 檢查貓砂盆按鈕（頂部置中，計時器下方）
-	_sandbox_btn = _make_button("🪣 清理貓砂盆",
-			Vector2(SW / 2.0 - 90.0, 72.0), Vector2(180.0, 38.0))
+	_sandbox_btn = _make_button("Idle 00:00:00", Vector2(250.0, 1010.0), Vector2(220.0, 36.0))
 	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
 	_ui_layer.add_child(_sandbox_btn)
 
-	# 勝利／敗北 短暫顯示文字
+	var idle_bar_bg := _make_panel(
+		Vector2((SW - IDLE_BAR_W) / 2.0, IDLE_BAR_Y),
+		Vector2(IDLE_BAR_W, IDLE_BAR_H),
+		Color(0.16, 0.11, 0.08, 0.9),
+		Color(0.43, 0.30, 0.18, 1.0)
+	)
+	_ui_layer.add_child(idle_bar_bg)
+	_idle_progress_fill = ColorRect.new()
+	_idle_progress_fill.position = Vector2(3.0, 3.0)
+	_idle_progress_fill.size = Vector2(0.0, IDLE_BAR_H - 6.0)
+	_idle_progress_fill.color = Color(0.95, 0.71, 0.23, 0.92)
+	idle_bar_bg.add_child(_idle_progress_fill)
+
+	_skip_btn = _make_button("Skip", Vector2(608.0, 1000.0), Vector2(90.0, 40.0))
+	_ui_layer.add_child(_skip_btn)
+	_skip_btn.pressed.connect(_on_skip_pressed)
+	_skip_btn.visible = GameState.can_skip_battle()
+
 	_result_display = Label.new()
-	_result_display.size = Vector2(SW, 80.0)
+	_result_display.size = Vector2(420.0, 110.0)
+	_result_display.position = Vector2(150.0, 420.0)
 	_result_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_result_display.add_theme_font_size_override("font_size", 64)
+	_result_display.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_result_display.add_theme_font_size_override("font_size", 72)
 	_result_display.visible = false
 	_ui_layer.add_child(_result_display)
 
+	var nav_bg := _make_panel(
+		Vector2(0.0, NAV_Y),
+		Vector2(SW, NAV_H),
+		Color(0.11, 0.08, 0.06, 0.94),
+		Color(0.52, 0.40, 0.24, 1.0)
+	)
+	_ui_layer.add_child(nav_bg)
 
-## 建立技能列容器（5 個槽，置中）
+	var nav_items: Array = [
+		[UiText.NAV_SCOOPER, _on_nav_scooper],
+		[UiText.NAV_CONFIG, _on_nav_config],
+		[UiText.NAV_ENHANCE, _on_nav_enhance],
+		[UiText.NAV_ACTIVITY, _on_nav_activity],
+		[UiText.NAV_SHOP, _on_nav_shop],
+	]
+	var btn_w := SW / nav_items.size()
+	for i in range(nav_items.size()):
+		var nav_btn := _make_button(
+			nav_items[i][0],
+			Vector2(i * btn_w + 8.0, NAV_Y + 12.0),
+			Vector2(btn_w - 16.0, NAV_H - 24.0)
+		)
+		nav_btn.pressed.connect(nav_items[i][1])
+		nav_btn.add_theme_font_size_override("font_size", 28)
+		_ui_layer.add_child(nav_btn)
+
+	_reward_fx_layer = Control.new()
+	_reward_fx_layer.name = "RewardFxLayer"
+	_reward_fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_reward_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_layer.add_child(_reward_fx_layer)
+
+
+## Build the centered five-slot skill bar.
 func _build_skill_bar() -> Control:
 	var bar := Control.new()
 	bar.name = "SkillBar"
 	var total_w := SKILL_SLOT_W * MAX_CATS_ON_FIELD + 8.0 * (MAX_CATS_ON_FIELD - 1)
 	var bar_x := (SW - total_w) / 2.0
-	bar.position = Vector2(bar_x, SKILL_BAR_Y)
+	bar.position = Vector2(bar_x, 880.0)
 	bar.size = Vector2(total_w, SKILL_BAR_H)
 
 	for i in range(MAX_CATS_ON_FIELD):
@@ -240,7 +415,7 @@ func _make_skill_slot(idx: int) -> Control:
 	slot.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
 	slot.custom_minimum_size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
 
-	# 背景
+	# Slot background
 	var bg := ColorRect.new()
 	bg.name = "Bg"
 	bg.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
@@ -257,7 +432,7 @@ func _make_skill_slot(idx: int) -> Control:
 	icon.visible = false
 	slot.add_child(icon)
 
-	# 技能名稱（預留，啟動時填入）
+	# Skill name placeholder populated after battle setup
 	var name_lbl := Label.new()
 	name_lbl.name = "NameLabel"
 	name_lbl.size = Vector2(SKILL_SLOT_W, 22.0)
@@ -267,7 +442,7 @@ func _make_skill_slot(idx: int) -> Control:
 	name_lbl.clip_contents = true
 	slot.add_child(name_lbl)
 
-	# 冷卻遮罩（從上往下覆蓋，按比例縮短）
+	# Cooldown overlay shrinks downward over time
 	var overlay := ColorRect.new()
 	overlay.name = "Overlay"
 	overlay.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
@@ -275,7 +450,7 @@ func _make_skill_slot(idx: int) -> Control:
 	overlay.visible = false
 	slot.add_child(overlay)
 
-	# 冷卻數字
+	# Cooldown number
 	var cd_lbl := Label.new()
 	cd_lbl.name = "CdLabel"
 	cd_lbl.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
@@ -285,15 +460,15 @@ func _make_skill_slot(idx: int) -> Control:
 	cd_lbl.visible = false
 	slot.add_child(cd_lbl)
 
-	# Buff 持續外框（黃色邊框）
+	# Active buff outline
 	var buff_frame := ColorRect.new()
 	buff_frame.name = "BuffFrame"
 	buff_frame.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
-	buff_frame.color = Color(1.0, 0.85, 0.0, 0.0)   # 透明填充
+	buff_frame.color = Color(1.0, 0.85, 0.0, 0.0)
 	buff_frame.visible = false
 	slot.add_child(buff_frame)
 
-	# 黃色邊框（4 條 ColorRect 組成）
+	# Build the border from four ColorRect edges
 	var border_color := Color(1.0, 0.85, 0.0, 1.0)
 	var border_thick := 3.0
 	for side in [
@@ -311,7 +486,7 @@ func _make_skill_slot(idx: int) -> Control:
 	return slot
 
 
-## 戰鬥開始後依玩家隊伍更新技能槽名稱
+## Refresh skill slot names from the active player team.
 func _refresh_skill_bar_names(player_cats: Array) -> void:
 	if _skill_bar == null:
 		return
@@ -328,14 +503,14 @@ func _refresh_skill_bar_names(player_cats: Array) -> void:
 		else:
 			name_lbl.text = ""
 
-	# 空槽隱藏
+	# Hide unused slots
 	for i in range(player_cats.size(), MAX_CATS_ON_FIELD):
 		var slot_node: Control = _skill_bar.get_node_or_null("Slot%d" % i)
 		if slot_node:
 			slot_node.visible = false
 
 
-# ── 工廠輔助 ─────────────────────────────────
+# Factory helpers
 
 func _make_label(txt: String, pos: Vector2, sz: Vector2, font_size: int) -> Label:
 	var lbl := Label.new()
@@ -343,6 +518,7 @@ func _make_label(txt: String, pos: Vector2, sz: Vector2, font_size: int) -> Labe
 	lbl.position = pos
 	lbl.size = sz
 	lbl.add_theme_font_size_override("font_size", font_size)
+	lbl.add_theme_color_override("font_color", Color(0.97, 0.92, 0.84, 1.0))
 	return lbl
 
 
@@ -351,7 +527,177 @@ func _make_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
 	btn.text = txt
 	btn.position = pos
 	btn.size = sz
+	btn.add_theme_font_size_override("font_size", 22)
+	btn.modulate = Color(0.97, 0.93, 0.88, 1.0)
+	btn.pressed.connect(UiAudio.play_ui_click)
 	return btn
+
+
+func _make_panel(pos: Vector2, size: Vector2, fill: Color, border: Color) -> Control:
+	var panel := Control.new()
+	panel.position = pos
+	panel.size = size
+
+	var body := ColorRect.new()
+	body.size = size
+	body.color = fill
+	panel.add_child(body)
+
+	var border_thick := 2.0
+	for edge in [
+		[Vector2(0.0, 0.0), Vector2(size.x, border_thick)],
+		[Vector2(0.0, size.y - border_thick), Vector2(size.x, border_thick)],
+		[Vector2(0.0, 0.0), Vector2(border_thick, size.y)],
+		[Vector2(size.x - border_thick, 0.0), Vector2(border_thick, size.y)],
+	]:
+		var line := ColorRect.new()
+		line.position = edge[0]
+		line.size = edge[1]
+		line.color = border
+		panel.add_child(line)
+
+	return panel
+
+
+func _format_resource_count(value: int) -> String:
+	var negative := value < 0
+	var digits := str(abs(value))
+	var parts: Array[String] = []
+	while digits.length() > 3:
+		parts.push_front(digits.substr(digits.length() - 3, 3))
+		digits = digits.substr(0, digits.length() - 3)
+	parts.push_front(digits)
+	var joined := ",".join(parts)
+	return "-" + joined if negative else joined
+
+
+func _refresh_resource_strip() -> void:
+	if _resource_value_labels.is_empty():
+		return
+	_resource_value_labels["gold"].text = _format_resource_count(GameState.player_data.gold)
+	_resource_value_labels["diamonds"].text = _format_resource_count(GameState.player_data.diamonds)
+	_resource_value_labels["poop"].text = _format_resource_count(GameState.player_data.poop_count)
+
+
+func _get_home_reward_defs() -> Array[Array]:
+	return [
+		[UiText.REWARD_GOLD, "gold"],
+		[UiText.REWARD_POOP, "poop"],
+		[UiText.REWARD_CAT_FOOD, "cat_food"],
+		[UiText.REWARD_DIAMONDS, "diamonds"],
+		[UiText.REWARD_WHISKERS, "whiskers"],
+	]
+
+
+func _get_reward_float_color(reward_key: String, override_color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Color:
+	if override_color.a > 0.0:
+		return override_color
+	match reward_key:
+		"gold":
+			return Color(1.0, 0.84, 0.25, 1.0)
+		"diamonds":
+			return Color(0.35, 0.86, 1.0, 1.0)
+		"poop":
+			return Color(0.80, 0.58, 0.35, 1.0)
+		"exp":
+			return Color(0.63, 0.96, 0.54, 1.0)
+		"memory_shards":
+			return Color(0.87, 0.72, 1.0, 1.0)
+		"whiskers":
+			return Color(1.0, 0.66, 0.82, 1.0)
+		"cat_food":
+			return Color(1.0, 0.73, 0.43, 1.0)
+		_:
+			return REWARD_FLOAT_DEFAULT_COLOR
+
+
+func _make_reward_float_entry(label: String, amount: int, reward_key: String, color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Dictionary:
+	return {
+		"label": label,
+		"amount": amount,
+		"key": reward_key,
+		"color": _get_reward_float_color(reward_key, color),
+	}
+
+
+func _queue_reward_floats(entries: Array[Dictionary]) -> void:
+	for entry in entries:
+		if int(entry.get("amount", 0)) <= 0:
+			continue
+		_reward_fx_queue.append(entry)
+	if _reward_fx_active or _reward_fx_queue.is_empty():
+		return
+	_play_next_reward_float()
+
+
+func _play_next_reward_float() -> void:
+	if _reward_fx_queue.is_empty():
+		_reward_fx_active = false
+		return
+	_reward_fx_active = true
+	_spawn_reward_float(_reward_fx_queue.pop_front())
+	var delay_timer := get_tree().create_timer(REWARD_FLOAT_STEP_DELAY)
+	delay_timer.timeout.connect(_play_next_reward_float)
+
+
+func _spawn_reward_float(entry: Dictionary) -> void:
+	if _reward_fx_layer == null:
+		return
+	var amount := int(entry.get("amount", 0))
+	if amount <= 0:
+		return
+
+	var label := Label.new()
+	label.text = "%s +%s" % [str(entry.get("label", "")), _format_resource_count(amount)]
+	label.size = REWARD_FLOAT_LABEL_SIZE
+	label.position = Vector2((SW - REWARD_FLOAT_LABEL_SIZE.x) / 2.0, REWARD_FLOAT_START_Y)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 34)
+	label.add_theme_constant_override("outline_size", 6)
+	label.add_theme_color_override("font_color", entry.get("color", REWARD_FLOAT_DEFAULT_COLOR))
+	label.add_theme_color_override("font_outline_color", Color(0.16, 0.09, 0.04, 0.92))
+	label.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	label.scale = Vector2(0.92, 0.92)
+	_reward_fx_layer.add_child(label)
+	_play_reward_float_sfx(str(entry.get("key", "")))
+
+	var motion_tween := create_tween()
+	motion_tween.set_parallel(true)
+	motion_tween.tween_property(label, "position:y", REWARD_FLOAT_START_Y - REWARD_FLOAT_RISE, REWARD_FLOAT_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	motion_tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	motion_tween.finished.connect(label.queue_free)
+
+	var fade_tween := create_tween()
+	fade_tween.tween_property(label, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	fade_tween.tween_interval(REWARD_FLOAT_DURATION - 0.36)
+	fade_tween.tween_property(label, "modulate:a", 0.0, 0.24).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+
+
+func _play_reward_float_demo_tick() -> void:
+	var demo_entries: Array[Dictionary] = [
+		_make_reward_float_entry(UiText.REWARD_GOLD, 1234, "gold"),
+		_make_reward_float_entry(UiText.REWARD_DIAMONDS, 18, "diamonds"),
+		_make_reward_float_entry(UiText.REWARD_POOP, 2, "poop"),
+		_make_reward_float_entry(UiText.REWARD_CAT_FOOD, 25, "cat_food"),
+		_make_reward_float_entry(UiText.REWARD_WHISKERS, 8, "whiskers"),
+	]
+	if demo_entries.is_empty():
+		return
+	_queue_reward_floats([demo_entries[_reward_float_demo_index % demo_entries.size()]])
+	_reward_float_demo_index += 1
+
+
+func _play_reward_float_sfx(reward_key: String) -> void:
+	var stream: AudioStream = REWARD_SFX_BY_KEY.get(reward_key, REWARD_DEFAULT_SFX)
+	if stream == null:
+		return
+	var player := AudioStreamPlayer.new()
+	player.stream = stream
+	player.volume_db = -20.0
+	add_child(player)
+	player.finished.connect(player.queue_free)
+	player.play()
 
 
 func _set_speed(mult: float, active_btn: Button) -> void:
@@ -377,23 +723,40 @@ func _highlight_speed_btn(active: Button) -> void:
 
 func _refresh_ui() -> void:
 	_level_label.text = GameState.get_level_display()
+	if _stage_task_label != null:
+		_stage_task_label.text = UiText.HOME_DAILY_TASK
+	if _profile_name_label != null:
+		var profile_name := GameState.player_data.display_name.strip_edges()
+		if profile_name.is_empty():
+			profile_name = GameState.player_data.player_name.strip_edges()
+		if profile_name.is_empty():
+			profile_name = "Scooper"
+		_profile_name_label.text = profile_name
+	if _profile_level_label != null:
+		_profile_level_label.text = "Lv.%d" % GameState.player_data.scooper_level
 	_boss_btn.visible = GameState.boss_available and not GameState.is_current_boss()
+	_refresh_resource_strip()
 	_refresh_sandbox_btn()
 	_refresh_mail_badge()
 
 
 func _refresh_sandbox_btn() -> void:
+	if _sandbox_btn == null:
+		return
 	var elapsed := GameState.get_idle_elapsed_seconds()
 	var claimable_minutes := elapsed / 60
 	if claimable_minutes < 1:
 		_sandbox_btn.disabled = true
-		_sandbox_btn.text = "🪣 乾淨貓砂盆"
+		_sandbox_btn.text = UiText.HOME_IDLE_NOT_READY
 	else:
 		_sandbox_btn.disabled = false
 		var h := elapsed / 3600
 		var m := (elapsed % 3600) / 60
 		var s := elapsed % 60
-		_sandbox_btn.text = "🪣 清理貓砂盆 %02d:%02d:%02d" % [h, m, s]
+		_sandbox_btn.text = "%s %02d:%02d:%02d" % [UiText.HOME_IDLE_READY, h, m, s]
+	if _idle_progress_fill != null:
+		var fill_ratio := clampf(float(elapsed) / IDLE_PROGRESS_CAP_SECONDS, 0.0, 1.0)
+		_idle_progress_fill.size.x = (IDLE_BAR_W - 6.0) * fill_ratio
 
 
 func _refresh_mail_badge() -> void:
@@ -407,7 +770,7 @@ func _refresh_mail_badge() -> void:
 	_mail_badge.modulate = Color(1.0, 0.28, 0.28, 1.0)
 
 
-# ── 戰鬥邏輯 ─────────────────────────────────
+# Battle flow
 
 func _start_battle() -> void:
 	_result_display.visible = false
@@ -425,7 +788,7 @@ func _start_battle() -> void:
 		var player_cat_id: int = GameState.player_team[i]
 		var cat_id: String = GameState.get_cat_file_id(player_cat_id)
 		if cat_id.is_empty():
-			push_error("BattleScene: 無法解析 playerCatId %d 的本地貓咪檔名" % player_cat_id)
+			push_error("BattleScene: failed to resolve local cat file id for playerCatId %d" % player_cat_id)
 			continue
 		var path := cat_id + ".json"
 		var data := CatData.from_json_file(path)
@@ -436,13 +799,13 @@ func _start_battle() -> void:
 			data.apply_enhancement(player_cat)
 			data.apply_rank_bonus(player_cat)
 			_apply_equipment_bonuses(data)
-			# 重新載入技能（強化後 rank 已設定，需更新 initial_delay）
+			# Reload skills after enhancement so the initial delay stays in sync.
 			data._load_skill_data()
 			if data.active_skills_data.size() > 0:
 				data.active_skills_data[0]["initial_delay"] = GameState.get_delay(i)
 			player_cats.append(data)
 		else:
-			push_error("BattleScene: 無法載入玩家貓咪 " + cat_id)
+			push_error("BattleScene: failed to load player cat " + cat_id)
 
 	var diff_mult: float = GameState.get_difficulty_multiplier()
 	for cat_id: String in GameState.get_enemy_ids():
@@ -455,10 +818,10 @@ func _start_battle() -> void:
 			data.weight  = roundi(data.weight  * diff_mult)
 			enemy_cats.append(data)
 		else:
-			push_error("BattleScene: 無法載入敵方貓咪 " + cat_id)
+			push_error("BattleScene: failed to load enemy cat " + cat_id)
 
 	if player_cats.is_empty() or enemy_cats.is_empty():
-		push_error("BattleScene: 貓咪資料不足，無法開始戰鬥")
+		push_error("BattleScene: insufficient cat data; cannot start battle")
 		return
 
 	_refresh_skill_bar_names(player_cats)
@@ -478,12 +841,12 @@ func _on_battle_finished(result: String) -> void:
 	var is_boss := GameState.is_current_boss()
 
 	if result == "WIN":
-		_show_result_text("勝利", Color(0.3, 1.0, 0.4, 1.0), 310.0)
+		_show_result_text("?", Color(0.3, 1.0, 0.4, 1.0), 310.0)
 		GameState.advance_after_win()
 		await get_tree().create_timer(1.0).timeout
 		_start_battle()
 	else:
-		_show_result_text("敗北", Color(1.0, 0.3, 0.3, 1.0), 310.0)
+		_show_result_text("??", Color(1.0, 0.3, 0.3, 1.0), 310.0)
 		if is_boss:
 			GameState.on_boss_fail()
 		await get_tree().create_timer(1.0).timeout
@@ -502,9 +865,9 @@ func _on_challenge_boss_pressed() -> void:
 	_start_battle()
 
 
-# ── 導覽 ─────────────────────────────────────
+# Navigation
 
-## 將鏟屎官戰鬥加成套用至 CatData（裝備 + 回憶 + 寶藏）
+## Apply scooper-related combat bonuses to the cat data.
 func _apply_equipment_bonuses(data: CatData) -> void:
 	GameState.apply_player_combat_bonuses(data)
 
@@ -513,7 +876,7 @@ func _on_nav_scooper() -> void:
 	SceneNavigator.open_overlay_scene("res://scenes/ScooperScene.tscn")
 
 
-## 顯示貓砂盆互動視窗：掛機獎勵領取（完整分鐘）+ 屎堆鏟除
+## Show the idle rewards and cleanup dialog.
 func _show_sandbox_dialog() -> void:
 	var elapsed_seconds := GameState.get_idle_elapsed_seconds()
 	var complete_minutes := elapsed_seconds / 60
@@ -524,7 +887,7 @@ func _show_sandbox_dialog() -> void:
 	vbox.add_theme_constant_override("separation", 14)
 	vbox.custom_minimum_size = Vector2(400.0, 0.0)
 
-	# ── 掛機獎勵區 ────────────────────────────────────────
+	# Idle rewards section
 	var rewards_section := VBoxContainer.new()
 	rewards_section.add_theme_constant_override("separation", 6)
 
@@ -532,34 +895,28 @@ func _show_sandbox_dialog() -> void:
 		var h := complete_minutes / 60
 		var m := complete_minutes % 60
 		var time_lbl := Label.new()
-		time_lbl.text = "累積時間：%d 小時 %d 分鐘" % [h, m]
+		time_lbl.text = UiText.HOME_SANDBOX_TIME_FORMAT % [h, m]
 		time_lbl.add_theme_font_size_override("font_size", 18)
 		time_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rewards_section.add_child(time_lbl)
 
-		for entry: Array in [
-			["💰 金幣",   "gold"],
-			["💩 屎堆",   "poop"],
-			["🍖 貓糧",   "cat_food"],
-			["💎 鑽石",   "diamonds"],
-			["🐱 鬍鬚",   "whiskers"],
-		]:
-			var val: int = rewards.get(entry[1], 0)
+		for entry: Array in _get_home_reward_defs():
+			var val: int = int(rewards.get(entry[1], 0))
 			if val > 0:
 				var lbl := Label.new()
-				lbl.text = "  %s  +%d" % [entry[0], val]
+				lbl.text = "%s +%d" % [entry[0], val]
 				lbl.add_theme_font_size_override("font_size", 18)
 				rewards_section.add_child(lbl)
 
 	if has_rewards:
 		vbox.add_child(rewards_section)
 
-	# ── 鏟屎互動區 ────────────────────────────────────────
+	# Cleanup interaction section
 	var scoop_section := VBoxContainer.new()
 	scoop_section.add_theme_constant_override("separation", 8)
 
 	var poop_count_lbl := Label.new()
-	poop_count_lbl.text = "待鏟屎堆：%d 個" % GameState.player_data.poop_count
+	poop_count_lbl.text = UiText.HOME_SANDBOX_PENDING_POOP % GameState.player_data.poop_count
 	poop_count_lbl.add_theme_font_size_override("font_size", 20)
 	scoop_section.add_child(poop_count_lbl)
 
@@ -570,7 +927,7 @@ func _show_sandbox_dialog() -> void:
 	scoop_section.add_child(result_lbl)
 
 	var scoop_btn := Button.new()
-	scoop_btn.text = "🪣 鏟屎！"
+	scoop_btn.text = UiText.HOME_SANDBOX_CLEAN_NOW
 	scoop_btn.custom_minimum_size = Vector2(160.0, 52.0)
 	scoop_btn.disabled = GameState.player_data.poop_count <= 0
 	scoop_btn.pressed.connect(func() -> void:
@@ -580,7 +937,7 @@ func _show_sandbox_dialog() -> void:
 		result_lbl.text = ""
 		ApiClient.scoop_poop(1, func(ok: bool, data: Variant, err: Dictionary) -> void:
 			if not ok:
-				result_lbl.text = str(err.get("message", "鏟屎失敗"))
+				result_lbl.text = str(err.get("message", UiText.HOME_SANDBOX_CLEAN_FAILED))
 				scoop_btn.disabled = GameState.player_data.poop_count <= 0
 				return
 
@@ -590,64 +947,71 @@ func _show_sandbox_dialog() -> void:
 				GameState.update_scooper_profile(updated_profile)
 
 			var remaining := GameState.player_data.poop_count
-			poop_count_lbl.text = "💩 待鏟屎堆：%d 個" % remaining
+			poop_count_lbl.text = UiText.HOME_SANDBOX_PENDING_POOP % remaining
 			var parts: Array[String] = []
+			var reward_entries: Array[Dictionary] = []
+
 			var exp_gained := int(result.get("expGained", 0))
 			if exp_gained > 0:
 				parts.append("EXP +%d" % exp_gained)
+				reward_entries.append(_make_reward_float_entry(UiText.REWARD_EXP, exp_gained, "exp"))
+
 			var memory_shards_gained := int(result.get("memoryShardsGained", 0))
 			if memory_shards_gained > 0:
-				parts.append("回憶碎片 +%d" % memory_shards_gained)
+				parts.append("%s +%d" % [UiText.REWARD_MEMORY_SHARDS, memory_shards_gained])
+				reward_entries.append(_make_reward_float_entry(UiText.REWARD_MEMORY_SHARDS, memory_shards_gained, "memory_shards"))
+
 			var whiskers_gained := int(result.get("WhiskersGained", result.get("whiskersGained", 0)))
 			if whiskers_gained > 0:
-				parts.append("鬍鬚 +%d" % whiskers_gained)
-			result_lbl.text = "（空手而歸）" if parts.is_empty() else "獲得：" + "、".join(parts)
+				parts.append("%s +%d" % [UiText.REWARD_WHISKERS, whiskers_gained])
+				reward_entries.append(_make_reward_float_entry(UiText.REWARD_WHISKERS, whiskers_gained, "whiskers"))
+
+			result_lbl.text = UiText.HOME_SANDBOX_NONE_EXTRA if parts.is_empty() else UiText.HOME_SANDBOX_GAINED_PREFIX + "、".join(parts)
+			if not reward_entries.is_empty():
+				_queue_reward_floats(reward_entries)
+
 			scoop_btn.disabled = remaining <= 0
-			_refresh_sandbox_btn()
+			_refresh_ui()
 		)
 	)
 	scoop_section.add_child(scoop_btn)
 	if not has_rewards and GameState.player_data.poop_count > 0:
 		vbox.add_child(scoop_section)
 
-	# ── 領取按鈕 ───────────────────────────────────────────
+	# Claim rewards action
 	var close_ref := [Callable()]
 
 	if has_rewards:
 		var claim_btn := Button.new()
-		claim_btn.text = "領取獎勵"
+		claim_btn.text = UiText.HOME_CLAIM_REWARDS
 		claim_btn.custom_minimum_size = Vector2(200.0, 52.0)
 		claim_btn.pressed.connect(func() -> void:
 			claim_btn.disabled = true
 			ApiClient.claim_idle_rewards(func(ok: bool, data: Variant, err: Dictionary) -> void:
 				claim_btn.disabled = false
 				if not ok:
-					DialogManager.show_info("領取失敗", str(err.get("message", "掛機獎勵領取失敗")))
+					DialogManager.show_info(UiText.HOME_CLAIM_FAILED_TITLE, str(err.get("message", UiText.HOME_CLAIM_FAILED_MESSAGE)))
 					return
 
 				var response: Dictionary = data if data is Dictionary else {}
 				GameState.apply_idle_claim_response(response)
 				close_ref[0].call()
-				_refresh_sandbox_btn()
+				_refresh_ui()
 
 				var claimed: Dictionary = response.get("rewards", {})
-				var lines: Array[String] = []
-				for entry: Array in [
-					["💰 金幣",   "gold"],
-					["💩 屎堆",   "poop"],
-					["🍖 貓糧",   "cat_food"],
-					["💎 鑽石",   "diamonds"],
-					["🐱 鬍鬚",   "whiskers"],
-				]:
+				var reward_entries: Array[Dictionary] = []
+				for entry: Array in _get_home_reward_defs():
 					var val: int = int(claimed.get(entry[1], 0))
 					if val > 0:
-						lines.append("  %s  +%d" % [entry[0], val])
-				DialogManager.show_info("領取成功！", "\n".join(lines))
+						reward_entries.append(_make_reward_float_entry(entry[0], val, entry[1]))
+
+				if not reward_entries.is_empty():
+					_queue_reward_floats(reward_entries)
 			)
 		)
 		vbox.add_child(claim_btn)
 
-	close_ref[0] = DialogManager.show_info_node("清理貓砂盆", vbox)
+	close_ref[0] = DialogManager.show_info_node(UiText.HOME_SANDBOX_TITLE, vbox)
 
 
 func _on_nav_config() -> void:
@@ -674,13 +1038,13 @@ func _on_nav_mail() -> void:
 			if close_dialog[0].is_valid():
 				close_dialog[0].call()
 		)
-		close_dialog[0] = DialogManager.show_info_node("郵件", mail_view, Callable(), "large")
+		close_dialog[0] = DialogManager.show_info_node(UiText.HOME_MAIL_DIALOG_TITLE, mail_view, Callable(), "large")
 	else:
-		DialogManager.show_info_node("郵件", mail_view, Callable(), "large")
+		DialogManager.show_info_node(UiText.HOME_MAIL_DIALOG_TITLE, mail_view, Callable(), "large")
 
 func _open_chat() -> void:
 	var chat_view: Control = CHAT_SCENE.instantiate()
-	DialogManager.show_info_node("Chat", chat_view, Callable(), "large")
+	DialogManager.show_info_node(UiText.HOME_CHAT_DIALOG_TITLE, chat_view, Callable(), "large")
 
 
 func _refresh_chat_badge() -> void:

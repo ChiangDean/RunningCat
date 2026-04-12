@@ -31,6 +31,7 @@ func show_overlay_scene(scene_path: String) -> void:
 	var overlay := packed_scene.instantiate()
 	_overlay_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	_overlay_root.add_child(overlay)
+	_attach_ui_click_sfx(overlay)
 	if overlay is Control:
 		overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		overlay.set_deferred("size", get_viewport_rect().size)
@@ -51,3 +52,12 @@ func _build_shell() -> void:
 	_overlay_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_overlay_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay_root)
+
+
+func _attach_ui_click_sfx(root: Node) -> void:
+	if root is BaseButton:
+		var button := root as BaseButton
+		if UiAudio.should_play_for_button(button) and not button.pressed.is_connected(UiAudio.play_ui_click):
+			button.pressed.connect(UiAudio.play_ui_click)
+	for child in root.get_children():
+		_attach_ui_click_sfx(child)
