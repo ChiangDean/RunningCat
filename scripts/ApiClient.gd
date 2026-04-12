@@ -60,6 +60,10 @@ func get_scooper_profile(callback: Callable) -> void:
 	_api_get("scooper/profile", callback)
 
 
+func get_scooper_profile_silent(callback: Callable) -> void:
+	_api_get_tracked("scooper/profile", callback, false)
+
+
 func scoop_poop(count: int, callback: Callable) -> void:
 	_api_post("scooper/profile/scoop", {"count": count}, callback)
 
@@ -72,6 +76,10 @@ func get_equipment_list(callback: Callable) -> void:
 	_api_get("scooper/equipment", callback)
 
 
+func get_equipment_list_silent(callback: Callable) -> void:
+	_api_get_tracked("scooper/equipment", callback, false)
+
+
 func purchase_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/purchase", {"equipmentId": equipment_id}, callback)
 
@@ -80,12 +88,24 @@ func upgrade_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/upgrade", {"equipmentId": equipment_id}, callback)
 
 
+func upgrade_equipment_silent(equipment_id: int, callback: Callable) -> void:
+	_api_post_tracked("scooper/equipment/upgrade", {"equipmentId": equipment_id}, callback, false)
+
+
 func repair_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/repair", {"equipmentId": equipment_id}, callback)
 
 
+func repair_equipment_silent(equipment_id: int, callback: Callable) -> void:
+	_api_post_tracked("scooper/equipment/repair", {"equipmentId": equipment_id}, callback, false)
+
+
 func treat_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/treat", {"equipmentId": equipment_id}, callback)
+
+
+func treat_equipment_silent(equipment_id: int, callback: Callable) -> void:
+	_api_post_tracked("scooper/equipment/treat", {"equipmentId": equipment_id}, callback, false)
 
 
 func get_abilities(callback: Callable) -> void:
@@ -108,8 +128,16 @@ func get_achievements(callback: Callable) -> void:
 	_api_get("scooper/achievement", callback)
 
 
+func get_achievements_silent(callback: Callable) -> void:
+	_api_get_tracked("scooper/achievement", callback, false)
+
+
 func claim_achievement(achievement_id: int, callback: Callable) -> void:
 	_api_post("scooper/achievement/claim", {"achievementId": achievement_id}, callback)
+
+
+func claim_achievement_silent(achievement_id: int, callback: Callable) -> void:
+	_api_post_tracked("scooper/achievement/claim", {"achievementId": achievement_id}, callback, false)
 
 
 func get_authenticated_bootstrap(callback: Callable) -> void:
@@ -272,8 +300,16 @@ func _api_get(path: String, callback: Callable) -> void:
 	_enqueue_request(path, HTTPClient.METHOD_GET, {}, callback)
 
 
+func _api_get_tracked(path: String, callback: Callable, track_loading: bool) -> void:
+	_enqueue_request(path, HTTPClient.METHOD_GET, {}, callback, track_loading)
+
+
 func _api_post(path: String, body: Dictionary, callback: Callable) -> void:
 	_enqueue_request(path, HTTPClient.METHOD_POST, body, callback)
+
+
+func _api_post_tracked(path: String, body: Dictionary, callback: Callable, track_loading: bool) -> void:
+	_enqueue_request(path, HTTPClient.METHOD_POST, body, callback, track_loading)
 
 
 func _api_put(path: String, body: Dictionary, callback: Callable) -> void:
