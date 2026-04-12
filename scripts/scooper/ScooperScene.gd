@@ -6,6 +6,7 @@ extends Control
 
 const SW := 720.0
 const SH := 1280.0
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 var _current_tab: String = "scooper"
 var _tab_btns: Dictionary = {}    # tab_key -> Button
@@ -65,9 +66,7 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.133, 0.157, 0.192, 1.0)
-	bg.size = Vector2(SW, SH)
+	var bg := AssetResolver.make_fullscreen_background("scooper")
 	add_child(bg)
 
 	var layer := CanvasLayer.new()

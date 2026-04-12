@@ -2,12 +2,11 @@ class_name EnhanceSceneUI
 extends RefCounted
 
 const Refresh = preload("res://scripts/enhance/EnhanceSceneRefresh.gd")
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 
 static func build_ui(scene) -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.133, 0.157, 0.192, 1.0)
-	bg.size = Vector2(scene.SW, scene.SH)
+	var bg := AssetResolver.make_fullscreen_background("enhance")
 	scene.add_child(bg)
 
 	var layer := CanvasLayer.new()
@@ -90,6 +89,8 @@ static func populate_cat_buttons(scene) -> void:
 		btn.text = Refresh.get_display_name(cat_id)
 		btn.custom_minimum_size = Vector2(140.0, 64.0)
 		btn.mouse_filter = Control.MOUSE_FILTER_PASS
+		btn.icon = AssetResolver.resolve_cat_icon(cat_id)
+		btn.expand_icon = true
 		btn.pressed.connect(Callable(scene, "_on_cat_button_pressed").bind(cat_id))
 		cat_row.add_child(btn)
 
@@ -126,6 +127,10 @@ static func rebuild_detail_panel(scene) -> void:
 	var name_row := HBoxContainer.new()
 	name_row.add_theme_constant_override("separation", 8)
 	scene._detail_panel.add_child(name_row)
+
+	var cat_icon := AssetResolver.resolve_cat_icon(scene._selected_cat_id)
+	if cat_icon != null:
+		name_row.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(56.0, 56.0)))
 
 	scene._cat_name_label = Label.new()
 	scene._cat_name_label.text = CatRegistry.get_cat_display_name_with_lv(scene._selected_cat_id, player_cat.cat_food_level)

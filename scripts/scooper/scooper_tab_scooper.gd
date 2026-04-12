@@ -1,5 +1,7 @@
 extends RefCounted
 
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+
 ## 鏟屎官 Tab — 個人資料、鏟屎、特殊能力、裝備列表
 
 
@@ -181,6 +183,8 @@ func _make_ability_card(scene: Control, item: Dictionary) -> Control:
 	btn.custom_minimum_size = Vector2(0.0, 52.0)
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.add_theme_font_size_override("font_size", 20)
+	btn.icon = AssetResolver.resolve_ability_icon(item)
+	btn.expand_icon = true
 	btn.pressed.connect(func() -> void:
 		_show_ability_dialog(scene, item)
 	)
@@ -304,6 +308,10 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	# ── 標題行：名稱 + 等級 ──
 	var header_row := HBoxContainer.new()
 	card.add_child(header_row)
+
+	var equipment_icon := AssetResolver.resolve_equipment_icon(item)
+	if equipment_icon != null:
+		header_row.add_child(AssetResolver.create_icon_rect(equipment_icon, Vector2(48.0, 48.0)))
 
 	var name_lbl := Label.new()
 	name_lbl.add_theme_font_size_override("font_size", 20)

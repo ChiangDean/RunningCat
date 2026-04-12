@@ -1,5 +1,7 @@
 extends Control
 
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+
 var _summary_label: Label
 var _mail_list: ItemList
 var _detail_title: Label
@@ -30,9 +32,7 @@ func set_close_action(action: Callable) -> void:
 
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.color = Color(0.11, 0.12, 0.15, 1.0)
+	var bg := AssetResolver.make_fullscreen_background("mail")
 	add_child(bg)
 
 	var root := MarginContainer.new()
@@ -237,17 +237,24 @@ func _render_detail(detail: Dictionary) -> void:
 		if not (attachment_variant is Dictionary):
 			continue
 		var attachment: Dictionary = attachment_variant
-		var row := Label.new()
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.custom_minimum_size = Vector2(340, 0)
-		row.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var attachment_texture := AssetResolver.load_texture(AssetResolver.resolve_catalog_path(attachment.get("imagePath", "")))
+		if attachment_texture != null:
+			row.add_child(AssetResolver.create_icon_rect(attachment_texture, Vector2(48.0, 48.0)))
+		var body := Label.new()
+		body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var prefix := "已領取" if bool(attachment.get("isClaimed", false)) else "可領取"
-		row.text = "%s %s x%d\n%s" % [
+		body.text = "%s %s x%d\n%s" % [
 			prefix,
 			str(attachment.get("displayName", attachment.get("rewardType", ""))),
 			int(attachment.get("quantity", 0)),
 			str(attachment.get("description", ""))
 		]
+		row.add_child(body)
 		_attachment_box.add_child(row)
 
 	_claim_btn.disabled = not bool(detail.get("canClaim", false))

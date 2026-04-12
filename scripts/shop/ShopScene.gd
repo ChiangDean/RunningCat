@@ -2,6 +2,7 @@ extends Control
 
 const ShopTrapCageView = preload("res://scripts/shop/ShopTrapCageView.gd")
 const ShopBundleView = preload("res://scripts/shop/ShopBundleView.gd")
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 const SW := 720.0
 const SH := 1280.0
@@ -20,9 +21,7 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var background := ColorRect.new()
-	background.color = Color(0.133, 0.157, 0.192, 1.0)
-	background.size = Vector2(SW, SH)
+	var background := AssetResolver.make_fullscreen_background("shop")
 	add_child(background)
 
 	var layer := CanvasLayer.new()

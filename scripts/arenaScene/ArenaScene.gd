@@ -2,6 +2,7 @@ extends Control
 
 const Helpers = preload("res://scripts/arenaScene/arena_scene_helpers.gd")
 const RewardPopup = preload("res://scripts/arenaScene/arena_scene_reward_popup.gd")
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 const SW := 720.0
 const SH := 1280.0
@@ -10,6 +11,7 @@ const REROLL_COOLDOWN := 5.0
 var _overview: Dictionary = {}
 var _reroll_cooldown := 0.0
 
+var _rank_badge: TextureRect
 var _rank_label: Label
 var _score_label: Label
 var _ticket_label: Label
@@ -41,9 +43,7 @@ func _process(delta: float) -> void:
 
 
 func _build_ui() -> void:
-	var background := ColorRect.new()
-	background.color = Color(0.133, 0.157, 0.192, 1.0)
-	background.size = Vector2(SW, SH)
+	var background := AssetResolver.make_fullscreen_background("arena")
 	add_child(background)
 
 	var root := VBoxContainer.new()
@@ -83,6 +83,13 @@ func _build_ui() -> void:
 	var status_box := VBoxContainer.new()
 	status_box.add_theme_constant_override("separation", 6)
 	status_panel.add_child(status_box)
+
+	_rank_badge = TextureRect.new()
+	_rank_badge.custom_minimum_size = Vector2(96.0, 96.0)
+	_rank_badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_rank_badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_rank_badge.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	status_box.add_child(_rank_badge)
 
 	_rank_label = Label.new()
 	_rank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -180,6 +187,9 @@ func _refresh_overview(excluded_opponent_ids: Array) -> void:
 
 func _apply_overview(overview: Dictionary) -> void:
 	_overview = overview.duplicate(true)
+	var rank_texture := AssetResolver.load_texture(AssetResolver.resolve_catalog_path(_overview.get("rankImagePath", "")))
+	_rank_badge.texture = rank_texture
+	_rank_badge.visible = rank_texture != null
 	_rank_label.text = Helpers.get_current_rank(_overview)
 	_score_label.text = "積分：%d" % Helpers.get_current_score(_overview)
 	_ticket_label.text = "競技券：%d" % Helpers.get_current_tickets(_overview)

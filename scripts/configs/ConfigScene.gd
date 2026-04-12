@@ -1,6 +1,7 @@
 extends Control
 
 const Constants = preload("res://scripts/configs/ConfigConstants.gd")
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 var _current_team_type: String = "boss"
 var _api_in_flight: bool = false
@@ -21,9 +22,7 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.133, 0.157, 0.192, 1.0)
-	bg.size = Vector2(Constants.SW, Constants.SH)
+	var bg := AssetResolver.make_fullscreen_background("config")
 	add_child(bg)
 
 	var layer := CanvasLayer.new()
@@ -204,6 +203,10 @@ func _make_team_slot_row(slot_index: int, member: Dictionary) -> HBoxContainer:
 	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
 	var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
 
+	var team_icon := AssetResolver.resolve_cat_icon(Constants.CAT_FILE_MAP.get(cat_catalog_id, ""))
+	if team_icon != null:
+		row.add_child(AssetResolver.create_icon_rect(team_icon, Vector2(44.0, 44.0)))
+
 	var name_lbl := Label.new()
 	name_lbl.text = "%d. %s Lv.%d" % [slot_index + 1, cat_name, cat_lv] if is_filled else "%d." % [slot_index + 1]
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -288,6 +291,10 @@ func _make_cat_row(cat: Dictionary, in_team_ids: Array) -> HBoxContainer:
 	var player_cat_id: int = int(cat.get("playerCatId", 0))
 	var display_name: String = str(cat.get("displayName", ""))
 	var lv: int = int(cat.get("catFoodLevel", 1))
+
+	var cat_icon := AssetResolver.resolve_cat_icon(GameState.get_cat_file_id_by_catalog_id(int(cat.get("catCatalogId", 0))))
+	if cat_icon != null:
+		row.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(44.0, 44.0)))
 
 	var name_lbl := Label.new()
 	name_lbl.text = "%s Lv.%d" % [display_name, lv]

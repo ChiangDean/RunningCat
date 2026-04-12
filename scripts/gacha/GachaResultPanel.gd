@@ -1,5 +1,7 @@
 extends VBoxContainer
 
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+
 const RESULT_COLORS := {
 	"Common": Color(0.78, 0.78, 0.78, 1.0),
 	"Rare": Color(0.43, 0.73, 1.0, 1.0),
@@ -16,8 +18,31 @@ func setup(results: Array) -> void:
 
 
 func _build_row(result: Dictionary) -> Control:
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.14, 0.16, 0.2, 0.92)
+	style.border_color = _resolve_color(result)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	panel.add_theme_stylebox_override("panel", style)
+
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
+	panel.add_child(row)
+
+	var frame_texture := AssetResolver.resolve_gacha_frame(result)
+	if frame_texture != null:
+		row.add_child(AssetResolver.create_icon_rect(frame_texture, Vector2(74.0, 74.0)))
+
+	var cat_icon := AssetResolver.resolve_cat_icon(str(result.get("catId", "")))
+	if cat_icon != null:
+		row.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(56.0, 56.0)))
 
 	var rarity := str(result.get("rarityDisplayName", result.get("rarityType", "稀有度")))
 	var rarity_label := Label.new()
@@ -46,7 +71,7 @@ func _build_row(result: Dictionary) -> Control:
 	state_label.add_theme_font_size_override("font_size", 18)
 	row.add_child(state_label)
 
-	return row
+	return panel
 
 
 func _resolve_color(result: Dictionary) -> Color:

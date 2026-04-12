@@ -1,5 +1,7 @@
 extends RefCounted
 
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+
 ## 回憶 Tab — 回憶收藏列表、解鎖功能
 
 
@@ -134,16 +136,16 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	preview_bg.color = accent
 	preview.add_child(preview_bg)
 
-	var photo_path: String = item.get("imagePath") if item.get("imagePath") != null else ""
-	if photo_path != "" and ResourceLoader.exists(photo_path):
-		var texture := load(photo_path)
-		if texture is Texture2D:
-			var photo := TextureRect.new()
-			photo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			photo.texture = texture
-			photo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			photo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			preview.add_child(photo)
+	var photo_path := AssetResolver.resolve_catalog_path(item.get("imagePath", ""))
+	var texture := AssetResolver.load_texture(photo_path)
+	if texture != null:
+		var photo := TextureRect.new()
+		photo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		photo.texture = texture
+		photo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		photo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		photo.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		preview.add_child(photo)
 
 	var preview_text := Label.new()
 	preview_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

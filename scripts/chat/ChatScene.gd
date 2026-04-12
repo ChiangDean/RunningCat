@@ -2,6 +2,7 @@ extends Control
 
 const ChatTabScript = preload("res://scripts/chat/chat_channel_tab.gd")
 const ChatItemScript = preload("res://scripts/chat/chat_message_item.gd")
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 var _active_channel := "system"
 var _tab_buttons: Dictionary = {}
@@ -26,6 +27,7 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
+	add_child(AssetResolver.make_fullscreen_background("chat"))
 	var root := VBoxContainer.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_theme_constant_override("separation", 8)

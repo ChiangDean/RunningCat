@@ -1,6 +1,7 @@
 extends Control
 
 const GachaResultPanel = preload("res://scripts/gacha/GachaResultPanel.gd")
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 const SW := 720.0
 const SH := 1280.0
@@ -19,9 +20,7 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var background := ColorRect.new()
-	background.color = Color(0.133, 0.157, 0.192, 1.0)
-	background.size = Vector2(SW, SH)
+	var background := AssetResolver.make_fullscreen_background("gacha")
 	add_child(background)
 
 	var layer := CanvasLayer.new()
