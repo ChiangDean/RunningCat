@@ -1,6 +1,11 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://djbtui5a6ipd2"]
 
-[ext_resource type="Script" path="res://scripts/battle/arena_battle_scene.gd" id="1"]
+[ext_resource type="Script" uid="uid://kh0j73nrogpx" path="res://scripts/battle/arena_battle_scene.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/ShopScene.tscn" id="2_uy3l4"]
 
-[node name="ArenaBattleScene" type="Node2D"]
+[node name="ArenaBattleScene" type="Node2D" unique_id=201545090]
 script = ExtResource("1")
+
+[node name="ShopScene" parent="." unique_id=1322746919 instance=ExtResource("2_uy3l4")]
+grow_horizontal = 2
+grow_vertical = 2
