@@ -3,18 +3,47 @@ extends Control
 const Constants = preload("res://scripts/configs/ConfigConstants.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
+const BOTTOM_DOCK_H := 112.0
+const HOME_MAIN_NAV_H := 110.0
+const CONTENT_TOP_GAP := 150.0
+const PANEL_FILL := Color(0.08, 0.07, 0.08, 0.94)
+const PANEL_BORDER := Color(0.80, 0.67, 0.42, 0.95)
+const CARD_FILL := Color(0.16, 0.15, 0.18, 0.96)
+const CARD_BORDER := Color(0.50, 0.43, 0.30, 0.92)
+const ACTIVE_TAB_COLOR := Color(1.0, 0.95, 0.82, 1.0)
+const INACTIVE_TAB_COLOR := Color(0.65, 0.65, 0.68, 1.0)
+const ACTION_BUTTON_COLOR := Color(0.94, 0.77, 0.39, 1.0)
+const DANGER_BUTTON_COLOR := Color(0.94, 0.48, 0.42, 1.0)
+const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
+const DISABLED_TEXT_COLOR := Color(0.70, 0.70, 0.72, 0.92)
+const EMPTY_SLOT_TEXT_COLOR := Color(0.75, 0.70, 0.62, 0.9)
+const SLOT_IMAGE_BG := Color(0.24, 0.20, 0.16, 0.96)
+const SLOT_IMAGE_BORDER := Color(0.98, 0.84, 0.54, 0.95)
+const SLOT_DELAY_BG := Color(0.18, 0.12, 0.08, 0.94)
+const SLOT_HOLD_SECONDS := 0.4
+const SLOT_EMPTY_FILL := Color(0.20, 0.18, 0.16, 0.88)
+const SLOT_EMPTY_BORDER := Color(0.62, 0.54, 0.40, 0.78)
+const SLOT_NAME_COLOR := Color(0.98, 0.95, 0.88, 1.0)
+const SLOT_META_COLOR := Color(0.88, 0.80, 0.67, 0.92)
+const SLOT_REMOVE_BG := Color(0.56, 0.18, 0.18, 0.96)
+
 var _current_team_type: String = "boss"
 var _api_in_flight: bool = false
 
-var _team_container: VBoxContainer
 var _team_type_btns: Dictionary = {}
-var _team_title: Label
-var cats_container: VBoxContainer
-var _save_hint_label: Label
+var _page_title: Label
+var _team_summary_label: Label
+var _team_container: GridContainer
+var _cats_title: Label
+var _cats_sort_btns: Dictionary = {}
+var _cats_scroll: ScrollContainer
+var _cats_container: GridContainer
 var _save_team_btn: Button
+var _cats_scroller: InertialScroller
 
 var _team_drafts: Dictionary = {}
 var _team_dirty: Dictionary = {}
+var _cats_sort_mode: String = "level"
 
 
 func _ready() -> void:
@@ -22,87 +51,185 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var bg := AssetResolver.make_fullscreen_background("config")
+	var bg: Control = AssetResolver.make_fullscreen_background("config")
 	add_child(bg)
 
-	var layer := CanvasLayer.new()
-	add_child(layer)
+	var dim: ColorRect = ColorRect.new()
+	dim.color = Color(0.04, 0.03, 0.05, 0.34)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(dim)
 
-	var root_vbox := VBoxContainer.new()
-	root_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root_vbox.add_theme_constant_override("separation", 16)
-	root_vbox.offset_left = 20
-	root_vbox.offset_top = 40
-	root_vbox.offset_right = -20
-	root_vbox.offset_bottom = -20
-	layer.add_child(root_vbox)
+	var content_panel: PanelContainer = PanelContainer.new()
+	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content_panel.offset_left = 20.0
+	content_panel.offset_top = CONTENT_TOP_GAP
+	content_panel.offset_right = -20.0
+	content_panel.offset_bottom = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H + 12.0)
+	content_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 18))
+	add_child(content_panel)
 
-	var top_row := HBoxContainer.new()
-	root_vbox.add_child(top_row)
+	var content_margin: MarginContainer = _make_content_margin(18)
+	content_panel.add_child(content_margin)
 
-	var back_btn := Button.new()
-	back_btn.text = "返回"
-	back_btn.custom_minimum_size = Vector2(100.0, 50.0)
-	back_btn.pressed.connect(_on_back_pressed)
-	top_row.add_child(back_btn)
+	var content_vbox: VBoxContainer = VBoxContainer.new()
+	content_vbox.add_theme_constant_override("separation", 14)
+	content_margin.add_child(content_vbox)
 
-	var title := Label.new()
-	title.text = "配置"
-	title.add_theme_font_size_override("font_size", 36)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	top_row.add_child(title)
+	_page_title = Label.new()
+	_page_title.text = UiText.CONFIG_PAGE_TITLE
+	_page_title.add_theme_font_size_override("font_size", 34)
+	content_vbox.add_child(_page_title)
 
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(100.0, 50.0)
-	top_row.add_child(spacer)
+	var page_desc: Label = Label.new()
+	page_desc.text = UiText.CONFIG_PAGE_DESC
+	page_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	page_desc.add_theme_font_size_override("font_size", 18)
+	page_desc.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+	content_vbox.add_child(page_desc)
 
-	var type_row := HBoxContainer.new()
-	type_row.add_theme_constant_override("separation", 6)
-	root_vbox.add_child(type_row)
+	var main_split: VBoxContainer = VBoxContainer.new()
+	main_split.add_theme_constant_override("separation", 12)
+	main_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_vbox.add_child(main_split)
 
-	for type_key: String in ["boss", "dungeon", "arena_attack", "arena_defense"]:
-		var btn := Button.new()
-		btn.text = Constants.TEAM_LABELS[type_key]
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.custom_minimum_size = Vector2(0.0, 48.0)
-		btn.add_theme_font_size_override("font_size", 18)
-		btn.pressed.connect(func(): _switch_team_type(type_key))
-		type_row.add_child(btn)
-		_team_type_btns[type_key] = btn
+	var team_panel: PanelContainer = _make_card_panel()
+	team_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	team_panel.size_flags_vertical = 0
+	main_split.add_child(team_panel)
 
-	root_vbox.add_child(_make_separator())
+	var team_margin: MarginContainer = _make_content_margin(14)
+	team_panel.add_child(team_margin)
 
-	_team_title = Label.new()
-	_team_title.add_theme_font_size_override("font_size", 24)
-	root_vbox.add_child(_team_title)
+	var team_vbox: VBoxContainer = VBoxContainer.new()
+	team_vbox.add_theme_constant_override("separation", 10)
+	team_vbox.size_flags_vertical = 0
+	team_margin.add_child(team_vbox)
 
-	_team_container = VBoxContainer.new()
-	_team_container.add_theme_constant_override("separation", 8)
-	root_vbox.add_child(_team_container)
+	_team_summary_label = Label.new()
+	_team_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_team_summary_label.add_theme_font_size_override("font_size", 14)
+	_team_summary_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+	_team_summary_label.visible = false
+	team_vbox.add_child(_team_summary_label)
 
-	_save_hint_label = Label.new()
-	_save_hint_label.add_theme_font_size_override("font_size", 18)
-	root_vbox.add_child(_save_hint_label)
+	_team_container = GridContainer.new()
+	_team_container.columns = 5
+	_team_container.add_theme_constant_override("separation", 6)
+	_team_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_team_container.size_flags_vertical = 0
+	team_vbox.add_child(_team_container)
 
 	_save_team_btn = Button.new()
-	_save_team_btn.text = "套用隊伍變更"
+	_save_team_btn.text = UiText.CONFIG_SAVE_BUTTON
 	_save_team_btn.custom_minimum_size = Vector2(0.0, 52.0)
+	_save_team_btn.add_theme_font_size_override("font_size", 20)
 	_save_team_btn.pressed.connect(_on_save_team_pressed)
-	root_vbox.add_child(_save_team_btn)
+	_apply_button_palette(_save_team_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
+	team_vbox.add_child(_save_team_btn)
 
-	root_vbox.add_child(_make_separator())
+	var cats_panel: PanelContainer = _make_card_panel()
+	cats_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cats_panel.size_flags_stretch_ratio = 1.05
+	main_split.add_child(cats_panel)
 
-	var cats_title := Label.new()
-	cats_title.text = "持有貓咪"
-	cats_title.add_theme_font_size_override("font_size", 24)
-	root_vbox.add_child(cats_title)
+	var cats_margin: MarginContainer = _make_content_margin(14)
+	cats_panel.add_child(cats_margin)
 
-	cats_container = VBoxContainer.new()
-	cats_container.add_theme_constant_override("separation", 8)
-	root_vbox.add_child(cats_container)
+	var cats_vbox: VBoxContainer = VBoxContainer.new()
+	cats_vbox.add_theme_constant_override("separation", 10)
+	cats_margin.add_child(cats_vbox)
 
-	root_vbox.add_child(_make_separator())
+	var cats_header: HBoxContainer = HBoxContainer.new()
+	cats_header.add_theme_constant_override("separation", 8)
+	cats_vbox.add_child(cats_header)
+
+	_cats_title = Label.new()
+	_cats_title.text = UiText.CONFIG_OWNED_CATS_TITLE
+	_cats_title.add_theme_font_size_override("font_size", 28)
+	_cats_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cats_header.add_child(_cats_title)
+
+	var sort_row: HBoxContainer = HBoxContainer.new()
+	sort_row.add_theme_constant_override("separation", 6)
+	cats_header.add_child(sort_row)
+
+	for sort_key: String in ["level", "rank"]:
+		var sort_btn: Button = Button.new()
+		sort_btn.text = UiText.CONFIG_SORT_LEVEL if sort_key == "level" else UiText.CONFIG_SORT_RANK
+		sort_btn.custom_minimum_size = Vector2(64.0, 28.0)
+		sort_btn.add_theme_font_size_override("font_size", 13)
+		sort_btn.pressed.connect(func() -> void:
+			_set_cats_sort_mode(sort_key)
+		)
+		sort_row.add_child(sort_btn)
+		_cats_sort_btns[sort_key] = sort_btn
+
+	_cats_scroll = ScrollContainer.new()
+	_cats_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_cats_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	cats_vbox.add_child(_cats_scroll)
+
+	_cats_container = GridContainer.new()
+	_cats_container.columns = 3
+	_cats_container.add_theme_constant_override("separation", 12)
+	_cats_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_cats_scroll.add_child(_cats_container)
+	_cats_scroller = InertialScroller.attach(_cats_scroll, "vertical")
+
+	var back_panel: PanelContainer = PanelContainer.new()
+	back_panel.anchor_left = 0.0
+	back_panel.anchor_top = 1.0
+	back_panel.anchor_right = 0.0
+	back_panel.anchor_bottom = 1.0
+	back_panel.offset_left = 20.0
+	back_panel.offset_top = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H)
+	back_panel.offset_right = 128.0
+	back_panel.offset_bottom = -HOME_MAIN_NAV_H
+	back_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 16))
+	add_child(back_panel)
+
+	var back_margin: MarginContainer = _make_content_margin(12)
+	back_panel.add_child(back_margin)
+
+	var back_btn: Button = Button.new()
+	back_btn.text = UiText.CONFIG_BACK
+	back_btn.custom_minimum_size = Vector2(84.0, 56.0)
+	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	back_btn.add_theme_font_size_override("font_size", 20)
+	back_btn.pressed.connect(_on_back_pressed)
+	back_margin.add_child(back_btn)
+
+	var dock_panel: PanelContainer = PanelContainer.new()
+	dock_panel.anchor_left = 0.0
+	dock_panel.anchor_top = 1.0
+	dock_panel.anchor_right = 1.0
+	dock_panel.anchor_bottom = 1.0
+	dock_panel.offset_left = 136.0
+	dock_panel.offset_top = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H)
+	dock_panel.offset_right = -20.0
+	dock_panel.offset_bottom = -HOME_MAIN_NAV_H
+	dock_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 16))
+	add_child(dock_panel)
+
+	var dock_margin: MarginContainer = _make_content_margin(12)
+	dock_panel.add_child(dock_margin)
+
+	var dock_row: HBoxContainer = HBoxContainer.new()
+	dock_row.add_theme_constant_override("separation", 8)
+	dock_margin.add_child(dock_row)
+
+	for type_key: String in ["boss", "dungeon", "arena_attack", "arena_defense"]:
+		var btn: Button = Button.new()
+		btn.text = str(Constants.TEAM_LABELS[type_key])
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.custom_minimum_size = Vector2(0.0, 56.0)
+		btn.add_theme_font_size_override("font_size", 20)
+		btn.pressed.connect(func() -> void:
+			_switch_team_type(type_key)
+		)
+		dock_row.add_child(btn)
+		_team_type_btns[type_key] = btn
 
 	_switch_team_type("boss")
 
@@ -111,25 +238,37 @@ func _switch_team_type(type_key: String) -> void:
 	_ensure_team_draft(type_key)
 	_current_team_type = type_key
 
-	for key: String in _team_type_btns:
+	for key: String in _team_type_btns.keys():
 		var btn: Button = _team_type_btns[key]
-		btn.modulate = Color(1.0, 1.0, 1.0, 1.0) if key == type_key else Color(0.6, 0.6, 0.6, 1.0)
+		var is_active: bool = key == type_key
+		btn.modulate = ACTIVE_TAB_COLOR if is_active else INACTIVE_TAB_COLOR
+		btn.add_theme_font_size_override("font_size", 22 if is_active else 20)
 
 	_refresh_team()
+	_refresh_cats_list()
 	_update_team_title()
 	_update_save_section()
+	_refresh_cats_sort_buttons()
 
 
 func _get_team_type_key(type_key: String = "") -> String:
 	if type_key == "":
 		type_key = _current_team_type
-	return Constants.TEAM_TYPE_MAP.get(type_key, "Boss")
+	return str(Constants.TEAM_TYPE_MAP.get(type_key, "Boss"))
 
 
 func _get_editing_team_members() -> Array:
 	_ensure_team_draft(_current_team_type)
 	var team: Dictionary = _team_drafts[_current_team_type]
 	return team.get("members", [])
+
+
+func _get_filled_editing_team_members() -> Array:
+	var filled: Array = []
+	for member_variant: Variant in _get_editing_team_members():
+		if member_variant is Dictionary and not (member_variant as Dictionary).is_empty():
+			filled.append(member_variant)
+	return filled
 
 
 func _ensure_team_draft(type_key: String) -> void:
@@ -139,7 +278,7 @@ func _ensure_team_draft(type_key: String) -> void:
 
 
 func _reset_team_draft(type_key: String, source_team: Dictionary) -> void:
-	var draft := source_team.duplicate(true)
+	var draft: Dictionary = source_team.duplicate(true)
 	draft["teamType"] = _get_team_type_key(type_key)
 	draft["members"] = _normalize_members(draft.get("members", []), type_key)
 	_team_drafts[type_key] = draft
@@ -149,17 +288,48 @@ func _reset_team_draft(type_key: String, source_team: Dictionary) -> void:
 func _normalize_members(members: Array, type_key: String = "") -> Array:
 	if type_key == "":
 		type_key = _current_team_type
+	var max_count: int = _get_max_team_size_for(type_key)
 	var normalized: Array = []
-	for index in range(members.size()):
-		var member_variant: Variant = members[index]
+	normalized.resize(max_count)
+	for index: int in range(max_count):
+		normalized[index] = {}
+
+	for member_variant: Variant in members:
+		if member_variant is Dictionary and (member_variant as Dictionary).is_empty():
+			continue
 		if not (member_variant is Dictionary):
 			continue
 
-		var member := (member_variant as Dictionary).duplicate(true)
-		member["slotNo"] = index
-		member["initialDelaySeconds"] = 0.0 if type_key == "arena_defense" else float(member.get("initialDelaySeconds", 0.0))
-		normalized.append(member)
+		var member: Dictionary = (member_variant as Dictionary).duplicate(true)
+		var slot_no: int = int(member.get("slotNo", -1))
+		if slot_no < 0 or slot_no >= max_count:
+			slot_no = _find_first_empty_slot_index(normalized)
+			if slot_no < 0:
+				continue
+
+		member["slotNo"] = slot_no
+		member["initialDelaySeconds"] = float(member.get("initialDelaySeconds", 0.0))
+		normalized[slot_no] = member
 	return normalized
+
+
+func _find_first_empty_slot_index(members: Array) -> int:
+	for index: int in range(members.size()):
+		var slot_variant: Variant = members[index]
+		if slot_variant is Dictionary and (slot_variant as Dictionary).is_empty():
+			return index
+	return -1
+
+
+func _get_max_team_size_for(type_key: String) -> int:
+	match type_key:
+		"boss":
+			return int(GameState.boss_config.get("max_team_size", 5))
+		"dungeon":
+			return int(GameState.dungeon_config.get("max_team_size", 5))
+		"arena_attack", "arena_defense":
+			return int(GameState.arena_config.get("max_team_size", 5))
+	return 5
 
 
 func _is_current_team_dirty() -> bool:
@@ -172,147 +342,346 @@ func _mark_current_team_dirty() -> void:
 
 
 func _update_team_title() -> void:
-	var mode_label: String = Constants.TEAM_LABELS.get(_current_team_type, _current_team_type)
-	var members := _get_editing_team_members()
-	var max_count := _get_max_team_size()
-	_team_title.text = "%s Team (%d/%d)" % [mode_label, members.size(), max_count]
+	var mode_label: String = str(Constants.TEAM_LABELS.get(_current_team_type, _current_team_type))
+	var members: Array = _get_filled_editing_team_members()
+	var max_count: int = _get_max_team_size()
+	var title_text: String = UiText.CONFIG_TEAM_TITLE_FORMAT % [mode_label, members.size(), max_count]
+	_page_title.text = title_text
+
+	_team_summary_label.text = UiText.CONFIG_TEAM_SUMMARY_WITH_DELAY
 
 
 func _refresh_team() -> void:
-	for child in _team_container.get_children():
+	for child: Node in _team_container.get_children():
 		child.queue_free()
 
-	var members := _get_editing_team_members()
-	var max_count := _get_max_team_size()
-	for i in range(max_count):
+	var members: Array = _get_editing_team_members()
+	var max_count: int = _get_max_team_size()
+	_team_container.columns = maxi(1, max_count)
+	for i: int in range(max_count):
 		var member: Dictionary = members[i] if i < members.size() else {}
-		_team_container.add_child(_make_team_slot_row(i, member))
+		_team_container.add_child(_make_team_slot_card(i, member))
 
-	_refresh_cats_list()
 	_update_team_title()
 	_update_save_section()
 
 
-func _make_team_slot_row(slot_index: int, member: Dictionary) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer:
+	var is_filled: bool = not member.is_empty()
+	var card: PanelContainer = _make_card_panel(PANEL_BORDER if is_filled else SLOT_EMPTY_BORDER)
+	card.custom_minimum_size = Vector2(0.0, 166.0)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var margin: MarginContainer = _make_content_margin(4)
+	card.add_child(margin)
 
-	var is_filled := not member.is_empty()
-	var cat_name: String = str(member.get("catDisplayName", "")) if is_filled else ""
-	var cat_lv: int = int(member.get("catFoodLevel", 1)) if is_filled else 1
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	margin.add_child(column)
+
+	var cat_name: String = str(member.get("catDisplayName", "")) if is_filled else UiText.CONFIG_EMPTY_SLOT
 	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
 	var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
+	var cat_file_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id) if is_filled else ""
 
-	var team_icon := AssetResolver.resolve_cat_icon(Constants.CAT_FILE_MAP.get(cat_catalog_id, ""))
+	var top_row: HBoxContainer = HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 4)
+	column.add_child(top_row)
+
+	var slot_badge: Label = Label.new()
+	slot_badge.text = UiText.CONFIG_SLOT_BADGE_FORMAT % [slot_index + 1]
+	slot_badge.add_theme_font_size_override("font_size", 12)
+	slot_badge.add_theme_color_override("font_color", Color(0.98, 0.90, 0.72, 1.0))
+	top_row.add_child(slot_badge)
+
+	var top_name: Label = Label.new()
+	top_name.text = cat_name if is_filled else UiText.CONFIG_TEAM_SLOT_EMPTY_NAME
+	top_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_name.clip_text = true
+	top_name.add_theme_font_size_override("font_size", 17)
+	top_name.add_theme_color_override("font_color", SLOT_NAME_COLOR if is_filled else EMPTY_SLOT_TEXT_COLOR)
+	top_row.add_child(top_name)
+
+	var image_shell: PanelContainer = PanelContainer.new()
+	image_shell.custom_minimum_size = Vector2(0.0, 96.0)
+	image_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	image_shell.add_theme_stylebox_override("panel", _make_panel_style(SLOT_IMAGE_BG if is_filled else SLOT_EMPTY_FILL, SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER, 14))
+	image_shell.mouse_filter = Control.MOUSE_FILTER_STOP
+	column.add_child(image_shell)
+
+	var image_button: Button = Button.new()
+	image_button.flat = true
+	image_button.text = UiText.CONFIG_EMPTY_SLOT_ICON if not is_filled else ""
+	image_button.custom_minimum_size = Vector2(0.0, 96.0)
+	image_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	image_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	image_button.clip_text = true
+	image_button.add_theme_font_size_override("font_size", 34)
+	image_button.add_theme_color_override("font_color", EMPTY_SLOT_TEXT_COLOR)
+	image_shell.add_child(image_button)
+
+	var overlay_root: Control = Control.new()
+	overlay_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	image_shell.add_child(overlay_root)
+
+	var image_margin: MarginContainer = _make_content_margin(4)
+	image_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay_root.add_child(image_margin)
+
+	var icon_holder: CenterContainer = CenterContainer.new()
+	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image_margin.add_child(icon_holder)
+
+	var team_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_file_id)
 	if team_icon != null:
-		row.add_child(AssetResolver.create_icon_rect(team_icon, Vector2(44.0, 44.0)))
+		icon_holder.add_child(AssetResolver.create_icon_rect(team_icon, Vector2(72.0, 72.0)))
+	elif is_filled:
+		var fallback_name: Label = Label.new()
+		fallback_name.text = _get_cat_visual_fallback(cat_name)
+		fallback_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback_name.add_theme_font_size_override("font_size", 30)
+		fallback_name.add_theme_color_override("font_color", SLOT_NAME_COLOR)
+		icon_holder.add_child(fallback_name)
 
-	var name_lbl := Label.new()
-	name_lbl.text = "%d. %s Lv.%d" % [slot_index + 1, cat_name, cat_lv] if is_filled else "%d." % [slot_index + 1]
-	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_lbl.add_theme_font_size_override("font_size", 22)
-	row.add_child(name_lbl)
+	if is_filled:
+		var remove_btn: Button = Button.new()
+		remove_btn.text = "－"
+		remove_btn.custom_minimum_size = Vector2(22.0, 22.0)
+		remove_btn.add_theme_font_size_override("font_size", 11)
+		remove_btn.add_theme_color_override("font_color", Color(1.0, 0.97, 0.95, 1.0))
+		remove_btn.anchor_left = 1.0
+		remove_btn.anchor_top = 0.0
+		remove_btn.anchor_right = 1.0
+		remove_btn.anchor_bottom = 0.0
+		remove_btn.offset_left = -20.0
+		remove_btn.offset_top = -10.0
+		remove_btn.offset_right = 2.0
+		remove_btn.offset_bottom = 12.0
+		remove_btn.disabled = _api_in_flight
+		var remove_style: StyleBoxFlat = StyleBoxFlat.new()
+		remove_style.bg_color = SLOT_REMOVE_BG
+		remove_style.corner_radius_top_left = 999
+		remove_style.corner_radius_top_right = 999
+		remove_style.corner_radius_bottom_left = 999
+		remove_style.corner_radius_bottom_right = 999
+		remove_style.border_width_left = 1
+		remove_style.border_width_right = 1
+		remove_style.border_width_top = 1
+		remove_style.border_width_bottom = 1
+		remove_style.border_color = Color(1.0, 0.82, 0.78, 0.95)
+		remove_btn.add_theme_stylebox_override("normal", remove_style)
+		var remove_hover: StyleBoxFlat = remove_style.duplicate()
+		remove_hover.bg_color = SLOT_REMOVE_BG.lightened(0.08)
+		var remove_pressed: StyleBoxFlat = remove_style.duplicate()
+		remove_pressed.bg_color = SLOT_REMOVE_BG.darkened(0.08)
+		remove_btn.add_theme_stylebox_override("hover", remove_hover)
+		remove_btn.add_theme_stylebox_override("pressed", remove_pressed)
+		if not _api_in_flight:
+			remove_btn.pressed.connect(func() -> void:
+				_remove_member_from_draft(slot_index)
+			)
+		overlay_root.add_child(remove_btn)
 
-	var skill_btn := Button.new()
-	skill_btn.text = "技能"
-	skill_btn.custom_minimum_size = Vector2(64.0, 44.0)
-	skill_btn.disabled = not is_filled or not Constants.CAT_FILE_MAP.has(cat_catalog_id)
-	if is_filled and Constants.CAT_FILE_MAP.has(cat_catalog_id):
-		var press_time: float = 0.0
-		var local_cat_id: String = Constants.CAT_FILE_MAP[cat_catalog_id]
-		skill_btn.button_down.connect(func(): press_time = Time.get_ticks_msec() / 1000.0)
-		skill_btn.button_up.connect(func():
-			if Time.get_ticks_msec() / 1000.0 - press_time >= 0.4:
-				_show_skill_popup(local_cat_id)
+	image_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if is_filled and cat_file_id != "":
+		image_shell.gui_input.connect(func(event: InputEvent) -> void:
+			if not (event is InputEventMouseButton):
+				return
+			var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+			if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
+				return
+			_show_skill_popup(cat_file_id)
+			image_shell.accept_event()
 		)
-	row.add_child(skill_btn)
+	else:
+		image_button.disabled = true
 
-	if _current_team_type != "arena_defense":
-		var delay_lbl := Label.new()
-		delay_lbl.text = "延遲:"
-		delay_lbl.add_theme_font_size_override("font_size", 20)
-		row.add_child(delay_lbl)
-
-		var minus_btn := Button.new()
-		minus_btn.text = "-"
-		minus_btn.custom_minimum_size = Vector2(44.0, 44.0)
-		minus_btn.disabled = not is_filled or _api_in_flight
-		row.add_child(minus_btn)
-
-		var delay_val := Label.new()
-		delay_val.text = str(int(delay_seconds)) if is_filled else "-"
-		delay_val.custom_minimum_size = Vector2(30.0, 44.0)
-		delay_val.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		delay_val.add_theme_font_size_override("font_size", 22)
-		row.add_child(delay_val)
-
-		var plus_btn := Button.new()
-		plus_btn.text = "+"
-		plus_btn.custom_minimum_size = Vector2(44.0, 44.0)
-		plus_btn.disabled = not is_filled or _api_in_flight
-		row.add_child(plus_btn)
-
-		if is_filled and not _api_in_flight:
-			minus_btn.pressed.connect(func():
-				var new_val := maxi(0, int(float(delay_val.text)) - 1)
-				_update_member_delay_in_draft(slot_index, float(new_val))
-			)
-			plus_btn.pressed.connect(func():
-				var new_val := int(float(delay_val.text)) + 1
-				_update_member_delay_in_draft(slot_index, float(new_val))
-			)
-
-	var remove_btn := Button.new()
-	remove_btn.text = "移除"
-	remove_btn.custom_minimum_size = Vector2(96.0, 44.0)
-	remove_btn.disabled = not is_filled or _api_in_flight
+	var delay_button: Button = Button.new()
+	delay_button.text = UiText.CONFIG_DELAY_BUTTON_FORMAT % [_format_delay_label(delay_seconds)] if is_filled else UiText.CONFIG_DELAY_BUTTON_EMPTY
+	delay_button.custom_minimum_size = Vector2(0.0, 24.0)
+	delay_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	delay_button.add_theme_font_size_override("font_size", 13)
+	delay_button.disabled = not is_filled or _api_in_flight
+	_apply_button_palette(delay_button, SLOT_DELAY_BG, Color(0.98, 0.90, 0.72, 1.0))
 	if is_filled and not _api_in_flight:
-		remove_btn.pressed.connect(func(): _remove_member_from_draft(slot_index))
-	row.add_child(remove_btn)
+		delay_button.pressed.connect(func() -> void:
+			_update_member_delay_in_draft(slot_index, _get_next_delay_value(delay_seconds))
+		)
+	column.add_child(delay_button)
 
-	return row
+	return card
 
 
 func _refresh_cats_list() -> void:
-	for child in cats_container.get_children():
+	for child: Node in _cats_container.get_children():
 		child.queue_free()
 
-	var in_team_ids := _get_editing_team_members().map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
-	var owned_cats := GameState.get_config_owned_cats()
-	for cat: Variant in owned_cats:
-		if cat is Dictionary:
-			cats_container.add_child(_make_cat_row(cat, in_team_ids))
+	var in_team_ids: Array = _get_editing_team_members().map(func(member: Dictionary) -> int:
+		return int(member.get("playerCatId", 0))
+	)
+	in_team_ids = in_team_ids.filter(func(id: int) -> bool:
+		return id > 0
+	)
+	var owned_cats: Array = _get_sorted_owned_cats()
+	for cat_variant: Variant in owned_cats:
+		if cat_variant is Dictionary:
+			_cats_container.add_child(_make_cat_card(cat_variant as Dictionary, in_team_ids))
 
 
-func _make_cat_row(cat: Dictionary, in_team_ids: Array) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
+	var card: PanelContainer = _make_card_panel()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.custom_minimum_size = Vector2(0.0, 214.0)
+	var margin: MarginContainer = _make_content_margin(8)
+	card.add_child(margin)
+
+	var root: VBoxContainer = VBoxContainer.new()
+	root.add_theme_constant_override("separation", 10)
+	margin.add_child(root)
 
 	var player_cat_id: int = int(cat.get("playerCatId", 0))
 	var display_name: String = str(cat.get("displayName", ""))
 	var lv: int = int(cat.get("catFoodLevel", 1))
+	var rank: int = int(cat.get("rank", 0))
+	var cat_catalog_id: int = int(cat.get("catCatalogId", 0))
+	var already_in: bool = player_cat_id in in_team_ids
+	var team_full: bool = _get_filled_editing_team_members().size() >= _get_max_team_size()
+	var action_disabled: bool = already_in or team_full or _api_in_flight
 
-	var cat_icon := AssetResolver.resolve_cat_icon(GameState.get_cat_file_id_by_catalog_id(int(cat.get("catCatalogId", 0))))
+	var art_panel: PanelContainer = PanelContainer.new()
+	art_panel.custom_minimum_size = Vector2(0.0, 108.0)
+	art_panel.add_theme_stylebox_override("panel", _make_panel_style(
+		Color(0.19, 0.17, 0.15, 0.96),
+		Color(0.90, 0.77, 0.46, 0.88),
+		12
+	))
+	root.add_child(art_panel)
+
+	var art_margin: MarginContainer = _make_content_margin(8)
+	art_panel.add_child(art_margin)
+
+	var art_button: Button = Button.new()
+	art_button.flat = true
+	art_button.text = ""
+	art_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	art_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art_panel.add_child(art_button)
+
+	var art_center: CenterContainer = CenterContainer.new()
+	art_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art_margin.add_child(art_center)
+
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(GameState.get_cat_file_id_by_catalog_id(cat_catalog_id))
 	if cat_icon != null:
-		row.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(44.0, 44.0)))
+		art_center.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(84.0, 84.0)))
+	else:
+		var fallback: Label = Label.new()
+		fallback.text = _get_cat_visual_fallback(display_name)
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback.add_theme_font_size_override("font_size", 40)
+		fallback.add_theme_color_override("font_color", SLOT_NAME_COLOR)
+		art_center.add_child(fallback)
 
-	var name_lbl := Label.new()
-	name_lbl.text = "%s Lv.%d" % [display_name, lv]
-	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_lbl.add_theme_font_size_override("font_size", 22)
-	row.add_child(name_lbl)
+	var local_cat_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id)
+	if local_cat_id != "":
+		art_button.gui_input.connect(func(event: InputEvent) -> void:
+			if not (event is InputEventMouseButton):
+				return
+			var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+			if mouse_event.button_index != MOUSE_BUTTON_LEFT or mouse_event.pressed:
+				return
+			if _cats_scroller != null and _cats_scroller.consume_moved():
+				art_button.accept_event()
+				return
+			_show_skill_popup(local_cat_id)
+			art_button.accept_event()
+		)
+	else:
+		art_button.disabled = true
 
-	var add_btn := Button.new()
-	add_btn.text = "加入"
-	add_btn.custom_minimum_size = Vector2(100.0, 50.0)
-	var already_in := player_cat_id in in_team_ids
-	var team_full := _get_editing_team_members().size() >= _get_max_team_size()
-	add_btn.disabled = already_in or team_full or _api_in_flight
-	if not add_btn.disabled:
-		add_btn.pressed.connect(func(): _add_member_to_draft(player_cat_id))
-	row.add_child(add_btn)
+	var stats_row: HBoxContainer = HBoxContainer.new()
+	stats_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	stats_row.add_theme_constant_override("separation", 8)
+	root.add_child(stats_row)
 
-	return row
+	var level_lbl: Label = Label.new()
+	level_lbl.text = UiText.CONFIG_CAT_LEVEL_ONLY_FORMAT % [lv]
+	level_lbl.add_theme_font_size_override("font_size", 18)
+	level_lbl.add_theme_color_override("font_color", SLOT_NAME_COLOR)
+	stats_row.add_child(level_lbl)
+
+	var stars_lbl: Label = Label.new()
+	stars_lbl.text = UiText.CONFIG_CAT_STARS_FORMAT % [rank]
+	stars_lbl.add_theme_font_size_override("font_size", 17)
+	stars_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
+	stats_row.add_child(stars_lbl)
+
+	var add_btn: Button = Button.new()
+	add_btn.text = UiText.CONFIG_DEPLOYED_BUTTON if already_in else UiText.CONFIG_ADD_BUTTON
+	add_btn.custom_minimum_size = Vector2(0.0, 30.0)
+	add_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_btn.disabled = action_disabled
+	if not action_disabled:
+		add_btn.pressed.connect(func() -> void:
+			_add_member_to_draft(player_cat_id)
+		)
+	if already_in:
+		_apply_button_palette(add_btn, Color(0.27, 0.29, 0.21, 0.96), Color(0.88, 0.90, 0.74, 1.0))
+	elif team_full:
+		_apply_button_palette(add_btn, Color(0.26, 0.22, 0.18, 0.96), Color(0.75, 0.72, 0.68, 1.0))
+	else:
+		_apply_button_palette(add_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
+	root.add_child(add_btn)
+
+	return card
+
+
+func _set_cats_sort_mode(sort_mode: String) -> void:
+	if _cats_sort_mode == sort_mode:
+		return
+	_cats_sort_mode = sort_mode
+	_refresh_cats_sort_buttons()
+	_refresh_cats_list()
+
+
+func _refresh_cats_sort_buttons() -> void:
+	for key: String in _cats_sort_btns.keys():
+		var button: Button = _cats_sort_btns[key]
+		var is_active: bool = key == _cats_sort_mode
+		if is_active:
+			_apply_button_palette(button, Color(0.58, 0.48, 0.26, 0.88), Color(0.97, 0.93, 0.84, 1.0))
+		else:
+			_apply_button_palette(button, Color(0.20, 0.18, 0.17, 0.88), Color(0.62, 0.58, 0.54, 1.0))
+
+
+func _get_sorted_owned_cats() -> Array:
+	var owned_cats: Array = GameState.get_config_owned_cats().duplicate(true)
+	owned_cats.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if _cats_sort_mode == "rank":
+			var a_rank: int = int(a.get("rank", 0))
+			var b_rank: int = int(b.get("rank", 0))
+			if a_rank != b_rank:
+				return a_rank > b_rank
+			var a_level: int = int(a.get("catFoodLevel", 1))
+			var b_level: int = int(b.get("catFoodLevel", 1))
+			if a_level != b_level:
+				return a_level > b_level
+			return int(a.get("playerCatId", 0)) < int(b.get("playerCatId", 0))
+
+		var a_level_default: int = int(a.get("catFoodLevel", 1))
+		var b_level_default: int = int(b.get("catFoodLevel", 1))
+		if a_level_default != b_level_default:
+			return a_level_default > b_level_default
+		var a_rank_default: int = int(a.get("rank", 0))
+		var b_rank_default: int = int(b.get("rank", 0))
+		if a_rank_default != b_rank_default:
+			return a_rank_default > b_rank_default
+		return int(a.get("playerCatId", 0)) < int(b.get("playerCatId", 0))
+	)
+	return owned_cats
 
 
 func _build_member_from_player_cat(player_cat_id: int) -> Dictionary:
@@ -320,7 +689,7 @@ func _build_member_from_player_cat(player_cat_id: int) -> Dictionary:
 		if not (cat_variant is Dictionary):
 			continue
 
-		var cat := cat_variant as Dictionary
+		var cat: Dictionary = cat_variant as Dictionary
 		if int(cat.get("playerCatId", 0)) != player_cat_id:
 			continue
 
@@ -350,41 +719,56 @@ func _add_member_to_draft(player_cat_id: int) -> void:
 	if _api_in_flight:
 		return
 
-	var members := _get_editing_team_members().duplicate(true)
-	if members.size() >= _get_max_team_size():
+	var members: Array = _get_editing_team_members().duplicate(true)
+	if _get_filled_editing_team_members().size() >= _get_max_team_size():
 		return
 	if _draft_has_player_cat(members, player_cat_id):
 		return
 
-	var new_member := _build_member_from_player_cat(player_cat_id)
+	var new_member: Dictionary = _build_member_from_player_cat(player_cat_id)
 	if new_member.is_empty():
 		return
 
-	members.append(new_member)
+	var target_index: int = -1
+	for index: int in range(members.size()):
+		var slot_variant: Variant = members[index]
+		if slot_variant is Dictionary and (slot_variant as Dictionary).is_empty():
+			target_index = index
+			break
+
+	if target_index >= 0:
+		new_member["slotNo"] = target_index
+		members[target_index] = new_member
+	else:
+		new_member["slotNo"] = members.size()
+		members.append(new_member)
+
 	_team_drafts[_current_team_type]["members"] = _normalize_members(members)
 	_mark_current_team_dirty()
 	_refresh_team()
+	_refresh_cats_list()
 
 
 func _remove_member_from_draft(slot_no: int) -> void:
 	if _api_in_flight:
 		return
 
-	var members := _get_editing_team_members().duplicate(true)
+	var members: Array = _get_editing_team_members().duplicate(true)
 	if slot_no < 0 or slot_no >= members.size():
 		return
 
-	members.remove_at(slot_no)
+	members[slot_no] = {}
 	_team_drafts[_current_team_type]["members"] = _normalize_members(members)
 	_mark_current_team_dirty()
 	_refresh_team()
+	_refresh_cats_list()
 
 
 func _update_member_delay_in_draft(slot_no: int, delay_seconds: float) -> void:
-	if _api_in_flight or _current_team_type == "arena_defense":
+	if _api_in_flight:
 		return
 
-	var members := _get_editing_team_members().duplicate(true)
+	var members: Array = _get_editing_team_members().duplicate(true)
 	if slot_no < 0 or slot_no >= members.size():
 		return
 
@@ -397,15 +781,12 @@ func _update_member_delay_in_draft(slot_no: int, delay_seconds: float) -> void:
 
 
 func _update_save_section() -> void:
-	var dirty := _is_current_team_dirty()
-	if _api_in_flight:
-		_save_hint_label.text = "儲存中..."
-	elif dirty:
-		_save_hint_label.text = "尚有未儲存的隊伍變更。"
-	else:
-		_save_hint_label.text = "隊伍已同步。"
-
+	var dirty: bool = _is_current_team_dirty()
 	_save_team_btn.disabled = _api_in_flight or not dirty
+	if dirty and not _api_in_flight:
+		_apply_button_palette(_save_team_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
+	else:
+		_apply_button_palette(_save_team_btn, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
 
 
 func _on_save_team_pressed() -> void:
@@ -414,36 +795,43 @@ func _on_save_team_pressed() -> void:
 
 	var request_members: Array = []
 	for member: Dictionary in _get_editing_team_members():
+		if member.is_empty():
+			continue
 		request_members.append({
+			"slotNo": int(member.get("slotNo", 0)),
 			"playerCatId": int(member.get("playerCatId", 0)),
-			"initialDelaySeconds": 0.0 if _current_team_type == "arena_defense" else float(member.get("initialDelaySeconds", 0.0)),
+			"initialDelaySeconds": float(member.get("initialDelaySeconds", 0.0)),
 		})
 
 	_api_in_flight = true
 	_update_save_section()
 	_refresh_team()
+	_refresh_cats_list()
 
-	ApiClient.replace_team(_current_team_type, request_members, func(success: bool, data: Variant, error: Dictionary):
+	ApiClient.replace_team(_current_team_type, request_members, func(success: bool, data: Variant, error: Dictionary) -> void:
 		_api_in_flight = false
 		if not success:
-			DialogManager.show_info("儲存失敗", "更新隊伍失敗：%s" % error.get("message", "未知錯誤"))
+			DialogManager.show_info(UiText.CONFIG_SAVE_FAILED_TITLE, UiText.CONFIG_SAVE_FAILED_BODY_FORMAT % error.get("message", UiText.CONFIG_UNKNOWN_ERROR))
 			_refresh_team()
+			_refresh_cats_list()
 			return
 
 		if data is Dictionary:
-			var team_response := data as Dictionary
+			var team_response: Dictionary = data as Dictionary
 			_apply_team_update(team_response)
-			var saved_type_key := _team_scene_type_to_key(str(team_response.get("teamType", "")))
+			var saved_type_key: String = _team_scene_type_to_key(str(team_response.get("teamType", "")))
 			if saved_type_key != "":
 				_reset_team_draft(saved_type_key, team_response)
+				_restart_home_battle_if_needed(saved_type_key)
 
 		_refresh_team()
+		_refresh_cats_list()
 	)
 
 
 func _team_scene_type_to_key(team_type: String) -> String:
-	for key: String in Constants.TEAM_TYPE_MAP:
-		if Constants.TEAM_TYPE_MAP[key] == team_type:
+	for key: String in Constants.TEAM_TYPE_MAP.keys():
+		if str(Constants.TEAM_TYPE_MAP[key]) == team_type:
 			return key
 	return ""
 
@@ -457,35 +845,130 @@ func _apply_team_update(team_response: Dictionary) -> void:
 	GameState._save_config_cache("teams", GameState.teams_data.values())
 
 	if type_str == "Boss":
-		var members: Array = team_response.get("members", [])
-		GameState.player_team = members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
+		GameState.apply_active_team_from_config("Boss")
+
+
+func _restart_home_battle_if_needed(type_key: String) -> void:
+	if type_key != "boss":
+		return
+	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
+	if battle_scene != null and battle_scene.has_method("restart_with_latest_team"):
+		battle_scene.call_deferred("restart_with_latest_team")
 
 
 func _show_skill_popup(cat_file_id: String) -> void:
-	var cat_data := CatData.from_json_file(cat_file_id + ".json")
+	var cat_data: Variant = CatData.from_json_file(cat_file_id + ".json")
 	if cat_data == null:
 		return
 
-	var lines: Array = [cat_data.display_name + " 技能"]
+	var lines: Array = [str(cat_data.display_name) + UiText.CONFIG_SKILL_DIALOG_SUFFIX]
 
 	for sid: String in cat_data.passive_skill_ids:
-		var skill_d := CatData._read_skill_json(sid)
-		if not skill_d.is_empty():
-			lines.append("被動：%s" % skill_d.get("display_name", sid))
-			lines.append("  " + skill_d.get("description", ""))
+		var passive_skill: Dictionary = CatData._read_skill_json(sid)
+		if passive_skill.is_empty():
+			continue
+		lines.append(UiText.CONFIG_SKILL_PASSIVE_FORMAT % passive_skill.get("display_name", sid))
+		lines.append("  " + str(passive_skill.get("description", "")))
 
-	for skill_d: Dictionary in cat_data.active_skills_data:
-		lines.append("主動：%s  CD: %.1fs" % [
-			skill_d.get("display_name", ""),
-			skill_d.get("cooldown", 0.0),
+	for active_skill: Dictionary in cat_data.active_skills_data:
+		lines.append(UiText.CONFIG_SKILL_ACTIVE_FORMAT % [
+			active_skill.get("display_name", ""),
+			float(active_skill.get("cooldown", 0.0)),
 		])
-		lines.append("  " + skill_d.get("description", ""))
+		lines.append("  " + str(active_skill.get("description", "")))
 
-	DialogManager.show_info("技能", "\n".join(lines))
+	DialogManager.show_info(UiText.CONFIG_SKILL_DIALOG_TITLE, "\n".join(lines))
 
 
 func _make_separator() -> HSeparator:
 	return HSeparator.new()
+
+
+func _make_card_panel(accent: Color = CARD_BORDER) -> PanelContainer:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _make_panel_style(CARD_FILL, accent, 14))
+	return panel
+
+
+func _make_content_margin(value: int) -> MarginContainer:
+	var margin: MarginContainer = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", value)
+	margin.add_theme_constant_override("margin_top", value)
+	margin.add_theme_constant_override("margin_right", value)
+	margin.add_theme_constant_override("margin_bottom", value)
+	return margin
+
+
+func _make_panel_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = border
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
+	return style
+
+
+func _make_chip_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
+	var style: StyleBoxFlat = _make_panel_style(fill, border, radius)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	return style
+
+
+func _get_next_delay_value(current_delay: float) -> float:
+	var current_seconds: int = maxi(0, int(round(current_delay)))
+	return float((current_seconds + 1) % 10)
+
+
+func _format_delay_label(delay_seconds: float) -> String:
+	var seconds: int = maxi(0, int(round(delay_seconds)))
+	return str(seconds) + "秒"
+
+
+func _get_cat_visual_fallback(cat_name: String) -> String:
+	var trimmed: String = cat_name.strip_edges()
+	if trimmed == "":
+		return "?"
+	return trimmed.substr(0, 1)
+
+
+func _apply_button_palette(button: Button, bg: Color, fg: Color) -> void:
+	var normal: StyleBoxFlat = StyleBoxFlat.new()
+	normal.bg_color = bg
+	normal.corner_radius_top_left = 12
+	normal.corner_radius_top_right = 12
+	normal.corner_radius_bottom_left = 12
+	normal.corner_radius_bottom_right = 12
+	normal.border_width_left = 1
+	normal.border_width_right = 1
+	normal.border_width_top = 1
+	normal.border_width_bottom = 1
+	normal.border_color = bg.lightened(0.12)
+
+	var hover: StyleBoxFlat = normal.duplicate()
+	hover.bg_color = bg.lightened(0.08)
+
+	var pressed: StyleBoxFlat = normal.duplicate()
+	pressed.bg_color = bg.darkened(0.08)
+
+	var disabled: StyleBoxFlat = normal.duplicate()
+	disabled.bg_color = bg.darkened(0.18)
+	disabled.border_color = bg.lightened(0.04)
+
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("disabled", disabled)
+	button.add_theme_color_override("font_color", fg)
+	button.add_theme_color_override("font_disabled_color", fg.darkened(0.25))
 
 
 func _get_max_team_size() -> int:
@@ -502,5 +985,7 @@ func _get_max_team_size() -> int:
 func _on_back_pressed() -> void:
 	var boss_team: Dictionary = GameState.get_team("Boss")
 	var boss_members: Array = boss_team.get("members", [])
-	GameState.player_team = boss_members.map(func(m: Dictionary) -> int: return int(m.get("playerCatId", 0)))
+	GameState.player_team = boss_members.map(func(member: Dictionary) -> int:
+		return int(member.get("playerCatId", 0))
+	)
 	SceneNavigator.return_to_battle()

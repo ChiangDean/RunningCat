@@ -136,7 +136,7 @@ func _spawn_cat_node(ev: BattleEvent) -> void:
 
 
 func _on_collision(ev: BattleEvent) -> void:
-	var node: CatNode = _cat_nodes.get(ev.cat_id)
+	var node: CatNode = _get_cat_node(ev.cat_id)
 	if node == null:
 		return
 	var prev_hp = node.current_hp
@@ -153,7 +153,7 @@ func _on_collision(ev: BattleEvent) -> void:
 
 
 func _on_hp_update(ev: BattleEvent) -> void:
-	var node: CatNode = _cat_nodes.get(ev.cat_id)
+	var node: CatNode = _get_cat_node(ev.cat_id)
 	if node:
 		var prev_hp = node.current_hp
 		node.update_hp(ev.current_hp)
@@ -163,7 +163,7 @@ func _on_hp_update(ev: BattleEvent) -> void:
 
 
 func _on_skill_activate(ev: BattleEvent) -> void:
-	var node: CatNode = _cat_nodes.get(ev.cat_id)
+	var node: CatNode = _get_cat_node(ev.cat_id)
 	if node:
 		node.play_skill()
 		node.flash_skill()
@@ -183,13 +183,11 @@ func _on_buff_apply(ev: BattleEvent) -> void:
 
 
 func _on_cat_die(ev: BattleEvent) -> void:
-	var node: CatNode = _cat_nodes.get(ev.cat_id)
+	var node: CatNode = _get_cat_node(ev.cat_id)
 	if node:
 		node.move_to(ev.pos_x)
 		node.play_death()
-		_cat_nodes.erase(ev.cat_id)
-		_cat_speeds.erase(ev.cat_id)
-		_cat_stagger_timers.erase(ev.cat_id)
+	_remove_cat_runtime_state(ev.cat_id)
 
 
 func _on_battle_end(ev: BattleEvent) -> void:
@@ -200,8 +198,10 @@ func _on_battle_end(ev: BattleEvent) -> void:
 
 func _update_cat_movement(delta: float) -> void:
 	var scaled_delta := delta * _speed_mult
-	for id: int in _cat_nodes:
-		var node: CatNode = _cat_nodes.get(id)
+	var cat_ids: Array = _cat_nodes.keys()
+	for id_variant: Variant in cat_ids:
+		var id: int = int(id_variant)
+		var node: CatNode = _get_cat_node(id)
 		if node == null:
 			continue
 		if _cat_stagger_timers.has(id):
@@ -213,6 +213,26 @@ func _update_cat_movement(delta: float) -> void:
 		var dir := 1.0 if node.team == "player" else -1.0
 		node.position.x = clampf(node.position.x + dir * speed * scaled_delta, 40.0, 680.0)
 		node.play_run()
+
+
+func _get_cat_node(cat_id: int) -> CatNode:
+	if not _cat_nodes.has(cat_id):
+		return null
+	var node_variant: Variant = _cat_nodes.get(cat_id)
+	if not (node_variant is CatNode):
+		_remove_cat_runtime_state(cat_id)
+		return null
+	var node: CatNode = node_variant as CatNode
+	if not is_instance_valid(node):
+		_remove_cat_runtime_state(cat_id)
+		return null
+	return node
+
+
+func _remove_cat_runtime_state(cat_id: int) -> void:
+	_cat_nodes.erase(cat_id)
+	_cat_speeds.erase(cat_id)
+	_cat_stagger_timers.erase(cat_id)
 
 
 func _find_cat_data(id: int, team: String) -> CatData:

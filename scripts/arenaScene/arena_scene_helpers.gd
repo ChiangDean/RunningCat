@@ -19,6 +19,18 @@ static func get_team_member_player_cat_ids(team_type: String, fallback_team_type
 	return player_cat_ids
 
 
+static func get_effective_team_type(team_type: String, fallback_team_type: String = "") -> String:
+	var team: Dictionary = GameState.get_team(team_type)
+	var members: Array = team.get("members", [])
+	if not members.is_empty():
+		return team_type
+	if fallback_team_type == "":
+		return ""
+	var fallback_team: Dictionary = GameState.get_team(fallback_team_type)
+	var fallback_members: Array = fallback_team.get("members", [])
+	return fallback_team_type if not fallback_members.is_empty() else ""
+
+
 static func format_team_names_from_team(team_type: String, fallback_team_type: String = "", empty_text: String = "未設定") -> String:
 	var team: Dictionary = GameState.get_team(team_type)
 	var members: Array = team.get("members", [])

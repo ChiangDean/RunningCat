@@ -78,10 +78,12 @@ Bootstrap 會把設定資料寫入 `user://config/`，`ConfigScene` 開啟時先
 {
   "members": [
     {
+      "slotNo": 0,
       "playerCatId": 42,
       "initialDelaySeconds": 0.0
     },
     {
+      "slotNo": 4,
       "playerCatId": 99,
       "initialDelaySeconds": 2.0
     }
@@ -92,10 +94,12 @@ Bootstrap 會把設定資料寫入 `user://config/`，`ConfigScene` 開啟時先
 ### 4.3 驗證規則
 
 - 每隊最多 5 隻貓。
+- `slotNo` 必須介於 0 到 4，且同一隊內不可重複。
 - 同一隻貓不可在同一隊內重複出現。
 - 所有 `playerCatId` 必須屬於當前玩家且為 `isOwned = true`。
 - `initialDelaySeconds` 不可為負數。
 - `arena_defense` 不接受非 0 的 `initialDelaySeconds`。
+- 前端可透過缺少某些 `slotNo` 來保留空槽，例如只送出 `slotNo = 0` 與 `slotNo = 4` 代表中間槽位留空。
 - 回應成功後會回傳完整 `TeamResponse`，供前端直接覆蓋快取。
 
 ---
