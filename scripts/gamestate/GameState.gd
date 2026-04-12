@@ -5,6 +5,7 @@ extends Node
 const FileUtils = preload("res://scripts/gamestate/GameStateFileUtils.gd")
 const CacheIO   = preload("res://scripts/gamestate/GameStateCacheIO.gd")
 const BossStage = preload("res://scripts/gamestate/GameStateBossStage.gd")
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 const AUTH_SESSION_PATH := "user://auth_session.json"
 const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
@@ -544,6 +545,25 @@ func _to_snake_case(value: String) -> String:
 	return result
 
 
+func _normalize_image_fields_variant(value: Variant) -> Variant:
+	if value is Array:
+		var normalized_array: Array = []
+		for item: Variant in value:
+			normalized_array.append(_normalize_image_fields_variant(item))
+		return normalized_array
+	if value is Dictionary:
+		var normalized_dict: Dictionary = (value as Dictionary).duplicate(true)
+		for key_variant: Variant in normalized_dict.keys():
+			var key := str(key_variant)
+			var item: Variant = normalized_dict[key_variant]
+			if key == "imagePath" or key == "rankImagePath" or key == "image_path":
+				normalized_dict[key_variant] = AssetResolver.resolve_catalog_path(item)
+			else:
+				normalized_dict[key_variant] = _normalize_image_fields_variant(item)
+		return normalized_dict
+	return value
+
+
 func get_cat_catalog_item(cat_id: String) -> Dictionary:
 	for item: Variant in cat_catalog:
 		if item is Dictionary and str(item.get("id", "")) == cat_id:
@@ -579,23 +599,23 @@ func update_scooper_profile(data: Dictionary) -> void:
 
 ## 更新裝備快取（記憶體 + 本地檔案）
 func update_scooper_equipment(data: Array) -> void:
-	scooper_equipment_data = data
-	CacheIO.save_scooper("equipment", data)
+	scooper_equipment_data = _normalize_image_fields_variant(data)
+	CacheIO.save_scooper("equipment", scooper_equipment_data)
 
 ## 更新特殊能力快取（記憶體 + 本地檔案）
 func update_scooper_ability(data: Array) -> void:
-	scooper_ability_data = data
-	CacheIO.save_scooper("ability", data)
+	scooper_ability_data = _normalize_image_fields_variant(data)
+	CacheIO.save_scooper("ability", scooper_ability_data)
 
 ## 更新回憶快取（記憶體 + 本地檔案）
 func update_scooper_memory(data: Array) -> void:
-	scooper_memory_data = data
-	CacheIO.save_scooper("memory", data)
+	scooper_memory_data = _normalize_image_fields_variant(data)
+	CacheIO.save_scooper("memory", scooper_memory_data)
 
 ## 更新寶藏快取（記憶體 + 本地檔案）
 func update_scooper_treasure(data: Array) -> void:
-	scooper_treasure_data = data
-	CacheIO.save_scooper("treasure", data)
+	scooper_treasure_data = _normalize_image_fields_variant(data)
+	CacheIO.save_scooper("treasure", scooper_treasure_data)
 
 ## 更新成就快取（記憶體 + 本地檔案）
 func update_scooper_achievement(data: Array) -> void:
@@ -604,7 +624,7 @@ func update_scooper_achievement(data: Array) -> void:
 
 
 func update_arena(data: Dictionary) -> void:
-	arena_overview_data = data.duplicate(true)
+	arena_overview_data = _normalize_image_fields_variant(data)
 	CacheIO.save_config("arena", arena_overview_data)
 	if player_data == null:
 		return
@@ -628,11 +648,11 @@ func update_mail_summary(data: Dictionary) -> void:
 
 
 func update_mail_list(data: Array) -> void:
-	mail_list_data = data.duplicate(true)
+	mail_list_data = _normalize_image_fields_variant(data)
 
 
 func update_selected_mail(data: Dictionary) -> void:
-	selected_mail_data = data.duplicate(true)
+	selected_mail_data = _normalize_image_fields_variant(data)
 	if not selected_mail_data.is_empty():
 		_merge_mail_into_list(selected_mail_data)
 
@@ -775,7 +795,7 @@ func update_player_cats(data: Array) -> void:
 
 
 func update_gacha(data: Dictionary) -> void:
-	gacha_data = data.duplicate(true)
+	gacha_data = _normalize_image_fields_variant(data)
 	_save_gacha_cache(gacha_data)
 	if player_data == null:
 		return
@@ -807,7 +827,7 @@ func apply_gacha_pull_response(data: Dictionary) -> void:
 
 
 func update_shop(data: Dictionary) -> void:
-	shop_data = data.duplicate(true)
+	shop_data = _normalize_image_fields_variant(data)
 	shop_bundle_config = {"bundles": shop_data.get("bundles", [])}
 	_save_shop_cache(shop_data)
 	if player_data == null:
@@ -868,7 +888,7 @@ func apply_enhance_overview(data: Dictionary) -> void:
 
 
 func update_dungeon_overview(data: Array) -> void:
-	dungeon_overview_data = data.duplicate(true)
+	dungeon_overview_data = _normalize_image_fields_variant(data)
 	_save_dungeon_cache(dungeon_overview_data)
 
 

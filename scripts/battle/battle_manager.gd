@@ -127,8 +127,9 @@ func _spawn_cat_node(ev: BattleEvent) -> void:
 	var node := CatNode.new()
 	var parent := _player_team_node if ev.team == "player" else _enemy_team_node
 	parent.add_child(node)
-	node.setup(ev.cat_id, ev.team, cat_data.display_name, ev.max_hp)
+	node.setup(ev.cat_id, ev.team, cat_data.display_name, ev.max_hp, cat_data.id)
 	node.position = Vector2(ev.pos_x, 0.0)
+	node.play_run()
 	_cat_nodes[ev.cat_id] = node
 	_cat_speeds[ev.cat_id] = cat_data.speed
 	_cat_stagger_timers[ev.cat_id] = 0.0
@@ -144,9 +145,11 @@ func _on_collision(ev: BattleEvent) -> void:
 	if damage > 0:
 		node.show_damage_number(damage)
 	node.move_to(ev.pos_x)
+	node.play_collision(ev.knockback)
 	var is_near_wall := (ev.pos_x <= 70.0 or ev.pos_x >= 650.0)
 	_cat_stagger_timers[ev.cat_id] = \
 		CatStats.WALL_STAGGER_TIME if is_near_wall else CatStats.STAGGER_TIME
+	node.play_stagger()
 
 
 func _on_hp_update(ev: BattleEvent) -> void:
@@ -162,6 +165,7 @@ func _on_hp_update(ev: BattleEvent) -> void:
 func _on_skill_activate(ev: BattleEvent) -> void:
 	var node: CatNode = _cat_nodes.get(ev.cat_id)
 	if node:
+		node.play_skill()
 		node.flash_skill()
 	# 找到對應的 player 技能槽並重置 CD 顯示
 	if ev.cat_id < _player_cats.size():
@@ -203,10 +207,12 @@ func _update_cat_movement(delta: float) -> void:
 		if _cat_stagger_timers.has(id):
 			_cat_stagger_timers[id] -= scaled_delta
 			if _cat_stagger_timers[id] > 0.0:
+				node.play_stagger()
 				continue
 		var speed: float = _cat_speeds.get(id, 80.0)
 		var dir := 1.0 if node.team == "player" else -1.0
 		node.position.x = clampf(node.position.x + dir * speed * scaled_delta, 40.0, 680.0)
+		node.play_run()
 
 
 func _find_cat_data(id: int, team: String) -> CatData:

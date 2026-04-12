@@ -1,6 +1,8 @@
 class_name ArenaSceneRewardPopup
 extends RefCounted
 
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+
 
 static func show(scene: Control, overview: Dictionary, claim_callback: Callable) -> void:
 	var scroll := ScrollContainer.new()
@@ -18,6 +20,10 @@ static func show(scene: Control, overview: Dictionary, claim_callback: Callable)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		list.add_child(row)
+
+		var badge_texture := AssetResolver.load_texture(AssetResolver.resolve_catalog_path(rank.get("imagePath", "")))
+		if badge_texture != null:
+			row.add_child(AssetResolver.create_icon_rect(badge_texture, Vector2(44.0, 44.0)))
 
 		var name_label := Label.new()
 		name_label.text = str(rank.get("displayName", "未知牌位"))

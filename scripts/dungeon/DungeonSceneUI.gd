@@ -1,11 +1,11 @@
 class_name DungeonSceneUI
 extends RefCounted
 
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+
 
 static func build_ui(scene) -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.133, 0.157, 0.192, 1.0)
-	bg.size = Vector2(scene.SW, scene.SH)
+	var bg := AssetResolver.make_fullscreen_background("dungeon")
 	scene.add_child(bg)
 
 	scene._ui_layer = CanvasLayer.new()
@@ -126,6 +126,16 @@ static func _build_dungeon_panel(scene, dungeon: Dictionary) -> PanelContainer:
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
 	panel.add_child(vbox)
+
+	var preview_texture := AssetResolver.load_texture(AssetResolver.resolve_catalog_path(dungeon.get("imagePath", "")))
+	if preview_texture != null:
+		var preview := TextureRect.new()
+		preview.custom_minimum_size = Vector2(0.0, 140.0)
+		preview.texture = preview_texture
+		preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		vbox.add_child(preview)
 
 	var name_label := Label.new()
 	name_label.text = str(dungeon.get("displayName", "地城"))

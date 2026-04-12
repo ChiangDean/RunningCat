@@ -4,6 +4,7 @@ signal request_refresh
 
 const CARD_BG := Color(0.16, 0.18, 0.22, 1.0)
 const CARD_BORDER := Color(0.33, 0.45, 0.54, 1.0)
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 var _selected_category_id: String = ""
 
@@ -95,6 +96,16 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 	var card := VBoxContainer.new()
 	card.add_theme_constant_override("separation", 10)
 	margin.add_child(card)
+
+	var bundle_art := AssetResolver.resolve_bundle_art(bundle)
+	if bundle_art != null:
+		var art := TextureRect.new()
+		art.custom_minimum_size = Vector2(0.0, 180.0)
+		art.texture = bundle_art
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		card.add_child(art)
 
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 8)

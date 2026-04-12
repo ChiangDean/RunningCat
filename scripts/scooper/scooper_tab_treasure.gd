@@ -1,5 +1,7 @@
 extends RefCounted
 
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+
 ## 寶藏 Tab — 寶藏收藏列表
 
 
@@ -100,6 +102,10 @@ func _make_treasure_card(scene: Control, item: Dictionary) -> Control:
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 8)
 	card.add_child(header)
+
+	var treasure_texture := AssetResolver.load_texture(AssetResolver.resolve_catalog_path(item.get("imagePath", "")))
+	if treasure_texture != null:
+		header.add_child(AssetResolver.create_icon_rect(treasure_texture, Vector2(52.0, 52.0)))
 
 	var title_lbl := Label.new()
 	title_lbl.text = item.get("displayName") if item.get("displayName") != null else ""
