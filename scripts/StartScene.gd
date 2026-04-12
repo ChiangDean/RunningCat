@@ -1,14 +1,19 @@
 extends Control
 
 const HERO_IMAGE := preload("res://assets/sprites/ui/start_scene_homey_v1.png")
-const TITLE_TEXT := "\u55b5\u55b5\u885d\u649e\u6d3e\u5c0d"
-const SUBTITLE_TEXT := "\u93df\u5c4e\u5b98\u4e5f\u60f3\u7576\u8c93"
-const TAP_TO_START_TEXT := "\u9ede\u64ca\u4efb\u610f\u4f4d\u7f6e\u958b\u59cb"
+const TITLE_TEXT := UiText.START_TITLE
+const SUBTITLE_TEXT := UiText.START_SUBTITLE
+const TAP_TO_START_TEXT := UiText.START_TAP_TO_START
 const CONFIG_PATH := "res://config/runtime_config.json"
 const LOCAL_CONFIG_PATH := "res://config/runtime_config.local.json"
 const DEVICE_ID_PATH := "user://device_id.txt"
 const DEFAULT_ENVIRONMENT := "Local"
 const DEFAULT_API_BASE_URL := "http://localhost:5000/api"
+const REQUEST_TIMEOUT_SECONDS := 15.0
+const BOOTSTRAP_MAX_RETRY_COUNT := 2
+const BOOTSTRAP_RETRY_DELAY_SECONDS := 5.0
+const BOOTSTRAP_PROGRESS_MAX_PERCENT := 96.0
+const BOOTSTRAP_PROGRESS_DURATION_SECONDS := 12.0
 const REQUEST_KIND_AUTH := "auth"
 const REQUEST_KIND_BOOTSTRAP := "bootstrap"
 const REQUEST_KIND_REFRESH := "refresh"
@@ -54,6 +59,8 @@ var _loading_fill_tween: Tween
 var _loading_percent_tween: Tween
 var _loading_animation_finished := false
 var _bootstrap_completed := false
+var _bootstrap_retry_count: int = 0
+var _bootstrap_retry_timer: Timer
 
 
 func _ready() -> void:
@@ -68,7 +75,7 @@ func _ready() -> void:
 		_api_base_url = GameState.api_base_url
 		_sync_logout_button_visibility()
 		_show_loading_state()
-		_begin_authenticated_bootstrap("正在恢復登入...")
+		_begin_authenticated_bootstrap(UiText.START_STATUS_BOOTSTRAP_RESTORE)
 
 
 func _build_ui() -> void:
@@ -141,7 +148,7 @@ func _build_title_block() -> PanelContainer:
 	margin.add_child(content)
 
 	var ribbon := Label.new()
-	ribbon.text = "HOME OF MEOW"
+	ribbon.text = UiText.START_RIBBON
 	ribbon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ribbon.add_theme_font_size_override("font_size", 18)
 	ribbon.add_theme_color_override("font_color", Color("f8f3ea"))
@@ -196,16 +203,16 @@ func _build_auth_block() -> PanelContainer:
 	_form_title.add_theme_color_override("font_color", Color("4f3d31"))
 	content.add_child(_form_title)
 
-	_display_name_input = _build_input("\u540d\u7a31", false)
+	_display_name_input = _build_input(UiText.START_PLACEHOLDER_DISPLAY_NAME, false)
 	content.add_child(_display_name_input)
 
-	_account_input = _build_input("\u5e33\u865f", false)
+	_account_input = _build_input(UiText.START_PLACEHOLDER_ACCOUNT, false)
 	content.add_child(_account_input)
 
-	_password_input = _build_input("\u5bc6\u78bc", true)
+	_password_input = _build_input(UiText.START_PLACEHOLDER_PASSWORD, true)
 	content.add_child(_password_input)
 
-	_confirm_password_input = _build_input("\u518d\u6b21\u8f38\u5165\u5bc6\u78bc", true)
+	_confirm_password_input = _build_input(UiText.START_PLACEHOLDER_CONFIRM_PASSWORD, true)
 	content.add_child(_confirm_password_input)
 
 	var button_row := HBoxContainer.new()
@@ -268,7 +275,7 @@ func _build_loading_block() -> Control:
 	margin.add_child(content)
 
 	_loading_label = Label.new()
-	_loading_label.text = "\u8c93\u54aa\u5011\u6b63\u5728\u96c6\u5408..."
+	_loading_label.text = UiText.START_LOADING_GATHERING
 	_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_loading_label.add_theme_font_size_override("font_size", 22)
 	_loading_label.add_theme_color_override("font_color", Color("5f4c3f"))
@@ -294,7 +301,7 @@ func _build_loading_block() -> Control:
 	_loading_track_fill_width = 312.0
 
 	_loading_percent_label = Label.new()
-	_loading_percent_label.text = "0%"
+	_loading_percent_label.text = UiText.START_LOADING_PERCENT_ZERO
 	_loading_percent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_loading_percent_label.add_theme_font_size_override("font_size", 18)
 	_loading_percent_label.add_theme_color_override("font_color", Color("715b4a"))
@@ -323,7 +330,7 @@ func _build_tap_hint() -> Label:
 
 func _build_logout_button() -> Button:
 	var button := Button.new()
-	button.text = "登出"
+	button.text = UiText.START_LOGOUT_BUTTON
 	button.anchor_left = 1.0
 	button.anchor_top = 0.0
 	button.anchor_right = 1.0
@@ -364,9 +371,15 @@ func _build_input(placeholder: String, secret: bool) -> LineEdit:
 
 func _attach_http_request() -> void:
 	_http_request = HTTPRequest.new()
-	_http_request.timeout = 15.0
+	_http_request.timeout = REQUEST_TIMEOUT_SECONDS
 	_http_request.request_completed.connect(_on_request_completed)
 	add_child(_http_request)
+
+	_bootstrap_retry_timer = Timer.new()
+	_bootstrap_retry_timer.one_shot = true
+	_bootstrap_retry_timer.wait_time = BOOTSTRAP_RETRY_DELAY_SECONDS
+	_bootstrap_retry_timer.timeout.connect(_on_bootstrap_retry_timeout)
+	add_child(_bootstrap_retry_timer)
 
 
 func _play_idle_animation() -> void:
@@ -394,11 +407,11 @@ func _play_idle_animation() -> void:
 
 func _apply_mode() -> void:
 	var is_register := _mode == AuthMode.REGISTER
-	_form_title.text = "\u5efa\u7acb\u5e33\u865f" if is_register else "\u767b\u5165"
+	_form_title.text = UiText.START_FORM_REGISTER if is_register else UiText.START_FORM_LOGIN
 	_display_name_input.visible = is_register
 	_confirm_password_input.visible = is_register
-	_primary_button.text = "\u8a3b\u518a" if is_register else "\u767b\u5165"
-	_secondary_button.text = "\u8fd4\u56de\u767b\u5165" if is_register else "\u8a3b\u518a"
+	_primary_button.text = UiText.START_BUTTON_REGISTER if is_register else UiText.START_BUTTON_LOGIN
+	_secondary_button.text = UiText.START_BUTTON_BACK_TO_LOGIN if is_register else UiText.START_BUTTON_REGISTER
 	_status_label.text = ""
 
 
@@ -439,14 +452,14 @@ func _submit_login() -> void:
 	var account := _account_input.text.strip_edges()
 	var password := _password_input.text
 	if account == "" or password.strip_edges() == "":
-		_set_status("\u8acb\u8f38\u5165\u5e33\u865f\u8207\u5bc6\u78bc\u3002", true)
+		_set_status(UiText.START_STATUS_ENTER_ACCOUNT_PASSWORD, true)
 		return
 
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_AUTH
 	_set_auth_interactable(false)
-	_set_status("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...", false)
-	_retain_network_loading_overlay("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...")
+	_set_status(UiText.START_STATUS_CONNECTING_SERVER, false)
+	_retain_network_loading_overlay(UiText.START_STATUS_CONNECTING_SERVER)
 
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -462,7 +475,7 @@ func _submit_login() -> void:
 	if error != OK:
 		_request_in_flight = false
 		_set_auth_interactable(true)
-		_set_status("\u7121\u6cd5\u9001\u51fa\u8acb\u6c42\uff0c\u932f\u8aa4\u78bc: %s" % error, true)
+		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
 
 
 func _submit_register() -> void:
@@ -475,22 +488,22 @@ func _submit_register() -> void:
 	var confirm_password := _confirm_password_input.text
 
 	if display_name == "" or account == "" or password.strip_edges() == "" or confirm_password.strip_edges() == "":
-		_set_status("\u8acb\u5b8c\u6574\u586b\u5beb\u540d\u7a31\u3001\u5e33\u865f\u8207\u5bc6\u78bc\u3002", true)
+		_set_status(UiText.START_STATUS_FILL_REGISTER_FIELDS, true)
 		return
 
 	if password.length() < 8:
-		_set_status("\u5bc6\u78bc\u81f3\u5c11\u9700\u8981 8 \u78bc\u3002", true)
+		_set_status(UiText.START_STATUS_PASSWORD_MIN_LENGTH, true)
 		return
 
 	if password != confirm_password:
-		_set_status("\u5169\u6b21\u8f38\u5165\u7684\u5bc6\u78bc\u4e0d\u4e00\u81f4\u3002", true)
+		_set_status(UiText.START_STATUS_PASSWORD_MISMATCH, true)
 		return
 
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_AUTH
 	_set_auth_interactable(false)
-	_set_status("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...", false)
-	_retain_network_loading_overlay("\u6b63\u5728\u8207\u4f3a\u670d\u5668\u9023\u7dda...")
+	_set_status(UiText.START_STATUS_CONNECTING_SERVER, false)
+	_retain_network_loading_overlay(UiText.START_STATUS_CONNECTING_SERVER)
 
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -509,19 +522,23 @@ func _submit_register() -> void:
 		_request_in_flight = false
 		_set_auth_interactable(true)
 		_release_network_loading_overlay()
-		_set_status("\u7121\u6cd5\u9001\u51fa\u8acb\u6c42\uff0c\u932f\u8aa4\u78bc: %s" % error, true)
+		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
 
 
-func _on_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_request_in_flight = false
 	var completed_request_kind := _request_kind
 	_request_kind = ""
 	_set_auth_interactable(true)
 
+	if result != HTTPRequest.RESULT_SUCCESS:
+		_handle_request_transport_failure(completed_request_kind, result)
+		return
+
 	var response_text := body.get_string_from_utf8()
 	var response_json := JSON.new()
 	if response_text == "" or response_json.parse(response_text) != OK:
-		_set_status("\u4f3a\u670d\u5668\u56de\u50b3\u683c\u5f0f\u7121\u6cd5\u89e3\u6790\u3002", true)
+		_handle_request_invalid_response(completed_request_kind)
 		return
 
 	var payload_variant: Variant = response_json.get_data()
@@ -539,9 +556,10 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 			_sync_logout_button_visibility()
 			if completed_request_kind == REQUEST_KIND_AUTH or _loading_block == null or not _loading_block.visible:
 				_show_loading_state()
-			_begin_authenticated_bootstrap("正在同步玩家資料...")
+			_begin_authenticated_bootstrap(UiText.START_STATUS_BOOTSTRAP_SYNC)
 			return
 		if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
+			_cancel_bootstrap_retry()
 			GameState.apply_player_bootstrap(data)
 			_bootstrap_completed = true
 			_complete_loading_state()
@@ -567,7 +585,7 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 
 	if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
 		_abort_loading_state()
-		var bootstrap_message := str(error_payload.get("message", "同步玩家資料失敗，請稍後再試。"))
+		var bootstrap_message := str(error_payload.get("message", UiText.START_STATUS_BOOTSTRAP_FAILED))
 		_set_status(bootstrap_message, true)
 		return
 
@@ -576,7 +594,7 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 		GameState.clear_auth_session()
 		_api_base_url = _resolve_api_base_url()
 		_sync_logout_button_visibility()
-		_set_status("登入已過期，請重新登入。", true)
+		_set_status(UiText.START_STATUS_LOGIN_EXPIRED, true)
 		return
 
 	if completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE:
@@ -588,7 +606,7 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 			_begin_logout_refresh()
 			return
 		_release_network_loading_overlay()
-		var logout_message = error_payload.get("message") if error_payload.get("message") != null else "登出失敗，請稍後再試。"
+		var logout_message = error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGOUT_FAILED
 		_set_logout_button_state(true)
 		_set_status(logout_message, true)
 		return
@@ -599,30 +617,76 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 			_finalize_logout()
 			return
 		_release_network_loading_overlay()
-		var logout_refresh_message = error_payload.get("message") if error_payload.get("message") != null else "更新登入狀態失敗，請稍後再試。"
+		var logout_refresh_message = error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGOUT_REFRESH_FAILED
 		_set_logout_button_state(true)
 		_set_status(logout_refresh_message, true)
 		return
 
-	var message = error_payload.get("message") if error_payload.get("message") != null else "登入失敗，請稍後再試。"
+	var message = error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED
 	_release_network_loading_overlay()
 	_set_status(message, true)
 
 
-func _begin_authenticated_bootstrap(status_message: String) -> void:
+func _handle_request_transport_failure(completed_request_kind: String, result: int) -> void:
+	_release_network_loading_overlay()
+	if completed_request_kind == REQUEST_KIND_BOOTSTRAP and _is_bootstrap_retryable_result(result):
+		if _bootstrap_retry_count < BOOTSTRAP_MAX_RETRY_COUNT:
+			_schedule_bootstrap_retry()
+			return
+	var message := _describe_http_request_result(result)
+	if completed_request_kind == REQUEST_KIND_BOOTSTRAP or completed_request_kind == REQUEST_KIND_REFRESH:
+		_abort_loading_state()
+	elif completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE or completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
+		_set_logout_button_state(true)
+	_logout_dialog_open = false if completed_request_kind.begins_with("logout") else _logout_dialog_open
+	_set_status(message, true)
+
+
+func _handle_request_invalid_response(completed_request_kind: String) -> void:
+	_release_network_loading_overlay()
+	if completed_request_kind == REQUEST_KIND_BOOTSTRAP or completed_request_kind == REQUEST_KIND_REFRESH:
+		_abort_loading_state()
+	elif completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE or completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
+		_set_logout_button_state(true)
+	_logout_dialog_open = false if completed_request_kind.begins_with("logout") else _logout_dialog_open
+	_set_status(UiText.START_STATUS_INVALID_RESPONSE, true)
+
+
+func _describe_http_request_result(result: int) -> String:
+	match result:
+		HTTPRequest.RESULT_TIMEOUT:
+			return UiText.START_STATUS_TIMEOUT
+		HTTPRequest.RESULT_CANT_CONNECT:
+			return UiText.START_STATUS_CANT_CONNECT
+		HTTPRequest.RESULT_CANT_RESOLVE:
+			return UiText.START_STATUS_CANT_RESOLVE
+		HTTPRequest.RESULT_CONNECTION_ERROR:
+			return UiText.START_STATUS_CONNECTION_ERROR
+		HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR:
+			return UiText.START_STATUS_TLS_ERROR
+		_:
+			return UiText.START_STATUS_GENERIC_RESULT_ERROR % result
+
+
+func _begin_authenticated_bootstrap(status_message: String, reset_retry_count: bool = true) -> void:
 	if _request_in_flight:
 		return
 
 	var access_token := GameState.get_access_token()
 	if access_token == "":
 		GameState.clear_auth_session()
-		_set_status("登入資訊遺失，請重新登入。", true)
+		_set_status(UiText.START_STATUS_LOGIN_INFO_MISSING, true)
 		return
+
+	if reset_retry_count:
+		_cancel_bootstrap_retry()
+		_bootstrap_retry_count = 0
 
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_BOOTSTRAP
 	_set_auth_interactable(false)
 	_set_status(status_message, false)
+	_set_loading_message(status_message)
 
 	var headers := PackedStringArray([
 		"Accept: application/json",
@@ -635,7 +699,7 @@ func _begin_authenticated_bootstrap(status_message: String) -> void:
 		_set_auth_interactable(true)
 		_abort_loading_state()
 		_release_network_loading_overlay()
-		_set_status("無法同步玩家資料，錯誤碼: %s" % error, true)
+		_set_status(UiText.START_STATUS_BOOTSTRAP_REQUEST_ERROR_FORMAT % error, true)
 
 
 func _begin_refresh_then_bootstrap() -> void:
@@ -645,14 +709,14 @@ func _begin_refresh_then_bootstrap() -> void:
 	var refresh_token := GameState.get_refresh_token()
 	if refresh_token == "":
 		GameState.clear_auth_session()
-		_set_status("登入已過期，請重新登入。", true)
+		_set_status(UiText.START_STATUS_LOGIN_EXPIRED, true)
 		return
 
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_REFRESH
 	_set_auth_interactable(false)
-	_retain_network_loading_overlay("資料同步中...")
-	_set_status("正在更新登入資訊...", false)
+	_retain_network_loading_overlay(UiText.START_STATUS_BOOTSTRAP_SYNC)
+	_set_status(UiText.START_STATUS_REFRESHING_SESSION, false)
 
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -668,14 +732,16 @@ func _begin_refresh_then_bootstrap() -> void:
 		_set_auth_interactable(true)
 		_abort_loading_state()
 		_release_network_loading_overlay()
-		_set_status("無法更新登入資訊，錯誤碼: %s" % error, true)
+		_set_status(UiText.START_STATUS_REFRESH_REQUEST_ERROR_FORMAT % error, true)
 
 
 func _show_loading_state() -> void:
 	_input_ready = false
 	_bootstrap_completed = false
+	_bootstrap_retry_count = 0
 	_loading_animation_finished = false
 	_cancel_loading_tweens()
+	_cancel_bootstrap_retry()
 	_sync_logout_button_visibility()
 	_set_status("", false)
 	if _auth_block != null:
@@ -685,25 +751,26 @@ func _show_loading_state() -> void:
 		_loading_block.modulate.a = 1.0
 	if _tap_hint != null:
 		_tap_hint.visible = false
-	if _loading_fill != null:
-		_loading_fill.size.x = 0.0
 	if _loading_label != null:
-		_loading_label.text = "\u8c93\u54aa\u5011\u6b63\u5728\u96c6\u5408..."
-	if _loading_percent_label != null:
-		_loading_percent_label.text = "0%"
+		_loading_label.text = UiText.START_LOADING_GATHERING
+	_set_loading_progress_visual(0.0)
 	_start_fake_loading()
 
 
 func _start_fake_loading() -> void:
-	if _loading_fill == null:
+	if _loading_fill == null or _loading_percent_label == null:
 		return
 
+	_set_loading_progress_visual(0.0)
 	_loading_fill_tween = create_tween()
-	_loading_fill_tween.tween_property(_loading_fill, "size:x", _loading_track_fill_width, 2.0).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
+	_loading_fill_tween.tween_method(
+		_set_loading_progress_visual,
+		0.0,
+		BOOTSTRAP_PROGRESS_MAX_PERCENT,
+		BOOTSTRAP_PROGRESS_DURATION_SECONDS
+	).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	_loading_fill_tween.finished.connect(_on_loading_animation_finished)
-
-	_loading_percent_tween = create_tween()
-	_loading_percent_tween.tween_method(_update_loading_progress, 0.0, 100.0, 2.0)
+	_loading_percent_tween = _loading_fill_tween
 
 
 func _on_loading_animation_finished() -> void:
@@ -721,12 +788,9 @@ func _complete_loading_state() -> void:
 	_cancel_loading_tweens()
 	_input_ready = true
 	_sync_logout_button_visibility()
-	if _loading_fill != null:
-		_loading_fill.size.x = _loading_track_fill_width
 	if _loading_label != null:
-		_loading_label.text = "\u8c93\u54aa\u968a\u4f0d\u96c6\u5408\u5b8c\u7562"
-	if _loading_percent_label != null:
-		_loading_percent_label.text = "100%"
+		_loading_label.text = UiText.START_LOADING_COMPLETE
+	_set_loading_progress_visual(100.0)
 	if _loading_block != null:
 		var fade_tween := create_tween()
 		fade_tween.tween_property(_loading_block, "modulate:a", 0.0, 0.3)
@@ -739,16 +803,19 @@ func _complete_loading_state() -> void:
 
 
 func _cancel_loading_tweens() -> void:
+	var shared_tween := _loading_fill_tween != null and _loading_fill_tween == _loading_percent_tween
 	if _loading_fill_tween != null:
 		_loading_fill_tween.kill()
 		_loading_fill_tween = null
-	if _loading_percent_tween != null:
+	if _loading_percent_tween != null and not shared_tween:
 		_loading_percent_tween.kill()
-		_loading_percent_tween = null
+	_loading_percent_tween = null
 
 
 func _abort_loading_state() -> void:
 	_cancel_loading_tweens()
+	_cancel_bootstrap_retry()
+	_bootstrap_retry_count = 0
 	_bootstrap_completed = false
 	_loading_animation_finished = false
 	if _auth_block != null:
@@ -758,15 +825,53 @@ func _abort_loading_state() -> void:
 		_loading_block.modulate.a = 1.0
 	if _tap_hint != null:
 		_tap_hint.visible = false
+	_set_loading_progress_visual(0.0)
+
+
+func _set_loading_progress_visual(value: float) -> void:
+	var clamped_value := clampf(value, 0.0, 100.0)
 	if _loading_fill != null:
-		_loading_fill.size.x = 0.0
+		_loading_fill.size.x = _loading_track_fill_width * (clamped_value / 100.0)
 	if _loading_percent_label != null:
-		_loading_percent_label.text = "0%"
+		_loading_percent_label.text = UiText.START_LOADING_PERCENT_FORMAT % int(round(clamped_value))
 
 
-func _update_loading_progress(value: float) -> void:
-	if _loading_percent_label != null:
-		_loading_percent_label.text = "%d%%" % int(round(value))
+func _set_loading_message(message: String) -> void:
+	if _loading_label != null and message != "":
+		_loading_label.text = message
+
+
+func _is_bootstrap_retryable_result(result: int) -> bool:
+	return result == HTTPRequest.RESULT_TIMEOUT \
+		or result == HTTPRequest.RESULT_CANT_CONNECT \
+		or result == HTTPRequest.RESULT_CANT_RESOLVE \
+		or result == HTTPRequest.RESULT_CONNECTION_ERROR
+
+
+func _schedule_bootstrap_retry() -> void:
+	_bootstrap_retry_count += 1
+	var retry_message := UiText.START_STATUS_RETRY_FORMAT % [
+		int(BOOTSTRAP_RETRY_DELAY_SECONDS),
+		_bootstrap_retry_count,
+		BOOTSTRAP_MAX_RETRY_COUNT
+	]
+	_set_status(retry_message, true)
+	_set_loading_message(retry_message)
+	if _bootstrap_retry_timer != null:
+		_bootstrap_retry_timer.stop()
+		_bootstrap_retry_timer.wait_time = BOOTSTRAP_RETRY_DELAY_SECONDS
+		_bootstrap_retry_timer.start()
+
+
+func _cancel_bootstrap_retry() -> void:
+	if _bootstrap_retry_timer != null:
+		_bootstrap_retry_timer.stop()
+
+
+func _on_bootstrap_retry_timeout() -> void:
+	if _request_in_flight:
+		return
+	_begin_authenticated_bootstrap(UiText.START_STATUS_BOOTSTRAP_RETRY, false)
 
 
 func _start_game() -> void:
@@ -818,12 +923,11 @@ func _is_event_on_logout_button(event_position: Vector2) -> bool:
 	return _logout_button.get_global_rect().has_point(event_position)
 
 
-func _set_logout_button_state(enabled: bool, button_text: String = "登出") -> void:
+func _set_logout_button_state(enabled: bool, button_text: String = UiText.START_LOGOUT_BUTTON) -> void:
 	if _logout_button == null:
 		return
 	_logout_button.disabled = not enabled
 	_logout_button.text = button_text
-
 
 func _on_logout_pressed() -> void:
 	if _request_in_flight:
@@ -831,12 +935,11 @@ func _on_logout_pressed() -> void:
 
 	_logout_dialog_open = true
 	DialogManager.show_confirm(
-		"登出",
-		"您確定要登出嗎？(請注意：若先前為遊客登入，此動作將導致資料無法被找回)",
+		UiText.START_LOGOUT_CONFIRM_TITLE,
+		UiText.START_LOGOUT_CONFIRM_BODY,
 		Callable(self, "_begin_logout"),
 		func() -> void: _logout_dialog_open = false
 	)
-
 
 func _begin_logout() -> void:
 	_logout_revoke_retry = false
@@ -857,8 +960,8 @@ func _begin_logout_revoke() -> void:
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_LOGOUT_REVOKE
 	_set_auth_interactable(false)
-	_set_logout_button_state(false, "登出中...")
-	_set_status("正在登出...", false)
+	_set_logout_button_state(false, UiText.START_LOGOUT_BUTTON_WORKING)
+	_set_status(UiText.START_STATUS_LOGGING_OUT, false)
 
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -867,7 +970,7 @@ func _begin_logout_revoke() -> void:
 	])
 	var body := JSON.stringify({
 		"refreshToken": refresh_token,
-		"reason": "Player logout from client."
+		"reason": UiText.START_LOGOUT_REASON
 	})
 	var error := _http_request.request("%s/auth/revoke" % GameState.api_base_url, headers, HTTPClient.METHOD_POST, body)
 	if error != OK:
@@ -875,8 +978,7 @@ func _begin_logout_revoke() -> void:
 		_request_kind = ""
 		_set_auth_interactable(true)
 		_set_logout_button_state(true)
-		_set_status("無法送出登出請求，錯誤碼: %s" % error, true)
-
+		_set_status(UiText.START_STATUS_LOGOUT_REQUEST_ERROR_FORMAT % error, true)
 
 func _begin_logout_refresh() -> void:
 	var refresh_token := GameState.get_refresh_token()
@@ -888,8 +990,8 @@ func _begin_logout_refresh() -> void:
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_LOGOUT_REFRESH
 	_set_auth_interactable(false)
-	_set_logout_button_state(false, "更新中...")
-	_set_status("正在更新登入狀態...", false)
+	_set_logout_button_state(false, UiText.START_REFRESH_BUTTON_WORKING)
+	_set_status(UiText.START_STATUS_LOGOUT_REFRESHING, false)
 
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -904,18 +1006,19 @@ func _begin_logout_refresh() -> void:
 		_request_kind = ""
 		_set_auth_interactable(true)
 		_set_logout_button_state(true)
-		_set_status("無法更新登入狀態，錯誤碼: %s" % error, true)
-
+		_set_status(UiText.START_STATUS_LOGOUT_REFRESH_REQUEST_ERROR_FORMAT % error, true)
 
 func _finalize_logout() -> void:
 	_logout_dialog_open = false
 	_release_network_loading_overlay()
 	_cancel_loading_tweens()
+	_cancel_bootstrap_retry()
 	GameState.clear_auth_and_player_state()
 	_api_base_url = _resolve_api_base_url()
 	_request_in_flight = false
 	_request_kind = ""
 	_input_ready = false
+	_bootstrap_retry_count = 0
 	_bootstrap_completed = false
 	_loading_animation_finished = false
 	_set_auth_interactable(true)
@@ -933,13 +1036,12 @@ func _finalize_logout() -> void:
 	if _loading_fill != null:
 		_loading_fill.size.x = 0.0
 	if _loading_percent_label != null:
-		_loading_percent_label.text = "0%"
+		_loading_percent_label.text = UiText.START_LOADING_PERCENT_ZERO
 	_account_input.text = ""
 	_password_input.text = ""
 	_confirm_password_input.text = ""
 	_display_name_input.text = ""
-	_set_status("已登出。", false)
-
+	_set_status(UiText.START_STATUS_LOGOUT_SUCCESS, false)
 
 func _resolve_api_base_url() -> String:
 	var config := _load_runtime_config()
