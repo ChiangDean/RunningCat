@@ -61,6 +61,7 @@ static func attach(
 # ── Init ───────────────────────────────────────────────
 
 func _init_attach() -> void:
+	set_process_input(true)
 	set_process(true)
 	target.mouse_filter = Control.MOUSE_FILTER_STOP
 

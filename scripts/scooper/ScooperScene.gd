@@ -11,6 +11,7 @@ const PANEL_BORDER := Color(0.80, 0.67, 0.42, 0.95)
 const CARD_FILL := Color(0.16, 0.15, 0.18, 0.96)
 const CARD_BORDER := Color(0.50, 0.43, 0.30, 0.92)
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 
 var _current_tab: String = "equipment"
 var _tab_btns: Dictionary = {}
@@ -121,66 +122,24 @@ func _build_ui() -> void:
 	_tab_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_vbox.add_child(_tab_content)
 
-	var back_panel: PanelContainer = PanelContainer.new()
-	back_panel.anchor_left = 0.0
-	back_panel.anchor_top = 1.0
-	back_panel.anchor_right = 0.0
-	back_panel.anchor_bottom = 1.0
-	back_panel.offset_left = 20.0
-	back_panel.offset_top = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H)
-	back_panel.offset_right = 128.0
-	back_panel.offset_bottom = -HOME_MAIN_NAV_H
-	back_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 16))
-	add_child(back_panel)
-
-	var back_margin: MarginContainer = MarginContainer.new()
-	back_margin.add_theme_constant_override("margin_left", 12)
-	back_margin.add_theme_constant_override("margin_top", 12)
-	back_margin.add_theme_constant_override("margin_right", 12)
-	back_margin.add_theme_constant_override("margin_bottom", 12)
-	back_panel.add_child(back_margin)
-
-	var back_btn: Button = Button.new()
-	back_btn.text = UiText.SCOOPER_BACK
-	back_btn.custom_minimum_size = Vector2(84.0, 56.0)
-	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	back_btn.add_theme_font_size_override("font_size", 20)
-	back_btn.pressed.connect(_on_back_pressed)
-	back_margin.add_child(back_btn)
-
-	var dock_panel: PanelContainer = PanelContainer.new()
-	dock_panel.anchor_left = 0.0
-	dock_panel.anchor_top = 1.0
-	dock_panel.anchor_right = 1.0
-	dock_panel.anchor_bottom = 1.0
-	dock_panel.offset_left = 136.0
-	dock_panel.offset_top = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H)
-	dock_panel.offset_right = -20.0
-	dock_panel.offset_bottom = -HOME_MAIN_NAV_H
-	dock_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 16))
-	add_child(dock_panel)
-
-	var dock_margin: MarginContainer = MarginContainer.new()
-	dock_margin.add_theme_constant_override("margin_left", 12)
-	dock_margin.add_theme_constant_override("margin_top", 12)
-	dock_margin.add_theme_constant_override("margin_right", 12)
-	dock_margin.add_theme_constant_override("margin_bottom", 12)
-	dock_panel.add_child(dock_margin)
-
-	var dock_row: HBoxContainer = HBoxContainer.new()
-	dock_row.add_theme_constant_override("separation", 8)
-	dock_margin.add_child(dock_row)
-
+	var submenu_items: Array = []
 	for tab_key: String in TAB_KEYS:
-		var btn: Button = Button.new()
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.custom_minimum_size = Vector2(0.0, 56.0)
-		btn.add_theme_font_size_override("font_size", 20)
-		btn.pressed.connect(func() -> void:
-			_switch_tab(tab_key)
-		)
-		dock_row.add_child(btn)
-		_tab_btns[tab_key] = btn
+		submenu_items.append({
+			"key": tab_key,
+			"label": str(_get_tab_meta(tab_key).get("label", tab_key)),
+		})
+	var submenu: Dictionary = SceneSubmenuBar.build(self, {
+		"items": submenu_items,
+		"active_key": _current_tab,
+		"back_label": UiText.SCOOPER_BACK,
+		"back_pressed": Callable(self, "_on_back_pressed"),
+		"button_pressed": Callable(self, "_switch_tab"),
+		"panel_fill": PANEL_FILL,
+		"panel_border": PANEL_BORDER,
+		"top": -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H),
+		"bottom": -HOME_MAIN_NAV_H,
+	})
+	_tab_btns = submenu.get("buttons", {})
 
 	_refresh_tab_button_labels()
 	_switch_tab(_current_tab)
@@ -206,13 +165,7 @@ func _switch_tab(tab_key: String) -> void:
 	_current_tab = tab_key
 	_refresh_tab_button_labels()
 	_refresh_tab_header()
-	for key: String in _tab_btns.keys():
-		var btn: Button = _tab_btns[key]
-		if btn == null:
-			continue
-		var is_active: bool = key == tab_key
-		btn.modulate = Color(1.0, 0.95, 0.82, 1.0) if is_active else Color(0.65, 0.65, 0.68, 1.0)
-		btn.add_theme_font_size_override("font_size", 22 if is_active else 20)
+	SceneSubmenuBar.refresh(_tab_btns, tab_key)
 	_rebuild_tab_content()
 
 

@@ -6,35 +6,91 @@ const SH := 1280.0
 const UI = preload("res://scripts/enhance/EnhanceSceneUI.gd")
 const Refresh = preload("res://scripts/enhance/EnhanceSceneRefresh.gd")
 const Actions = preload("res://scripts/enhance/EnhanceSceneActions.gd")
+const ACTION_FLOAT_COLOR := Color(0.93, 0.98, 0.92, 1.0)
+const ACTION_FLOAT_RANK_COLOR := Color(0.98, 0.95, 0.84, 1.0)
 
 var _selected_cat_id: String = ""
 var _detail_panel: VBoxContainer
 var _resource_label: Label
+var _detail_resource_label: Label
 var _stat_labels: Dictionary = {}
 var _food_level_label: Label
 var _cat_name_label: Label
 var _food_cost_label: Label
+var _food_progress_bar: ProgressBar
+var _food_progress_label: Label
 var _special_cost_label: Label
 var _special_point_labels: Dictionary = {}
 var _rank_stars_label: Label
+var _rank_progress_bar: ProgressBar
+var _rank_progress_label: Label
 var _rank_upgrade_btn: Button
 var _special_plus_btns: Dictionary = {}
 var _special_minus_btns: Dictionary = {}
+var _special_apply_btn: Button
+var _special_reset_btn: Button
 var _food_upgrade_btn: Button
 var _food_max_btn: Button
 var _cat_hscroll: ScrollContainer
+var _cats_container: GridContainer
 var _cat_scroller: InertialScroller
+var _detail_dialog_close: Callable = Callable()
+var _detail_dialog_scroll: ScrollContainer
+var _detail_dialog_scroller: InertialScroller
+var _detail_tab: String = "upgrade"
+var _detail_tab_btns: Dictionary = {}
+var _detail_upgrade_tab: Control
+var _detail_skill_tab: Control
+var _detail_rank_tab: Control
 var _cat_drag_threshold: float = 8.0
 var _action_inflight: bool = false
+var _special_point_draft: Dictionary = {"hp": 0, "atk": 0, "def": 0}
+var _loading_canvas: CanvasLayer
+var _loading_overlay: ColorRect
+var _loading_label: Label
+var _float_canvas: CanvasLayer
+var _pending_action_type: String = ""
+var _pending_level_before: int = 0
+var _pending_rank_before: int = 0
+var _submenu_btns: Dictionary = {}
+var _active_submenu: String = "main"
+var _main_section: Control
+var _catalog_section: Control
 
 @onready var GameState = get_node("/root/GameState")
 @onready var ApiClient = get_node("/root/ApiClient")
 
 
 func _ready() -> void:
+	_build_feedback_layers()
 	_build_ui()
 	if GameState.enhance_data.is_empty():
 		_request_enhance_overview()
+
+
+func _build_feedback_layers() -> void:
+	_loading_canvas = CanvasLayer.new()
+	_loading_canvas.layer = 120
+	add_child(_loading_canvas)
+
+	_loading_overlay = ColorRect.new()
+	_loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_loading_overlay.color = Color(0.0, 0.0, 0.0, 0.44)
+	_loading_overlay.visible = false
+	_loading_canvas.add_child(_loading_overlay)
+
+	var loading_center := CenterContainer.new()
+	loading_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_loading_overlay.add_child(loading_center)
+
+	_loading_label = Label.new()
+	_loading_label.text = "載入中..."
+	_loading_label.add_theme_font_size_override("font_size", 22)
+	loading_center.add_child(_loading_label)
+
+	_float_canvas = CanvasLayer.new()
+	_float_canvas.layer = 121
+	add_child(_float_canvas)
 
 
 func _build_ui() -> void:
@@ -47,17 +103,38 @@ func _populate_cat_buttons() -> void:
 
 func _select_cat(cat_id: String) -> void:
 	_selected_cat_id = cat_id
-	_rebuild_detail_panel()
+	_reset_special_point_draft()
+	_populate_cat_buttons()
 
 
 func _on_cat_button_pressed(cat_id: String) -> void:
 	if _cat_scroller != null and _cat_scroller.consume_moved():
 		return
 	_select_cat(cat_id)
+	_open_selected_cat_dialog()
+
+
+func _switch_submenu(submenu_key: String) -> void:
+	if _active_submenu == submenu_key:
+		return
+	_active_submenu = submenu_key
+	UI.refresh_submenu_state(self)
 
 
 func _rebuild_detail_panel() -> void:
 	UI.rebuild_detail_panel(self)
+
+
+func _open_selected_cat_dialog() -> void:
+	UI.open_selected_cat_dialog(self)
+
+
+func _close_selected_cat_dialog() -> void:
+	UI.close_selected_cat_dialog(self)
+
+
+func _on_detail_dialog_closed() -> void:
+	UI.on_detail_dialog_closed(self)
 
 
 func _on_upgrade_one_pressed() -> void:
@@ -76,12 +153,120 @@ func _on_special_remove_pressed(stat_key: String) -> void:
 	Actions.on_special_remove_pressed(self, stat_key)
 
 
+func _on_apply_special_points_pressed() -> void:
+	Actions.on_apply_special_points_pressed(self)
+
+
+func _on_reset_special_points_pressed() -> void:
+	Actions.on_reset_special_points_pressed(self)
+
+
 func _on_rank_upgrade_pressed() -> void:
 	Actions.on_rank_upgrade_pressed(self)
 
 
 func _on_reset_pressed() -> void:
 	Actions.on_reset_pressed(self)
+
+
+func _switch_detail_tab(tab_key: String) -> void:
+	_detail_tab = tab_key
+	UI.refresh_detail_tab_state(self)
+
+
+func _set_loading_overlay(visible: bool) -> void:
+	if _loading_overlay != null:
+		_loading_overlay.visible = visible
+
+
+func _prepare_action_feedback(action_type: String) -> void:
+	_pending_action_type = action_type
+	_pending_level_before = 0
+	_pending_rank_before = 0
+	if _selected_cat_id == "":
+		return
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
+	if player_cat == null:
+		return
+	_pending_level_before = player_cat.cat_food_level
+	_pending_rank_before = player_cat.rank
+
+
+func _play_action_feedback() -> void:
+	if _pending_action_type == "" or _selected_cat_id == "":
+		return
+	var player_cat: PlayerCatData = GameState.get_player_cat(_selected_cat_id)
+	if player_cat == null:
+		_pending_action_type = ""
+		return
+
+	match _pending_action_type:
+		"upgrade":
+			var level_gain: int = maxi(0, player_cat.cat_food_level - _pending_level_before)
+			_show_action_float("等級提升", maxi(1, level_gain), ACTION_FLOAT_COLOR)
+		"upgrade_max":
+			var max_level_gain: int = maxi(0, player_cat.cat_food_level - _pending_level_before)
+			_show_action_float("等級提升", maxi(1, max_level_gain), ACTION_FLOAT_COLOR)
+		"rank":
+			var rank_gain: int = maxi(0, player_cat.rank - _pending_rank_before)
+			_show_action_float("品階提升", maxi(1, rank_gain), ACTION_FLOAT_RANK_COLOR)
+
+	_pending_action_type = ""
+	_pending_level_before = 0
+	_pending_rank_before = 0
+
+
+func _show_action_float(text: String, count: int, color: Color) -> void:
+	if _float_canvas == null:
+		return
+	for idx: int in range(count):
+		var label := Label.new()
+		label.text = text
+		label.modulate = color
+		label.add_theme_font_size_override("font_size", 28)
+		label.position = Vector2(250.0, 460.0 + idx * 10.0)
+		_float_canvas.add_child(label)
+
+		var tween := create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(label, "position:y", label.position.y - 92.0, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tween.tween_property(label, "modulate:a", 0.0, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		tween.chain().tween_callback(label.queue_free)
+
+
+func _reset_special_point_draft() -> void:
+	_special_point_draft = {"hp": 0, "atk": 0, "def": 0}
+
+
+func _has_special_point_draft() -> bool:
+	for stat_key: String in ["hp", "atk", "def"]:
+		if int(_special_point_draft.get(stat_key, 0)) != 0:
+			return true
+	return false
+
+
+func _get_effective_special_points(player_cat: PlayerCatData) -> Dictionary:
+	var result := {
+		"hp": int(player_cat.special_food_points.get("hp", 0)) + int(_special_point_draft.get("hp", 0)),
+		"atk": int(player_cat.special_food_points.get("atk", 0)) + int(_special_point_draft.get("atk", 0)),
+		"def": int(player_cat.special_food_points.get("def", 0)) + int(_special_point_draft.get("def", 0)),
+	}
+	for stat_key: String in ["hp", "atk", "def"]:
+		result[stat_key] = maxi(0, int(result.get(stat_key, 0)))
+	return result
+
+
+func _get_effective_special_total_points(player_cat: PlayerCatData) -> int:
+	var effective_points: Dictionary = _get_effective_special_points(player_cat)
+	return int(effective_points.get("hp", 0)) + int(effective_points.get("atk", 0)) + int(effective_points.get("def", 0))
+
+
+func _get_effective_special_food_held(player_cat: PlayerCatData) -> int:
+	var base_total := player_cat.get_total_special_points()
+	var effective_total: int = _get_effective_special_total_points(player_cat)
+	return GameState.player_data.special_cat_food \
+		+ PlayerCatData.special_food_total_spent(base_total) \
+		- PlayerCatData.special_food_total_spent(effective_total)
 
 
 func _refresh_all_labels() -> void:
@@ -133,7 +318,7 @@ func _stat_display_label(stat: String, eff_type: String) -> String:
 
 
 func _show_confirm(message: String, on_confirm: Callable) -> void:
-	DialogManager.show_confirm("確認", message, on_confirm)
+	DialogManager.show_confirm(UiText.ENHANCE_CONFIRM_TITLE, message, on_confirm)
 
 
 func _get_display_name(cat_id: String) -> String:
@@ -160,8 +345,8 @@ func _request_enhance_overview() -> void:
 	Actions.request_enhance_overview(self)
 
 
-func _run_enhance_action(action: Callable, refresh_achievements: bool = false) -> void:
-	Actions.run_enhance_action(self, action, refresh_achievements)
+func _run_enhance_action(action: Callable, action_type: String = "", refresh_achievements: bool = false) -> void:
+	Actions.run_enhance_action(self, action, action_type, refresh_achievements)
 
 
 func _on_enhance_action_completed(success: bool, data: Variant, error: Dictionary, refresh_achievements: bool = false) -> void:
