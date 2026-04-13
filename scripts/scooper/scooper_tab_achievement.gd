@@ -96,6 +96,7 @@ func _add_achievement_section(scene: Control, title_text: String, entries: Array
 		var claim_all_btn: Button = Button.new()
 		claim_all_btn.text = UiText.SCOOPER_ACHIEVEMENT_CLAIM_ALL
 		claim_all_btn.custom_minimum_size = Vector2(120.0, 40.0)
+		claim_all_btn.disabled = bool(scene._api_in_flight)
 		claim_all_btn.pressed.connect(func() -> void:
 			_claim_all_achievements(scene)
 		)
@@ -201,6 +202,7 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 	var achievement_id: int = int(entry.get("achievementId", 0))
 	if is_completed and not is_claimed:
 		action_btn.text = UiText.SCOOPER_ACHIEVEMENT_ACTION_CLAIM
+		action_btn.disabled = bool(scene._api_in_flight)
 		action_btn.pressed.connect(func() -> void:
 			_claim_achievement(scene, achievement_id)
 		)
@@ -218,10 +220,14 @@ func _claim_achievement(scene: Control, achievement_id: int) -> void:
 	if scene._api_in_flight:
 		return
 	scene._api_in_flight = true
+	_refresh_achievement_tab(scene)
+	scene._refresh_tab_button_labels()
 
 	scene.ApiClient.claim_achievement_silent(achievement_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
 		if not ok:
 			scene._api_in_flight = false
+			_refresh_achievement_tab(scene)
+			scene._refresh_tab_button_labels()
 			_set_feedback(scene, str(err.get("message", UiText.SCOOPER_ACHIEVEMENT_CLAIM_FAILED_DEFAULT)))
 			return
 
@@ -245,6 +251,8 @@ func _claim_all_achievements(scene: Control) -> void:
 		return
 
 	scene._api_in_flight = true
+	_refresh_achievement_tab(scene)
+	scene._refresh_tab_button_labels()
 	_claim_next_achievement(scene, claim_ids, [])
 
 
@@ -261,6 +269,8 @@ func _claim_next_achievement(scene: Control, pending_ids: Array[int], reward_ent
 	scene.ApiClient.claim_achievement_silent(achievement_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
 		if not ok:
 			scene._api_in_flight = false
+			_refresh_achievement_tab(scene)
+			scene._refresh_tab_button_labels()
 			_set_feedback(scene, str(err.get("message", UiText.SCOOPER_ACHIEVEMENT_CLAIM_FAILED_DEFAULT)))
 			return
 
@@ -285,6 +295,8 @@ func _refresh_achievements_after_claim(scene: Control) -> void:
 				_refresh_achievement_tab(scene)
 				scene._refresh_tab_button_labels()
 				return
+			_refresh_achievement_tab(scene)
+			scene._refresh_tab_button_labels()
 			_set_feedback(scene, str(refresh_err.get("message", UiText.SCOOPER_ACHIEVEMENT_REFRESH_FAILED_DEFAULT)))
 		)
 	)

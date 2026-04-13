@@ -12,6 +12,7 @@ var _claim_btn: Button
 var _claim_all_btn: Button
 var _status_label: Label
 var _close_action: Callable = Callable()
+var _api_in_flight: bool = false
 
 
 func _ready() -> void:
@@ -155,6 +156,8 @@ func _load_mail_list(select_first: bool = true) -> void:
 		GameState.update_mail_list(items)
 		_refresh_summary()
 		_populate_mail_list()
+		_api_in_flight = false
+		_refresh_action_buttons()
 		_set_status("", false)
 		if select_first and _mail_list.item_count > 0:
 			_mail_list.select(0)
@@ -262,13 +265,17 @@ func _render_detail(detail: Dictionary) -> void:
 
 
 func _on_claim_pressed() -> void:
+	if _api_in_flight:
+		return
 	var mail_id := int(GameState.selected_mail_data.get("mailId", 0))
 	if mail_id <= 0:
 		return
-	_claim_btn.disabled = true
+	_api_in_flight = true
+	_refresh_action_buttons()
 	ApiClient.claim_mail(mail_id, func(success: bool, data: Variant, error: Dictionary) -> void:
 		if not success:
-			_claim_btn.disabled = false
+			_api_in_flight = false
+			_refresh_action_buttons()
 			_set_status(error.get("message", "領取失敗。"), true)
 			return
 		var payload: Dictionary = data if data is Dictionary else {}
@@ -283,13 +290,17 @@ func _on_claim_pressed() -> void:
 
 
 func _on_claim_all_pressed() -> void:
+	if _api_in_flight:
+		return
 	if int(GameState.mail_summary_data.get("claimableCount", 0)) <= 0:
 		_set_status("目前沒有可領取的郵件。", true)
 		return
 	DialogManager.show_confirm("全部領取", "確定要領取目前所有可領取附件嗎？", func() -> void:
-		_claim_all_btn.disabled = true
+		_api_in_flight = true
+		_refresh_action_buttons()
 		ApiClient.claim_all_mails(func(success: bool, data: Variant, error: Dictionary) -> void:
-			_claim_all_btn.disabled = false
+			_api_in_flight = false
+			_refresh_action_buttons()
 			if not success:
 				_set_status(error.get("message", "全部領取失敗。"), true)
 				return
@@ -328,8 +339,17 @@ func _refresh_summary() -> void:
 		int(GameState.mail_summary_data.get("totalCount", 0))
 	]
 	_claim_all_btn.disabled = int(GameState.mail_summary_data.get("claimableCount", 0)) <= 0
+	_refresh_action_buttons()
 
 
 func _set_status(message: String, is_error: bool) -> void:
 	_status_label.text = message
 	_status_label.modulate = Color(1.0, 0.45, 0.45, 1.0) if is_error else Color(0.9, 0.9, 0.9, 1.0)
+
+
+func _refresh_action_buttons() -> void:
+	if _claim_all_btn != null:
+		_claim_all_btn.disabled = _api_in_flight or int(GameState.mail_summary_data.get("claimableCount", 0)) <= 0
+	if _claim_btn != null:
+		var can_claim: bool = bool(GameState.selected_mail_data.get("canClaim", false))
+		_claim_btn.disabled = _api_in_flight or not can_claim

@@ -68,6 +68,7 @@ func _refresh_memory_tab(scene: Control) -> void:
 
 func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	var memory_id: int = int(item.get("memoryId", 0))
+	var api_locked: bool = _is_api_locked(scene)
 	var unlocked: bool = bool(item.get("isUnlocked", false))
 	var cost: int = int(item.get("unlockCost", 0))
 	var can_unlock: bool = (not unlocked) and scene.GameState.player_data.memory_shards >= cost
@@ -150,7 +151,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	if unlocked:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCKED_BUTTON
 		action_btn.disabled = true
-	elif can_unlock:
+	elif can_unlock and not api_locked:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCK_BUTTON % [current_shards, cost]
 		action_btn.pressed.connect(func() -> void:
 			_confirm_unlock_memory(scene, memory_id, item)
@@ -176,8 +177,10 @@ func _confirm_unlock_memory(scene: Control, memory_id: int, memory_item: Diction
 			if scene._api_in_flight:
 				return
 			scene._api_in_flight = true
+			_refresh_memory_tab(scene)
 			scene.ApiClient.unlock_memory(memory_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
 				scene._api_in_flight = false
+				_refresh_memory_tab(scene)
 				if not ok:
 					scene.DialogManager.show_info(
 						UiText.SCOOPER_MEMORY_CONFIRM_FAILED,
@@ -226,3 +229,7 @@ func _memory_bonus_desc(item: Dictionary) -> String:
 func _get_memory_placeholder_color(item: Dictionary) -> Color:
 	var raw_color: String = str(item.get("placeholderColor", "#6B7280"))
 	return Color.from_string(raw_color, Color(0.42, 0.45, 0.50, 1.0))
+
+
+func _is_api_locked(scene: Control) -> bool:
+	return bool(scene._api_in_flight)
