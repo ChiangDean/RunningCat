@@ -7,7 +7,6 @@ const DEFAULT_LOADING_MESSAGE := "loading."
 
 var _pool: Array[HTTPRequest] = []
 var _busy: Array[bool] = []
-var _pending_queue: Array[Dictionary] = []
 var _refreshing := false
 var _refresh_queue: Array[Dictionary] = []
 
@@ -339,8 +338,13 @@ func _enqueue_request(path: String, method: int, body: Dictionary, callback: Cal
 	var slot := _find_free_slot()
 	if slot >= 0:
 		_dispatch(slot, entry)
-	else:
-		_pending_queue.append(entry)
+		return
+
+	_invoke_callback(callback, false, {}, {
+		"code": "HTTP.CLIENT_BUSY",
+		"message": "Client request pool is busy. Please try again.",
+	})
+	_release_loading_overlay_if_tracked(entry)
 
 
 func _find_free_slot() -> int:
@@ -380,7 +384,6 @@ func _dispatch(slot: int, entry: Dictionary) -> void:
 			"message": "無法送出請求，錯誤碼: %s" % error,
 		})
 		_release_loading_overlay_if_tracked(entry)
-		_flush_pending()
 
 
 func _on_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, slot: int) -> void:
@@ -398,7 +401,6 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 			"message": "伺服器回傳格式無法解析。",
 		})
 		_release_loading_overlay_if_tracked(entry)
-		_flush_pending()
 		return
 
 	var payload: Variant = json.get_data()
@@ -408,7 +410,6 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 			"message": "伺服器回傳格式無法解析。",
 		})
 		_release_loading_overlay_if_tracked(entry)
-		_flush_pending()
 		return
 
 	var envelope: Dictionary = payload
@@ -419,18 +420,15 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 	if response_code >= 200 and response_code < 300 and success:
 		_invoke_callback(callback, true, data_variant, {})
 		_release_loading_overlay_if_tracked(entry)
-		_flush_pending()
 		return
 
 	if response_code == 401 and GameState.get_refresh_token() != "":
 		_begin_refresh_and_retry(entry)
-		_flush_pending()
 		return
 
 	var error_dict: Dictionary = error_variant if error_variant is Dictionary else {}
 	_invoke_callback(callback, false, {}, error_dict)
 	_release_loading_overlay_if_tracked(entry)
-	_flush_pending()
 
 
 func _begin_refresh_and_retry(original_entry: Dictionary) -> void:
@@ -514,15 +512,6 @@ func _invoke_callback(callback: Callable, success: bool, data: Variant, error: D
 	callback.call(success, data, error)
 
 
-func _flush_pending() -> void:
-	while not _pending_queue.is_empty():
-		var slot := _find_free_slot()
-		if slot < 0:
-			break
-		var entry: Dictionary = _pending_queue.pop_front()
-		_dispatch(slot, entry)
-
-
 func _release_loading_overlay_if_tracked(entry: Dictionary) -> void:
 	if bool(entry.get("track_loading", true)):
 		_release_loading_overlay()
@@ -563,7 +552,7 @@ func _build_loading_overlay() -> void:
 	add_child(_loading_canvas)
 
 	var overlay := ColorRect.new()
-	overlay.color = Color(0.0, 0.0, 0.0, 0.42)
+	overlay.color = Color(0.18, 0.14, 0.10, 0.28)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	_loading_canvas.add_child(overlay)
@@ -573,10 +562,23 @@ func _build_loading_overlay() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_loading_canvas.add_child(center)
 
+	var frame := PanelContainer.new()
+	frame.custom_minimum_size = Vector2(320.0, 164.0)
+	frame.add_theme_stylebox_override("panel", _make_start_loading_card_stylebox())
+	center.add_child(frame)
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	frame.add_child(margin)
+
 	var content := VBoxContainer.new()
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_theme_constant_override("separation", 14)
-	center.add_child(content)
+	margin.add_child(content)
 
 	_loading_spinner = Control.new()
 	_loading_spinner.custom_minimum_size = Vector2(84.0, 84.0)
@@ -589,7 +591,7 @@ func _build_loading_overlay() -> void:
 	_loading_message_label.text = DEFAULT_LOADING_MESSAGE
 	_loading_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_loading_message_label.add_theme_font_size_override("font_size", 24)
-	_loading_message_label.add_theme_color_override("font_color", Color("f7f1e7"))
+	_loading_message_label.add_theme_color_override("font_color", Color("5f4c3f"))
 	content.add_child(_loading_message_label)
 
 
@@ -604,7 +606,7 @@ func _build_spinner_dots() -> void:
 	for i in range(8):
 		var dot := ColorRect.new()
 		var angle := TAU * float(i) / 8.0
-		dot.color = Color("f7f1e7")
+		dot.color = Color("9aae8b")
 		dot.size = dot_size
 		dot.position = ring_center + Vector2(cos(angle), sin(angle)) * radius - dot_size * 0.5
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -616,3 +618,27 @@ func _update_loading_label() -> void:
 	if _loading_message_label == null:
 		return
 	_loading_message_label.text = "loading%s" % ".".repeat(_loading_text_phase + 1)
+
+
+func _make_start_loading_card_stylebox() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.96, 0.93, 0.88, 0.86)
+	style.border_color = Color("6d5948")
+	style.border_width_left = 6
+	style.border_width_top = 6
+	style.border_width_right = 6
+	style.border_width_bottom = 6
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_right = 10
+	style.corner_radius_bottom_left = 10
+	style.content_margin_left = 10
+	style.content_margin_top = 10
+	style.content_margin_right = 10
+	style.content_margin_bottom = 10
+	style.shadow_color = Color(0.24, 0.18, 0.14, 0.22)
+	style.shadow_size = 6
+	style.shadow_offset = Vector2(0, 6)
+	style.anti_aliasing = false
+	style.border_blend = false
+	return style
