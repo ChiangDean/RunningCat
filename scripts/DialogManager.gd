@@ -15,6 +15,7 @@ extends Node
 const _PANEL_MIN_W := 480.0
 const _PANEL_W_MEDIUM := 560.0
 const _PANEL_W_LARGE := 640.0
+const _PANEL_W_XLARGE := 700.0
 const _PANEL_MIN_H := 0.0
 const _FONT_TITLE   := 22
 const _FONT_CONTENT := 18
@@ -68,6 +69,8 @@ func _resolve_panel_width(width_size: String) -> float:
 			return _PANEL_W_MEDIUM
 		"large":
 			return _PANEL_W_LARGE
+		"xlarge":
+			return _PANEL_W_XLARGE
 		_:
 			return _PANEL_MIN_W
 

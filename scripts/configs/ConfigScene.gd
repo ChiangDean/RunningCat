@@ -2,6 +2,8 @@ extends Control
 
 const Constants = preload("res://scripts/configs/ConfigConstants.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
 
 const BOTTOM_DOCK_H := 112.0
 const HOME_MAIN_NAV_H := 110.0
@@ -26,6 +28,7 @@ const SLOT_EMPTY_BORDER := Color(0.62, 0.54, 0.40, 0.78)
 const SLOT_NAME_COLOR := Color(0.98, 0.95, 0.88, 1.0)
 const SLOT_META_COLOR := Color(0.88, 0.80, 0.67, 0.92)
 const SLOT_REMOVE_BG := Color(0.56, 0.18, 0.18, 0.96)
+const CAT_CARD_HOLD_SECONDS := 2.0
 
 var _current_team_type: String = "boss"
 var _api_in_flight: bool = false
@@ -177,59 +180,24 @@ func _build_ui() -> void:
 	_cats_scroll.add_child(_cats_container)
 	_cats_scroller = InertialScroller.attach(_cats_scroll, "vertical")
 
-	var back_panel: PanelContainer = PanelContainer.new()
-	back_panel.anchor_left = 0.0
-	back_panel.anchor_top = 1.0
-	back_panel.anchor_right = 0.0
-	back_panel.anchor_bottom = 1.0
-	back_panel.offset_left = 20.0
-	back_panel.offset_top = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H)
-	back_panel.offset_right = 128.0
-	back_panel.offset_bottom = -HOME_MAIN_NAV_H
-	back_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 16))
-	add_child(back_panel)
-
-	var back_margin: MarginContainer = _make_content_margin(12)
-	back_panel.add_child(back_margin)
-
-	var back_btn: Button = Button.new()
-	back_btn.text = UiText.CONFIG_BACK
-	back_btn.custom_minimum_size = Vector2(84.0, 56.0)
-	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	back_btn.add_theme_font_size_override("font_size", 20)
-	back_btn.pressed.connect(_on_back_pressed)
-	back_margin.add_child(back_btn)
-
-	var dock_panel: PanelContainer = PanelContainer.new()
-	dock_panel.anchor_left = 0.0
-	dock_panel.anchor_top = 1.0
-	dock_panel.anchor_right = 1.0
-	dock_panel.anchor_bottom = 1.0
-	dock_panel.offset_left = 136.0
-	dock_panel.offset_top = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H)
-	dock_panel.offset_right = -20.0
-	dock_panel.offset_bottom = -HOME_MAIN_NAV_H
-	dock_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 16))
-	add_child(dock_panel)
-
-	var dock_margin: MarginContainer = _make_content_margin(12)
-	dock_panel.add_child(dock_margin)
-
-	var dock_row: HBoxContainer = HBoxContainer.new()
-	dock_row.add_theme_constant_override("separation", 8)
-	dock_margin.add_child(dock_row)
-
+	var submenu_items: Array = []
 	for type_key: String in ["boss", "dungeon", "arena_attack", "arena_defense"]:
-		var btn: Button = Button.new()
-		btn.text = str(Constants.TEAM_LABELS[type_key])
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.custom_minimum_size = Vector2(0.0, 56.0)
-		btn.add_theme_font_size_override("font_size", 20)
-		btn.pressed.connect(func() -> void:
-			_switch_team_type(type_key)
-		)
-		dock_row.add_child(btn)
-		_team_type_btns[type_key] = btn
+		submenu_items.append({
+			"key": type_key,
+			"label": str(Constants.TEAM_LABELS[type_key]),
+		})
+	var submenu: Dictionary = SceneSubmenuBar.build(self, {
+		"items": submenu_items,
+		"active_key": _current_team_type,
+		"back_label": UiText.CONFIG_BACK,
+		"back_pressed": Callable(self, "_on_back_pressed"),
+		"button_pressed": Callable(self, "_switch_team_type"),
+		"panel_fill": PANEL_FILL,
+		"panel_border": PANEL_BORDER,
+		"top": -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H),
+		"bottom": -HOME_MAIN_NAV_H,
+	})
+	_team_type_btns = submenu.get("buttons", {})
 
 	_switch_team_type("boss")
 
@@ -238,11 +206,10 @@ func _switch_team_type(type_key: String) -> void:
 	_ensure_team_draft(type_key)
 	_current_team_type = type_key
 
-	for key: String in _team_type_btns.keys():
-		var btn: Button = _team_type_btns[key]
-		var is_active: bool = key == type_key
-		btn.modulate = ACTIVE_TAB_COLOR if is_active else INACTIVE_TAB_COLOR
-		btn.add_theme_font_size_override("font_size", 22 if is_active else 20)
+	SceneSubmenuBar.refresh(_team_type_btns, type_key, {
+		"active_color": ACTIVE_TAB_COLOR,
+		"inactive_color": INACTIVE_TAB_COLOR,
+	})
 
 	_refresh_team()
 	_refresh_cats_list()
@@ -531,16 +498,6 @@ func _refresh_cats_list() -> void:
 
 
 func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
-	var card: PanelContainer = _make_card_panel()
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.custom_minimum_size = Vector2(0.0, 214.0)
-	var margin: MarginContainer = _make_content_margin(8)
-	card.add_child(margin)
-
-	var root: VBoxContainer = VBoxContainer.new()
-	root.add_theme_constant_override("separation", 10)
-	margin.add_child(root)
-
 	var player_cat_id: int = int(cat.get("playerCatId", 0))
 	var display_name: String = str(cat.get("displayName", ""))
 	var lv: int = int(cat.get("catFoodLevel", 1))
@@ -548,94 +505,82 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 	var cat_catalog_id: int = int(cat.get("catCatalogId", 0))
 	var already_in: bool = player_cat_id in in_team_ids
 	var team_full: bool = _get_filled_editing_team_members().size() >= _get_max_team_size()
-	var action_disabled: bool = already_in or team_full or _api_in_flight
-
-	var art_panel: PanelContainer = PanelContainer.new()
-	art_panel.custom_minimum_size = Vector2(0.0, 108.0)
-	art_panel.add_theme_stylebox_override("panel", _make_panel_style(
-		Color(0.19, 0.17, 0.15, 0.96),
-		Color(0.90, 0.77, 0.46, 0.88),
-		12
-	))
-	root.add_child(art_panel)
-
-	var art_margin: MarginContainer = _make_content_margin(8)
-	art_panel.add_child(art_margin)
-
-	var art_button: Button = Button.new()
-	art_button.flat = true
-	art_button.text = ""
-	art_button.mouse_filter = Control.MOUSE_FILTER_STOP
-	art_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	art_panel.add_child(art_button)
-
-	var art_center: CenterContainer = CenterContainer.new()
-	art_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	art_margin.add_child(art_center)
-
-	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(GameState.get_cat_file_id_by_catalog_id(cat_catalog_id))
-	if cat_icon != null:
-		art_center.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(84.0, 84.0)))
-	else:
-		var fallback: Label = Label.new()
-		fallback.text = _get_cat_visual_fallback(display_name)
-		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fallback.add_theme_font_size_override("font_size", 40)
-		fallback.add_theme_color_override("font_color", SLOT_NAME_COLOR)
-		art_center.add_child(fallback)
+	var action_disabled: bool = (not already_in and team_full) or _api_in_flight
 
 	var local_cat_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id)
-	if local_cat_id != "":
-		art_button.gui_input.connect(func(event: InputEvent) -> void:
-			if not (event is InputEventMouseButton):
-				return
-			var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-			if mouse_event.button_index != MOUSE_BUTTON_LEFT or mouse_event.pressed:
-				return
-			if _cats_scroller != null and _cats_scroller.consume_moved():
-				art_button.accept_event()
-				return
-			_show_skill_popup(local_cat_id)
-			art_button.accept_event()
-		)
-	else:
-		art_button.disabled = true
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(local_cat_id)
+	var hold_timer: Timer = Timer.new()
+	hold_timer.one_shot = true
+	hold_timer.wait_time = CAT_CARD_HOLD_SECONDS
+	var pointer_down: Array[bool] = [false]
+	var long_press_triggered: Array[bool] = [false]
+	hold_timer.timeout.connect(func() -> void:
+		if not pointer_down[0]:
+			return
+		if local_cat_id == "":
+			return
+		if _cats_scroller != null and _cats_scroller.consume_moved():
+			return
+		long_press_triggered[0] = true
+		_show_skill_popup(local_cat_id)
+	)
 
-	var stats_row: HBoxContainer = HBoxContainer.new()
-	stats_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	stats_row.add_theme_constant_override("separation", 8)
-	root.add_child(stats_row)
+	var whole_card_gui_input: Callable = func(event: InputEvent) -> void:
+		if not (event is InputEventMouseButton):
+			return
+		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+		if mouse_event.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if mouse_event.pressed:
+			pointer_down[0] = true
+			long_press_triggered[0] = false
+			if local_cat_id != "":
+				hold_timer.start()
+			return
 
-	var level_lbl: Label = Label.new()
-	level_lbl.text = UiText.CONFIG_CAT_LEVEL_ONLY_FORMAT % [lv]
-	level_lbl.add_theme_font_size_override("font_size", 18)
-	level_lbl.add_theme_color_override("font_color", SLOT_NAME_COLOR)
-	stats_row.add_child(level_lbl)
+		var was_pressed: bool = pointer_down[0]
+		pointer_down[0] = false
+		hold_timer.stop()
+		if not was_pressed:
+			return
+		if _cats_scroller != null and _cats_scroller.consume_moved():
+			return
+		if long_press_triggered[0]:
+			long_press_triggered[0] = false
+			return
+		if action_disabled:
+			return
+		_toggle_member_in_draft(player_cat_id)
 
-	var stars_lbl: Label = Label.new()
-	stars_lbl.text = UiText.CONFIG_CAT_STARS_FORMAT % [rank]
-	stars_lbl.add_theme_font_size_override("font_size", 17)
-	stars_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
-	stats_row.add_child(stars_lbl)
-
-	var add_btn: Button = Button.new()
-	add_btn.text = UiText.CONFIG_DEPLOYED_BUTTON if already_in else UiText.CONFIG_ADD_BUTTON
-	add_btn.custom_minimum_size = Vector2(0.0, 30.0)
-	add_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_btn.disabled = action_disabled
-	if not action_disabled:
-		add_btn.pressed.connect(func() -> void:
-			_add_member_to_draft(player_cat_id)
-		)
-	if already_in:
-		_apply_button_palette(add_btn, Color(0.27, 0.29, 0.21, 0.96), Color(0.88, 0.90, 0.74, 1.0))
-	elif team_full:
-		_apply_button_palette(add_btn, Color(0.26, 0.22, 0.18, 0.96), Color(0.75, 0.72, 0.68, 1.0))
-	else:
-		_apply_button_palette(add_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
-	root.add_child(add_btn)
-
+	var card: PanelContainer = CatRosterCard.build({
+		"is_selected": already_in,
+		"title_text": display_name,
+		"show_title": false,
+		"icon_texture": cat_icon,
+		"fallback_text": _get_cat_visual_fallback(display_name),
+		"chips": [
+			UiText.CONFIG_CAT_LEVEL_ONLY_FORMAT % [lv],
+			UiText.CONFIG_CAT_STARS_FORMAT % [rank],
+		],
+		"show_action": false,
+		"whole_card_gui_input": whole_card_gui_input,
+		"card_height": 228.0,
+		"art_height": 108.0,
+		"icon_size": Vector2(84.0, 84.0),
+		"card_fill": CARD_FILL,
+		"card_border": CARD_BORDER,
+		"selected_card_border": PANEL_BORDER,
+		"selected_card_fill": Color(0.24, 0.20, 0.13, 0.98),
+		"art_fill": Color(0.19, 0.17, 0.15, 0.96),
+		"art_border": Color(0.90, 0.77, 0.46, 0.88),
+		"selected_art_border": Color(0.90, 0.77, 0.46, 0.88),
+		"selected_art_fill": Color(0.26, 0.21, 0.14, 0.98),
+		"title_color": SLOT_NAME_COLOR,
+		"selected_chip_fill": Color(0.42, 0.29, 0.14, 0.98),
+		"selected_chip_border": Color(0.98, 0.83, 0.48, 1.0),
+		"selected_chip_text_color": Color(1.0, 0.97, 0.86, 1.0),
+	})
+	card.add_child(hold_timer)
 	return card
 
 
@@ -713,6 +658,30 @@ func _draft_has_player_cat(members: Array, player_cat_id: int) -> bool:
 			if int(member.get("playerCatId", 0)) == player_cat_id:
 				return true
 	return false
+
+
+func _find_member_slot_no_by_player_cat_id(player_cat_id: int) -> int:
+	for member_variant: Variant in _get_editing_team_members():
+		if not (member_variant is Dictionary):
+			continue
+		var member: Dictionary = member_variant as Dictionary
+		if member.is_empty():
+			continue
+		if int(member.get("playerCatId", 0)) == player_cat_id:
+			return int(member.get("slotNo", -1))
+	return -1
+
+
+func _toggle_member_in_draft(player_cat_id: int) -> void:
+	if _api_in_flight:
+		return
+
+	var slot_no: int = _find_member_slot_no_by_player_cat_id(player_cat_id)
+	if slot_no >= 0:
+		_remove_member_from_draft(slot_no)
+		return
+
+	_add_member_to_draft(player_cat_id)
 
 
 func _add_member_to_draft(player_cat_id: int) -> void:
