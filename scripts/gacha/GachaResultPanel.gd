@@ -2,13 +2,6 @@ extends VBoxContainer
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
-const RESULT_COLORS := {
-	"Common": Color(0.78, 0.78, 0.78, 1.0),
-	"Rare": Color(0.43, 0.73, 1.0, 1.0),
-	"Epic": Color(0.78, 0.50, 1.0, 1.0),
-	"Legendary": Color(1.0, 0.78, 0.36, 1.0),
-}
-
 
 func setup(results: Array) -> void:
 	add_theme_constant_override("separation", 8)
@@ -18,8 +11,8 @@ func setup(results: Array) -> void:
 
 
 func _build_row(result: Dictionary) -> Control:
-	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
+	var panel: PanelContainer = PanelContainer.new()
+	var style: StyleBoxFlat = StyleBoxFlat.new()
 	style.bg_color = Color(0.14, 0.16, 0.2, 0.92)
 	style.border_color = _resolve_color(result)
 	style.border_width_left = 2
@@ -32,39 +25,39 @@ func _build_row(result: Dictionary) -> Control:
 	style.corner_radius_bottom_right = 10
 	panel.add_theme_stylebox_override("panel", style)
 
-	var row := HBoxContainer.new()
+	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	panel.add_child(row)
 
-	var frame_texture := AssetResolver.resolve_gacha_frame(result)
+	var frame_texture: Texture2D = AssetResolver.resolve_gacha_frame(result)
 	if frame_texture != null:
 		row.add_child(AssetResolver.create_icon_rect(frame_texture, Vector2(74.0, 74.0)))
 
-	var cat_icon := AssetResolver.resolve_cat_icon(str(result.get("catId", "")))
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(str(result.get("catId", "")))
 	if cat_icon != null:
 		row.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(56.0, 56.0)))
 
-	var rarity := str(result.get("rarityDisplayName", result.get("rarityType", "稀有度")))
-	var rarity_label := Label.new()
+	var rarity: String = str(result.get("rarityDisplayName", result.get("rarityType", UiText.GACHA_RESULT_RARITY_FALLBACK)))
+	var rarity_label: Label = Label.new()
 	rarity_label.text = "[%s]" % rarity
 	rarity_label.custom_minimum_size = Vector2(110.0, 0.0)
 	rarity_label.add_theme_font_size_override("font_size", 20)
 	rarity_label.add_theme_color_override("font_color", _resolve_color(result))
 	row.add_child(rarity_label)
 
-	var cat_label := Label.new()
-	cat_label.text = str(result.get("catDisplayName", "未知貓咪"))
+	var cat_label: Label = Label.new()
+	cat_label.text = str(result.get("catDisplayName", UiText.GACHA_RESULT_CAT_FALLBACK))
 	cat_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cat_label.add_theme_font_size_override("font_size", 22)
 	row.add_child(cat_label)
 
-	var state_label := Label.new()
+	var state_label: Label = Label.new()
 	if bool(result.get("isNewCat", false)):
-		state_label.text = "NEW"
+		state_label.text = UiText.GACHA_RESULT_NEW
 		state_label.add_theme_color_override("font_color", Color(0.36, 1.0, 0.62, 1.0))
 	else:
-		state_label.text = "%s +%d" % [
-			str(result.get("duplicateRewardDisplayName", "碎片")),
+		state_label.text = UiText.GACHA_RESULT_DUPLICATE_REWARD_FORMAT % [
+			str(result.get("duplicateRewardDisplayName", UiText.GACHA_RESULT_DUPLICATE_FALLBACK)),
 			int(result.get("duplicateRewardAmount", 0)),
 		]
 		state_label.add_theme_color_override("font_color", Color(0.92, 0.82, 0.52, 1.0))
@@ -75,7 +68,7 @@ func _build_row(result: Dictionary) -> Control:
 
 
 func _resolve_color(result: Dictionary) -> Color:
-	var html := str(result.get("rarityColor", ""))
+	var html: String = str(result.get("rarityColor", ""))
 	if html != "" and html.begins_with("#"):
 		return Color.html(html)
-	return RESULT_COLORS.get(str(result.get("rarityType", "")), Color.WHITE)
+	return GameConstants.get_rarity_color_from_string(str(result.get("rarityType", "")))

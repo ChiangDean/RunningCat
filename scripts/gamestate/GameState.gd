@@ -408,7 +408,10 @@ func _ready() -> void:
 	scooper_achievement_data = CacheIO.load_scooper_array("achievement")
 	gacha_data = CacheIO.load_config_dict("gacha")
 	shop_data = CacheIO.load_config_dict("shop")
-	shop_bundle_config = {"bundles": shop_data.get("bundles", [])}
+	shop_bundle_config = {
+		"bundles": shop_data.get("bundles", []),
+		"bundleGroups": shop_data.get("bundleGroups", []),
+	}
 	player_cats_data = CacheIO.load_config_array("player_cats")
 	update_enhance(_load_enhance_cache_array())
 	var cached_teams := CacheIO.load_config_array("teams")
@@ -428,7 +431,10 @@ func _rebuild_cached_static_configs() -> void:
 	memory_config = _build_memory_config()
 	treasure_config = _build_treasure_config()
 	achievement_config = _build_achievement_config()
-	shop_bundle_config = {"bundles": shop_data.get("bundles", [])}
+	shop_bundle_config = {
+		"bundles": shop_data.get("bundles", []),
+		"bundleGroups": shop_data.get("bundleGroups", []),
+	}
 
 
 func _build_equipment_config() -> Dictionary:
@@ -823,11 +829,15 @@ func apply_gacha_pull_response(data: Dictionary) -> void:
 
 func update_shop(data: Dictionary) -> void:
 	shop_data = _normalize_image_fields_variant(data)
-	shop_bundle_config = {"bundles": shop_data.get("bundles", [])}
+	shop_bundle_config = {
+		"bundles": shop_data.get("bundles", []),
+		"bundleGroups": shop_data.get("bundleGroups", []),
+	}
 	_save_shop_cache(shop_data)
 	if player_data == null:
 		return
 	player_data.diamonds = int(shop_data.get("diamonds", player_data.diamonds))
+	player_data.trap_points = int(shop_data.get("trapPoints", player_data.trap_points))
 	player_data.trap_cages = int(shop_data.get("trapCages", player_data.trap_cages))
 	var purchase_counts: Dictionary = {}
 	var bundles_variant: Variant = shop_data.get("bundles", [])
