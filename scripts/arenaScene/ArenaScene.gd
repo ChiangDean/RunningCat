@@ -1,33 +1,54 @@
 extends Control
 
 const Helpers = preload("res://scripts/arenaScene/arena_scene_helpers.gd")
-const RewardPopup = preload("res://scripts/arenaScene/arena_scene_reward_popup.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
+const UiPalette = preload("res://scripts/ui/ui_palette.gd")
+const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 
-const SW := 720.0
-const SH := 1280.0
 const REROLL_COOLDOWN := 5.0
+const OPPONENT_SLOT_FILL := Color(0.19, 0.17, 0.15, 0.96)
+const OPPONENT_SLOT_BORDER := Color(0.90, 0.77, 0.46, 0.88)
+const OPPONENT_SLOT_TEXT := Color(0.98, 0.95, 0.88, 1.0)
+const OPPONENT_SLOT_MUTED := Color(0.86, 0.80, 0.70, 0.95)
+const OPPONENT_META_FILL := Color(0.21, 0.18, 0.16, 0.94)
+const OPPONENT_META_BORDER := Color(0.52, 0.43, 0.30, 0.92)
+const TEAM_SLOT_FILL := Color(0.24, 0.20, 0.16, 0.96)
+const TEAM_SLOT_BORDER := Color(0.98, 0.84, 0.54, 0.95)
+const TEAM_SLOT_EMPTY_FILL := Color(0.20, 0.18, 0.16, 0.88)
+const TEAM_SLOT_EMPTY_BORDER := Color(0.62, 0.54, 0.40, 0.78)
+const TEAM_DELAY_BG := Color(0.18, 0.12, 0.08, 0.94)
+const STATUS_ACTION_WIDTH := 156.0
+const TEAM_SLOT_WIDTH := 108.0
+const OPPONENT_SLOT_WIDTH := 104.0
+const TEAM_SLOT_GAP := 6
+const OPPONENT_SLOT_GAP := 4
 
 var _overview: Dictionary = {}
-var _reroll_cooldown := 0.0
+var _reroll_cooldown: float = 0.0
+var _active_tab: String = "arena"
+var _team_panel_expanded: bool = false
+var _tab_buttons: Dictionary = {}
 
 var _rank_badge: TextureRect
 var _rank_label: Label
 var _score_label: Label
 var _ticket_label: Label
 var _season_label: Label
-var _attack_team_label: Label
-var _defense_team_label: Label
+var _team_toggle_button: Button
+var _team_detail_section: VBoxContainer
 var _reroll_button: Button
 var _opponent_container: VBoxContainer
+var _content_scroll: ScrollContainer
+var _arena_section: VBoxContainer
+var _reward_section: VBoxContainer
+var _reward_list: VBoxContainer
 
 
 func _ready() -> void:
 	_build_ui()
 	if not GameState.arena_overview_data.is_empty():
 		_apply_overview(GameState.arena_overview_data)
-	if _has_cached_opponents(GameState.arena_overview_data):
-		return
 	_refresh_overview([])
 
 
@@ -37,140 +58,205 @@ func _process(delta: float) -> void:
 	_reroll_cooldown = maxf(0.0, _reroll_cooldown - delta)
 	if _reroll_cooldown == 0.0:
 		_reroll_button.disabled = false
-		_reroll_button.text = "重骰"
+		_reroll_button.text = UiText.ARENA_REROLL_BUTTON
 	else:
-		_reroll_button.text = "重骰 (%d)" % ceili(_reroll_cooldown)
+		_reroll_button.text = UiText.ARENA_REROLL_COOLDOWN_FORMAT % ceili(_reroll_cooldown)
 
 
 func _build_ui() -> void:
-	var background := AssetResolver.make_fullscreen_background("arena")
-	add_child(background)
+	var chrome: Dictionary = OverlaySceneChrome.build(self, "arena", Callable(self, "_on_back_pressed"), {
+		"show_dock": true,
+		"dock_items": [
+			{"key": "arena", "label": UiText.ARENA_TAB_MAIN},
+			{"key": "rewards", "label": UiText.ARENA_TAB_REWARDS},
+		],
+		"active_key": _active_tab,
+		"button_pressed": Callable(self, "_switch_tab"),
+		"button_height": 52.0,
+		"font_size": 20,
+	})
+	var content_box: VBoxContainer = chrome.get("content_box")
+	_tab_buttons = chrome.get("dock_buttons", {})
 
-	var root := VBoxContainer.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.offset_left = 20
-	root.offset_top = 40
-	root.offset_right = -20
-	root.offset_bottom = -20
-	root.add_theme_constant_override("separation", 16)
-	add_child(root)
+	var title: Label = Label.new()
+	title.text = UiText.ARENA_PAGE_TITLE
+	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	content_box.add_child(title)
 
-	var top_row := HBoxContainer.new()
-	root.add_child(top_row)
+	var desc: Label = Label.new()
+	desc.text = UiText.ARENA_PAGE_DESC
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.add_theme_font_size_override("font_size", 18)
+	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	content_box.add_child(desc)
 
-	var back_button := Button.new()
-	back_button.text = "返回"
-	back_button.custom_minimum_size = Vector2(100.0, 50.0)
-	back_button.pressed.connect(func() -> void: SceneNavigator.open_overlay_scene("res://scenes/ActivityScene.tscn"))
-	top_row.add_child(back_button)
+	_content_scroll = ScrollContainer.new()
+	_content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content_box.add_child(_content_scroll)
+	InertialScroller.attach(_content_scroll, "vertical")
 
-	var title := Label.new()
-	title.text = "競技場"
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 36)
-	top_row.add_child(title)
+	var scroll_box: VBoxContainer = VBoxContainer.new()
+	scroll_box.add_theme_constant_override("separation", 14)
+	scroll_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_content_scroll.add_child(scroll_box)
 
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(100.0, 50.0)
-	top_row.add_child(spacer)
+	_arena_section = VBoxContainer.new()
+	_arena_section.add_theme_constant_override("separation", 14)
+	scroll_box.add_child(_arena_section)
 
-	root.add_child(HSeparator.new())
+	var status_panel: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
+	_arena_section.add_child(status_panel)
 
-	var status_panel := PanelContainer.new()
-	root.add_child(status_panel)
+	var status_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
+	status_panel.add_child(status_margin)
 
-	var status_box := VBoxContainer.new()
-	status_box.add_theme_constant_override("separation", 6)
-	status_panel.add_child(status_box)
+	var status_row: HBoxContainer = HBoxContainer.new()
+	status_row.add_theme_constant_override("separation", 16)
+	status_margin.add_child(status_row)
 
 	_rank_badge = TextureRect.new()
-	_rank_badge.custom_minimum_size = Vector2(96.0, 96.0)
+	_rank_badge.custom_minimum_size = Vector2(112.0, 112.0)
 	_rank_badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_rank_badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_rank_badge.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	status_box.add_child(_rank_badge)
+	status_row.add_child(_rank_badge)
+
+	var status_text: VBoxContainer = VBoxContainer.new()
+	status_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	status_text.add_theme_constant_override("separation", 8)
+	status_row.add_child(status_text)
+
+	var rank_header_row: HBoxContainer = HBoxContainer.new()
+	rank_header_row.add_theme_constant_override("separation", 10)
+	status_text.add_child(rank_header_row)
 
 	_rank_label = Label.new()
-	_rank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_rank_label.add_theme_font_size_override("font_size", 28)
-	status_box.add_child(_rank_label)
+	_rank_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rank_label.add_theme_font_size_override("font_size", 30)
+	_rank_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	rank_header_row.add_child(_rank_label)
 
-	_score_label = Label.new()
-	_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_score_label.add_theme_font_size_override("font_size", 20)
-	status_box.add_child(_score_label)
+	var score_chip: PanelContainer = _make_opponent_meta_chip("")
+	score_chip.custom_minimum_size = Vector2(STATUS_ACTION_WIDTH, 0.0)
+	rank_header_row.add_child(score_chip)
+
+	_score_label = score_chip.get_child(0).get_child(0) as Label
+	_score_label.add_theme_font_size_override("font_size", 18)
 
 	_ticket_label = Label.new()
-	_ticket_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_ticket_label.add_theme_font_size_override("font_size", 20)
-	status_box.add_child(_ticket_label)
+	_ticket_label.add_theme_font_size_override("font_size", 18)
+	status_text.add_child(_ticket_label)
+
+	var season_row: HBoxContainer = HBoxContainer.new()
+	season_row.add_theme_constant_override("separation", 10)
+	status_text.add_child(season_row)
 
 	_season_label = Label.new()
-	_season_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_season_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_season_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_season_label.add_theme_font_size_override("font_size", 16)
-	status_box.add_child(_season_label)
+	_season_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	season_row.add_child(_season_label)
 
-	var team_panel := PanelContainer.new()
-	root.add_child(team_panel)
+	_team_toggle_button = Button.new()
+	_team_toggle_button.custom_minimum_size = Vector2(STATUS_ACTION_WIDTH, 38.0)
+	_team_toggle_button.pressed.connect(_toggle_team_panel)
+	season_row.add_child(_team_toggle_button)
+	UiPalette.apply_button_kind(_team_toggle_button, "rank")
 
-	var team_box := VBoxContainer.new()
-	team_box.add_theme_constant_override("separation", 4)
-	team_panel.add_child(team_box)
+	var team_help_button: Button = Button.new()
+	team_help_button.text = "?"
+	team_help_button.custom_minimum_size = Vector2(38.0, 38.0)
+	team_help_button.pressed.connect(_show_team_panel_help)
+	season_row.add_child(team_help_button)
+	UiPalette.apply_button_kind(team_help_button, "rank")
 
-	_attack_team_label = Label.new()
-	_attack_team_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_attack_team_label.add_theme_font_size_override("font_size", 17)
-	team_box.add_child(_attack_team_label)
+	var team_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
+	_arena_section.add_child(team_panel)
 
-	_defense_team_label = Label.new()
-	_defense_team_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_defense_team_label.add_theme_font_size_override("font_size", 17)
-	team_box.add_child(_defense_team_label)
+	var team_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
+	team_panel.add_child(team_margin)
 
-	var button_row := HBoxContainer.new()
-	button_row.add_theme_constant_override("separation", 12)
-	root.add_child(button_row)
+	_team_detail_section = VBoxContainer.new()
+	_team_detail_section.add_theme_constant_override("separation", 14)
+	team_margin.add_child(_team_detail_section)
+	team_panel.visible = _team_panel_expanded
 
-	var reward_button := Button.new()
-	reward_button.text = "牌位獎勵"
-	reward_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	reward_button.custom_minimum_size = Vector2(0.0, 54.0)
-	reward_button.pressed.connect(_on_reward_pressed)
-	button_row.add_child(reward_button)
+	var opponent_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
+	opponent_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_arena_section.add_child(opponent_panel)
 
-	var purchase_button := Button.new()
-	purchase_button.text = "購買競技券"
-	purchase_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	purchase_button.custom_minimum_size = Vector2(0.0, 54.0)
-	purchase_button.pressed.connect(_on_purchase_pressed)
-	button_row.add_child(purchase_button)
+	var opponent_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
+	opponent_panel.add_child(opponent_margin)
 
-	root.add_child(HSeparator.new())
+	var opponent_box: VBoxContainer = VBoxContainer.new()
+	opponent_box.add_theme_constant_override("separation", 12)
+	opponent_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	opponent_margin.add_child(opponent_box)
 
-	var opponent_title_row := HBoxContainer.new()
-	root.add_child(opponent_title_row)
+	var opponent_title_row: HBoxContainer = HBoxContainer.new()
+	opponent_title_row.add_theme_constant_override("separation", 12)
+	opponent_box.add_child(opponent_title_row)
 
-	var opponent_title := Label.new()
-	opponent_title.text = "推薦對手"
+	var opponent_title: Label = Label.new()
+	opponent_title.text = UiText.ARENA_OPPONENT_TITLE
 	opponent_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	opponent_title.add_theme_font_size_override("font_size", 24)
+	opponent_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	opponent_title_row.add_child(opponent_title)
 
 	_reroll_button = Button.new()
-	_reroll_button.text = "重骰"
+	_reroll_button.text = UiText.ARENA_REROLL_BUTTON
 	_reroll_button.custom_minimum_size = Vector2(140.0, 44.0)
 	_reroll_button.pressed.connect(_on_reroll_pressed)
 	opponent_title_row.add_child(_reroll_button)
-
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(scroll)
+	UiPalette.apply_button_kind(_reroll_button, "secondary")
 
 	_opponent_container = VBoxContainer.new()
-	_opponent_container.add_theme_constant_override("separation", 12)
-	scroll.add_child(_opponent_container)
+	_opponent_container.add_theme_constant_override("separation", 10)
+	_opponent_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	opponent_box.add_child(_opponent_container)
 
+	_reward_section = VBoxContainer.new()
+	_reward_section.add_theme_constant_override("separation", 14)
+	scroll_box.add_child(_reward_section)
+
+	var reward_intro: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
+	_reward_section.add_child(reward_intro)
+
+	var reward_intro_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
+	reward_intro.add_child(reward_intro_margin)
+
+	var reward_intro_box: VBoxContainer = VBoxContainer.new()
+	reward_intro_box.add_theme_constant_override("separation", 8)
+	reward_intro_margin.add_child(reward_intro_box)
+
+	var reward_title: Label = Label.new()
+	reward_title.text = UiText.ARENA_REWARD_DIALOG_TITLE
+	reward_title.add_theme_font_size_override("font_size", 28)
+	reward_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	reward_intro_box.add_child(reward_title)
+
+	var reward_desc: Label = Label.new()
+	reward_desc.text = UiText.ARENA_REWARD_SECTION_DESC
+	reward_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	reward_desc.add_theme_font_size_override("font_size", 17)
+	reward_desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	reward_intro_box.add_child(reward_desc)
+
+	var reward_list_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
+	_reward_section.add_child(reward_list_panel)
+
+	var reward_list_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
+	reward_list_panel.add_child(reward_list_margin)
+
+	_reward_list = VBoxContainer.new()
+	_reward_list.add_theme_constant_override("separation", 10)
+	reward_list_margin.add_child(_reward_list)
+
+	_refresh_tab_state()
 	_apply_overview({})
 
 
@@ -181,25 +267,28 @@ func _refresh_overview(excluded_opponent_ids: Array) -> void:
 			_apply_overview(data)
 			return
 		if _overview.is_empty():
-			_show_dialog("競技場", Helpers.build_error_message(error))
+			_show_dialog(UiText.ARENA_DIALOG_TITLE, Helpers.build_error_message(error))
 	)
 
 
 func _apply_overview(overview: Dictionary) -> void:
 	_overview = overview.duplicate(true)
-	var rank_texture := AssetResolver.load_texture(AssetResolver.resolve_catalog_path(_overview.get("rankImagePath", "")))
+	var rank_texture: Texture2D = Helpers.resolve_rank_texture(
+		_overview.get("rankImagePath", ""),
+		_overview.get("rankKey", "")
+	)
 	_rank_badge.texture = rank_texture
 	_rank_badge.visible = rank_texture != null
 	_rank_label.text = Helpers.get_current_rank(_overview)
-	_score_label.text = "積分：%d" % Helpers.get_current_score(_overview)
-	_ticket_label.text = "競技券：%d" % Helpers.get_current_tickets(_overview)
-	_season_label.text = "%s｜結束日 %s" % [
-		str(_overview.get("seasonDisplayName", "目前賽季")),
+	_score_label.text = UiText.ARENA_SCORE_FORMAT % Helpers.get_current_score(_overview)
+	_ticket_label.text = UiText.ARENA_TICKETS_FORMAT % Helpers.get_current_tickets(_overview)
+	_season_label.text = UiText.ARENA_SEASON_FORMAT % [
+		str(_overview.get("seasonDisplayName", UiText.ARENA_SEASON_DEFAULT)),
 		str(_overview.get("seasonEndDate", "-"))
 	]
-	_attack_team_label.text = "攻擊隊伍：%s" % Helpers.format_team_names_from_team("ArenaAttack", "Boss", "未設定，將改用 Boss 隊伍")
-	_defense_team_label.text = "防守隊伍：%s" % Helpers.format_team_names_from_team("ArenaDefense", "", "未設定防守隊伍")
+	_refresh_team_panel()
 	_render_opponents()
+	_render_rewards()
 
 
 func _render_opponents() -> void:
@@ -208,9 +297,11 @@ func _render_opponents() -> void:
 
 	var opponents: Array = _overview.get("opponents", [])
 	if opponents.is_empty():
-		var empty_label := Label.new()
-		empty_label.text = "目前沒有可挑戰的對手。"
+		var empty_label: Label = Label.new()
+		empty_label.text = UiText.ARENA_EMPTY_OPPONENTS
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty_label.add_theme_font_size_override("font_size", 18)
+		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		_opponent_container.add_child(empty_label)
 		return
 
@@ -220,40 +311,354 @@ func _render_opponents() -> void:
 
 
 func _build_opponent_card(opponent: Dictionary) -> Control:
-	var panel := PanelContainer.new()
+	var panel: PanelContainer = OverlaySceneChrome.make_card_panel(
+		OverlaySceneChrome.CARD_BORDER,
+		Color(0.12, 0.12, 0.14, 0.96),
+		12
+	)
 
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
-	panel.add_child(box)
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	panel.add_child(margin)
 
-	var title_row := HBoxContainer.new()
+	var box: VBoxContainer = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	margin.add_child(box)
+
+	var title_row: HBoxContainer = HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 10)
 	box.add_child(title_row)
 
-	var name_label := Label.new()
-	name_label.text = str(opponent.get("playerName", "未知對手"))
+	var rank_texture: Texture2D = Helpers.resolve_rank_texture(
+		opponent.get("rankImagePath", ""),
+		opponent.get("rankKey", "")
+	)
+	if rank_texture != null:
+		title_row.add_child(AssetResolver.create_icon_rect(rank_texture, Vector2(54.0, 54.0)))
+
+	var title_box: VBoxContainer = VBoxContainer.new()
+	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_box.add_theme_constant_override("separation", 6)
+	title_row.add_child(title_box)
+
+	var name_label: Label = Label.new()
+	name_label.text = str(opponent.get("playerName", UiText.ARENA_UNKNOWN_OPPONENT))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.add_theme_font_size_override("font_size", 22)
-	title_row.add_child(name_label)
+	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	title_box.add_child(name_label)
 
-	var score_label := Label.new()
-	score_label.text = "%s  %d" % [str(opponent.get("rankName", "青銅 III")), int(opponent.get("score", 0))]
-	score_label.add_theme_font_size_override("font_size", 18)
-	title_row.add_child(score_label)
+	var meta_row: HBoxContainer = HBoxContainer.new()
+	meta_row.add_theme_constant_override("separation", 8)
+	title_box.add_child(meta_row)
 
-	var team_label := Label.new()
-	team_label.text = "防守隊伍：%s" % Helpers.format_opponent_team(opponent)
-	team_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	team_label.add_theme_font_size_override("font_size", 16)
-	box.add_child(team_label)
+	meta_row.add_child(_make_opponent_meta_chip(str(opponent.get("rankName", UiText.ARENA_DEFAULT_RANK))))
+	meta_row.add_child(_make_opponent_meta_chip(UiText.ARENA_SCORE_FORMAT % int(opponent.get("score", 0))))
 
-	var challenge_button := Button.new()
-	challenge_button.text = "挑戰"
+	box.add_child(_build_opponent_member_row(opponent.get("defenseMembers", [])))
+
+	var challenge_button: Button = Button.new()
+	challenge_button.text = _get_opponent_action_text()
 	challenge_button.custom_minimum_size = Vector2(0.0, 48.0)
-	challenge_button.disabled = Helpers.get_current_tickets(_overview) <= 0
 	challenge_button.pressed.connect(func() -> void: _on_challenge_pressed(opponent))
 	box.add_child(challenge_button)
+	_apply_opponent_action_style(challenge_button)
 
 	return panel
+
+
+func _toggle_team_panel() -> void:
+	_team_panel_expanded = not _team_panel_expanded
+	_refresh_team_panel()
+
+
+func _show_team_panel_help() -> void:
+	_show_dialog(UiText.ARENA_DIALOG_TITLE, UiText.ARENA_TEAM_PANEL_HINT)
+
+
+func _refresh_team_panel() -> void:
+	if _team_toggle_button != null:
+		_team_toggle_button.text = UiText.ARENA_TEAM_PANEL_COLLAPSE if _team_panel_expanded else UiText.ARENA_TEAM_PANEL_EXPAND
+	if _team_detail_section == null:
+		return
+	var team_panel: Control = _team_detail_section.get_parent().get_parent() as Control
+	team_panel.visible = _team_panel_expanded
+	if not _team_panel_expanded:
+		return
+	for child: Node in _team_detail_section.get_children():
+		child.queue_free()
+	_team_detail_section.add_child(_build_team_preview_section(
+		UiText.ARENA_TEAM_PANEL_ATTACK,
+		_get_team_members("ArenaAttack", "Boss"),
+		UiText.ARENA_ATTACK_TEAM_FALLBACK
+	))
+	_team_detail_section.add_child(_build_team_preview_section(
+		UiText.ARENA_TEAM_PANEL_DEFENSE,
+		_get_team_members("ArenaDefense", ""),
+		UiText.ARENA_DEFENSE_TEAM_FALLBACK
+	))
+
+
+func _build_team_preview_section(title_text: String, members: Array, empty_text: String) -> Control:
+	var section: VBoxContainer = VBoxContainer.new()
+	section.add_theme_constant_override("separation", 10)
+
+	var title_label: Label = Label.new()
+	title_label.text = title_text
+	title_label.add_theme_font_size_override("font_size", 20)
+	title_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	section.add_child(title_label)
+
+	var has_filled_member: bool = false
+	for member_variant: Variant in members:
+		if member_variant is Dictionary and not (member_variant as Dictionary).is_empty():
+			has_filled_member = true
+			break
+	if not has_filled_member:
+		var empty_label: Label = Label.new()
+		empty_label.text = empty_text
+		empty_label.add_theme_font_size_override("font_size", 16)
+		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		section.add_child(empty_label)
+		return section
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", TEAM_SLOT_GAP)
+	section.add_child(row)
+
+	for member_variant: Variant in members:
+		if not (member_variant is Dictionary):
+			continue
+		var member_card: PanelContainer = _build_team_member_card(member_variant)
+		member_card.custom_minimum_size.x = TEAM_SLOT_WIDTH
+		member_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(member_card)
+
+	return section
+
+
+func _build_team_member_card(member: Dictionary) -> PanelContainer:
+	var is_filled: bool = not member.is_empty()
+	var card: PanelContainer = PanelContainer.new()
+	card.custom_minimum_size = Vector2(0.0, 142.0)
+	card.add_theme_stylebox_override(
+		"panel",
+		_make_opponent_slot_style(
+			TEAM_SLOT_FILL if is_filled else TEAM_SLOT_EMPTY_FILL,
+			TEAM_SLOT_BORDER if is_filled else TEAM_SLOT_EMPTY_BORDER,
+			14
+		)
+	)
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(3)
+	card.add_child(margin)
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 3)
+	margin.add_child(column)
+
+	var top_row: HBoxContainer = HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 4)
+	column.add_child(top_row)
+
+	var slot_label: Label = Label.new()
+	slot_label.text = UiText.CONFIG_SLOT_BADGE_FORMAT % [int(member.get("slotNo", 0)) + 1]
+	slot_label.add_theme_font_size_override("font_size", 12)
+	slot_label.add_theme_color_override("font_color", Color(0.98, 0.90, 0.72, 1.0))
+	top_row.add_child(slot_label)
+
+	var name_label: Label = Label.new()
+	name_label.text = str(member.get("catDisplayName", UiText.CONFIG_TEAM_SLOT_EMPTY_NAME)) if is_filled else UiText.CONFIG_TEAM_SLOT_EMPTY_NAME
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.clip_text = true
+	name_label.add_theme_font_size_override("font_size", 13)
+	name_label.add_theme_color_override("font_color", OPPONENT_SLOT_TEXT if is_filled else OverlaySceneChrome.MUTED_TEXT_COLOR)
+	top_row.add_child(name_label)
+
+	var art_panel: PanelContainer = PanelContainer.new()
+	art_panel.custom_minimum_size = Vector2(0.0, 68.0)
+	art_panel.add_theme_stylebox_override(
+		"panel",
+		_make_opponent_slot_style(
+			TEAM_SLOT_FILL if is_filled else TEAM_SLOT_EMPTY_FILL,
+			TEAM_SLOT_BORDER if is_filled else TEAM_SLOT_EMPTY_BORDER,
+			12
+		)
+	)
+	column.add_child(art_panel)
+
+	var art_margin: MarginContainer = OverlaySceneChrome.make_content_margin(3)
+	art_panel.add_child(art_margin)
+
+	var art_center: CenterContainer = CenterContainer.new()
+	art_margin.add_child(art_center)
+
+	var cat_icon: Texture2D = Helpers.resolve_cat_icon_by_catalog_id(int(member.get("catCatalogId", 0))) if is_filled else null
+	if cat_icon != null:
+		art_center.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(42.0, 42.0)))
+	else:
+		var fallback: Label = Label.new()
+		fallback.text = Helpers.get_name_fallback(str(member.get("catDisplayName", ""))) if is_filled else UiText.CONFIG_EMPTY_SLOT_ICON
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback.add_theme_font_size_override("font_size", 20)
+		fallback.add_theme_color_override("font_color", OPPONENT_SLOT_TEXT if is_filled else OverlaySceneChrome.MUTED_TEXT_COLOR)
+		art_center.add_child(fallback)
+
+	var delay_button: Button = Button.new()
+	delay_button.text = UiText.CONFIG_DELAY_BUTTON_FORMAT % [_format_delay_label(float(member.get("initialDelaySeconds", 0.0)))] if is_filled else UiText.CONFIG_DELAY_BUTTON_EMPTY
+	delay_button.custom_minimum_size = Vector2(0.0, 16.0)
+	delay_button.add_theme_font_size_override("font_size", 11)
+	delay_button.disabled = true
+	UiPalette.apply_button_palette(delay_button, TEAM_DELAY_BG, Color(0.98, 0.90, 0.72, 1.0))
+	column.add_child(delay_button)
+
+	return card
+
+
+func _get_team_members(team_type: String, fallback_team_type: String = "") -> Array:
+	var team: Dictionary = GameState.get_team(team_type)
+	var members: Array = team.get("members", [])
+	if members.is_empty() and fallback_team_type != "":
+		team = GameState.get_team(fallback_team_type)
+		members = team.get("members", [])
+	var ordered_members: Array = [{}, {}, {}, {}, {}]
+	for member_variant: Variant in members:
+		if not (member_variant is Dictionary):
+			continue
+		var member: Dictionary = (member_variant as Dictionary).duplicate(true)
+		var slot_no: int = clampi(int(member.get("slotNo", 0)), 0, 4)
+		ordered_members[slot_no] = member
+	return ordered_members
+
+
+func _format_delay_label(delay_seconds: float) -> String:
+	var seconds: int = maxi(0, int(round(delay_seconds)))
+	return str(seconds) + UiText.COMMON_SECONDS
+
+
+func _build_opponent_member_row(members_variant: Variant) -> Control:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", OPPONENT_SLOT_GAP)
+	var members: Array = _get_opponent_members(members_variant)
+	for member_variant: Variant in members:
+		if not (member_variant is Dictionary):
+			continue
+		var member_card: PanelContainer = _build_opponent_member_card(member_variant)
+		member_card.custom_minimum_size.x = OPPONENT_SLOT_WIDTH
+		member_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(member_card)
+	return row
+
+
+func _build_opponent_member_card(member: Dictionary) -> PanelContainer:
+	var is_filled: bool = not member.is_empty()
+	var card: PanelContainer = PanelContainer.new()
+	card.custom_minimum_size = Vector2(0.0, 146.0)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_stylebox_override(
+		"panel",
+		_make_opponent_slot_style(
+			OPPONENT_SLOT_FILL if is_filled else TEAM_SLOT_EMPTY_FILL,
+			OPPONENT_SLOT_BORDER if is_filled else TEAM_SLOT_EMPTY_BORDER,
+			14
+		)
+	)
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(6)
+	card.add_child(margin)
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	margin.add_child(column)
+
+	var art_panel: PanelContainer = PanelContainer.new()
+	art_panel.custom_minimum_size = Vector2(0.0, 72.0)
+	art_panel.add_theme_stylebox_override(
+		"panel",
+		_make_opponent_slot_style(
+			Color(0.15, 0.14, 0.12, 0.96) if is_filled else TEAM_SLOT_EMPTY_FILL,
+			OPPONENT_SLOT_BORDER if is_filled else TEAM_SLOT_EMPTY_BORDER,
+			12
+		)
+	)
+	column.add_child(art_panel)
+
+	var art_margin: MarginContainer = OverlaySceneChrome.make_content_margin(4)
+	art_panel.add_child(art_margin)
+
+	var art_center: CenterContainer = CenterContainer.new()
+	art_margin.add_child(art_center)
+
+	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
+	var cat_icon: Texture2D = Helpers.resolve_cat_icon_by_catalog_id(cat_catalog_id) if is_filled else null
+	if cat_icon != null:
+		art_center.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(52.0, 52.0)))
+	else:
+		var fallback: Label = Label.new()
+		fallback.text = Helpers.get_name_fallback(str(member.get("catDisplayName", ""))) if is_filled else UiText.CONFIG_EMPTY_SLOT_ICON
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback.add_theme_font_size_override("font_size", 24)
+		fallback.add_theme_color_override("font_color", OPPONENT_SLOT_TEXT if is_filled else OverlaySceneChrome.MUTED_TEXT_COLOR)
+		art_center.add_child(fallback)
+
+	var meta_column: VBoxContainer = VBoxContainer.new()
+	meta_column.add_theme_constant_override("separation", 3)
+	column.add_child(meta_column)
+
+	var level_text: String = UiText.CONFIG_CAT_LEVEL_ONLY_FORMAT % int(member.get("catFoodLevel", 1)) if is_filled else " "
+	var rank_text: String = UiText.CONFIG_CAT_STARS_FORMAT % int(member.get("rank", 0)) if is_filled else " "
+	meta_column.add_child(_make_opponent_meta_chip(level_text))
+	meta_column.add_child(_make_opponent_meta_chip(rank_text))
+
+	return card
+
+
+func _get_opponent_members(members_variant: Variant) -> Array:
+	var members: Array = members_variant if members_variant is Array else []
+	var ordered_members: Array = [{}, {}, {}, {}, {}]
+	for member_variant: Variant in members:
+		if not (member_variant is Dictionary):
+			continue
+		var member: Dictionary = (member_variant as Dictionary).duplicate(true)
+		var slot_no: int = clampi(int(member.get("slotNo", 0)), 0, 4)
+		ordered_members[slot_no] = member
+	return ordered_members
+
+
+func _make_opponent_meta_chip(text: String) -> PanelContainer:
+	var chip: PanelContainer = PanelContainer.new()
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.add_theme_stylebox_override("panel", _make_opponent_slot_style(OPPONENT_META_FILL, OPPONENT_META_BORDER, 10))
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(5)
+	chip.add_child(margin)
+
+	var label: Label = Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", OPPONENT_SLOT_MUTED)
+	margin.add_child(label)
+
+	return chip
+
+
+func _make_opponent_slot_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = border
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
+	return style
 
 
 func _on_reroll_pressed() -> void:
@@ -265,13 +670,13 @@ func _on_reroll_pressed() -> void:
 
 
 func _on_challenge_pressed(opponent: Dictionary) -> void:
-	var effective_team_type: String = Helpers.get_effective_team_type("ArenaAttack", "Boss")
-	var attack_team := Helpers.get_team_member_player_cat_ids("ArenaAttack", "Boss")
-	if attack_team.is_empty():
-		_show_dialog("競技場", "請先在配置頁設定競技場攻擊隊伍或 Boss 隊伍。")
-		return
 	if Helpers.get_current_tickets(_overview) <= 0:
-		_show_dialog("競技場", "競技券不足。")
+		_on_purchase_pressed()
+		return
+	var effective_team_type: String = Helpers.get_effective_team_type("ArenaAttack", "Boss")
+	var attack_team: Array = Helpers.get_team_member_player_cat_ids("ArenaAttack", "Boss")
+	if attack_team.is_empty():
+		_show_dialog(UiText.ARENA_DIALOG_TITLE, UiText.ARENA_MISSING_TEAM_ERROR)
 		return
 	if effective_team_type != "":
 		GameState.apply_active_team_from_config(effective_team_type)
@@ -280,26 +685,26 @@ func _on_challenge_pressed(opponent: Dictionary) -> void:
 	GameState.arena_opponent = opponent.duplicate(true)
 	get_tree().change_scene_to_file("res://scenes/ArenaBattleScene.tscn")
 
+func _get_opponent_action_text() -> String:
+	return UiText.ARENA_PURCHASE_BUTTON if Helpers.get_current_tickets(_overview) <= 0 else UiText.ARENA_CHALLENGE_BUTTON
 
-func _on_reward_pressed() -> void:
-	if _overview.is_empty():
-		_show_dialog("牌位獎勵", "尚未取得競技場資料。")
-		return
-	RewardPopup.show(self, _overview, func(rank_id: int) -> void: _claim_rank_reward(rank_id))
+
+func _apply_opponent_action_style(button: Button) -> void:
+	UiPalette.apply_button_kind(button, "rank" if Helpers.get_current_tickets(_overview) <= 0 else "primary")
 
 
 func _claim_rank_reward(rank_id: int) -> void:
 	ApiClient.claim_arena_rank_reward(rank_id, func(success: bool, data: Variant, error: Dictionary) -> void:
 		if not success or not (data is Dictionary):
-			_show_dialog("牌位獎勵", Helpers.build_error_message(error))
+			_show_dialog(UiText.ARENA_REWARD_DIALOG_TITLE, Helpers.build_error_message(error))
 			return
 		var response: Dictionary = data
 		var overview: Dictionary = response.get("overview", {})
 		if not overview.is_empty():
 			GameState.update_arena(overview)
 			_apply_overview(overview)
-		_show_dialog("牌位獎勵", "已領取 %s：%s" % [
-			str(response.get("rankName", "牌位獎勵")),
+		_show_dialog(UiText.ARENA_REWARD_DIALOG_TITLE, UiText.ARENA_REWARD_CLAIMED_FORMAT % [
+			str(response.get("rankName", UiText.ARENA_REWARD_UNKNOWN_RANK)),
 			Helpers.format_rewards(response.get("rewards", []))
 		])
 	)
@@ -307,21 +712,21 @@ func _claim_rank_reward(rank_id: int) -> void:
 
 func _on_purchase_pressed() -> void:
 	if _overview.is_empty():
-		_show_dialog("購買競技券", "尚未取得競技場資料。")
+		_show_dialog(UiText.ARENA_PURCHASE_DIALOG_TITLE, UiText.ARENA_DATA_MISSING)
 		return
-	var purchase_count := int(_overview.get("dailyPurchaseCount", 0))
-	var max_purchase_count := int(_overview.get("maxDailyPurchaseCount", 5))
+	var purchase_count: int = int(_overview.get("dailyPurchaseCount", 0))
+	var max_purchase_count: int = int(_overview.get("maxDailyPurchaseCount", 5))
 	if purchase_count >= max_purchase_count:
-		_show_dialog("購買競技券", "今日已達購買上限。")
+		_show_dialog(UiText.ARENA_PURCHASE_DIALOG_TITLE, UiText.ARENA_PURCHASE_LIMIT)
 		return
 	var costs: Array = _overview.get("ticketPurchaseCosts", [])
-	var cost := int(costs[purchase_count]) if purchase_count < costs.size() else -1
+	var cost: int = int(costs[purchase_count]) if purchase_count < costs.size() else -1
 	if cost < 0:
-		_show_dialog("購買競技券", "目前沒有可用的購買方案。")
+		_show_dialog(UiText.ARENA_PURCHASE_DIALOG_TITLE, UiText.ARENA_PURCHASE_NO_PLAN)
 		return
 	DialogManager.show_confirm(
-		"購買競技券",
-		"消耗 %d 鑽石，購買 %d 張競技券？" % [cost, int(_overview.get("ticketsPerPurchase", 3))],
+		UiText.ARENA_PURCHASE_DIALOG_TITLE,
+		UiText.ARENA_PURCHASE_CONFIRM_BODY % [cost, int(_overview.get("ticketsPerPurchase", 3))],
 		_purchase_tickets_confirmed
 	)
 
@@ -330,18 +735,13 @@ func _show_dialog(title_text: String, body_text: String) -> void:
 	DialogManager.show_info(title_text, body_text)
 
 
-func _has_cached_opponents(overview: Dictionary) -> bool:
-	var opponents_variant: Variant = overview.get("opponents", [])
-	return opponents_variant is Array and not (opponents_variant as Array).is_empty()
-
-
 func _get_current_opponent_ids() -> Array:
 	var ids: Array = []
 	for opponent_variant: Variant in _overview.get("opponents", []):
 		if not (opponent_variant is Dictionary):
 			continue
 		var opponent: Dictionary = opponent_variant
-		var opponent_id := str(opponent.get("opponentId", "")).strip_edges()
+		var opponent_id: String = str(opponent.get("opponentId", "")).strip_edges()
 		if opponent_id != "":
 			ids.append(opponent_id)
 	return ids
@@ -353,11 +753,121 @@ func _purchase_tickets_confirmed() -> void:
 
 func _on_purchase_tickets_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success or not (data is Dictionary):
-		_show_dialog("購買競技券", Helpers.build_error_message(error))
+		_show_dialog(UiText.ARENA_PURCHASE_DIALOG_TITLE, Helpers.build_error_message(error))
 		return
 	var response: Dictionary = data
 	var overview: Dictionary = response.get("overview", {})
 	if not overview.is_empty():
+		var preserved_opponents: Array = _overview.get("opponents", []).duplicate(true)
+		if not preserved_opponents.is_empty():
+			overview["opponents"] = preserved_opponents
 		GameState.update_arena(overview)
 		_apply_overview(overview)
-	_show_dialog("購買競技券", "已購買 %d 張競技券。" % int(response.get("addedTickets", 0)))
+	_show_dialog(UiText.ARENA_PURCHASE_DIALOG_TITLE, UiText.ARENA_PURCHASE_SUCCESS_FORMAT % int(response.get("addedTickets", 0)))
+
+
+func _on_back_pressed() -> void:
+	SceneNavigator.open_overlay_scene("res://scenes/ActivityScene.tscn")
+
+
+func _switch_tab(tab_key: String) -> void:
+	if _active_tab == tab_key:
+		return
+	_active_tab = tab_key
+	_refresh_tab_state()
+
+
+func _refresh_tab_state() -> void:
+	SceneSubmenuBar.refresh(_tab_buttons, _active_tab, {
+		"active_color": Color(1.0, 0.95, 0.82, 1.0),
+		"inactive_color": Color(0.65, 0.65, 0.68, 1.0),
+	})
+	if _arena_section != null:
+		_arena_section.visible = _active_tab == "arena"
+	if _reward_section != null:
+		_reward_section.visible = _active_tab == "rewards"
+
+
+func _render_rewards() -> void:
+	if _reward_list == null:
+		return
+
+	for child: Node in _reward_list.get_children():
+		child.queue_free()
+
+	if _overview.is_empty():
+		var empty_label: Label = Label.new()
+		empty_label.text = UiText.ARENA_DATA_MISSING
+		empty_label.add_theme_font_size_override("font_size", 18)
+		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		_reward_list.add_child(empty_label)
+		return
+
+	for rank_variant: Variant in _overview.get("ranks", []):
+		if not (rank_variant is Dictionary):
+			continue
+		var rank: Dictionary = rank_variant
+		_reward_list.add_child(_build_reward_card(rank))
+
+
+func _build_reward_card(rank: Dictionary) -> PanelContainer:
+	var panel: PanelContainer = OverlaySceneChrome.make_card_panel(
+		OverlaySceneChrome.CARD_BORDER,
+		Color(0.12, 0.12, 0.14, 0.96),
+		12
+	)
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	panel.add_child(margin)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	margin.add_child(row)
+
+	var badge_texture: Texture2D = Helpers.resolve_rank_texture(
+		rank.get("imagePath", ""),
+		rank.get("rankKey", "")
+	)
+	if badge_texture != null:
+		row.add_child(AssetResolver.create_icon_rect(badge_texture, Vector2(56.0, 56.0)))
+
+	var text_box: VBoxContainer = VBoxContainer.new()
+	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_box.add_theme_constant_override("separation", 6)
+	row.add_child(text_box)
+
+	var name_label: Label = Label.new()
+	name_label.text = str(rank.get("displayName", UiText.ARENA_REWARD_UNKNOWN_RANK))
+	name_label.add_theme_font_size_override("font_size", 18)
+	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	text_box.add_child(name_label)
+
+	var reward_label: Label = Label.new()
+	reward_label.text = Helpers.format_rewards(rank.get("rewards", []))
+	reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	reward_label.add_theme_font_size_override("font_size", 15)
+	reward_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	text_box.add_child(reward_label)
+
+	if bool(rank.get("isClaimed", false)):
+		var claimed_label: Label = Label.new()
+		claimed_label.text = UiText.COMMON_CLAIMED
+		claimed_label.add_theme_font_size_override("font_size", 16)
+		row.add_child(claimed_label)
+	elif bool(rank.get("isClaimable", false)):
+		var claim_button: Button = Button.new()
+		claim_button.text = UiText.COMMON_CLAIM
+		claim_button.custom_minimum_size = Vector2(96.0, 40.0)
+		claim_button.pressed.connect(func() -> void:
+			_claim_rank_reward(int(rank.get("rankId", 0)))
+		)
+		row.add_child(claim_button)
+		UiPalette.apply_button_kind(claim_button, "primary")
+	else:
+		var requirement_label: Label = Label.new()
+		requirement_label.text = UiText.ARENA_REQUIRE_SCORE_FORMAT % int(rank.get("scoreMin", 0))
+		requirement_label.add_theme_font_size_override("font_size", 15)
+		requirement_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		row.add_child(requirement_label)
+
+	return panel
