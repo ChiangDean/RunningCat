@@ -13,8 +13,8 @@ config_version=5
 config/name="MeowPartyDashClient"
 run/main_scene="res://scenes/StartScene.tscn"
 config/features=PackedStringArray("4.6", "C#", "Forward Plus", "Mobile")
-config/icon="res://icon.svg"
 boot_splash/show_image=false
+config/icon="res://icon.svg"
 
 [autoload]
 

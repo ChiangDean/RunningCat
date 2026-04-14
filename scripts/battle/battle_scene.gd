@@ -1,10 +1,11 @@
-class_name BattleScene
+﻿class_name BattleScene
 extends Node2D
 
 ## Main home scene: battle view plus bottom navigation.
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
-const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/home_top_bar_frame.png")
+const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/HomeTopHudEditor.tscn")
+const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v2.png")
 const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png.png")
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
 const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
@@ -37,24 +38,12 @@ const SKILL_SLOT_H := 90.0
 
 # Stage and boss actions stay aligned with the result banner.
 const STAGE_BTN_Y := 310.0
-const TOP_BAR_FRAME_X := 6.0
-const TOP_BAR_FRAME_Y := 42.0
-const TOP_BAR_FRAME_W := 708.0
-const TOP_BAR_FRAME_H := 188.0
-const TOP_BAR_ATLAS_REGION := Rect2(58.0, 270.0, 1420.0, 391.0)
-const RESOURCE_CHIP_W := 92.0
-const RESOURCE_CHIP_H := 30.0
-const TOP_BAR_AVATAR_POS := Vector2(24.0, 18.0)
-const TOP_BAR_AVATAR_SIZE := Vector2(86.0, 86.0)
-const TOP_BAR_NAME_POS := Vector2(176.0, 34.0)
-const TOP_BAR_NAME_SIZE := Vector2(132.0, 22.0)
-const TOP_BAR_LEVEL_POS := Vector2(318.0, 14.0)
-const TOP_BAR_LEVEL_SIZE := Vector2(90.0, 22.0)
-const TOP_BAR_RESOURCE_Y := 99.0
-const ACTION_STACK_X := 560.0
-const ACTION_STACK_Y := 258.0
-const ACTION_STACK_W := 110.0
-const ACTION_STACK_H := 52.0
+const TOP_BAR_FRAME_X := 26.0
+const TOP_BAR_FRAME_Y := 28.0
+const ACTION_STACK_X := 586.0
+const ACTION_STACK_Y := 250.0
+const ACTION_STACK_W := 96.0
+const ACTION_STACK_H := 42.0
 const SKILL_PANEL_Y := 844.0
 const SKILL_PANEL_H := 184.0
 const IDLE_BAR_Y := 1054.0
@@ -62,10 +51,12 @@ const IDLE_BAR_W := 412.0
 const IDLE_BAR_H := 18.0
 const IDLE_PROGRESS_CAP_SECONDS := 8 * 3600.0
 const HOME_SCOOP_PANEL_X := 154.0
-const HOME_SCOOP_PANEL_Y := 1040.0
+const HOME_SCOOP_PANEL_Y := 1032.0
 const HOME_SCOOP_PANEL_W := 412.0
 const HOME_SCOOP_PANEL_H := 112.0
 const HOME_SCOOP_COOLDOWN := 0.5
+const RESULT_BANNER_W := 296.0
+const RESULT_BANNER_H := 84.0
 const REWARD_FLOAT_START_Y := 620.0
 const REWARD_FLOAT_RISE := 168.0
 const REWARD_FLOAT_STEP_DELAY := 0.18
@@ -90,6 +81,7 @@ var _skip_btn: Button
 var _level_label: Label
 var _boss_btn: Button
 var _result_display: Label
+var _result_backdrop: Control
 var _skill_bar: Control      # Skill bar container
 var _sandbox_btn: Button     # Idle rewards action button
 var _mail_btn: Button
@@ -102,6 +94,13 @@ var _stage_task_label: Label
 var _battle_countdown_fill: ColorRect
 var _profile_name_label: Label
 var _profile_level_label: Label
+var _top_area_label: Label
+var _top_exp_bar: ProgressBar
+var _top_progress_value_label: Label
+var _top_poop_value_label: Label
+var _top_heart_labels: Array[Label] = []
+var _top_avatar_rect: TextureRect
+var _cached_team_power: int = 0
 var _reward_fx_layer: Control
 var _reward_fx_canvas: CanvasLayer
 var _reward_fx_queue: Array[Dictionary] = []
@@ -146,7 +145,7 @@ func _process(_delta: float) -> void:
 	else:
 		var remaining := _timer_label.text.to_float()
 		var fill_ratio := clampf(remaining / 60.0, 0.0, 1.0)
-		_battle_countdown_fill.size.x = 306.0 * fill_ratio
+		_battle_countdown_fill.size.x = 286.0 * fill_ratio
 
 	if _home_scoop_cooldown_remaining > 0.0:
 		_home_scoop_cooldown_remaining = maxf(0.0, _home_scoop_cooldown_remaining - _delta)
@@ -219,86 +218,53 @@ func _build_ui() -> void:
 	_ui_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_ui_layer)
 
-	var top_bar_root := Control.new()
+	var top_bar_root: Control = HOME_TOP_HUD_SCENE.instantiate()
 	top_bar_root.position = Vector2(TOP_BAR_FRAME_X, TOP_BAR_FRAME_Y)
-	top_bar_root.size = Vector2(TOP_BAR_FRAME_W, TOP_BAR_FRAME_H)
 	_ui_layer.add_child(top_bar_root)
 
-	var top_bar_texture := AtlasTexture.new()
-	top_bar_texture.atlas = HOME_TOP_BAR_TEXTURE
-	top_bar_texture.region = TOP_BAR_ATLAS_REGION
-
-	var top_bar_frame := TextureRect.new()
-	top_bar_frame.position = Vector2.ZERO
-	top_bar_frame.size = top_bar_root.size
-	top_bar_frame.texture = top_bar_texture
-	top_bar_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	top_bar_frame.stretch_mode = TextureRect.STRETCH_SCALE
-	top_bar_frame.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	top_bar_root.add_child(top_bar_frame)
-
-	var avatar_rect := TextureRect.new()
-	avatar_rect.position = TOP_BAR_AVATAR_POS
-	avatar_rect.size = TOP_BAR_AVATAR_SIZE
-	avatar_rect.texture = PROFILE_AVATAR_TEXTURE
-	avatar_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	avatar_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	avatar_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	top_bar_root.add_child(avatar_rect)
-
-	_profile_name_label = _make_label("Scooper", TOP_BAR_NAME_POS, TOP_BAR_NAME_SIZE, 13)
-	_profile_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	top_bar_root.add_child(_profile_name_label)
-
-	_profile_level_label = _make_label("Lv.1", TOP_BAR_LEVEL_POS, TOP_BAR_LEVEL_SIZE, 16)
-	_profile_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	top_bar_root.add_child(_profile_level_label)
-
-	var resource_defs: Array[Dictionary] = [
-		{"key": "gold", "texture": RESOURCE_GOLD_TEXTURE, "x": 418.0},
-		{"key": "diamonds", "texture": RESOURCE_DIAMOND_TEXTURE, "x": 515.0},
-		{"key": "poop", "texture": RESOURCE_POOP_TEXTURE, "x": 611.0},
-	]
-	for entry in resource_defs:
-		var icon_rect := TextureRect.new()
-		icon_rect.position = Vector2(entry["x"], TOP_BAR_RESOURCE_Y)
-		icon_rect.size = Vector2(22.0, 22.0)
-		icon_rect.texture = entry["texture"]
-		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-		top_bar_root.add_child(icon_rect)
-
-		var value_label := _make_label("--", Vector2(entry["x"] + 16.0, TOP_BAR_RESOURCE_Y - 3.0), Vector2(RESOURCE_CHIP_W, RESOURCE_CHIP_H), 13)
-		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		top_bar_root.add_child(value_label)
-		_resource_value_labels[str(entry["key"])] = value_label
-
+	_top_avatar_rect = top_bar_root.get_node("Avatar") as TextureRect
+	_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
+	var avatar_circle_material := ShaderMaterial.new()
+	avatar_circle_material.shader = Shader.new()
+	avatar_circle_material.shader.code = "shader_type canvas_item;\nvoid fragment(){\n\tvec2 uv = UV - vec2(0.5);\n\tif (length(uv) > 0.5) {\n\t\tdiscard;\n\t}\n\tCOLOR = texture(TEXTURE, UV) * COLOR;\n}\n"
+	_top_avatar_rect.material = avatar_circle_material
+	_profile_name_label = top_bar_root.get_node("NameLabel") as Label
+	_profile_level_label = top_bar_root.get_node("LevelLabel") as Label
+	_top_exp_bar = top_bar_root.get_node("TopExpBar") as ProgressBar
+	_top_progress_value_label = top_bar_root.get_node("ExpValueLabel") as Label
+	_resource_value_labels["diamonds"] = top_bar_root.get_node("DiamondsPanel/Value") as Label
+	_resource_value_labels["gold"] = top_bar_root.get_node("GoldPanel/Value") as Label
+	_resource_value_labels["power"] = top_bar_root.get_node("PowerPanel/Value") as Label
 	var stage_panel := _make_panel(
-		Vector2(180.0, 246.0),
-		Vector2(360.0, 116.0),
+		Vector2(188.0, 244.0),
+		Vector2(344.0, 104.0),
 		Color(0.12, 0.08, 0.06, 0.72),
 		Color(0.66, 0.53, 0.31, 0.92)
 	)
 	_ui_layer.add_child(stage_panel)
 
-	_level_label = _make_label("", Vector2(22.0, 16.0), Vector2(316.0, 34.0), 28)
+	_stage_task_label = _make_label(UiText.HOME_DAILY_TASK, Vector2(18.0, 10.0), Vector2(308.0, 18.0), 11)
+	_stage_task_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_stage_task_label.add_theme_color_override("font_color", Color(0.90, 0.82, 0.63, 0.86))
+	stage_panel.add_child(_stage_task_label)
+
+	_level_label = _make_label("", Vector2(18.0, 28.0), Vector2(308.0, 28.0), 25)
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stage_panel.add_child(_level_label)
 
-	_timer_label = _make_label("60.0", Vector2(22.0, 50.0), Vector2(316.0, 24.0), 20)
+	_timer_label = _make_label("60.0", Vector2(18.0, 54.0), Vector2(308.0, 20.0), 18)
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stage_panel.add_child(_timer_label)
 
 	var countdown_bar_bg := ColorRect.new()
-	countdown_bar_bg.position = Vector2(26.0, 82.0)
-	countdown_bar_bg.size = Vector2(308.0, 12.0)
+	countdown_bar_bg.position = Vector2(28.0, 80.0)
+	countdown_bar_bg.size = Vector2(288.0, 8.0)
 	countdown_bar_bg.color = Color(0.20, 0.14, 0.10, 0.92)
 	stage_panel.add_child(countdown_bar_bg)
 
 	_battle_countdown_fill = ColorRect.new()
 	_battle_countdown_fill.position = Vector2(1.0, 1.0)
-	_battle_countdown_fill.size = Vector2(306.0, 10.0)
+	_battle_countdown_fill.size = Vector2(286.0, 6.0)
 	_battle_countdown_fill.color = Color(0.97, 0.78, 0.28, 0.96)
 	countdown_bar_bg.add_child(_battle_countdown_fill)
 
@@ -307,7 +273,7 @@ func _build_ui() -> void:
 	_mail_btn.pressed.connect(_on_nav_mail)
 
 	_mail_badge = Label.new()
-	_mail_badge.position = _mail_btn.position + Vector2(ACTION_STACK_W - 24.0, -6.0)
+	_mail_badge.position = _mail_btn.position + Vector2(ACTION_STACK_W - 20.0, -6.0)
 	_mail_badge.size = Vector2(28.0, 28.0)
 	_mail_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mail_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -319,7 +285,7 @@ func _build_ui() -> void:
 	_chat_btn.pressed.connect(_open_chat)
 	_ui_layer.add_child(_chat_btn)
 
-	_chat_badge = _make_label("", _chat_btn.position + Vector2(ACTION_STACK_W - 26.0, -4.0), Vector2(24.0, 20.0), 12)
+	_chat_badge = _make_label("", _chat_btn.position + Vector2(ACTION_STACK_W - 22.0, -4.0), Vector2(22.0, 18.0), 12)
 	_chat_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ui_layer.add_child(_chat_badge)
 	GameState.chat_unread_changed.connect(func(_channel_key: String, _count: int) -> void:
@@ -327,7 +293,8 @@ func _build_ui() -> void:
 	)
 	_refresh_chat_badge()
 
-	_boss_btn = _make_button(UiText.HOME_BOSS, Vector2(210.0, 264.0), Vector2(300.0, 56.0))
+	_boss_btn = _make_button(UiText.HOME_BOSS, Vector2(252.0, 350.0), Vector2(216.0, 42.0))
+	_boss_btn.add_theme_font_size_override("font_size", 20)
 	_boss_btn.visible = false
 	_ui_layer.add_child(_boss_btn)
 	_boss_btn.pressed.connect(_on_challenge_boss_pressed)
@@ -355,44 +322,71 @@ func _build_ui() -> void:
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 
-	_sandbox_btn = _make_button("Idle 00:00:00", Vector2(250.0, 1010.0), Vector2(220.0, 36.0))
+	_sandbox_btn = _make_button("Idle 00:00:00", Vector2(230.0, 982.0), Vector2(260.0, 28.0))
+	_sandbox_btn.add_theme_font_size_override("font_size", 15)
 	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
 	_ui_layer.add_child(_sandbox_btn)
 
-	_home_scoop_panel = _make_panel(
-		Vector2(HOME_SCOOP_PANEL_X, HOME_SCOOP_PANEL_Y),
-		Vector2(HOME_SCOOP_PANEL_W, HOME_SCOOP_PANEL_H),
-		Color(0.16, 0.11, 0.08, 0.9),
-		Color(0.43, 0.30, 0.18, 1.0)
-	)
+	_home_scoop_panel = Control.new()
+	_home_scoop_panel.position = Vector2(HOME_SCOOP_PANEL_X, HOME_SCOOP_PANEL_Y)
+	_home_scoop_panel.size = Vector2(HOME_SCOOP_PANEL_W, HOME_SCOOP_PANEL_H)
 	_ui_layer.add_child(_home_scoop_panel)
 
-	var scoop_title := _make_label(UiText.HOME_SCOOPER_EXP_TITLE, Vector2(14.0, 10.0), Vector2(160.0, 22.0), 18)
+	var scoop_title := _make_label(UiText.HOME_SCOOPER_EXP_TITLE, Vector2(18.0, 10.0), Vector2(164.0, 20.0), 16)
 	scoop_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	scoop_title.add_theme_color_override("font_color", Color(0.34, 0.18, 0.08, 1.0))
 	_home_scoop_panel.add_child(scoop_title)
 
-	_home_exp_label = _make_label("EXP 0 / 0", Vector2(244.0, 10.0), Vector2(150.0, 22.0), 16)
+	_home_exp_label = _make_label("EXP 0 / 0", Vector2(190.0, 10.0), Vector2(198.0, 20.0), 15)
 	_home_exp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_home_exp_label.add_theme_color_override("font_color", Color(0.34, 0.18, 0.08, 1.0))
 	_home_scoop_panel.add_child(_home_exp_label)
 
+	var exp_bg_rect := ColorRect.new()
+	exp_bg_rect.position = Vector2(28.0, 40.0)
+	exp_bg_rect.size = Vector2(HOME_SCOOP_PANEL_W - 92.0, 20.0)
+	exp_bg_rect.color = Color(0.35, 0.20, 0.08, 0.82)
+	_home_scoop_panel.add_child(exp_bg_rect)
+
+	var exp_bg_inner := ColorRect.new()
+	exp_bg_inner.position = Vector2(2.0, 2.0)
+	exp_bg_inner.size = Vector2(HOME_SCOOP_PANEL_W - 96.0, 16.0)
+	exp_bg_inner.color = Color(0.62, 0.40, 0.12, 0.30)
+	exp_bg_rect.add_child(exp_bg_inner)
+
 	_home_exp_bar = ProgressBar.new()
-	_home_exp_bar.position = Vector2(14.0, 36.0)
-	_home_exp_bar.size = Vector2(HOME_SCOOP_PANEL_W - 28.0, 18.0)
+	_home_exp_bar.position = Vector2(30.0, 42.0)
+	_home_exp_bar.size = Vector2(HOME_SCOOP_PANEL_W - 96.0, 16.0)
 	_home_exp_bar.min_value = 0
 	_home_exp_bar.show_percentage = false
+	var exp_bar_bg_style := StyleBoxFlat.new()
+	exp_bar_bg_style.bg_color = Color(0.31, 0.19, 0.09, 0.80)
+	exp_bar_bg_style.corner_radius_top_left = 7
+	exp_bar_bg_style.corner_radius_top_right = 7
+	exp_bar_bg_style.corner_radius_bottom_left = 7
+	exp_bar_bg_style.corner_radius_bottom_right = 7
+	var exp_bar_fill_style := StyleBoxFlat.new()
+	exp_bar_fill_style.bg_color = Color(0.96, 0.78, 0.29, 0.96)
+	exp_bar_fill_style.corner_radius_top_left = 7
+	exp_bar_fill_style.corner_radius_top_right = 7
+	exp_bar_fill_style.corner_radius_bottom_left = 7
+	exp_bar_fill_style.corner_radius_bottom_right = 7
+	_home_exp_bar.add_theme_stylebox_override("background", exp_bar_bg_style)
+	_home_exp_bar.add_theme_stylebox_override("fill", exp_bar_fill_style)
 	_home_scoop_panel.add_child(_home_exp_bar)
 
-	_home_scoop_result_label = _make_label("", Vector2(14.0, 60.0), Vector2(240.0, 40.0), 15)
+	_home_scoop_result_label = _make_label("", Vector2(18.0, 70.0), Vector2(176.0, 24.0), 11)
 	_home_scoop_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_home_scoop_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_home_scoop_result_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_home_scoop_result_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_home_scoop_result_label.add_theme_color_override("font_color", Color(0.84, 0.98, 0.80, 1.0))
 	_home_scoop_panel.add_child(_home_scoop_result_label)
 
 	_home_scoop_button = Button.new()
 	_home_scoop_button.text = UiText.HOME_SCOOPER_BUTTON
-	_home_scoop_button.position = Vector2(262.0, 62.0)
-	_home_scoop_button.size = Vector2(136.0, 36.0)
-	_home_scoop_button.add_theme_font_size_override("font_size", 18)
+	_home_scoop_button.position = Vector2(242.0, 66.0)
+	_home_scoop_button.size = Vector2(154.0, 26.0)
+	_home_scoop_button.add_theme_font_size_override("font_size", 15)
 	_home_scoop_button.modulate = Color(0.97, 0.93, 0.88, 1.0)
 	_home_scoop_button.pressed.connect(UiAudio.play_ui_click)
 	_home_scoop_button.pressed.connect(_on_home_scoop_pressed)
@@ -417,14 +411,37 @@ func _build_ui() -> void:
 	_skip_btn.pressed.connect(_on_skip_pressed)
 	_skip_btn.visible = GameState.can_skip_battle()
 
+	_result_backdrop = _make_panel(
+		Vector2((SW - RESULT_BANNER_W) / 2.0, 356.0),
+		Vector2(RESULT_BANNER_W, RESULT_BANNER_H),
+		Color(0.16, 0.09, 0.06, 0.86),
+		Color(0.90, 0.73, 0.34, 0.94)
+	)
+	_result_backdrop.visible = false
+	_ui_layer.add_child(_result_backdrop)
+
+	var result_top_glow := ColorRect.new()
+	result_top_glow.position = Vector2(14.0, 10.0)
+	result_top_glow.size = Vector2(RESULT_BANNER_W - 28.0, 14.0)
+	result_top_glow.color = Color(1.0, 0.95, 0.82, 0.10)
+	_result_backdrop.add_child(result_top_glow)
+
+	var result_bottom_rule := ColorRect.new()
+	result_bottom_rule.position = Vector2(26.0, RESULT_BANNER_H - 16.0)
+	result_bottom_rule.size = Vector2(RESULT_BANNER_W - 52.0, 2.0)
+	result_bottom_rule.color = Color(0.92, 0.78, 0.42, 0.42)
+	_result_backdrop.add_child(result_bottom_rule)
+
 	_result_display = Label.new()
-	_result_display.size = Vector2(420.0, 110.0)
-	_result_display.position = Vector2(150.0, 420.0)
+	_result_display.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
+	_result_display.position = Vector2.ZERO
 	_result_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_display.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_result_display.add_theme_font_size_override("font_size", 72)
+	_result_display.add_theme_font_size_override("font_size", 50)
+	_result_display.add_theme_constant_override("outline_size", 6)
+	_result_display.add_theme_color_override("font_outline_color", Color(0.20, 0.09, 0.04, 0.98))
 	_result_display.visible = false
-	_ui_layer.add_child(_result_display)
+	_result_backdrop.add_child(_result_display)
 
 	_nav_canvas = CanvasLayer.new()
 	_nav_canvas.layer = 20
@@ -652,9 +669,12 @@ func _format_resource_count(value: int) -> String:
 func _refresh_resource_strip() -> void:
 	if _resource_value_labels.is_empty():
 		return
-	_resource_value_labels["gold"].text = _format_resource_count(GameState.player_data.gold)
-	_resource_value_labels["diamonds"].text = _format_resource_count(GameState.player_data.diamonds)
-	_resource_value_labels["poop"].text = _format_resource_count(GameState.player_data.poop_count)
+	if _resource_value_labels.has("diamonds"):
+		_resource_value_labels["diamonds"].text = _format_resource_count(GameState.player_data.diamonds)
+	if _resource_value_labels.has("gold"):
+		_resource_value_labels["gold"].text = _format_resource_count(GameState.player_data.gold)
+	if _resource_value_labels.has("power"):
+		_resource_value_labels["power"].text = _format_resource_count(_cached_team_power)
 
 
 func _get_home_reward_defs() -> Array[Array]:
@@ -814,7 +834,23 @@ func _refresh_ui() -> void:
 			profile_name = "Scooper"
 		_profile_name_label.text = profile_name
 	if _profile_level_label != null:
-		_profile_level_label.text = "Lv.%d" % GameState.player_data.scooper_level
+		_profile_level_label.text = str(GameState.player_data.scooper_level)
+	if _top_exp_bar != null and _top_progress_value_label != null:
+		var top_profile: Dictionary = GameState.scooper_profile_data
+		var top_level: int
+		var top_exp: int
+		var top_threshold: int
+		if not top_profile.is_empty():
+			top_level = int(top_profile.get("scooperLevel", GameState.player_data.scooper_level))
+			top_exp = int(top_profile.get("scooperExp", GameState.player_data.scooper_exp))
+			top_threshold = int(top_profile.get("expThreshold", max((top_level + 1) * 10, 1)))
+		else:
+			top_level = GameState.player_data.scooper_level
+			top_exp = GameState.player_data.scooper_exp
+			top_threshold = max((top_level + 1) * int(GameState.idle_config.get("scooper_exp_per_level", 10)), 1)
+		_top_exp_bar.max_value = top_threshold
+		_top_exp_bar.value = top_exp
+		_top_progress_value_label.text = "鏟屎官Exp %d/%d" % [top_exp, top_threshold]
 	_boss_btn.visible = GameState.boss_available and not GameState.is_current_boss()
 	_refresh_resource_strip()
 	_refresh_sandbox_btn()
@@ -908,6 +944,8 @@ func _refresh_mail_badge() -> void:
 
 func _start_battle() -> void:
 	_result_display.visible = false
+	if _result_backdrop != null:
+		_result_backdrop.visible = false
 	_refresh_ui()
 
 	for child in _player_team.get_children():
@@ -917,6 +955,7 @@ func _start_battle() -> void:
 
 	var player_cats: Array = []
 	var enemy_cats: Array = []
+	var team_power_total: int = 0
 
 	for i in range(GameState.player_team.size()):
 		var player_cat_id: int = GameState.player_team[i]
@@ -933,6 +972,7 @@ func _start_battle() -> void:
 			data.apply_enhancement(player_cat)
 			data.apply_rank_bonus(player_cat)
 			_apply_equipment_bonuses(data)
+			team_power_total += int(data.max_hp) + int(data.atk) * 6 + int(data.defense) * 4
 			# Reload skills after enhancement so the initial delay stays in sync.
 			data._load_skill_data()
 			if data.active_skills_data.size() > 0:
@@ -958,6 +998,8 @@ func _start_battle() -> void:
 		push_error("BattleScene: insufficient cat data; cannot start battle")
 		return
 
+	_cached_team_power = max(team_power_total, 0)
+	_refresh_resource_strip()
 	_refresh_skill_bar_names(player_cats)
 
 	var simulator := BattleSimulator.new()
@@ -980,12 +1022,12 @@ func _on_battle_finished(result: String) -> void:
 	var is_boss := GameState.is_current_boss()
 
 	if result == "WIN":
-		_show_result_text(UiText.BATTLE_RESULT_WIN, Color(0.3, 1.0, 0.4, 1.0), 310.0)
+		_show_result_text(UiText.BATTLE_RESULT_WIN, Color(0.46, 0.98, 0.48, 1.0), 356.0)
 		GameState.advance_after_win()
 		await get_tree().create_timer(1.0).timeout
 		_start_battle()
 	else:
-		_show_result_text(UiText.BATTLE_RESULT_LOSE, Color(1.0, 0.3, 0.3, 1.0), 310.0)
+		_show_result_text(UiText.BATTLE_RESULT_LOSE, Color(1.0, 0.42, 0.38, 1.0), 356.0)
 		if is_boss:
 			GameState.on_boss_fail()
 		await get_tree().create_timer(1.0).timeout
@@ -994,8 +1036,27 @@ func _on_battle_finished(result: String) -> void:
 
 func _show_result_text(text: String, color: Color, y: float) -> void:
 	_result_display.text = text
-	_result_display.modulate = color
-	_result_display.position = Vector2(0.0, y)
+	_result_display.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_result_display.add_theme_color_override("font_color", color)
+	if _result_backdrop != null:
+		_result_backdrop.position = Vector2((SW - RESULT_BANNER_W) / 2.0, y)
+		_result_backdrop.visible = true
+		var body: ColorRect = _result_backdrop.get_child(0)
+		if body != null:
+			body.color = Color(
+				lerpf(0.16, color.r * 0.32, 0.24),
+				lerpf(0.09, color.g * 0.20, 0.24),
+				lerpf(0.06, color.b * 0.14, 0.24),
+				0.90
+			)
+		var border_color := color.lightened(0.18)
+		for i in range(1, 5):
+			var border: ColorRect = _result_backdrop.get_child(i)
+			if border != null:
+				border.color = border_color
+		var result_bottom_rule: ColorRect = _result_backdrop.get_child(6)
+		if result_bottom_rule != null:
+			result_bottom_rule.color = border_color.lightened(0.10)
 	_result_display.visible = true
 
 
@@ -1171,7 +1232,7 @@ func _show_sandbox_dialog() -> void:
 				parts.append("%s +%d" % [UiText.REWARD_WHISKERS, whiskers_gained])
 				reward_entries.append(_make_reward_float_entry(UiText.REWARD_WHISKERS, whiskers_gained, "whiskers"))
 
-			result_lbl.text = UiText.HOME_SANDBOX_NONE_EXTRA if parts.is_empty() else UiText.HOME_SANDBOX_GAINED_PREFIX + "、".join(parts)
+			result_lbl.text = UiText.HOME_SANDBOX_NONE_EXTRA if parts.is_empty() else UiText.HOME_SANDBOX_GAINED_PREFIX + " / ".join(parts)
 			if not reward_entries.is_empty():
 				_queue_reward_floats(reward_entries)
 
@@ -1257,4 +1318,4 @@ func _refresh_chat_badge() -> void:
 		return
 	var unread := GameState.get_chat_total_unread()
 	_chat_badge.visible = unread > 0
-	_chat_badge.text = str(mini(unread, 99))
+	_chat_badge.text = str(min(unread, 99))
