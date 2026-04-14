@@ -7,15 +7,6 @@ const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 
-const BOTTOM_DOCK_H := 112.0
-const HOME_MAIN_NAV_H := 110.0
-const CONTENT_TOP_GAP := 150.0
-const PANEL_FILL := Color(0.08, 0.07, 0.08, 0.94)
-const PANEL_BORDER := Color(0.80, 0.67, 0.42, 0.95)
-const CARD_FILL := Color(0.16, 0.15, 0.18, 0.96)
-const CARD_BORDER := Color(0.50, 0.43, 0.30, 0.92)
-const ACTIVE_TAB_COLOR := Color(1.0, 0.95, 0.82, 1.0)
-const INACTIVE_TAB_COLOR := Color(0.65, 0.65, 0.68, 1.0)
 const DETAIL_TAB_FILL := Color(0.20, 0.16, 0.18, 0.92)
 const DETAIL_TAB_ACTIVE_FILL := Color(0.43, 0.31, 0.14, 0.98)
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
@@ -42,25 +33,25 @@ static func build_ui(scene) -> void:
 		"back_label": UiText.ENHANCE_BACK,
 		"back_pressed": Callable(scene, "_on_back_pressed"),
 		"button_pressed": Callable(scene, "_switch_submenu"),
-		"panel_fill": PANEL_FILL,
-		"panel_border": PANEL_BORDER,
+		"panel_fill": OverlaySceneChrome.PANEL_FILL,
+		"panel_border": OverlaySceneChrome.PANEL_BORDER,
 		"button_height": 52.0,
 		"back_anchor_top": 1.0,
 		"back_anchor_bottom": 1.0,
 		"dock_anchor_top": 1.0,
 		"dock_anchor_bottom": 1.0,
-		"top": -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H),
-		"bottom": -HOME_MAIN_NAV_H,
+		"top": -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H),
+		"bottom": -OverlaySceneChrome.HOME_MAIN_NAV_H,
 	})
 	scene._submenu_btns = submenu.get("buttons", {})
 
 	var content_panel := PanelContainer.new()
 	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	content_panel.offset_left = 20.0
-	content_panel.offset_top = CONTENT_TOP_GAP
+	content_panel.offset_top = OverlaySceneChrome.CONTENT_TOP_GAP
 	content_panel.offset_right = -20.0
-	content_panel.offset_bottom = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H + 12.0)
-	content_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 18))
+	content_panel.offset_bottom = -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H + 12.0)
+	content_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.PANEL_FILL, OverlaySceneChrome.PANEL_BORDER, 18))
 	scene.add_child(content_panel)
 
 	var content_margin := _make_content_margin(18)
@@ -72,7 +63,7 @@ static func build_ui(scene) -> void:
 	content_margin.add_child(content_vbox)
 
 	scene._resource_label = Label.new()
-	scene._resource_label.add_theme_font_size_override("font_size", 20)
+	scene._resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	scene._resource_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	content_vbox.add_child(scene._resource_label)
 	Refresh.refresh_resource_label(scene)
@@ -97,7 +88,7 @@ static func build_ui(scene) -> void:
 
 	var cats_title := Label.new()
 	cats_title.text = UiText.ENHANCE_CAT_LIST_TITLE
-	cats_title.add_theme_font_size_override("font_size", 28)
+	cats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	cats_vbox.add_child(cats_title)
 
 	scene._cat_hscroll = ScrollContainer.new()
@@ -135,7 +126,7 @@ static func build_ui(scene) -> void:
 	catalog_desc.text = UiText.ENHANCE_CATALOG_TODO_BODY
 	catalog_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	catalog_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	catalog_desc.add_theme_font_size_override("font_size", 20)
+	catalog_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	catalog_desc.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	catalog_box.add_child(catalog_desc)
 
@@ -145,8 +136,8 @@ static func build_ui(scene) -> void:
 
 static func refresh_submenu_state(scene) -> void:
 	SceneSubmenuBar.refresh(scene._submenu_btns, scene._active_submenu, {
-		"active_color": ACTIVE_TAB_COLOR,
-		"inactive_color": INACTIVE_TAB_COLOR,
+		"active_color": SceneMenuTheme.ACTIVE_COLOR,
+		"inactive_color": SceneMenuTheme.INACTIVE_COLOR,
 	})
 
 	if scene._main_section != null:
@@ -172,7 +163,7 @@ static func populate_cat_buttons(scene) -> void:
 		var empty_label := Label.new()
 		empty_label.text = UiText.ENHANCE_NO_CATS
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_label.add_theme_font_size_override("font_size", 22)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		empty_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 		scene._cats_container.add_child(empty_label)
 		return
@@ -214,7 +205,7 @@ static func rebuild_detail_panel(scene) -> void:
 		var empty_label := Label.new()
 		empty_label.text = UiText.ENHANCE_SELECT_CAT_EMPTY
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_label.add_theme_font_size_override("font_size", 22)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		empty_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 		scene._detail_panel.add_child(empty_label)
 		return
@@ -224,7 +215,7 @@ static func rebuild_detail_panel(scene) -> void:
 	if cat_data == null:
 		return
 
-	var summary_panel := _make_card_panel(PANEL_BORDER)
+	var summary_panel := _make_card_panel(OverlaySceneChrome.PANEL_BORDER)
 	summary_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scene._detail_panel.add_child(summary_panel)
 
@@ -238,7 +229,7 @@ static func rebuild_detail_panel(scene) -> void:
 	scene._detail_resource_label = Label.new()
 	scene._detail_resource_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scene._detail_resource_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	scene._detail_resource_label.add_theme_font_size_override("font_size", 18)
+	scene._detail_resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	scene._detail_resource_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	summary_stack.add_child(scene._detail_resource_label)
 
@@ -254,7 +245,7 @@ static func rebuild_detail_panel(scene) -> void:
 	var cat_icon := AssetResolver.resolve_cat_icon(scene._selected_cat_id)
 	var icon_shell := PanelContainer.new()
 	icon_shell.custom_minimum_size = Vector2(152.0, 152.0)
-	icon_shell.add_theme_stylebox_override("panel", _make_panel_style(ART_FILL, ART_BORDER, 14))
+	icon_shell.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(ART_FILL, ART_BORDER, 14))
 	left_column.add_child(icon_shell)
 
 	var icon_center := CenterContainer.new()
@@ -269,16 +260,16 @@ static func rebuild_detail_panel(scene) -> void:
 	left_column.add_child(left_meta_row)
 
 	scene._food_level_label = Label.new()
-	scene._food_level_label.add_theme_font_size_override("font_size", 16)
+	scene._food_level_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	scene._food_level_label.add_theme_color_override("font_color", SLOT_NAME_COLOR)
 	scene._food_level_label.text = UiText.ENHANCE_CAT_LEVEL_FORMAT % [player_cat.cat_food_level]
-	var level_chip := _make_info_chip(scene._food_level_label, Color(0.20, 0.16, 0.18, 0.92), CARD_BORDER)
+	var level_chip := _make_info_chip(scene._food_level_label, Color(0.20, 0.16, 0.18, 0.92), OverlaySceneChrome.CARD_BORDER)
 	left_meta_row.add_child(level_chip)
 
 	scene._rank_stars_label = Label.new()
 	scene._rank_stars_label.add_theme_font_size_override("font_size", 17)
 	scene._rank_stars_label.add_theme_color_override("font_color", SLOT_NAME_COLOR)
-	var rank_chip := _make_info_chip(scene._rank_stars_label, Color(0.20, 0.16, 0.18, 0.92), CARD_BORDER)
+	var rank_chip := _make_info_chip(scene._rank_stars_label, Color(0.20, 0.16, 0.18, 0.92), OverlaySceneChrome.CARD_BORDER)
 	left_meta_row.add_child(rank_chip)
 
 	var summary_body := VBoxContainer.new()
@@ -318,7 +309,7 @@ static func rebuild_detail_panel(scene) -> void:
 	scene._detail_upgrade_tab.add_child(upgrade_spacer)
 
 	scene._food_cost_label = Label.new()
-	scene._food_cost_label.add_theme_font_size_override("font_size", 16)
+	scene._food_cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	scene._food_cost_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	scene._detail_upgrade_tab.add_child(scene._food_cost_label)
 
@@ -342,7 +333,7 @@ static func rebuild_detail_panel(scene) -> void:
 	scene._food_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	scene._food_progress_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	scene._food_progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	scene._food_progress_label.add_theme_font_size_override("font_size", 18)
+	scene._food_progress_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	food_progress_shell.add_child(scene._food_progress_label)
 
 	var reset_btn := Button.new()
@@ -410,7 +401,7 @@ static func rebuild_detail_panel(scene) -> void:
 	scene._rank_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	scene._rank_progress_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	scene._rank_progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	scene._rank_progress_label.add_theme_font_size_override("font_size", 16)
+	scene._rank_progress_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	scene._rank_progress_label.add_theme_color_override("font_color", UiPalette.EXP_BAR_TEXT)
 	rank_progress_shell.add_child(scene._rank_progress_label)
 
@@ -450,18 +441,18 @@ static func rebuild_detail_panel(scene) -> void:
 
 	var stats_title := Label.new()
 	stats_title.text = UiText.ENHANCE_STATS_TITLE
-	stats_title.add_theme_font_size_override("font_size", 22)
+	stats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	stats_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stats_header.add_child(stats_title)
 
 	scene._special_cost_label = Label.new()
-	scene._special_cost_label.add_theme_font_size_override("font_size", 16)
+	scene._special_cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	scene._special_cost_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	stats_header.add_child(scene._special_cost_label)
 
 	for stat_key: String in ["hp", "atk", "def"]:
 		var row_card := PanelContainer.new()
-		row_card.add_theme_stylebox_override("panel", _make_panel_style(Color(0.13, 0.12, 0.14, 0.94), CARD_BORDER, 12))
+		row_card.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(Color(0.13, 0.12, 0.14, 0.94), OverlaySceneChrome.CARD_BORDER, 12))
 		stats_vbox.add_child(row_card)
 
 		var row_margin := _make_content_margin(10)
@@ -478,7 +469,7 @@ static func rebuild_detail_panel(scene) -> void:
 		row.add_child(stat_stack)
 
 		var stat_lbl := Label.new()
-		stat_lbl.add_theme_font_size_override("font_size", 20)
+		stat_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 		stat_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		scene._stat_labels[stat_key] = stat_lbl
 		stat_stack.add_child(stat_lbl)
@@ -486,7 +477,7 @@ static func rebuild_detail_panel(scene) -> void:
 		var plus_btn := Button.new()
 		plus_btn.text = UiText.ENHANCE_ADD_POINT_BUTTON
 		plus_btn.custom_minimum_size = Vector2(30.0, 30.0)
-		plus_btn.add_theme_font_size_override("font_size", 18)
+		plus_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		plus_btn.pressed.connect(Callable(scene, "_on_special_add_pressed").bind(stat_key))
 		scene._special_plus_btns[stat_key] = plus_btn
 		row.add_child(plus_btn)
@@ -607,12 +598,12 @@ static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_
 		],
 		"show_action": false,
 		"whole_card_pressed": Callable(scene, "_on_cat_button_pressed").bind(cat_id),
-		"card_fill": CARD_FILL,
-		"card_border": CARD_BORDER,
-		"selected_card_border": PANEL_BORDER,
+		"card_fill": OverlaySceneChrome.CARD_FILL,
+		"card_border": OverlaySceneChrome.CARD_BORDER,
+		"selected_card_border": OverlaySceneChrome.PANEL_BORDER,
 		"selected_card_fill": Color(0.25, 0.21, 0.14, 0.98),
 		"art_fill": ART_FILL,
-		"art_border": CARD_BORDER,
+		"art_border": OverlaySceneChrome.CARD_BORDER,
 		"selected_art_border": ART_BORDER,
 		"selected_art_fill": Color(0.27, 0.22, 0.14, 0.98),
 		"title_color": SLOT_NAME_COLOR,
@@ -625,9 +616,9 @@ static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_
 	})
 
 
-static func _make_card_panel(accent: Color = CARD_BORDER) -> PanelContainer:
+static func _make_card_panel(accent: Color = OverlaySceneChrome.CARD_BORDER) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _make_panel_style(CARD_FILL, accent, 14))
+	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.CARD_FILL, accent, 14))
 	return panel
 
 
@@ -638,7 +629,7 @@ static func refresh_detail_tab_state(scene) -> void:
 		UiPalette.apply_button_palette(
 			tab_btn,
 			DETAIL_TAB_ACTIVE_FILL if is_active else DETAIL_TAB_FILL,
-			ACTIVE_TAB_COLOR if is_active else INACTIVE_TAB_COLOR
+			SceneMenuTheme.ACTIVE_COLOR if is_active else SceneMenuTheme.INACTIVE_COLOR
 		)
 
 	if scene._detail_upgrade_tab != null:
@@ -652,7 +643,7 @@ static func refresh_detail_tab_state(scene) -> void:
 static func _make_meta_chip(text: String, is_selected: bool) -> PanelContainer:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	label.add_theme_color_override(
 		"font_color",
 		Color(1.0, 0.97, 0.86, 1.0) if is_selected else SLOT_NAME_COLOR
@@ -660,13 +651,13 @@ static func _make_meta_chip(text: String, is_selected: bool) -> PanelContainer:
 	return _make_info_chip(
 		label,
 		Color(0.42, 0.29, 0.14, 0.98) if is_selected else Color(0.20, 0.16, 0.18, 0.92),
-		Color(0.98, 0.83, 0.48, 1.0) if is_selected else CARD_BORDER
+		Color(0.98, 0.83, 0.48, 1.0) if is_selected else OverlaySceneChrome.CARD_BORDER
 	)
 
 
 static func _make_info_chip(content: Control, fill: Color, border: Color) -> PanelContainer:
 	var chip := PanelContainer.new()
-	chip.add_theme_stylebox_override("panel", _make_panel_style(fill, border, 12))
+	chip.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(fill, border, 12))
 	var margin := _make_content_margin(8)
 	chip.add_child(margin)
 	margin.add_child(content)
@@ -680,18 +671,3 @@ static func _make_content_margin(value: int) -> MarginContainer:
 	margin.add_theme_constant_override("margin_right", value)
 	margin.add_theme_constant_override("margin_bottom", value)
 	return margin
-
-
-static func _make_panel_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.border_color = border
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
-	return style

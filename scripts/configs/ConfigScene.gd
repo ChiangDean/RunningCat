@@ -5,15 +5,6 @@ const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
 
-const BOTTOM_DOCK_H := 112.0
-const HOME_MAIN_NAV_H := 110.0
-const CONTENT_TOP_GAP := 150.0
-const PANEL_FILL := Color(0.08, 0.07, 0.08, 0.94)
-const PANEL_BORDER := Color(0.80, 0.67, 0.42, 0.95)
-const CARD_FILL := Color(0.16, 0.15, 0.18, 0.96)
-const CARD_BORDER := Color(0.50, 0.43, 0.30, 0.92)
-const ACTIVE_TAB_COLOR := Color(1.0, 0.95, 0.82, 1.0)
-const INACTIVE_TAB_COLOR := Color(0.65, 0.65, 0.68, 1.0)
 const ACTION_BUTTON_COLOR := Color(0.94, 0.77, 0.39, 1.0)
 const DANGER_BUTTON_COLOR := Color(0.94, 0.48, 0.42, 1.0)
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
@@ -65,13 +56,13 @@ func _build_ui() -> void:
 	var content_panel: PanelContainer = PanelContainer.new()
 	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	content_panel.offset_left = 20.0
-	content_panel.offset_top = CONTENT_TOP_GAP
+	content_panel.offset_top = OverlaySceneChrome.CONTENT_TOP_GAP
 	content_panel.offset_right = -20.0
-	content_panel.offset_bottom = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H + 12.0)
-	content_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 18))
+	content_panel.offset_bottom = -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H + 12.0)
+	content_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.PANEL_FILL, OverlaySceneChrome.PANEL_BORDER, 18))
 	add_child(content_panel)
 
-	var content_margin: MarginContainer = _make_content_margin(18)
+	var content_margin: MarginContainer = OverlaySceneChrome.make_content_margin(18)
 	content_panel.add_child(content_margin)
 
 	var content_vbox: VBoxContainer = VBoxContainer.new()
@@ -80,13 +71,13 @@ func _build_ui() -> void:
 
 	_page_title = Label.new()
 	_page_title.text = UiText.CONFIG_PAGE_TITLE
-	_page_title.add_theme_font_size_override("font_size", 34)
+	_page_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	content_vbox.add_child(_page_title)
 
 	var page_desc: Label = Label.new()
 	page_desc.text = UiText.CONFIG_PAGE_DESC
 	page_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	page_desc.add_theme_font_size_override("font_size", 18)
+	page_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	page_desc.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	content_vbox.add_child(page_desc)
 
@@ -100,7 +91,7 @@ func _build_ui() -> void:
 	team_panel.size_flags_vertical = 0
 	main_split.add_child(team_panel)
 
-	var team_margin: MarginContainer = _make_content_margin(14)
+	var team_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
 	team_panel.add_child(team_margin)
 
 	var team_vbox: VBoxContainer = VBoxContainer.new()
@@ -110,7 +101,7 @@ func _build_ui() -> void:
 
 	_team_summary_label = Label.new()
 	_team_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_team_summary_label.add_theme_font_size_override("font_size", 14)
+	_team_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	_team_summary_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	_team_summary_label.visible = false
 	team_vbox.add_child(_team_summary_label)
@@ -125,9 +116,9 @@ func _build_ui() -> void:
 	_save_team_btn = Button.new()
 	_save_team_btn.text = UiText.CONFIG_SAVE_BUTTON
 	_save_team_btn.custom_minimum_size = Vector2(0.0, 52.0)
-	_save_team_btn.add_theme_font_size_override("font_size", 20)
+	_save_team_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	_save_team_btn.pressed.connect(_on_save_team_pressed)
-	_apply_button_palette(_save_team_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
+	UiPalette.apply_button_palette(_save_team_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
 	team_vbox.add_child(_save_team_btn)
 
 	var cats_panel: PanelContainer = _make_card_panel()
@@ -136,7 +127,7 @@ func _build_ui() -> void:
 	cats_panel.size_flags_stretch_ratio = 1.05
 	main_split.add_child(cats_panel)
 
-	var cats_margin: MarginContainer = _make_content_margin(14)
+	var cats_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
 	cats_panel.add_child(cats_margin)
 
 	var cats_vbox: VBoxContainer = VBoxContainer.new()
@@ -149,7 +140,7 @@ func _build_ui() -> void:
 
 	_cats_title = Label.new()
 	_cats_title.text = UiText.CONFIG_OWNED_CATS_TITLE
-	_cats_title.add_theme_font_size_override("font_size", 28)
+	_cats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	_cats_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cats_header.add_child(_cats_title)
 
@@ -192,10 +183,10 @@ func _build_ui() -> void:
 		"back_label": UiText.CONFIG_BACK,
 		"back_pressed": Callable(self, "_on_back_pressed"),
 		"button_pressed": Callable(self, "_switch_team_type"),
-		"panel_fill": PANEL_FILL,
-		"panel_border": PANEL_BORDER,
-		"top": -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H),
-		"bottom": -HOME_MAIN_NAV_H,
+		"panel_fill": OverlaySceneChrome.PANEL_FILL,
+		"panel_border": OverlaySceneChrome.PANEL_BORDER,
+		"top": -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H),
+		"bottom": -OverlaySceneChrome.HOME_MAIN_NAV_H,
 	})
 	_team_type_btns = submenu.get("buttons", {})
 
@@ -207,8 +198,8 @@ func _switch_team_type(type_key: String) -> void:
 	_current_team_type = type_key
 
 	SceneSubmenuBar.refresh(_team_type_btns, type_key, {
-		"active_color": ACTIVE_TAB_COLOR,
-		"inactive_color": INACTIVE_TAB_COLOR,
+		"active_color": SceneMenuTheme.ACTIVE_COLOR,
+		"inactive_color": SceneMenuTheme.INACTIVE_COLOR,
 	})
 
 	_refresh_team()
@@ -335,10 +326,10 @@ func _refresh_team() -> void:
 
 func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer:
 	var is_filled: bool = not member.is_empty()
-	var card: PanelContainer = _make_card_panel(PANEL_BORDER if is_filled else SLOT_EMPTY_BORDER)
+	var card: PanelContainer = _make_card_panel(OverlaySceneChrome.PANEL_BORDER if is_filled else SLOT_EMPTY_BORDER)
 	card.custom_minimum_size = Vector2(0.0, 166.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var margin: MarginContainer = _make_content_margin(4)
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(4)
 	card.add_child(margin)
 
 	var column: VBoxContainer = VBoxContainer.new()
@@ -356,7 +347,7 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 
 	var slot_badge: Label = Label.new()
 	slot_badge.text = UiText.CONFIG_SLOT_BADGE_FORMAT % [slot_index + 1]
-	slot_badge.add_theme_font_size_override("font_size", 12)
+	slot_badge.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	slot_badge.add_theme_color_override("font_color", Color(0.98, 0.90, 0.72, 1.0))
 	top_row.add_child(slot_badge)
 
@@ -371,7 +362,7 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 	var image_shell: PanelContainer = PanelContainer.new()
 	image_shell.custom_minimum_size = Vector2(0.0, 96.0)
 	image_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	image_shell.add_theme_stylebox_override("panel", _make_panel_style(SLOT_IMAGE_BG if is_filled else SLOT_EMPTY_FILL, SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER, 14))
+	image_shell.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(SLOT_IMAGE_BG if is_filled else SLOT_EMPTY_FILL, SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER, 14))
 	image_shell.mouse_filter = Control.MOUSE_FILTER_STOP
 	column.add_child(image_shell)
 
@@ -382,7 +373,7 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 	image_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	image_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	image_button.clip_text = true
-	image_button.add_theme_font_size_override("font_size", 34)
+	image_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	image_button.add_theme_color_override("font_color", EMPTY_SLOT_TEXT_COLOR)
 	image_shell.add_child(image_button)
 
@@ -391,7 +382,7 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 	overlay_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	image_shell.add_child(overlay_root)
 
-	var image_margin: MarginContainer = _make_content_margin(4)
+	var image_margin: MarginContainer = OverlaySceneChrome.make_content_margin(4)
 	image_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay_root.add_child(image_margin)
@@ -471,7 +462,7 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 	delay_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	delay_button.add_theme_font_size_override("font_size", 13)
 	delay_button.disabled = not is_filled or _api_in_flight
-	_apply_button_palette(delay_button, SLOT_DELAY_BG, Color(0.98, 0.90, 0.72, 1.0))
+	UiPalette.apply_button_palette(delay_button, SLOT_DELAY_BG, Color(0.98, 0.90, 0.72, 1.0))
 	if is_filled and not _api_in_flight:
 		delay_button.pressed.connect(func() -> void:
 			_update_member_delay_in_draft(slot_index, _get_next_delay_value(delay_seconds))
@@ -567,9 +558,9 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 		"card_height": 228.0,
 		"art_height": 108.0,
 		"icon_size": Vector2(84.0, 84.0),
-		"card_fill": CARD_FILL,
-		"card_border": CARD_BORDER,
-		"selected_card_border": PANEL_BORDER,
+		"card_fill": OverlaySceneChrome.CARD_FILL,
+		"card_border": OverlaySceneChrome.CARD_BORDER,
+		"selected_card_border": OverlaySceneChrome.PANEL_BORDER,
 		"selected_card_fill": Color(0.24, 0.20, 0.13, 0.98),
 		"art_fill": Color(0.19, 0.17, 0.15, 0.96),
 		"art_border": Color(0.90, 0.77, 0.46, 0.88),
@@ -597,9 +588,9 @@ func _refresh_cats_sort_buttons() -> void:
 		var button: Button = _cats_sort_btns[key]
 		var is_active: bool = key == _cats_sort_mode
 		if is_active:
-			_apply_button_palette(button, Color(0.58, 0.48, 0.26, 0.88), Color(0.97, 0.93, 0.84, 1.0))
+			UiPalette.apply_button_palette(button, Color(0.58, 0.48, 0.26, 0.88), Color(0.97, 0.93, 0.84, 1.0))
 		else:
-			_apply_button_palette(button, Color(0.20, 0.18, 0.17, 0.88), Color(0.62, 0.58, 0.54, 1.0))
+			UiPalette.apply_button_palette(button, Color(0.20, 0.18, 0.17, 0.88), Color(0.62, 0.58, 0.54, 1.0))
 
 
 func _get_sorted_owned_cats() -> Array:
@@ -753,9 +744,9 @@ func _update_save_section() -> void:
 	var dirty: bool = _is_current_team_dirty()
 	_save_team_btn.disabled = _api_in_flight or not dirty
 	if dirty and not _api_in_flight:
-		_apply_button_palette(_save_team_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
+		UiPalette.apply_button_palette(_save_team_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
 	else:
-		_apply_button_palette(_save_team_btn, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
+		UiPalette.apply_button_palette(_save_team_btn, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
 
 
 func _on_save_team_pressed() -> void:
@@ -853,38 +844,14 @@ func _make_separator() -> HSeparator:
 	return HSeparator.new()
 
 
-func _make_card_panel(accent: Color = CARD_BORDER) -> PanelContainer:
+func _make_card_panel(accent: Color = OverlaySceneChrome.CARD_BORDER) -> PanelContainer:
 	var panel: PanelContainer = PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _make_panel_style(CARD_FILL, accent, 14))
+	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.CARD_FILL, accent, 14))
 	return panel
 
 
-func _make_content_margin(value: int) -> MarginContainer:
-	var margin: MarginContainer = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", value)
-	margin.add_theme_constant_override("margin_top", value)
-	margin.add_theme_constant_override("margin_right", value)
-	margin.add_theme_constant_override("margin_bottom", value)
-	return margin
-
-
-func _make_panel_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.border_color = border
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
-	return style
-
-
 func _make_chip_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
-	var style: StyleBoxFlat = _make_panel_style(fill, border, radius)
+	var style: StyleBoxFlat = OverlaySceneChrome.make_panel_style(fill, border, radius)
 	style.border_width_left = 1
 	style.border_width_right = 1
 	style.border_width_top = 1
@@ -907,37 +874,6 @@ func _get_cat_visual_fallback(cat_name: String) -> String:
 	if trimmed == "":
 		return "?"
 	return trimmed.substr(0, 1)
-
-
-func _apply_button_palette(button: Button, bg: Color, fg: Color) -> void:
-	var normal: StyleBoxFlat = StyleBoxFlat.new()
-	normal.bg_color = bg
-	normal.corner_radius_top_left = 12
-	normal.corner_radius_top_right = 12
-	normal.corner_radius_bottom_left = 12
-	normal.corner_radius_bottom_right = 12
-	normal.border_width_left = 1
-	normal.border_width_right = 1
-	normal.border_width_top = 1
-	normal.border_width_bottom = 1
-	normal.border_color = bg.lightened(0.12)
-
-	var hover: StyleBoxFlat = normal.duplicate()
-	hover.bg_color = bg.lightened(0.08)
-
-	var pressed: StyleBoxFlat = normal.duplicate()
-	pressed.bg_color = bg.darkened(0.08)
-
-	var disabled: StyleBoxFlat = normal.duplicate()
-	disabled.bg_color = bg.darkened(0.18)
-	disabled.border_color = bg.lightened(0.04)
-
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", pressed)
-	button.add_theme_stylebox_override("disabled", disabled)
-	button.add_theme_color_override("font_color", fg)
-	button.add_theme_color_override("font_disabled_color", fg.darkened(0.25))
 
 
 func _get_max_team_size() -> int:

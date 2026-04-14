@@ -80,14 +80,14 @@ func _build_ui() -> void:
 
 	var title: Label = Label.new()
 	title.text = UiText.ARENA_PAGE_TITLE
-	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	content_box.add_child(title)
 
 	var desc: Label = Label.new()
 	desc.text = UiText.ARENA_PAGE_DESC
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", 18)
+	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	content_box.add_child(desc)
 
@@ -143,10 +143,10 @@ func _build_ui() -> void:
 	rank_header_row.add_child(score_chip)
 
 	_score_label = score_chip.get_child(0).get_child(0) as Label
-	_score_label.add_theme_font_size_override("font_size", 18)
+	_score_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 
 	_ticket_label = Label.new()
-	_ticket_label.add_theme_font_size_override("font_size", 18)
+	_ticket_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	status_text.add_child(_ticket_label)
 
 	var season_row: HBoxContainer = HBoxContainer.new()
@@ -156,7 +156,7 @@ func _build_ui() -> void:
 	_season_label = Label.new()
 	_season_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_season_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_season_label.add_theme_font_size_override("font_size", 16)
+	_season_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	_season_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	season_row.add_child(_season_label)
 
@@ -203,7 +203,7 @@ func _build_ui() -> void:
 	var opponent_title: Label = Label.new()
 	opponent_title.text = UiText.ARENA_OPPONENT_TITLE
 	opponent_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	opponent_title.add_theme_font_size_override("font_size", 24)
+	opponent_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	opponent_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	opponent_title_row.add_child(opponent_title)
 
@@ -235,7 +235,7 @@ func _build_ui() -> void:
 
 	var reward_title: Label = Label.new()
 	reward_title.text = UiText.ARENA_REWARD_DIALOG_TITLE
-	reward_title.add_theme_font_size_override("font_size", 28)
+	reward_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	reward_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	reward_intro_box.add_child(reward_title)
 
@@ -300,7 +300,7 @@ func _render_opponents() -> void:
 		var empty_label: Label = Label.new()
 		empty_label.text = UiText.ARENA_EMPTY_OPPONENTS
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_label.add_theme_font_size_override("font_size", 18)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		_opponent_container.add_child(empty_label)
 		return
@@ -343,7 +343,7 @@ func _build_opponent_card(opponent: Dictionary) -> Control:
 	var name_label: Label = Label.new()
 	name_label.text = str(opponent.get("playerName", UiText.ARENA_UNKNOWN_OPPONENT))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.add_theme_font_size_override("font_size", 22)
+	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	title_box.add_child(name_label)
 
@@ -404,7 +404,7 @@ func _build_team_preview_section(title_text: String, members: Array, empty_text:
 
 	var title_label: Label = Label.new()
 	title_label.text = title_text
-	title_label.add_theme_font_size_override("font_size", 20)
+	title_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	title_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	section.add_child(title_label)
 
@@ -416,7 +416,7 @@ func _build_team_preview_section(title_text: String, members: Array, empty_text:
 	if not has_filled_member:
 		var empty_label: Label = Label.new()
 		empty_label.text = empty_text
-		empty_label.add_theme_font_size_override("font_size", 16)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		section.add_child(empty_label)
 		return section
@@ -463,7 +463,7 @@ func _build_team_member_card(member: Dictionary) -> PanelContainer:
 
 	var slot_label: Label = Label.new()
 	slot_label.text = UiText.CONFIG_SLOT_BADGE_FORMAT % [int(member.get("slotNo", 0)) + 1]
-	slot_label.add_theme_font_size_override("font_size", 12)
+	slot_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	slot_label.add_theme_color_override("font_color", Color(0.98, 0.90, 0.72, 1.0))
 	top_row.add_child(slot_label)
 
@@ -501,7 +501,7 @@ func _build_team_member_card(member: Dictionary) -> PanelContainer:
 		fallback.text = Helpers.get_name_fallback(str(member.get("catDisplayName", ""))) if is_filled else UiText.CONFIG_EMPTY_SLOT_ICON
 		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fallback.add_theme_font_size_override("font_size", 20)
+		fallback.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 		fallback.add_theme_color_override("font_color", OPPONENT_SLOT_TEXT if is_filled else OverlaySceneChrome.MUTED_TEXT_COLOR)
 		art_center.add_child(fallback)
 
@@ -600,7 +600,7 @@ func _build_opponent_member_card(member: Dictionary) -> PanelContainer:
 		fallback.text = Helpers.get_name_fallback(str(member.get("catDisplayName", ""))) if is_filled else UiText.CONFIG_EMPTY_SLOT_ICON
 		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fallback.add_theme_font_size_override("font_size", 24)
+		fallback.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 		fallback.add_theme_color_override("font_color", OPPONENT_SLOT_TEXT if is_filled else OverlaySceneChrome.MUTED_TEXT_COLOR)
 		art_center.add_child(fallback)
 
@@ -639,7 +639,7 @@ func _make_opponent_meta_chip(text: String) -> PanelContainer:
 	var label: Label = Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	label.add_theme_color_override("font_color", OPPONENT_SLOT_MUTED)
 	margin.add_child(label)
 
@@ -798,7 +798,7 @@ func _render_rewards() -> void:
 	if _overview.is_empty():
 		var empty_label: Label = Label.new()
 		empty_label.text = UiText.ARENA_DATA_MISSING
-		empty_label.add_theme_font_size_override("font_size", 18)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		_reward_list.add_child(empty_label)
 		return
@@ -838,7 +838,7 @@ func _build_reward_card(rank: Dictionary) -> PanelContainer:
 
 	var name_label: Label = Label.new()
 	name_label.text = str(rank.get("displayName", UiText.ARENA_REWARD_UNKNOWN_RANK))
-	name_label.add_theme_font_size_override("font_size", 18)
+	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	text_box.add_child(name_label)
 
@@ -852,7 +852,7 @@ func _build_reward_card(rank: Dictionary) -> PanelContainer:
 	if bool(rank.get("isClaimed", false)):
 		var claimed_label: Label = Label.new()
 		claimed_label.text = UiText.COMMON_CLAIMED
-		claimed_label.add_theme_font_size_override("font_size", 16)
+		claimed_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		row.add_child(claimed_label)
 	elif bool(rank.get("isClaimable", false)):
 		var claim_button: Button = Button.new()

@@ -217,7 +217,7 @@ func _make_skill_slot(idx: int) -> Control:
 	name_lbl.name = "NameLabel"
 	name_lbl.size = Vector2(SKILL_SLOT_W, 22.0)
 	name_lbl.position = Vector2(0.0, SKILL_SLOT_H - 24.0)
-	name_lbl.add_theme_font_size_override("font_size", 12)
+	name_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.clip_contents = true
 	slot.add_child(name_lbl)
@@ -232,7 +232,7 @@ func _make_skill_slot(idx: int) -> Control:
 	var cd_lbl := Label.new()
 	cd_lbl.name = "CdLabel"
 	cd_lbl.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
-	cd_lbl.add_theme_font_size_override("font_size", 22)
+	cd_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	cd_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cd_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	cd_lbl.visible = false
@@ -443,20 +443,20 @@ func _show_result_popup(response: Dictionary) -> void:
 
 	var delta_lbl := Label.new()
 	delta_lbl.text = "分數變化：%s" % delta_str
-	delta_lbl.add_theme_font_size_override("font_size", 22)
+	delta_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	delta_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	delta_lbl.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5) if delta >= 0 else Color(1.0, 0.4, 0.4))
 	vbox.add_child(delta_lbl)
 
 	var score_lbl := Label.new()
 	score_lbl.text = "目前積分：%d" % new_score
-	score_lbl.add_theme_font_size_override("font_size", 22)
+	score_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	score_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(score_lbl)
 
 	var hint_lbl := Label.new()
 	hint_lbl.text = "點擊任意處返回競技場"
-	hint_lbl.add_theme_font_size_override("font_size", 16)
+	hint_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	vbox.add_child(hint_lbl)

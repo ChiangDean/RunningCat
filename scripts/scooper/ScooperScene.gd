@@ -3,13 +3,6 @@ extends Control
 
 const SW := 720.0
 const SH := 1280.0
-const BOTTOM_DOCK_H := 112.0
-const HOME_MAIN_NAV_H := 110.0
-const CONTENT_TOP_GAP := 150.0
-const PANEL_FILL := Color(0.08, 0.07, 0.08, 0.94)
-const PANEL_BORDER := Color(0.80, 0.67, 0.42, 0.95)
-const CARD_FILL := Color(0.16, 0.15, 0.18, 0.96)
-const CARD_BORDER := Color(0.50, 0.43, 0.30, 0.92)
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 
@@ -82,10 +75,10 @@ func _build_ui() -> void:
 	var content_panel := PanelContainer.new()
 	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	content_panel.offset_left = 20.0
-	content_panel.offset_top = CONTENT_TOP_GAP
+	content_panel.offset_top = OverlaySceneChrome.CONTENT_TOP_GAP
 	content_panel.offset_right = -20.0
-	content_panel.offset_bottom = -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H + 12.0)
-	content_panel.add_theme_stylebox_override("panel", _make_panel_style(PANEL_FILL, PANEL_BORDER, 18))
+	content_panel.offset_bottom = -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H + 12.0)
+	content_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.PANEL_FILL, OverlaySceneChrome.PANEL_BORDER, 18))
 	add_child(content_panel)
 
 	var content_margin := MarginContainer.new()
@@ -100,17 +93,17 @@ func _build_ui() -> void:
 	content_margin.add_child(content_vbox)
 
 	_tab_header_title = Label.new()
-	_tab_header_title.add_theme_font_size_override("font_size", 34)
+	_tab_header_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	content_vbox.add_child(_tab_header_title)
 
 	_tab_header_desc = Label.new()
 	_tab_header_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_tab_header_desc.add_theme_font_size_override("font_size", 18)
+	_tab_header_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_tab_header_desc.add_theme_color_override("font_color", Color(0.90, 0.88, 0.82, 0.92))
 	content_vbox.add_child(_tab_header_desc)
 
 	_resource_label = Label.new()
-	_resource_label.add_theme_font_size_override("font_size", 18)
+	_resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_resource_label.add_theme_color_override("font_color", Color(0.92, 0.86, 0.72, 1.0))
 	content_vbox.add_child(_resource_label)
 	_refresh_resource_label()
@@ -134,10 +127,10 @@ func _build_ui() -> void:
 		"back_label": UiText.SCOOPER_BACK,
 		"back_pressed": Callable(self, "_on_back_pressed"),
 		"button_pressed": Callable(self, "_switch_tab"),
-		"panel_fill": PANEL_FILL,
-		"panel_border": PANEL_BORDER,
-		"top": -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H),
-		"bottom": -HOME_MAIN_NAV_H,
+		"panel_fill": OverlaySceneChrome.PANEL_FILL,
+		"panel_border": OverlaySceneChrome.PANEL_BORDER,
+		"top": -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H),
+		"bottom": -OverlaySceneChrome.HOME_MAIN_NAV_H,
 	})
 	_tab_btns = submenu.get("buttons", {})
 
@@ -298,41 +291,17 @@ func _make_separator() -> HSeparator:
 func _show_loading_in(container: VBoxContainer) -> void:
 	var lbl: Label = Label.new()
 	lbl.text = UiText.SCOOPER_EQUIPMENT_LOADING
-	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 1.0))
 	container.add_child(lbl)
 
 
-func _make_card_panel(accent: Color = CARD_BORDER) -> PanelContainer:
+func _make_card_panel(accent: Color = OverlaySceneChrome.CARD_BORDER) -> PanelContainer:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _make_panel_style(CARD_FILL, accent, 14))
+	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.CARD_FILL, accent, 14))
 	return panel
-
-
-func _make_panel_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.border_color = border
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
-	return style
-
-
-func _make_card_margin() -> MarginContainer:
-	var margin: MarginContainer = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_bottom", 14)
-	return margin
 
 
 func queue_home_reward_floats(entries: Array[Dictionary]) -> void:

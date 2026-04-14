@@ -10,12 +10,12 @@ func build(scene: Control) -> void:
 
 	var section_label: Label = Label.new()
 	section_label.text = UiText.SCOOPER_TAB_MEMORY
-	section_label.add_theme_font_size_override("font_size", 18)
+	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary_row.add_child(section_label)
 
 	scene._memory_summary_label = Label.new()
-	scene._memory_summary_label.add_theme_font_size_override("font_size", 18)
+	scene._memory_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	scene._memory_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	scene._memory_summary_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary_row.add_child(scene._memory_summary_label)
@@ -53,7 +53,7 @@ func _refresh_memory_tab(scene: Control) -> void:
 	if items.is_empty():
 		var empty_lbl: Label = Label.new()
 		empty_lbl.text = UiText.SCOOPER_MEMORY_EMPTY
-		empty_lbl.add_theme_font_size_override("font_size", 18)
+		empty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		scene._memory_list.add_child(empty_lbl)
 		return
@@ -76,7 +76,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	var current_shards: int = mini(scene.GameState.player_data.memory_shards, cost)
 
 	var panel: PanelContainer = scene._make_card_panel(accent if unlocked else Color(0.42, 0.42, 0.46, 0.94))
-	var margin: MarginContainer = scene._make_card_margin()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
 	panel.add_child(margin)
 
 	var card: VBoxContainer = VBoxContainer.new()
@@ -90,7 +90,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	var display_name: String = str(item.get("displayName", ""))
 	var title_lbl: Label = Label.new()
 	title_lbl.text = display_name
-	title_lbl.add_theme_font_size_override("font_size", 22)
+	title_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title_lbl)
 
@@ -124,7 +124,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	preview_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	preview_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	preview_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	preview_text.add_theme_font_size_override("font_size", 28)
+	preview_text.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	preview_text.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 	preview_text.text = display_name if unlocked else UiText.SCOOPER_MEMORY_LOCKED
 	preview.add_child(preview_text)
@@ -132,7 +132,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	var desc: Label = Label.new()
 	desc.text = str(item.get("description", ""))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", 16)
+	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	desc.add_theme_color_override("font_color", Color(0.80, 0.80, 0.80, 1.0))
 	card.add_child(desc)
 

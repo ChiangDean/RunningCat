@@ -8,7 +8,7 @@ func build(scene: Control) -> void:
 
 	var section_label: Label = Label.new()
 	section_label.text = UiText.SCOOPER_TAB_ACHIEVEMENT
-	section_label.add_theme_font_size_override("font_size", 18)
+	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	summary_row.add_child(section_label)
 
 	var section_line: HSeparator = HSeparator.new()
@@ -16,14 +16,14 @@ func build(scene: Control) -> void:
 	summary_row.add_child(section_line)
 
 	scene._achievement_summary_label = Label.new()
-	scene._achievement_summary_label.add_theme_font_size_override("font_size", 18)
+	scene._achievement_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	scene._achievement_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	summary_row.add_child(scene._achievement_summary_label)
 
 	scene._achievement_feedback_label = Label.new()
 	scene._achievement_feedback_label.text = ""
 	scene._achievement_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	scene._achievement_feedback_label.add_theme_font_size_override("font_size", 16)
+	scene._achievement_feedback_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	scene._achievement_feedback_label.add_theme_color_override("font_color", Color(0.88, 0.98, 0.80, 1.0))
 	scene._tab_content.add_child(scene._achievement_feedback_label)
 
@@ -87,7 +87,7 @@ func _add_achievement_section(scene: Control, title_text: String, entries: Array
 
 	var title: Label = Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	title.add_theme_color_override("font_color", Color(0.84, 0.90, 1.0, 1.0))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
@@ -125,7 +125,7 @@ func _add_claimed_achievement_section(scene: Control, entries: Array) -> void:
 
 	var title: Label = Label.new()
 	title.text = UiText.SCOOPER_ACHIEVEMENT_SECTION_CLAIMED
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	title.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 1.0))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
@@ -148,7 +148,7 @@ func _add_claimed_achievement_section(scene: Control, entries: Array) -> void:
 
 func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 	var panel: PanelContainer = scene._make_card_panel(_achievement_border_color(entry))
-	var margin: MarginContainer = scene._make_card_margin()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
 	panel.add_child(margin)
 
 	var card: VBoxContainer = VBoxContainer.new()
@@ -161,20 +161,20 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 
 	var name_lbl: Label = Label.new()
 	name_lbl.text = str(entry.get("displayName", ""))
-	name_lbl.add_theme_font_size_override("font_size", 22)
+	name_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(name_lbl)
 
 	var condition_lbl: Label = Label.new()
 	condition_lbl.text = _format_achievement_text(entry.get("conditionText", ""))
 	condition_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	condition_lbl.add_theme_font_size_override("font_size", 16)
+	condition_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	condition_lbl.add_theme_color_override("font_color", Color(0.84, 0.84, 0.84, 1.0))
 	card.add_child(condition_lbl)
 
 	var progress_lbl: Label = Label.new()
 	progress_lbl.text = _format_achievement_text(entry.get("progressText", ""))
-	progress_lbl.add_theme_font_size_override("font_size", 16)
+	progress_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	progress_lbl.add_theme_color_override("font_color", Color(0.72, 0.82, 0.95, 1.0))
 	card.add_child(progress_lbl)
 

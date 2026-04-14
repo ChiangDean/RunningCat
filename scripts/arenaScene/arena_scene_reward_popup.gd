@@ -31,20 +31,20 @@ static func show(scene: Control, overview: Dictionary, claim_callback: Callable)
 		var name_label: Label = Label.new()
 		name_label.text = str(rank.get("displayName", UiText.ARENA_REWARD_UNKNOWN_RANK))
 		name_label.custom_minimum_size = Vector2(120.0, 0.0)
-		name_label.add_theme_font_size_override("font_size", 18)
+		name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		row.add_child(name_label)
 
 		var reward_label: Label = Label.new()
 		reward_label.text = ArenaSceneHelpers.format_rewards(rank.get("rewards", []))
 		reward_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		reward_label.add_theme_font_size_override("font_size", 16)
+		reward_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		row.add_child(reward_label)
 
 		if bool(rank.get("isClaimed", false)):
 			var claimed_label: Label = Label.new()
 			claimed_label.text = UiText.COMMON_CLAIMED
-			claimed_label.add_theme_font_size_override("font_size", 16)
+			claimed_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			row.add_child(claimed_label)
 		elif bool(rank.get("isClaimable", false)):
 			var claim_button: Button = Button.new()
@@ -59,7 +59,7 @@ static func show(scene: Control, overview: Dictionary, claim_callback: Callable)
 		else:
 			var requirement_label: Label = Label.new()
 			requirement_label.text = UiText.ARENA_REQUIRE_SCORE_FORMAT % int(rank.get("scoreMin", 0))
-			requirement_label.add_theme_font_size_override("font_size", 16)
+			requirement_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			row.add_child(requirement_label)
 
 	close_dialog = DialogManager.show_info_node(UiText.ARENA_REWARD_DIALOG_TITLE, scroll)

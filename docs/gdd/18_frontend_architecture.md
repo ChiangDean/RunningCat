@@ -35,6 +35,8 @@ Defined in `project.godot`:
   - `ApiClient = res://scripts/ApiClient.gd`
   - `ChatRealtimeClient = res://scripts/chat/ChatRealtimeClient.gd`
   - `SceneNavigator = res://scripts/navigation/SceneNavigator.gd`
+  - `UiAudio = res://scripts/ui/UiAudio.gd`
+  - `ToastManager = res://scripts/ui/ToastManager.gd` — non-blocking toast notifications (success / error / hint)
 
 ### 2.2 Start Flow
 
@@ -516,11 +518,27 @@ Prefer following that pattern instead of introducing a new architecture style fo
 
 Common shared dependencies should go through:
 
-- `GameState`
-- `ApiClient`
-- `DialogManager`
+- `GameState` — runtime state and persistence
+- `ApiClient` — all HTTP requests
+- `DialogManager` — blocking dialogs (info and confirm)
+- `ToastManager` — non-blocking ephemeral notifications
+- `UiAudio` — button click and UI sounds
 
 Do not create duplicate global state containers for the same concern.
+
+### 10.7 UI Component Rules
+
+All UI styling must use the shared helpers. Do not re-implement them inline.
+
+**Buttons** — always call `UiPalette.apply_button_kind(button, kind)`. Accepted kinds: `confirm`, `cancel`, `neutral`, `info`, `destruct`, `remove`, `add` (semantic aliases) or their color equivalents `primary`, `secondary`, `rank`, `danger`, `minus`, `plus`.
+
+**Panels and cards** — always call `OverlaySceneChrome.make_panel_style(...)` or `OverlaySceneChrome.make_card_panel(...)`. Do not define a local `_make_panel_style()` function.
+
+**Non-blocking feedback** — use `ToastManager.success/error/hint(message)`. Reserve `DialogManager` for cases where the player must actively choose or acknowledge before continuing.
+
+**Rarity colors** — use `GameConstants.get_rarity_color_from_string(rarity_type)` or `GameConstants.get_rarity_color(GameConstants.Rarity.LEGENDARY)`. Do not hardcode rarity colors inline.
+
+Full usage rules and situation guides: `docs/gdd/08_ui.md` and `docs/ui_component_spec.md`.
 
 ### 10.4 Persist Through `GameState`
 
@@ -607,7 +625,8 @@ Then inspect the feature-specific scene and helper folder.
 
 ## 14. Related Documents
 
-- `docs/gdd/08_ui.md`
+- `docs/gdd/08_ui.md` — UI component usage rules and situation guides
+- `docs/ui_component_spec.md` — code-level API reference for all UI helpers
 - `docs/gdd/14_scooper_data_architecture.md`
 - `docs/gdd/15_config_data_architecture.md`
 - `docs/gdd/16_dungeon_data_architecture.md`

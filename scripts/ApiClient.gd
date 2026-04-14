@@ -596,7 +596,7 @@ func _build_loading_overlay() -> void:
 	_loading_message_label = Label.new()
 	_loading_message_label.text = DEFAULT_LOADING_MESSAGE
 	_loading_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_loading_message_label.add_theme_font_size_override("font_size", 24)
+	_loading_message_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	_loading_message_label.add_theme_color_override("font_color", Color("5f4c3f"))
 	content.add_child(_loading_message_label)
 

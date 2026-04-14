@@ -40,13 +40,13 @@ func _build_ui() -> void:
 	var content_box: VBoxContainer = chrome.get("content_box")
 
 	_resource_label = Label.new()
-	_resource_label.add_theme_font_size_override("font_size", 20)
+	_resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	_resource_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	content_box.add_child(_resource_label)
 
 	_pull_summary_label = Label.new()
 	_pull_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_pull_summary_label.add_theme_font_size_override("font_size", 20)
+	_pull_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	_pull_summary_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	content_box.add_child(_pull_summary_label)
 
@@ -65,7 +65,7 @@ func _build_ui() -> void:
 	var pull_intro: Label = Label.new()
 	pull_intro.text = UiText.GACHA_PULL_DESC
 	pull_intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	pull_intro.add_theme_font_size_override("font_size", 18)
+	pull_intro.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	pull_intro.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	pull_box.add_child(pull_intro)
 
@@ -107,7 +107,7 @@ func _build_ui() -> void:
 
 	_technique_desc = Label.new()
 	_technique_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_technique_desc.add_theme_font_size_override("font_size", 18)
+	_technique_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_technique_desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	technique_box.add_child(_technique_desc)
 
@@ -302,13 +302,13 @@ func _build_technique_level_card(level_data: Dictionary, current_level: int, tot
 	var title: Label = Label.new()
 	title.text = UiText.GACHA_TECHNIQUE_LEVEL_FORMAT % level
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	header.add_child(title)
 
 	var state: Label = Label.new()
 	state.text = UiText.GACHA_TECHNIQUE_CONDITION_FORMAT % [level, required_pulls]
-	state.add_theme_font_size_override("font_size", 16)
+	state.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	state.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	header.add_child(state)
 
@@ -317,7 +317,7 @@ func _build_technique_level_card(level_data: Dictionary, current_level: int, tot
 		progress.text = UiText.GACHA_TECHNIQUE_UNLOCKED
 	else:
 		progress.text = UiText.GACHA_TECHNIQUE_REQUIRED_FORMAT % required_pulls
-	progress.add_theme_font_size_override("font_size", 16)
+	progress.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	progress.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	root.add_child(progress)
 
@@ -353,7 +353,7 @@ func _build_empty_card(message: String) -> Control:
 	label.text = message
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	margin.add_child(label)
 

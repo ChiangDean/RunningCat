@@ -11,12 +11,12 @@ func build(scene: Control) -> void:
 
 	var section_label: Label = Label.new()
 	section_label.text = UiText.SCOOPER_TAB_EQUIPMENT
-	section_label.add_theme_font_size_override("font_size", 18)
+	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary_row.add_child(section_label)
 
 	var summary: Label = Label.new()
-	summary.add_theme_font_size_override("font_size", 18)
+	summary.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary_row.add_child(summary)
@@ -89,7 +89,7 @@ func _refresh_equipment_tab(scene: Control) -> void:
 	if items.is_empty():
 		var empty_lbl: Label = Label.new()
 		empty_lbl.text = UiText.SCOOPER_EQUIPMENT_EMPTY
-		empty_lbl.add_theme_font_size_override("font_size", 18)
+		empty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		scene._equip_list.add_child(empty_lbl)
 		return
@@ -139,7 +139,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		accent = Color(0.52, 0.76, 0.95, 0.94)
 
 	var panel: PanelContainer = scene._make_card_panel(accent)
-	var margin: MarginContainer = scene._make_card_margin()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
 	panel.add_child(margin)
 
 	var card: HBoxContainer = HBoxContainer.new()
@@ -180,7 +180,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	content_block.add_child(title_row)
 
 	var title_lbl: Label = Label.new()
-	title_lbl.add_theme_font_size_override("font_size", 22)
+	title_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	title_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -193,7 +193,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	var desc_lbl: Label = Label.new()
 	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	desc_lbl.add_theme_font_size_override("font_size", 16)
+	desc_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	desc_lbl.add_theme_color_override("font_color", Color(0.84, 0.84, 0.82, 1.0))
 	detail_row.add_child(desc_lbl)
 
@@ -234,7 +234,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	exp_bar.add_child(exp_overlay)
 
 	var exp_label: Label = Label.new()
-	exp_label.add_theme_font_size_override("font_size", 14)
+	exp_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	exp_label.add_theme_color_override("font_color", UiPalette.EXP_BAR_MAX_TEXT if is_level_capped else UiPalette.EXP_BAR_TEXT)
 	exp_label.text = UiText.SCOOPER_EQUIPMENT_EXP_MAX if is_level_capped else UiText.SCOOPER_EQUIPMENT_EXP_FORMAT % [exp_val, exp_per_lv]
 	exp_overlay.add_child(exp_label)
@@ -551,7 +551,7 @@ func _add_locked_overlay(panel: PanelContainer, unlock_lv: int) -> void:
 	locked_lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	locked_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	locked_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	locked_lbl.add_theme_font_size_override("font_size", 28)
+	locked_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	locked_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 	locked_lbl.text = "鏟屎官等級%d解鎖" % unlock_lv
 	overlay.add_child(locked_lbl)
@@ -568,7 +568,7 @@ func _register_cooldown_button(scene: Control, button: Button, equip_id: int, ac
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	label.visible = false
 	button.add_child(label)
 

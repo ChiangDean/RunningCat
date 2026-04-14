@@ -83,18 +83,18 @@ func _build_ui() -> void:
 	var content_box: VBoxContainer = chrome.get("content_box")
 
 	_resource_label = Label.new()
-	_resource_label.add_theme_font_size_override("font_size", 20)
+	_resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	_resource_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	content_box.add_child(_resource_label)
 
 	_section_title = Label.new()
-	_section_title.add_theme_font_size_override("font_size", 34)
+	_section_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	_section_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	content_box.add_child(_section_title)
 
 	_section_desc = Label.new()
 	_section_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_section_desc.add_theme_font_size_override("font_size", 18)
+	_section_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_section_desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	content_box.add_child(_section_desc)
 
@@ -291,13 +291,13 @@ func _build_bundle_detail_card(bundle: Dictionary) -> Control:
 	var title: Label = Label.new()
 	title.text = str(bundle.get("displayName", UiText.SHOP_BUNDLE_DEFAULT_NAME))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	title_row.add_child(title)
 
 	var stock_label: Label = Label.new()
 	stock_label.text = _build_limit_text(bundle)
-	stock_label.add_theme_font_size_override("font_size", 16)
+	stock_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	stock_label.add_theme_color_override("font_color", Color(0.92, 0.80, 0.48, 1.0))
 	title_row.add_child(stock_label)
 
@@ -310,7 +310,7 @@ func _build_bundle_detail_card(bundle: Dictionary) -> Control:
 
 	var reward_title: Label = Label.new()
 	reward_title.text = UiText.SHOP_REWARD_TITLE
-	reward_title.add_theme_font_size_override("font_size", 18)
+	reward_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	card.add_child(reward_title)
 
 	for reward_line: String in _build_reward_lines(bundle):
@@ -355,7 +355,7 @@ func _build_collision_coin_card(item: Dictionary) -> Control:
 
 	var title: Label = Label.new()
 	title.text = str(item.get("label", UiText.SHOP_COIN_PACK_TITLE))
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	root.add_child(title)
 
@@ -398,7 +398,7 @@ func _build_trap_cage_card() -> Control:
 
 	var title: Label = Label.new()
 	title.text = UiText.SHOP_TRAP_CAGE_ITEM_TITLE
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	root.add_child(title)
 
@@ -439,7 +439,7 @@ func _build_arena_ticket_card() -> Control:
 
 	var title: Label = Label.new()
 	title.text = UiText.SHOP_ARENA_TICKET_TITLE
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	root.add_child(title)
 
@@ -483,7 +483,7 @@ func _build_empty_state(message: String) -> Control:
 	label.text = message
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	margin.add_child(label)
 
@@ -501,7 +501,7 @@ func _open_trap_cage_quantity_dialog() -> void:
 	var desc: Label = Label.new()
 	desc.text = UiText.SHOP_TRAP_CAGE_QUANTITY_DESC
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", 18)
+	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	content.add_child(desc)
 
 	var quantity_row: HBoxContainer = HBoxContainer.new()
@@ -511,23 +511,23 @@ func _open_trap_cage_quantity_dialog() -> void:
 	var minus_button: Button = Button.new()
 	minus_button.text = "-"
 	minus_button.custom_minimum_size = Vector2(60.0, 56.0)
-	minus_button.add_theme_font_size_override("font_size", 28)
+	minus_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	quantity_row.add_child(minus_button)
 
 	_trap_cage_quantity_button = Button.new()
 	_trap_cage_quantity_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_trap_cage_quantity_button.custom_minimum_size = Vector2(220.0, 56.0)
-	_trap_cage_quantity_button.add_theme_font_size_override("font_size", 28)
+	_trap_cage_quantity_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	quantity_row.add_child(_trap_cage_quantity_button)
 
 	var plus_button: Button = Button.new()
 	plus_button.text = "+"
 	plus_button.custom_minimum_size = Vector2(60.0, 56.0)
-	plus_button.add_theme_font_size_override("font_size", 28)
+	plus_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	quantity_row.add_child(plus_button)
 
 	_trap_cage_preview_label = Label.new()
-	_trap_cage_preview_label.add_theme_font_size_override("font_size", 18)
+	_trap_cage_preview_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_trap_cage_preview_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	content.add_child(_trap_cage_preview_label)
 
@@ -572,7 +572,7 @@ func _open_quantity_keypad(anchor: Control, initial_value: int, on_submit: Calla
 	var display: Label = Label.new()
 	display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	display.custom_minimum_size = Vector2(0.0, 52.0)
-	display.add_theme_font_size_override("font_size", 28)
+	display.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	display.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	content.add_child(display)
 
@@ -593,7 +593,7 @@ func _open_quantity_keypad(anchor: Control, initial_value: int, on_submit: Calla
 		button.text = key_label
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size = Vector2(0.0, 52.0)
-		button.add_theme_font_size_override("font_size", 22)
+		button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		if key_label == "OK":
 			UiPalette.apply_button_kind(button, "primary")
 		grid.add_child(button)

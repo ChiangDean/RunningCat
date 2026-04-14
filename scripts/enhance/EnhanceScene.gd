@@ -85,7 +85,7 @@ func _build_feedback_layers() -> void:
 
 	_loading_label = Label.new()
 	_loading_label.text = "載入中..."
-	_loading_label.add_theme_font_size_override("font_size", 22)
+	_loading_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	loading_center.add_child(_loading_label)
 
 	_float_canvas = CanvasLayer.new()
@@ -223,7 +223,7 @@ func _show_action_float(text: String, count: int, color: Color) -> void:
 		var label := Label.new()
 		label.text = text
 		label.modulate = color
-		label.add_theme_font_size_override("font_size", 28)
+		label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 		label.position = Vector2(250.0, 460.0 + idx * 10.0)
 		_float_canvas.add_child(label)
 

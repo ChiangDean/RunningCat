@@ -277,7 +277,7 @@ func _build_ui() -> void:
 	_mail_badge.size = Vector2(28.0, 28.0)
 	_mail_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mail_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_mail_badge.add_theme_font_size_override("font_size", 14)
+	_mail_badge.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	_mail_badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 	_ui_layer.add_child(_mail_badge)
 
@@ -294,7 +294,7 @@ func _build_ui() -> void:
 	_refresh_chat_badge()
 
 	_boss_btn = _make_button(UiText.HOME_BOSS, Vector2(252.0, 350.0), Vector2(216.0, 42.0))
-	_boss_btn.add_theme_font_size_override("font_size", 20)
+	_boss_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	_boss_btn.visible = false
 	_ui_layer.add_child(_boss_btn)
 	_boss_btn.pressed.connect(_on_challenge_boss_pressed)
@@ -402,7 +402,7 @@ func _build_ui() -> void:
 	_home_scoop_cd_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_home_scoop_cd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_home_scoop_cd_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_home_scoop_cd_label.add_theme_font_size_override("font_size", 18)
+	_home_scoop_cd_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_home_scoop_cd_label.visible = false
 	_home_scoop_button.add_child(_home_scoop_cd_label)
 
@@ -470,7 +470,7 @@ func _build_ui() -> void:
 			Vector2(btn_w - 16.0, NAV_H - 24.0)
 		)
 		nav_btn.pressed.connect(nav_items[i][2])
-		nav_btn.add_theme_font_size_override("font_size", 28)
+		nav_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 		_nav_canvas.add_child(nav_btn)
 		_nav_buttons[String(nav_items[i][1])] = nav_btn
 
@@ -532,7 +532,7 @@ func _make_skill_slot(idx: int) -> Control:
 	name_lbl.name = "NameLabel"
 	name_lbl.size = Vector2(SKILL_SLOT_W, 22.0)
 	name_lbl.position = Vector2(0.0, SKILL_SLOT_H - 24.0)
-	name_lbl.add_theme_font_size_override("font_size", 12)
+	name_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.clip_contents = true
 	slot.add_child(name_lbl)
@@ -549,7 +549,7 @@ func _make_skill_slot(idx: int) -> Control:
 	var cd_lbl := Label.new()
 	cd_lbl.name = "CdLabel"
 	cd_lbl.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
-	cd_lbl.add_theme_font_size_override("font_size", 22)
+	cd_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	cd_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cd_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	cd_lbl.visible = false
@@ -622,7 +622,7 @@ func _make_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
 	btn.text = txt
 	btn.position = pos
 	btn.size = sz
-	btn.add_theme_font_size_override("font_size", 22)
+	btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	btn.modulate = Color(0.97, 0.93, 0.88, 1.0)
 	btn.pressed.connect(UiAudio.play_ui_click)
 	return btn
@@ -755,7 +755,7 @@ func _spawn_reward_float(entry: Dictionary) -> void:
 	label.position = Vector2((SW - REWARD_FLOAT_LABEL_SIZE.x) / 2.0, REWARD_FLOAT_START_Y)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 34)
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	label.add_theme_constant_override("outline_size", 6)
 	label.add_theme_color_override("font_color", entry.get("color", REWARD_FLOAT_DEFAULT_COLOR))
 	label.add_theme_color_override("font_outline_color", Color(0.16, 0.09, 0.04, 0.92))
@@ -1162,7 +1162,7 @@ func _show_sandbox_dialog() -> void:
 		var m := complete_minutes % 60
 		var time_lbl := Label.new()
 		time_lbl.text = UiText.HOME_SANDBOX_TIME_FORMAT % [h, m]
-		time_lbl.add_theme_font_size_override("font_size", 18)
+		time_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		time_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rewards_section.add_child(time_lbl)
 
@@ -1171,7 +1171,7 @@ func _show_sandbox_dialog() -> void:
 			if val > 0:
 				var lbl := Label.new()
 				lbl.text = "%s +%d" % [entry[0], val]
-				lbl.add_theme_font_size_override("font_size", 18)
+				lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 				rewards_section.add_child(lbl)
 
 	if has_rewards:
@@ -1183,12 +1183,12 @@ func _show_sandbox_dialog() -> void:
 
 	var poop_count_lbl := Label.new()
 	poop_count_lbl.text = UiText.HOME_SANDBOX_PENDING_POOP % GameState.player_data.poop_count
-	poop_count_lbl.add_theme_font_size_override("font_size", 20)
+	poop_count_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	scoop_section.add_child(poop_count_lbl)
 
 	var result_lbl := Label.new()
 	result_lbl.text = ""
-	result_lbl.add_theme_font_size_override("font_size", 18)
+	result_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	result_lbl.add_theme_color_override("font_color", Color(0.8, 1.0, 0.7, 1.0))
 	scoop_section.add_child(result_lbl)
 

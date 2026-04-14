@@ -10,12 +10,12 @@ func build(scene: Control) -> void:
 
 	var section_label: Label = Label.new()
 	section_label.text = UiText.SCOOPER_TAB_ABILITY
-	section_label.add_theme_font_size_override("font_size", 18)
+	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary_row.add_child(section_label)
 
 	var summary: Label = Label.new()
-	summary.add_theme_font_size_override("font_size", 18)
+	summary.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary_row.add_child(summary)
@@ -53,7 +53,7 @@ func _refresh_ability_ui(scene: Control) -> void:
 	if owned.is_empty():
 		var empty_lbl: Label = Label.new()
 		empty_lbl.text = UiText.SCOOPER_ABILITY_EMPTY
-		empty_lbl.add_theme_font_size_override("font_size", 18)
+		empty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		scene._ability_list.add_child(empty_lbl)
 		return
@@ -68,7 +68,7 @@ func _refresh_ability_ui(scene: Control) -> void:
 
 func _make_ability_card(scene: Control, item: Dictionary) -> Control:
 	var panel: PanelContainer = scene._make_card_panel(Color(0.54, 0.76, 0.92, 0.95))
-	var margin: MarginContainer = scene._make_card_margin()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
 	panel.add_child(margin)
 
 	var card: VBoxContainer = VBoxContainer.new()
@@ -85,13 +85,13 @@ func _make_ability_card(scene: Control, item: Dictionary) -> Control:
 
 	var title: Label = Label.new()
 	title.text = str(item.get("displayName", item.get("display_name", "")))
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 
 	var source_chip: Label = Label.new()
 	source_chip.text = UiText.SCOOPER_ABILITY_SOURCE_VALUE
-	source_chip.add_theme_font_size_override("font_size", 14)
+	source_chip.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	source_chip.add_theme_color_override("font_color", Color(0.90, 0.82, 0.60, 1.0))
 	source_chip.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	source_chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -100,7 +100,7 @@ func _make_ability_card(scene: Control, item: Dictionary) -> Control:
 	var desc: Label = Label.new()
 	desc.text = str(item.get("description", ""))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", 16)
+	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	desc.add_theme_color_override("font_color", Color(0.86, 0.86, 0.84, 1.0))
 	card.add_child(desc)
 

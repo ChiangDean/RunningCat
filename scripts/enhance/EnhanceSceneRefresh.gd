@@ -225,13 +225,13 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 		var lbl := Label.new()
 		lbl.text = UiText.ENHANCE_PASSIVE_SKILL_FORMAT % [skill_d.get("display_name", sid)]
 		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lbl.add_theme_font_size_override("font_size", 18)
+		lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		row.add_child(lbl)
 
 		if rank >= 5:
 			var rank_lbl := Label.new()
 			rank_lbl.text = UiText.ENHANCE_SKILL_RANK_BONUS_FORMAT % [int(rank / 5)]
-			rank_lbl.add_theme_font_size_override("font_size", 16)
+			rank_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
 			row.add_child(rank_lbl)
 
@@ -249,13 +249,13 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 		var lbl := Label.new()
 		lbl.text = UiText.ENHANCE_ACTIVE_SKILL_FORMAT % [skill_d.get("display_name", ""), skill_d.get("cooldown", 0.0)]
 		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lbl.add_theme_font_size_override("font_size", 18)
+		lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		row.add_child(lbl)
 
 		if rank >= 5:
 			var rank_lbl := Label.new()
 			rank_lbl.text = UiText.ENHANCE_SKILL_RANK_BONUS_FORMAT % [int(rank / 5)]
-			rank_lbl.add_theme_font_size_override("font_size", 16)
+			rank_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
 			row.add_child(rank_lbl)
 

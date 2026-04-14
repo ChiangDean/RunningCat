@@ -55,7 +55,7 @@ func _build_ui() -> void:
 
 	var global_lbl := Label.new()
 	global_lbl.text = "全局關卡編號：%d" % GameState.current_global_stage
-	global_lbl.add_theme_font_size_override("font_size", 20)
+	global_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	global_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	global_lbl.modulate = Color(0.7, 0.7, 0.7, 1.0)
 	root_vbox.add_child(global_lbl)

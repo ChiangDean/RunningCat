@@ -55,7 +55,7 @@ func _rebuild() -> void:
 	var intro := Label.new()
 	intro.text = "\u5546\u57ce\u79ae\u5305\u6703\u76f4\u63a5\u900f\u904e\u5f8c\u7aef\u6263\u6b3e\u8207\u767c\u734e\uff0c\u5167\u5bb9\u4ee5\u76ee\u524d\u4f3a\u670d\u5668\u8cc7\u6599\u70ba\u6e96\u3002"
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	intro.add_theme_font_size_override("font_size", 18)
+	intro.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	add_child(intro)
 
 	var scroll := ScrollContainer.new()
@@ -72,7 +72,7 @@ func _rebuild() -> void:
 		var empty_label := Label.new()
 		empty_label.text = "\u9019\u500b\u5206\u985e\u76ee\u524d\u6c92\u6709\u79ae\u5305\u3002"
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_label.add_theme_font_size_override("font_size", 22)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		list.add_child(empty_label)
 		return
 
@@ -84,7 +84,7 @@ func _rebuild() -> void:
 func _build_bundle_card(bundle: Dictionary) -> Control:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _create_card_style())
+	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(CARD_BG, CARD_BORDER, 10))
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 16)
@@ -113,13 +113,13 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 
 	var title := Label.new()
 	title.text = str(bundle.get("displayName", "\u5546\u57ce\u79ae\u5305"))
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 
 	var status := Label.new()
 	status.text = _build_limit_text(bundle)
-	status.add_theme_font_size_override("font_size", 16)
+	status.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	status.add_theme_color_override("font_color", Color(0.92, 0.80, 0.48, 1.0))
 	header.add_child(status)
 
@@ -131,7 +131,7 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 
 	var reward_title := Label.new()
 	reward_title.text = "\u5167\u5bb9\u7269"
-	reward_title.add_theme_font_size_override("font_size", 18)
+	reward_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	card.add_child(reward_title)
 
 	for reward_line: String in _build_reward_lines(bundle):
@@ -147,7 +147,7 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 
 	var cost_label := Label.new()
 	cost_label.text = "\u947d\u77f3 %d" % int(bundle.get("priceAmount", 0))
-	cost_label.add_theme_font_size_override("font_size", 20)
+	cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	action_row.add_child(cost_label)
 
 	var button := Button.new()
@@ -228,21 +228,6 @@ func _build_reward_lines(bundle: Dictionary) -> Array[String]:
 					int(reward.get("quantity", 0)),
 				])
 	return result
-
-
-func _create_card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = CARD_BG
-	style.border_color = CARD_BORDER
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 10
-	style.corner_radius_top_right = 10
-	style.corner_radius_bottom_left = 10
-	style.corner_radius_bottom_right = 10
-	return style
 
 
 func _extract_error_message(error: Dictionary, fallback: String) -> String:

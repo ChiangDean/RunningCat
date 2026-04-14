@@ -17,11 +17,11 @@ func setup(channel_key: String, message: Dictionary) -> void:
 	var sender := str(message.get("senderDisplayName", "System"))
 	var time_text := str(message.get("sentAtUtc", "")).replace("T", " ").replace("Z", "")
 	header.text = "[%s] %s  %s" % [channel_key.capitalize(), sender, time_text]
-	header.add_theme_font_size_override("font_size", 14)
+	header.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	content.add_child(header)
 
 	var body := Label.new()
 	body.text = str(message.get("content", ""))
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.add_theme_font_size_override("font_size", 16)
+	body.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	content.add_child(body)

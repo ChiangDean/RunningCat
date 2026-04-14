@@ -10,7 +10,7 @@ func build(scene: Control) -> void:
 
 	var section_label: Label = Label.new()
 	section_label.text = UiText.SCOOPER_TAB_TREASURE
-	section_label.add_theme_font_size_override("font_size", 18)
+	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	summary_row.add_child(section_label)
 
 	var section_line: HSeparator = HSeparator.new()
@@ -56,7 +56,7 @@ func _refresh_treasure_tab(scene: Control) -> void:
 	if items.is_empty():
 		var empty_lbl: Label = Label.new()
 		empty_lbl.text = UiText.SCOOPER_TREASURE_EMPTY
-		empty_lbl.add_theme_font_size_override("font_size", 18)
+		empty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		scene._treasure_list.add_child(empty_lbl)
 		return
@@ -72,7 +72,7 @@ func _refresh_treasure_tab(scene: Control) -> void:
 func _make_treasure_card(scene: Control, item: Dictionary) -> Control:
 	var accent: Color = _get_treasure_placeholder_color(item)
 	var panel: PanelContainer = scene._make_card_panel(accent)
-	var margin: MarginContainer = scene._make_card_margin()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
 	panel.add_child(margin)
 
 	var card: VBoxContainer = VBoxContainer.new()
@@ -89,20 +89,20 @@ func _make_treasure_card(scene: Control, item: Dictionary) -> Control:
 
 	var title_lbl: Label = Label.new()
 	title_lbl.text = str(item.get("displayName", ""))
-	title_lbl.add_theme_font_size_override("font_size", 22)
+	title_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title_lbl)
 
 	var qty: Label = Label.new()
 	qty.text = "x%d" % int(item.get("quantity", 0))
-	qty.add_theme_font_size_override("font_size", 18)
+	qty.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	qty.add_theme_color_override("font_color", accent)
 	header.add_child(qty)
 
 	var desc: Label = Label.new()
 	desc.text = str(item.get("description", ""))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", 16)
+	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	desc.add_theme_color_override("font_color", Color(0.80, 0.80, 0.80, 1.0))
 	card.add_child(desc)
 
@@ -171,7 +171,7 @@ func _show_total_bonus_dialog(scene: Control) -> void:
 	if totals.is_empty():
 		var empty_label: Label = Label.new()
 		empty_label.text = UiText.SCOOPER_TREASURE_EMPTY
-		empty_label.add_theme_font_size_override("font_size", 18)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		content.add_child(empty_label)
 	else:
 		var keys: Array = totals.keys()

@@ -21,7 +21,7 @@ func _rebuild() -> void:
 	var intro := Label.new()
 	intro.text = "\u4f7f\u7528\u947d\u77f3\u76f4\u63a5\u8cfc\u8cb7\u8a98\u6355\u7c60\uff0c\u8cfc\u8cb7\u6210\u529f\u5f8c\u6703\u540c\u6b65\u66f4\u65b0\u76ee\u524d\u6301\u6709\u6578\u91cf\u3002"
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	intro.add_theme_font_size_override("font_size", 18)
+	intro.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	add_child(intro)
 
 	var offers_variant: Variant = GameState.shop_data.get("trapCageOffers", [])
@@ -30,7 +30,7 @@ func _rebuild() -> void:
 		var empty_label := Label.new()
 		empty_label.text = "\u76ee\u524d\u6c92\u6709\u53ef\u8cfc\u8cb7\u7684\u8a98\u6355\u7c60\u65b9\u6848\u3002"
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_label.add_theme_font_size_override("font_size", 22)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		add_child(empty_label)
 		return
 
@@ -42,7 +42,7 @@ func _rebuild() -> void:
 func _build_offer_card(offer: Dictionary) -> Control:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _create_card_style())
+	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(CARD_BG, CARD_BORDER, 10))
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 16)
@@ -65,7 +65,7 @@ func _build_offer_card(offer: Dictionary) -> Control:
 
 	var title := Label.new()
 	title.text = "\u8a98\u6355\u7c60 x%d" % count
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	info.add_child(title)
 
 	var desc := Label.new()
@@ -76,7 +76,7 @@ func _build_offer_card(offer: Dictionary) -> Control:
 
 	var cost_label := Label.new()
 	cost_label.text = "\u947d\u77f3 %d" % cost
-	cost_label.add_theme_font_size_override("font_size", 20)
+	cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	row.add_child(cost_label)
 
 	var button := Button.new()
@@ -106,21 +106,6 @@ func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> 
 		if scene != null and scene.has_method("refresh_from_bootstrap"):
 			scene.refresh_from_bootstrap(false)
 	DialogManager.show_info("\u8cfc\u8cb7\u6210\u529f", "\u5df2\u6210\u529f\u8cfc\u8cb7\u8a98\u6355\u7c60\u3002")
-
-
-func _create_card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = CARD_BG
-	style.border_color = CARD_BORDER
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 10
-	style.corner_radius_top_right = 10
-	style.corner_radius_bottom_left = 10
-	style.corner_radius_bottom_right = 10
-	return style
 
 
 func _extract_error_message(error: Dictionary, fallback: String) -> String:

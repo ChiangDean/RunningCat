@@ -37,14 +37,14 @@ static func build_ui(scene) -> void:
 
 	var title: Label = Label.new()
 	title.text = UiText.DUNGEON_PAGE_TITLE
-	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	scene._root_vbox.add_child(title)
 
 	var desc: Label = Label.new()
 	desc.text = UiText.DUNGEON_PAGE_DESC
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", 18)
+	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	scene._root_vbox.add_child(desc)
 
@@ -152,7 +152,7 @@ static func _add_empty_state(container: VBoxContainer) -> void:
 
 	var empty_label: Label = Label.new()
 	empty_label.text = UiText.DUNGEON_EMPTY_DATA
-	empty_label.add_theme_font_size_override("font_size", 22)
+	empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	empty_margin.add_child(empty_label)
@@ -207,7 +207,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 		var fallback_label: Label = Label.new()
 		fallback_label.text = UiText.DUNGEON_CARD_FALLBACK_ART
 		fallback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		fallback_label.add_theme_font_size_override("font_size", 20)
+		fallback_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 		fallback_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 		art_box.add_child(fallback_label)
 
@@ -230,7 +230,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 	var desc_label: Label = Label.new()
 	desc_label.text = str(dungeon.get("description", ""))
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.add_theme_font_size_override("font_size", 16)
+	desc_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	desc_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	header_box.add_child(desc_label)
 
@@ -249,7 +249,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 	var sweep_button: Button = Button.new()
 	sweep_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sweep_button.custom_minimum_size = Vector2(0.0, 52.0)
-	sweep_button.add_theme_font_size_override("font_size", 18)
+	sweep_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	if ticket_count <= 0 and ad_count > 0 and max_floor > 0:
 		sweep_button.text = AD_TICKET_BUTTON_TEXT
 	else:
@@ -267,7 +267,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 	var challenge_button: Button = Button.new()
 	challenge_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	challenge_button.custom_minimum_size = Vector2(0.0, 52.0)
-	challenge_button.add_theme_font_size_override("font_size", 18)
+	challenge_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	if ticket_count <= 0 and ad_count > 0:
 		challenge_button.text = AD_TICKET_BUTTON_TEXT
 	else:
@@ -306,7 +306,7 @@ static func _make_status_chip(text_value: String) -> PanelContainer:
 	label.text = text_value
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	margin.add_child(label)
 
 	return chip
@@ -325,7 +325,7 @@ static func _build_reward_panel(title_text: String, rewards: Dictionary, empty_t
 
 	var title_label: Label = Label.new()
 	title_label.text = title_text
-	title_label.add_theme_font_size_override("font_size", 20)
+	title_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	title_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	box.add_child(title_label)
 
@@ -341,14 +341,14 @@ static func _build_reward_panel(title_text: String, rewards: Dictionary, empty_t
 		has_reward = true
 		var reward_label: Label = Label.new()
 		reward_label.text = "%s \u00d7%d" % [_get_reward_label(reward_key), amount]
-		reward_label.add_theme_font_size_override("font_size", 16)
+		reward_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		list_box.add_child(reward_label)
 
 	if not has_reward:
 		var empty_label: Label = Label.new()
 		empty_label.text = empty_text
 		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		empty_label.add_theme_font_size_override("font_size", 16)
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		list_box.add_child(empty_label)
 

@@ -60,7 +60,7 @@ func _build_visuals() -> void:
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name_label.position = Vector2(-HP_BAR_W / 2.0, -BODY_H - 32.0)
 	_name_label.size = Vector2(HP_BAR_W, 20.0)
-	_name_label.add_theme_font_size_override("font_size", 12)
+	_name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	add_child(_name_label)
 
 	play_idle()
@@ -151,7 +151,7 @@ func show_damage_number(damage: int) -> void:
 	dmg_label.position = Vector2(-HP_BAR_W / 2.0, -BODY_H - 32.0)
 	dmg_label.size = Vector2(HP_BAR_W, 20.0)
 	dmg_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dmg_label.add_theme_font_size_override("font_size", 18)
+	dmg_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	dmg_label.add_theme_color_override("font_outline_color", Color(1, 1, 1, 1))
 	dmg_label.add_theme_constant_override("outline_size", 2)
 	if team == "player":

@@ -41,14 +41,14 @@ func _build_row(result: Dictionary) -> Control:
 	var rarity_label: Label = Label.new()
 	rarity_label.text = "[%s]" % rarity
 	rarity_label.custom_minimum_size = Vector2(110.0, 0.0)
-	rarity_label.add_theme_font_size_override("font_size", 20)
+	rarity_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	rarity_label.add_theme_color_override("font_color", _resolve_color(result))
 	row.add_child(rarity_label)
 
 	var cat_label: Label = Label.new()
 	cat_label.text = str(result.get("catDisplayName", UiText.GACHA_RESULT_CAT_FALLBACK))
 	cat_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cat_label.add_theme_font_size_override("font_size", 22)
+	cat_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	row.add_child(cat_label)
 
 	var state_label: Label = Label.new()
@@ -61,7 +61,7 @@ func _build_row(result: Dictionary) -> Control:
 			int(result.get("duplicateRewardAmount", 0)),
 		]
 		state_label.add_theme_color_override("font_color", Color(0.92, 0.82, 0.52, 1.0))
-	state_label.add_theme_font_size_override("font_size", 18)
+	state_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	row.add_child(state_label)
 
 	return panel

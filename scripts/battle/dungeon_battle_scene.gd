@@ -202,7 +202,7 @@ func _make_skill_slot(idx: int) -> Control:
 	name_lbl.name = "NameLabel"
 	name_lbl.size = Vector2(SKILL_SLOT_W, 22.0)
 	name_lbl.position = Vector2(0.0, SKILL_SLOT_H - 24.0)
-	name_lbl.add_theme_font_size_override("font_size", 12)
+	name_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.clip_contents = true
 	slot.add_child(name_lbl)
@@ -217,7 +217,7 @@ func _make_skill_slot(idx: int) -> Control:
 	var cd_lbl := Label.new()
 	cd_lbl.name = "CdLabel"
 	cd_lbl.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
-	cd_lbl.add_theme_font_size_override("font_size", 22)
+	cd_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	cd_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cd_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	cd_lbl.visible = false

@@ -16,7 +16,7 @@ func _ready() -> void:
 	_badge_label.size = Vector2(24, 20)
 	_badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_badge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_badge_label.add_theme_font_size_override("font_size", 12)
+	_badge_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	add_child(_badge_label)
 	set_badge_count(0)
 

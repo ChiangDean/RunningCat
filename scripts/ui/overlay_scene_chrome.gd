@@ -52,7 +52,7 @@ static func build(scene: Control, background_slot: String, back_pressed: Callabl
 		"panel_fill": panel_fill,
 		"panel_border": panel_border,
 		"button_height": float(options.get("button_height", 52.0)),
-		"font_size": int(options.get("font_size", 20)),
+		"font_size": int(options.get("font_size", UiPalette.FONT_SIZE_BODY_LG)),
 		"top": float(options.get("dock_top", -(HOME_MAIN_NAV_H + BOTTOM_DOCK_H))),
 		"bottom": float(options.get("dock_bottom", -HOME_MAIN_NAV_H)),
 	})

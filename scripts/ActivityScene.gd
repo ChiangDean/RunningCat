@@ -36,14 +36,14 @@ func _build_ui() -> void:
 
 	var title: Label = Label.new()
 	title.text = UiText.ACTIVITY_PAGE_TITLE
-	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	content_box.add_child(title)
 
 	var desc: Label = Label.new()
 	desc.text = UiText.ACTIVITY_PAGE_DESC
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", 18)
+	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	content_box.add_child(desc)
 
@@ -102,7 +102,7 @@ func _build_ui() -> void:
 
 	var empty_title: Label = Label.new()
 	empty_title.text = UiText.ACTIVITY_LIMITED_EMPTY_TITLE
-	empty_title.add_theme_font_size_override("font_size", 28)
+	empty_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	empty_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	empty_box.add_child(empty_title)
 
@@ -168,7 +168,7 @@ func _make_entry_card(
 
 	var title: Label = Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	text_box.add_child(title)
 
@@ -187,7 +187,7 @@ func _make_entry_card(
 	var action_button: Button = Button.new()
 	action_button.text = button_text
 	action_button.custom_minimum_size = Vector2(168.0, 56.0)
-	action_button.add_theme_font_size_override("font_size", 20)
+	action_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	action_button.size_flags_vertical = Control.SIZE_SHRINK_END
 	action_button.pressed.connect(callback)
 	UiPalette.apply_button_kind(action_button, "primary")

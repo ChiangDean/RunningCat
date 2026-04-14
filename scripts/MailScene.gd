@@ -76,7 +76,7 @@ func _build_ui() -> void:
 	header.add_child(_claim_all_btn)
 
 	_summary_label = Label.new()
-	_summary_label.add_theme_font_size_override("font_size", 18)
+	_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	layout.add_child(_summary_label)
 
 	var split := VSplitContainer.new()
@@ -103,7 +103,7 @@ func _build_ui() -> void:
 	detail_margin.add_child(detail_layout)
 
 	_detail_title = Label.new()
-	_detail_title.add_theme_font_size_override("font_size", 24)
+	_detail_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	detail_layout.add_child(_detail_title)
 
 	_detail_meta = Label.new()
@@ -118,7 +118,7 @@ func _build_ui() -> void:
 
 	var attachment_title := Label.new()
 	attachment_title.text = "附件"
-	attachment_title.add_theme_font_size_override("font_size", 20)
+	attachment_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	detail_layout.add_child(attachment_title)
 
 	var attachment_scroll := ScrollContainer.new()
