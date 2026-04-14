@@ -7,10 +7,13 @@ const UI = preload("res://scripts/dungeon/DungeonSceneUI.gd")
 const Actions = preload("res://scripts/dungeon/DungeonSceneActions.gd")
 
 var _dungeon_panels: Dictionary = {}
-var _action_inflight := false
+var _action_inflight: bool = false
+var _active_dungeon_key: String = ""
+var _submenu_buttons: Dictionary = {}
 var _ui_layer: CanvasLayer
 var _root_vbox: VBoxContainer
 var _dungeon_list: VBoxContainer
+var _scroll: ScrollContainer
 
 @onready var GameState = get_node("/root/GameState")
 @onready var ApiClient = get_node("/root/ApiClient")
@@ -34,6 +37,13 @@ func _rebuild_dungeon_panels() -> void:
 
 func _refresh_panel(dungeon_id: int) -> void:
 	UI.refresh_panel(self, dungeon_id)
+
+
+func _switch_dungeon_tab(dungeon_key: String) -> void:
+	if _active_dungeon_key == dungeon_key:
+		return
+	_active_dungeon_key = dungeon_key
+	_rebuild_dungeon_panels()
 
 
 func _request_dungeon_overview() -> void:
@@ -66,7 +76,10 @@ func _show_reward_popup(header: String, level: int, rewards: Dictionary) -> void
 
 func _get_local_dungeon_cfg(dungeon_key: String) -> Dictionary:
 	for cfg: Dictionary in GameState.dungeon_config.get("dungeons", []):
-		if cfg.get("id", "") == dungeon_key:
+		var cfg_id: String = str(cfg.get("id", ""))
+		if cfg_id == dungeon_key:
+			return cfg
+		if cfg_id.get_basename() == dungeon_key:
 			return cfg
 	return {}
 
