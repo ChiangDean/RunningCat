@@ -71,11 +71,23 @@ const SCOOPER_ABILITIES := {
 
 const SHOP_BUNDLES := {
 	1: UI_ROOT + "shop_bundles/starter_cleanup_set.png",
-	2: UI_ROOT + "shop_bundles/night_crit_set.png",
-	3: UI_ROOT + "shop_bundles/frontline_tank_set.png",
-	4: UI_ROOT + "shop_bundles/rush_combo_set.png",
-	5: UI_ROOT + "shop_bundles/ambush_hunter_set.png",
-	6: UI_ROOT + "shop_bundles/guard_tenacity_set.png",
+	2: UI_ROOT + "shop_bundles/rush_combo_set.png",
+	3: UI_ROOT + "shop_bundles/ambush_hunter_set.png",
+	4: UI_ROOT + "shop_bundles/guard_tenacity_set.png",
+	5: UI_ROOT + "shop_bundles/night_crit_set.png",
+	6: UI_ROOT + "shop_bundles/frontline_tank_set.png",
+	7: UI_ROOT + "shop_bundles/rush_combo_set.png",
+	8: UI_ROOT + "shop_bundles/frontline_tank_set.png",
+	9: UI_ROOT + "shop_bundles/rush_combo_set.png",
+	10: UI_ROOT + "shop_bundles/ambush_hunter_set.png",
+	11: UI_ROOT + "shop_bundles/guard_tenacity_set.png",
+	12: UI_ROOT + "shop_bundles/starter_cleanup_set.png",
+	13: UI_ROOT + "shop_bundles/frontline_tank_set.png",
+	14: UI_ROOT + "shop_bundles/starter_cleanup_set.png",
+	15: UI_ROOT + "shop_bundles/starter_cleanup_set.png",
+	16: UI_ROOT + "shop_bundles/rush_combo_set.png",
+	17: UI_ROOT + "shop_bundles/starter_cleanup_set.png",
+	18: UI_ROOT + "shop_bundles/frontline_tank_set.png",
 }
 
 

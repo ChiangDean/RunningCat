@@ -34,21 +34,24 @@ const EXP_BAR_MAX_EMPTY := Color(0.20, 0.29, 0.21, 0.96)
 const EXP_BAR_MAX_TEXT := Color(0.98, 1.0, 0.98, 1.0)
 
 
+## 按鈕種類對照表（語意別名 → 顏色名稱）
+## 顏色名稱:   confirm   cancel    neutral  info     destruct  remove   add
+## 語意別名:   primary   secondary rank     info     danger    minus    plus
 static func get_button_palette(kind: String) -> Dictionary:
 	match kind.to_lower():
-		"secondary":
+		"secondary", "cancel":
 			return {"bg": BUTTON_SECONDARY_BG, "fg": BUTTON_SECONDARY_FG}
-		"rank":
+		"rank", "neutral":
 			return {"bg": BUTTON_RANK_BG, "fg": BUTTON_RANK_FG}
 		"info":
 			return {"bg": BUTTON_INFO_BG, "fg": BUTTON_INFO_FG}
-		"danger":
+		"danger", "destruct":
 			return {"bg": BUTTON_DANGER_BG, "fg": BUTTON_DANGER_FG}
-		"minus":
+		"minus", "remove":
 			return {"bg": BUTTON_MINUS_BG, "fg": BUTTON_MINUS_FG}
-		"plus":
+		"plus", "add":
 			return {"bg": BUTTON_PLUS_BG, "fg": BUTTON_PLUS_FG}
-		_:
+		_: # primary / confirm
 			return {"bg": BUTTON_PRIMARY_BG, "fg": BUTTON_PRIMARY_FG}
 
 

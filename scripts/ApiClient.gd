@@ -227,6 +227,12 @@ func purchase_shop_bundle(bundle_id: int, callback: Callable) -> void:
 	_api_post("shop/bundles/%d/purchase" % bundle_id, {}, callback)
 
 
+func purchase_trap_points(trap_point_amount: int, callback: Callable) -> void:
+	_api_post("shop/trap-points/purchase", {
+		"trapPointAmount": trap_point_amount,
+	}, callback)
+
+
 func get_arena_overview(excluded_opponent_ids: Array, callback: Callable) -> void:
 	var path := "arena"
 	var filtered_ids: Array[String] = []

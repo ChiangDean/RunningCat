@@ -7,6 +7,7 @@ const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 
 const DUNGEON_CARD_ART := "res://assets/sprites/ui/dungeon_background_v1.png"
 const ARENA_CARD_ART := "res://assets/sprites/ui/arena_background_v1.png"
+const GACHA_CARD_ART := "res://assets/sprites/ui/gacha_background_v1.png"
 
 var _active_tab: String = "permanent"
 var _tab_buttons: Dictionary = {}
@@ -60,6 +61,14 @@ func _build_ui() -> void:
 	_permanent_section = VBoxContainer.new()
 	_permanent_section.add_theme_constant_override("separation", 14)
 	scroll_box.add_child(_permanent_section)
+
+	_permanent_section.add_child(_make_entry_card(
+		UiText.GACHA_PAGE_TITLE,
+		UiText.ACTIVITY_GACHA_DESC,
+		GACHA_CARD_ART,
+		UiText.ACTIVITY_GACHA_BUTTON,
+		Callable(self, "_on_gacha_pressed")
+	))
 
 	_permanent_section.add_child(_make_entry_card(
 		UiText.DUNGEON_PAGE_TITLE,
@@ -148,10 +157,12 @@ func _make_entry_card(
 
 	var body_row: HBoxContainer = HBoxContainer.new()
 	body_row.add_theme_constant_override("separation", 12)
+	body_row.alignment = BoxContainer.ALIGNMENT_END
 	layout.add_child(body_row)
 
 	var text_box: VBoxContainer = VBoxContainer.new()
 	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	text_box.add_theme_constant_override("separation", 8)
 	body_row.add_child(text_box)
 
@@ -164,14 +175,20 @@ func _make_entry_card(
 	var subtitle: Label = Label.new()
 	subtitle.text = subtitle_text
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	subtitle.custom_minimum_size = Vector2(0.0, 52.0)
 	subtitle.add_theme_font_size_override("font_size", 17)
 	subtitle.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	text_box.add_child(subtitle)
+
+	var text_spacer: Control = Control.new()
+	text_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	text_box.add_child(text_spacer)
 
 	var action_button: Button = Button.new()
 	action_button.text = button_text
 	action_button.custom_minimum_size = Vector2(168.0, 56.0)
 	action_button.add_theme_font_size_override("font_size", 20)
+	action_button.size_flags_vertical = Control.SIZE_SHRINK_END
 	action_button.pressed.connect(callback)
 	UiPalette.apply_button_kind(action_button, "primary")
 	body_row.add_child(action_button)
@@ -203,6 +220,10 @@ func _on_dungeon_pressed() -> void:
 
 func _on_arena_pressed() -> void:
 	SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
+
+
+func _on_gacha_pressed() -> void:
+	SceneNavigator.open_overlay_scene("res://scenes/GachaScene.tscn")
 
 
 func _on_back_pressed() -> void:

@@ -1,13 +1,14 @@
 class_name SceneSubmenuBar
 extends RefCounted
 
+const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
 
 static func build(host: Control, options: Dictionary) -> Dictionary:
 	var button_map: Dictionary = {}
-	var panel_fill: Color = options.get("panel_fill", Color(0.08, 0.07, 0.08, 0.94))
-	var panel_border: Color = options.get("panel_border", Color(0.80, 0.67, 0.42, 0.95))
-	var button_height: float = float(options.get("button_height", 56.0))
-	var font_size: int = int(options.get("font_size", 20))
+	var panel_fill: Color = options.get("panel_fill", SceneMenuTheme.PANEL_FILL)
+	var panel_border: Color = options.get("panel_border", SceneMenuTheme.PANEL_BORDER)
+	var button_height: float = float(options.get("button_height", SceneMenuTheme.SUBMENU_BUTTON_HEIGHT))
+	var font_size: int = int(options.get("font_size", SceneMenuTheme.SUBMENU_FONT_SIZE))
 	var left: float = float(options.get("left", 20.0))
 	var right: float = float(options.get("right", -20.0))
 	var back_right: float = float(options.get("back_right", 128.0))
@@ -88,10 +89,10 @@ static func build(host: Control, options: Dictionary) -> Dictionary:
 
 
 static func refresh(button_map: Dictionary, active_key: String, options: Dictionary = {}) -> void:
-	var active_color: Color = options.get("active_color", Color(1.0, 0.95, 0.82, 1.0))
-	var inactive_color: Color = options.get("inactive_color", Color(0.65, 0.65, 0.68, 1.0))
-	var active_font_size: int = int(options.get("active_font_size", 22))
-	var inactive_font_size: int = int(options.get("inactive_font_size", 20))
+	var active_color: Color = options.get("active_color", SceneMenuTheme.ACTIVE_COLOR)
+	var inactive_color: Color = options.get("inactive_color", SceneMenuTheme.INACTIVE_COLOR)
+	var active_font_size: int = int(options.get("active_font_size", SceneMenuTheme.SUBMENU_ACTIVE_FONT_SIZE))
+	var inactive_font_size: int = int(options.get("inactive_font_size", SceneMenuTheme.SUBMENU_INACTIVE_FONT_SIZE))
 
 	for key: String in button_map.keys():
 		var btn: Button = button_map[key]
