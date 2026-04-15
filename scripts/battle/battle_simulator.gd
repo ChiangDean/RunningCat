@@ -11,6 +11,9 @@ const WALL_LEFT: float = 40.0
 const WALL_RIGHT: float = 680.0
 const CAT_HALF_W: float = 30.0
 const BASE_CRIT_DAMAGE_MULT: float = 1.5
+const PLAYER_FRONT_START_X: float = 280.0
+const ENEMY_FRONT_START_X: float = 440.0
+const TEAM_ROW_SPACING: float = 60.0
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -146,20 +149,20 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 	var e_list: Array = []
 
 	# Player：前排 x=315，往左排 60px
-	var p_front_x := 315.0
+	var p_front_x := PLAYER_FRONT_START_X
 	for i in range(player_cats.size()):
 		var sc := SimCat.new(id_counter, player_cats[i], "player",
-				p_front_x - i * 60.0)
+				p_front_x - i * TEAM_ROW_SPACING)
 		p_list.append(sc)
 		events.append(BattleEvent.spawn(0.0, sc.instance_id, "player",
 				sc.pos_x, sc.current_hp, sc.base_hp))
 		id_counter += 1
 
 	# Enemy：前排 x=405，往右排 60px
-	var e_front_x := 405.0
+	var e_front_x := ENEMY_FRONT_START_X
 	for i in range(enemy_cats.size()):
 		var sc := SimCat.new(id_counter, enemy_cats[i], "enemy",
-				e_front_x + i * 60.0)
+				e_front_x + i * TEAM_ROW_SPACING)
 		e_list.append(sc)
 		events.append(BattleEvent.spawn(0.0, sc.instance_id, "enemy",
 				sc.pos_x, sc.current_hp, sc.base_hp))

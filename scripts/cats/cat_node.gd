@@ -14,6 +14,7 @@ var cat_file_id: String = ""
 
 var _body_rect: ColorRect
 var _animated_sprite: AnimatedSprite2D
+var _static_sprite: Sprite2D
 var _hp_bar_bg: ColorRect
 var _hp_bar_fill: ColorRect
 var _name_label: Label
@@ -25,9 +26,12 @@ const BODY_W := 56.0
 const BODY_H := 72.0
 const HP_BAR_W := 64.0
 const HP_BAR_H := 8.0
-const FRAME_SIZE := Vector2i(160, 160)
-const FRAME_COUNT := 6
-const SPRITE_TARGET_SIZE := Vector2(56.0, 72.0)
+const SPRITE_TARGET_W := 96.0
+const SPRITE_TARGET_H := 128.0
+const SPRITE_TARGET_SIZE := Vector2(SPRITE_TARGET_W, SPRITE_TARGET_H)
+const SPRITE_VERTICAL_OFFSET_Y := 10.0
+const HP_BAR_OFFSET_Y := 170.0
+const NAME_LABEL_OFFSET_Y := 198.0
 
 
 func setup(id: int, team_name: String, name_str: String, hp: int, file_id: String = "") -> void:
@@ -45,7 +49,7 @@ func _build_visuals() -> void:
 
 	_hp_bar_bg = ColorRect.new()
 	_hp_bar_bg.size = Vector2(HP_BAR_W, HP_BAR_H)
-	_hp_bar_bg.position = Vector2(-HP_BAR_W / 2.0, -BODY_H - 14.0)
+	_hp_bar_bg.position = Vector2(-HP_BAR_W / 2.0, -HP_BAR_OFFSET_Y)
 	_hp_bar_bg.color = Color(0.2, 0.2, 0.2, 1.0)
 	add_child(_hp_bar_bg)
 
@@ -58,7 +62,7 @@ func _build_visuals() -> void:
 	_name_label = Label.new()
 	_name_label.text = cat_display_name
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.position = Vector2(-HP_BAR_W / 2.0, -BODY_H - 32.0)
+	_name_label.position = Vector2(-HP_BAR_W / 2.0, -NAME_LABEL_OFFSET_Y)
 	_name_label.size = Vector2(HP_BAR_W, 20.0)
 	_name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	add_child(_name_label)
@@ -67,28 +71,31 @@ func _build_visuals() -> void:
 
 
 func _build_body() -> void:
-	var frames := _build_sprite_frames()
-	if frames != null:
-		var visible_rect := _get_visible_rect_for_alignment()
-		_animated_sprite = AnimatedSprite2D.new()
-		_animated_sprite.sprite_frames = frames
-		_animated_sprite.centered = true
-		var visible_size := Vector2(maxf(1.0, visible_rect.size.x), maxf(1.0, visible_rect.size.y))
-		var scale_ratio := minf(
-			SPRITE_TARGET_SIZE.x / visible_size.x,
-			SPRITE_TARGET_SIZE.y / visible_size.y
+	var sprite_texture: Texture2D = AssetResolver.resolve_cat_battle_static_art(cat_file_id)
+	if sprite_texture != null:
+		_static_sprite = Sprite2D.new()
+		_static_sprite.texture = sprite_texture
+		_static_sprite.centered = true
+		_static_sprite.flip_h = team != "player"
+		_static_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		var visible_rect: Rect2 = _get_texture_visible_rect(sprite_texture)
+		var safe_width: float = maxf(1.0, visible_rect.size.x)
+		var safe_height: float = maxf(1.0, visible_rect.size.y)
+		var scale_ratio: float = minf(
+			SPRITE_TARGET_SIZE.x / safe_width,
+			SPRITE_TARGET_SIZE.y / safe_height
 		)
-		_animated_sprite.scale = Vector2(scale_ratio, scale_ratio)
-		var frame_center := Vector2(float(FRAME_SIZE.x) * 0.5, float(FRAME_SIZE.y) * 0.5)
-		var visible_center_x := visible_rect.position.x + visible_rect.size.x * 0.5
-		var visible_bottom_y := visible_rect.position.y + visible_rect.size.y
-		_animated_sprite.position = Vector2(
-			-(visible_center_x - frame_center.x) * scale_ratio,
-			-(visible_bottom_y - frame_center.y) * scale_ratio
+		_static_sprite.scale = Vector2(scale_ratio, scale_ratio)
+		var texture_size: Vector2 = sprite_texture.get_size()
+		var texture_center: Vector2 = texture_size * 0.5
+		var visible_center_x: float = visible_rect.position.x + visible_rect.size.x * 0.5
+		var visible_bottom_y: float = visible_rect.position.y + visible_rect.size.y
+		_static_sprite.position = Vector2(
+			-(visible_center_x - texture_center.x) * scale_ratio,
+			-(visible_bottom_y - texture_center.y) * scale_ratio - SPRITE_VERTICAL_OFFSET_Y
 		)
-		_animated_sprite.flip_h = team != "player"
-		_animated_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
-		add_child(_animated_sprite)
+		_static_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		add_child(_static_sprite)
 		return
 
 	_body_rect = ColorRect.new()
@@ -98,43 +105,15 @@ func _build_body() -> void:
 	add_child(_body_rect)
 
 
-func _build_sprite_frames() -> SpriteFrames:
-	var idle_path := AssetResolver.resolve_cat_battle_animation_path(cat_file_id, "idle")
-	if idle_path == "":
-		return null
-
-	var frames := SpriteFrames.new()
-	for animation_name: String in ["idle", "run", "collide", "knockback", "stagger", "skill", "death_fly"]:
-		var sheet_path := AssetResolver.resolve_cat_battle_animation_path(cat_file_id, animation_name)
-		var sheet := AssetResolver.load_texture(sheet_path)
-		if sheet == null:
-			continue
-		frames.add_animation(animation_name)
-		frames.set_animation_speed(animation_name, 12.0)
-		frames.set_animation_loop(animation_name, animation_name == "idle" or animation_name == "run")
-		for frame_index in range(FRAME_COUNT):
-			var atlas := AtlasTexture.new()
-			atlas.atlas = sheet
-			atlas.region = Rect2(frame_index * FRAME_SIZE.x, 0, FRAME_SIZE.x, FRAME_SIZE.y)
-			atlas.filter_clip = true
-			frames.add_frame(animation_name, atlas)
-	return frames
-
-
-func _get_visible_rect_for_alignment() -> Rect2:
-	var idle_path := AssetResolver.resolve_cat_battle_animation_path(cat_file_id, "idle")
-	var idle_sheet := AssetResolver.load_texture(idle_path)
-	if idle_sheet == null:
-		return Rect2(Vector2.ZERO, Vector2(FRAME_SIZE))
-	var image := idle_sheet.get_image()
+func _get_texture_visible_rect(texture: Texture2D) -> Rect2:
+	var texture_size: Vector2 = texture.get_size()
+	var image: Image = texture.get_image()
 	if image == null:
-		return Rect2(Vector2.ZERO, Vector2(FRAME_SIZE))
-	var frame_image := image.get_region(Rect2i(0, 0, FRAME_SIZE.x, FRAME_SIZE.y))
-	var used_rect := frame_image.get_used_rect()
+		return Rect2(Vector2.ZERO, texture_size)
+	var used_rect: Rect2i = image.get_used_rect()
 	if used_rect.size == Vector2i.ZERO:
-		return Rect2(Vector2.ZERO, Vector2(FRAME_SIZE))
-	return Rect2(used_rect.position, used_rect.size)
-
+		return Rect2(Vector2.ZERO, texture_size)
+	return Rect2(Vector2(used_rect.position), Vector2(used_rect.size))
 
 func update_hp(hp: int) -> void:
 	current_hp = maxi(0, hp)
@@ -148,7 +127,7 @@ func show_damage_number(damage: int) -> void:
 		return
 	var dmg_label := Label.new()
 	dmg_label.text = "-" + str(damage)
-	dmg_label.position = Vector2(-HP_BAR_W / 2.0, -BODY_H - 32.0)
+	dmg_label.position = Vector2(-HP_BAR_W / 2.0, -NAME_LABEL_OFFSET_Y)
 	dmg_label.size = Vector2(HP_BAR_W, 20.0)
 	dmg_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	dmg_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
@@ -217,7 +196,9 @@ func play_death() -> void:
 
 func flash_skill() -> void:
 	play_skill()
-	var target: CanvasItem = _animated_sprite if _animated_sprite != null else _body_rect
+	var target: CanvasItem = _animated_sprite if _animated_sprite != null else _static_sprite
+	if target == null:
+		target = _body_rect
 	if target == null:
 		return
 	var tween := create_tween()

@@ -19,6 +19,94 @@ const BACKGROUNDS := {
 
 const CAT_ICONS := {
 	"black_cat": UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
+	"calico_cat": UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
+	"milk_cat": UI_ROOT + "character_refs/milk_cat/milk_cat_icon_v1.png",
+	"ninja_cat": UI_ROOT + "character_refs/ninja_cat/ninja_cat_icon_v1.png",
+	"orange_cat": UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
+	"test_enemy": UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
+	"tuxedo_cat": UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
+}
+
+const CAT_SHOWCASE_TEXTURES := {
+	"black_cat": [
+		UI_ROOT + "character_refs/black_cat/black_cat_ref_right_v1.png",
+		UI_ROOT + "character_refs/black_cat/black_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
+	],
+	"calico_cat": [
+		UI_ROOT + "character_refs/calico_cat/calico_cat_ref_three_quarter_v1-Photoroom.png",
+		UI_ROOT + "character_refs/calico_cat/calico_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
+	],
+	"milk_cat": [
+		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_right_v1.png",
+		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/milk_cat/milk_cat_icon_v1.png",
+	],
+	"ninja_cat": [
+		UI_ROOT + "character_refs/ninja_cat/ninja_cat_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/ninja_cat/ninja_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/ninja_cat/ninja_cat_icon_v1.png",
+	],
+	"orange_cat": [
+		UI_ROOT + "character_refs/orange_cat/orange_cat_ref_right_v1.png",
+		UI_ROOT + "character_refs/orange_cat/orange_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
+	],
+	"test_enemy": [
+		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_right_v1.png",
+		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_front_v1.png",
+		UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
+	],
+	"tuxedo_cat": [
+		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_right_v1.png",
+		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
+	],
+}
+
+const CAT_BATTLE_STATIC_ARTS := {
+	"black_cat": [
+		UI_ROOT + "character_refs/black_cat/black_cat_ref_right_v1.png",
+		UI_ROOT + "character_refs/black_cat/black_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
+	],
+	"calico_cat": [
+		UI_ROOT + "character_refs/calico_cat/calico_cat_ref_three_quarter_v1-Photoroom.png",
+		UI_ROOT + "character_refs/calico_cat/calico_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
+	],
+	"milk_cat": [
+		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_right_v1.png",
+		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/milk_cat/milk_cat_icon_v1.png",
+	],
+	"ninja_cat": [
+		UI_ROOT + "character_refs/ninja_cat/ninja_cat_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/ninja_cat/ninja_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/ninja_cat/ninja_cat_icon_v1.png",
+	],
+	"orange_cat": [
+		UI_ROOT + "character_refs/orange_cat/orange_cat_ref_right_v1.png",
+		UI_ROOT + "character_refs/orange_cat/orange_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
+	],
+	"test_enemy": [
+		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_right_v1.png",
+		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_front_v1.png",
+		UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
+	],
+	"tuxedo_cat": [
+		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_right_v1.png",
+		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_front_v1.png",
+		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
+	],
 }
 
 const CAT_BATTLE_IDLE := {
@@ -152,6 +240,26 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 
 static func resolve_cat_icon(cat_id: String) -> Texture2D:
 	return load_texture(CAT_ICONS.get(cat_id, ""))
+
+
+static func resolve_cat_showcase_art(cat_id: String) -> Texture2D:
+	var candidates: Array = CAT_SHOWCASE_TEXTURES.get(cat_id, [])
+	for candidate_variant: Variant in candidates:
+		var candidate_path: String = str(candidate_variant)
+		var texture: Texture2D = load_texture(candidate_path)
+		if texture != null:
+			return texture
+	return resolve_cat_icon(cat_id)
+
+
+static func resolve_cat_battle_static_art(cat_id: String) -> Texture2D:
+	var candidates: Array = CAT_BATTLE_STATIC_ARTS.get(cat_id, [])
+	for candidate_variant: Variant in candidates:
+		var candidate_path: String = str(candidate_variant)
+		var texture: Texture2D = load_texture(candidate_path)
+		if texture != null:
+			return texture
+	return resolve_cat_showcase_art(cat_id)
 
 
 static func resolve_cat_battle_idle(cat_id: String) -> Texture2D:
