@@ -260,7 +260,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 		sweep_rewards,
 		REWARD_EMPTY_TEXT,
 		sweep_button,
-		"rank"
+		"confirm"
 	))
 
 	var challenge_rewards: Dictionary = _calculate_rewards(dungeon_key, local_cfg, next_floor)
@@ -278,7 +278,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 		challenge_rewards,
 		REWARD_EMPTY_TEXT,
 		challenge_button,
-		"primary"
+		"confirm"
 	))
 
 	scene._dungeon_panels[dungeon_id] = {

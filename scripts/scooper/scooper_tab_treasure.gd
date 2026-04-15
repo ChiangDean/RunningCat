@@ -25,6 +25,7 @@ func build(scene: Control) -> void:
 	var total_bonus_btn: Button = Button.new()
 	total_bonus_btn.text = UiText.SCOOPER_TREASURE_TOTAL_BONUS
 	total_bonus_btn.custom_minimum_size = Vector2(120.0, 40.0)
+	UiPalette.apply_button_kind(total_bonus_btn, "info")
 	total_bonus_btn.pressed.connect(func() -> void:
 		_show_total_bonus_dialog(scene)
 	)

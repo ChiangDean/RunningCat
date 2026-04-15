@@ -266,7 +266,9 @@ func _build(
 	panel.size = panel.custom_minimum_size
 	dialog_stack.custom_minimum_size = Vector2(panel.custom_minimum_size.x, panel.custom_minimum_size.y + hint_min.y + (10.0 if not is_confirm else 0.0))
 	call_deferred("_fit_dialog_to_content", panel, margin, vbox, dialog_stack, hint_lbl, panel_width)
-	return func() -> void: canvas.queue_free()
+	return func() -> void:
+		if is_instance_valid(canvas):
+			canvas.queue_free()
 
 
 func _fit_dialog_to_content(

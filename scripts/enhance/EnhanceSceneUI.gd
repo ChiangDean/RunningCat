@@ -360,8 +360,8 @@ static func rebuild_detail_panel(scene) -> void:
 	scene._food_max_btn.custom_minimum_size = Vector2(0.0, 46.0)
 	upgrade_row.add_child(scene._food_max_btn)
 
-	UiPalette.apply_button_kind(scene._food_upgrade_btn, "rank")
-	UiPalette.apply_button_kind(scene._food_max_btn, "rank")
+	UiPalette.apply_button_kind(scene._food_upgrade_btn, "confirm")
+	UiPalette.apply_button_kind(scene._food_max_btn, "confirm")
 
 	scene._detail_skill_tab = VBoxContainer.new()
 	scene._detail_skill_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -417,7 +417,7 @@ static func rebuild_detail_panel(scene) -> void:
 	scene._rank_upgrade_btn.custom_minimum_size = Vector2(0.0, 46.0)
 	scene._rank_upgrade_btn.pressed.connect(scene._on_rank_upgrade_pressed)
 	scene._detail_rank_tab.add_child(scene._rank_upgrade_btn)
-	UiPalette.apply_button_kind(scene._rank_upgrade_btn, "rank")
+	UiPalette.apply_button_kind(scene._rank_upgrade_btn, "confirm")
 
 	Refresh.refresh_resource_label(scene)
 	Refresh.refresh_rank_labels(scene, player_cat)
@@ -617,9 +617,7 @@ static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_
 
 
 static func _make_card_panel(accent: Color = OverlaySceneChrome.CARD_BORDER) -> PanelContainer:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.CARD_FILL, accent, 14))
-	return panel
+	return OverlaySceneChrome.make_card_panel(accent)
 
 
 static func refresh_detail_tab_state(scene) -> void:

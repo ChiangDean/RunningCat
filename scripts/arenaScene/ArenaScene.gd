@@ -171,7 +171,7 @@ func _build_ui() -> void:
 	team_help_button.custom_minimum_size = Vector2(38.0, 38.0)
 	team_help_button.pressed.connect(_show_team_panel_help)
 	season_row.add_child(team_help_button)
-	UiPalette.apply_button_kind(team_help_button, "rank")
+	UiPalette.apply_button_kind(team_help_button, "info")
 
 	var team_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
 	_arena_section.add_child(team_panel)
@@ -690,20 +690,20 @@ func _get_opponent_action_text() -> String:
 
 
 func _apply_opponent_action_style(button: Button) -> void:
-	UiPalette.apply_button_kind(button, "rank" if Helpers.get_current_tickets(_overview) <= 0 else "primary")
+	UiPalette.apply_button_kind(button, "confirm")
 
 
 func _claim_rank_reward(rank_id: int) -> void:
 	ApiClient.claim_arena_rank_reward(rank_id, func(success: bool, data: Variant, error: Dictionary) -> void:
 		if not success or not (data is Dictionary):
-			_show_dialog(UiText.ARENA_REWARD_DIALOG_TITLE, Helpers.build_error_message(error))
+			ToastManager.error(UiText.ARENA_REWARD_DIALOG_TITLE, Helpers.build_error_message(error))
 			return
 		var response: Dictionary = data
 		var overview: Dictionary = response.get("overview", {})
 		if not overview.is_empty():
 			GameState.update_arena(overview)
 			_apply_overview(overview)
-		_show_dialog(UiText.ARENA_REWARD_DIALOG_TITLE, UiText.ARENA_REWARD_CLAIMED_FORMAT % [
+		ToastManager.success(UiText.ARENA_REWARD_DIALOG_TITLE, UiText.ARENA_REWARD_CLAIMED_FORMAT % [
 			str(response.get("rankName", UiText.ARENA_REWARD_UNKNOWN_RANK)),
 			Helpers.format_rewards(response.get("rewards", []))
 		])
@@ -753,7 +753,7 @@ func _purchase_tickets_confirmed() -> void:
 
 func _on_purchase_tickets_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success or not (data is Dictionary):
-		_show_dialog(UiText.ARENA_PURCHASE_DIALOG_TITLE, Helpers.build_error_message(error))
+		ToastManager.error(UiText.ARENA_PURCHASE_DIALOG_TITLE, Helpers.build_error_message(error))
 		return
 	var response: Dictionary = data
 	var overview: Dictionary = response.get("overview", {})
@@ -763,7 +763,7 @@ func _on_purchase_tickets_completed(success: bool, data: Variant, error: Diction
 			overview["opponents"] = preserved_opponents
 		GameState.update_arena(overview)
 		_apply_overview(overview)
-	_show_dialog(UiText.ARENA_PURCHASE_DIALOG_TITLE, UiText.ARENA_PURCHASE_SUCCESS_FORMAT % int(response.get("addedTickets", 0)))
+	ToastManager.success(UiText.ARENA_PURCHASE_DIALOG_TITLE, UiText.ARENA_PURCHASE_SUCCESS_FORMAT % int(response.get("addedTickets", 0)))
 
 
 func _on_back_pressed() -> void:
