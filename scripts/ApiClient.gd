@@ -4,6 +4,7 @@ const POOL_SIZE := 3
 const REQUEST_TIMEOUT := 15.0
 const LOADING_LAYER := 90
 const DEFAULT_LOADING_MESSAGE := "loading."
+const NGROK_SKIP_WARNING_HEADER := "ngrok-skip-browser-warning: true"
 
 var _pool: Array[HTTPRequest] = []
 var _busy: Array[bool] = []
@@ -366,10 +367,7 @@ func _dispatch(slot: int, entry: Dictionary) -> void:
 
 	var url := "%s/%s" % [GameState.api_base_url, entry["path"]]
 	var method: int = entry["method"]
-	var headers := PackedStringArray([
-		"Accept: application/json",
-		"Authorization: Bearer %s" % GameState.get_access_token(),
-	])
+	var headers := _build_request_headers(GameState.get_access_token())
 
 	var has_body := method == HTTPClient.METHOD_POST \
 			or method == HTTPClient.METHOD_PUT \
@@ -450,15 +448,24 @@ func _begin_refresh_and_retry(original_entry: Dictionary) -> void:
 	http.request_completed.connect(_on_refresh_completed.bind(http))
 
 	var url := "%s/auth/refresh" % GameState.api_base_url
-	var headers := PackedStringArray([
-		"Content-Type: application/json",
-		"Accept: application/json",
-	])
+	var headers := _build_request_headers("", true)
 	var body_text := JSON.stringify({"refreshToken": GameState.get_refresh_token()})
 	var error := http.request(url, headers, HTTPClient.METHOD_POST, body_text)
 	if error != OK:
 		_on_refresh_failed()
 		http.queue_free()
+
+
+func _build_request_headers(access_token: String = "", include_json_content_type: bool = false) -> PackedStringArray:
+	var headers := PackedStringArray([
+		"Accept: application/json",
+		NGROK_SKIP_WARNING_HEADER,
+	])
+	if include_json_content_type:
+		headers.append("Content-Type: application/json")
+	if access_token != "":
+		headers.append("Authorization: Bearer %s" % access_token)
+	return headers
 
 
 func _on_refresh_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, http: HTTPRequest) -> void:
