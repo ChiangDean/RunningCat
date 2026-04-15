@@ -242,7 +242,7 @@ static func rebuild_detail_panel(scene) -> void:
 	left_column.add_theme_constant_override("separation", 8)
 	summary_row.add_child(left_column)
 
-	var cat_icon := AssetResolver.resolve_cat_icon(scene._selected_cat_id)
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(scene._selected_cat_id)
 	var icon_shell := PanelContainer.new()
 	icon_shell.custom_minimum_size = Vector2(152.0, 152.0)
 	icon_shell.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(ART_FILL, ART_BORDER, 14))
@@ -583,7 +583,7 @@ static func on_detail_dialog_closed(scene) -> void:
 
 
 static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_selected: bool) -> PanelContainer:
-	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_id)
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(cat_id)
 	var select_button_bg: Color = Color(0.27, 0.29, 0.21, 0.96) if is_selected else UiPalette.BUTTON_PRIMARY_BG
 	var select_button_fg: Color = Color(0.88, 0.90, 0.74, 1.0) if is_selected else Color(0.16, 0.11, 0.05, 1.0)
 	return CatRosterCard.build({

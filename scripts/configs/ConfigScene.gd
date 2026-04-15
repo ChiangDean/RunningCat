@@ -390,7 +390,7 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_margin.add_child(icon_holder)
 
-	var team_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_file_id)
+	var team_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(cat_file_id)
 	if team_icon != null:
 		icon_holder.add_child(AssetResolver.create_icon_rect(team_icon, Vector2(72.0, 72.0)))
 	elif is_filled:
@@ -498,7 +498,7 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 	var action_disabled: bool = (not already_in and team_full) or _api_in_flight
 
 	var local_cat_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id)
-	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(local_cat_id)
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(local_cat_id)
 	var hold_timer: Timer = Timer.new()
 	hold_timer.one_shot = true
 	hold_timer.wait_time = CAT_CARD_HOLD_SECONDS
