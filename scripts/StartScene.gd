@@ -14,6 +14,7 @@ const BOOTSTRAP_MAX_RETRY_COUNT := 2
 const BOOTSTRAP_RETRY_DELAY_SECONDS := 5.0
 const BOOTSTRAP_PROGRESS_MAX_PERCENT := 96.0
 const BOOTSTRAP_PROGRESS_DURATION_SECONDS := 12.0
+const NGROK_SKIP_WARNING_HEADER := "ngrok-skip-browser-warning: true"
 const REQUEST_KIND_AUTH := "auth"
 const REQUEST_KIND_BOOTSTRAP := "bootstrap"
 const REQUEST_KIND_REFRESH := "refresh"
@@ -461,10 +462,7 @@ func _submit_login() -> void:
 	_set_status(UiText.START_STATUS_CONNECTING_SERVER, false)
 	_retain_network_loading_overlay(UiText.START_STATUS_CONNECTING_SERVER)
 
-	var headers := PackedStringArray([
-		"Content-Type: application/json",
-		"Accept: application/json"
-	])
+	var headers := _build_request_headers("", true)
 	var body := JSON.stringify({
 		"account": account,
 		"password": password,
@@ -505,10 +503,7 @@ func _submit_register() -> void:
 	_set_status(UiText.START_STATUS_CONNECTING_SERVER, false)
 	_retain_network_loading_overlay(UiText.START_STATUS_CONNECTING_SERVER)
 
-	var headers := PackedStringArray([
-		"Content-Type: application/json",
-		"Accept: application/json"
-	])
+	var headers := _build_request_headers("", true)
 	var body := JSON.stringify({
 		"displayName": display_name,
 		"account": account,
@@ -688,10 +683,7 @@ func _begin_authenticated_bootstrap(status_message: String, reset_retry_count: b
 	_set_status(status_message, false)
 	_set_loading_message(status_message)
 
-	var headers := PackedStringArray([
-		"Accept: application/json",
-		"Authorization: Bearer %s" % access_token
-	])
+	var headers := _build_request_headers(access_token)
 	var error := _http_request.request("%s/auth/bootstrap" % _api_base_url, headers, HTTPClient.METHOD_GET)
 	if error != OK:
 		_request_in_flight = false
@@ -718,10 +710,7 @@ func _begin_refresh_then_bootstrap() -> void:
 	_retain_network_loading_overlay(UiText.START_STATUS_BOOTSTRAP_SYNC)
 	_set_status(UiText.START_STATUS_REFRESHING_SESSION, false)
 
-	var headers := PackedStringArray([
-		"Content-Type: application/json",
-		"Accept: application/json"
-	])
+	var headers := _build_request_headers("", true)
 	var body := JSON.stringify({
 		"refreshToken": refresh_token
 	})
@@ -963,11 +952,7 @@ func _begin_logout_revoke() -> void:
 	_set_logout_button_state(false, UiText.START_LOGOUT_BUTTON_WORKING)
 	_set_status(UiText.START_STATUS_LOGGING_OUT, false)
 
-	var headers := PackedStringArray([
-		"Content-Type: application/json",
-		"Accept: application/json",
-		"Authorization: Bearer %s" % access_token
-	])
+	var headers := _build_request_headers(access_token, true)
 	var body := JSON.stringify({
 		"refreshToken": refresh_token,
 		"reason": UiText.START_LOGOUT_REASON
@@ -993,10 +978,7 @@ func _begin_logout_refresh() -> void:
 	_set_logout_button_state(false, UiText.START_REFRESH_BUTTON_WORKING)
 	_set_status(UiText.START_STATUS_LOGOUT_REFRESHING, false)
 
-	var headers := PackedStringArray([
-		"Content-Type: application/json",
-		"Accept: application/json"
-	])
+	var headers := _build_request_headers("", true)
 	var body := JSON.stringify({
 		"refreshToken": refresh_token
 	})
@@ -1042,6 +1024,18 @@ func _finalize_logout() -> void:
 	_confirm_password_input.text = ""
 	_display_name_input.text = ""
 	_set_status(UiText.START_STATUS_LOGOUT_SUCCESS, false)
+
+
+func _build_request_headers(access_token: String = "", include_json_content_type: bool = false) -> PackedStringArray:
+	var headers := PackedStringArray([
+		"Accept: application/json",
+		NGROK_SKIP_WARNING_HEADER
+	])
+	if include_json_content_type:
+		headers.append("Content-Type: application/json")
+	if access_token != "":
+		headers.append("Authorization: Bearer %s" % access_token)
+	return headers
 
 func _resolve_api_base_url() -> String:
 	var config := _load_runtime_config()
