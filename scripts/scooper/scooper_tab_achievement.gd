@@ -97,6 +97,7 @@ func _add_achievement_section(scene: Control, title_text: String, entries: Array
 		claim_all_btn.text = UiText.SCOOPER_ACHIEVEMENT_CLAIM_ALL
 		claim_all_btn.custom_minimum_size = Vector2(120.0, 40.0)
 		claim_all_btn.disabled = bool(scene._api_in_flight)
+		UiPalette.apply_button_kind(claim_all_btn, "confirm")
 		claim_all_btn.pressed.connect(func() -> void:
 			_claim_all_achievements(scene)
 		)
@@ -203,15 +204,18 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 	if is_completed and not is_claimed:
 		action_btn.text = UiText.SCOOPER_ACHIEVEMENT_ACTION_CLAIM
 		action_btn.disabled = bool(scene._api_in_flight)
+		UiPalette.apply_button_kind(action_btn, "confirm")
 		action_btn.pressed.connect(func() -> void:
 			_claim_achievement(scene, achievement_id)
 		)
 	elif is_claimed:
 		action_btn.text = UiText.SCOOPER_ACHIEVEMENT_ACTION_CLAIMED
 		action_btn.disabled = true
+		UiPalette.apply_button_kind(action_btn, "neutral")
 	else:
 		action_btn.text = UiText.SCOOPER_ACHIEVEMENT_ACTION_PENDING
 		action_btn.disabled = true
+		UiPalette.apply_button_kind(action_btn, "neutral")
 
 	return panel
 

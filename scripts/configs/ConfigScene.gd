@@ -5,7 +5,6 @@ const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
 
-const ACTION_BUTTON_COLOR := Color(0.94, 0.77, 0.39, 1.0)
 const DANGER_BUTTON_COLOR := Color(0.94, 0.48, 0.42, 1.0)
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
 const DISABLED_TEXT_COLOR := Color(0.70, 0.70, 0.72, 0.92)
@@ -86,7 +85,7 @@ func _build_ui() -> void:
 	main_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_vbox.add_child(main_split)
 
-	var team_panel: PanelContainer = _make_card_panel()
+	var team_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
 	team_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	team_panel.size_flags_vertical = 0
 	main_split.add_child(team_panel)
@@ -118,10 +117,10 @@ func _build_ui() -> void:
 	_save_team_btn.custom_minimum_size = Vector2(0.0, 52.0)
 	_save_team_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	_save_team_btn.pressed.connect(_on_save_team_pressed)
-	UiPalette.apply_button_palette(_save_team_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
+	UiPalette.apply_button_kind(_save_team_btn, "confirm")
 	team_vbox.add_child(_save_team_btn)
 
-	var cats_panel: PanelContainer = _make_card_panel()
+	var cats_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
 	cats_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cats_panel.size_flags_stretch_ratio = 1.05
@@ -326,7 +325,7 @@ func _refresh_team() -> void:
 
 func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer:
 	var is_filled: bool = not member.is_empty()
-	var card: PanelContainer = _make_card_panel(OverlaySceneChrome.PANEL_BORDER if is_filled else SLOT_EMPTY_BORDER)
+	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER if is_filled else SLOT_EMPTY_BORDER)
 	card.custom_minimum_size = Vector2(0.0, 166.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(4)
@@ -744,7 +743,7 @@ func _update_save_section() -> void:
 	var dirty: bool = _is_current_team_dirty()
 	_save_team_btn.disabled = _api_in_flight or not dirty
 	if dirty and not _api_in_flight:
-		UiPalette.apply_button_palette(_save_team_btn, ACTION_BUTTON_COLOR, Color(0.16, 0.11, 0.05, 1.0))
+		UiPalette.apply_button_kind(_save_team_btn, "confirm")
 	else:
 		UiPalette.apply_button_palette(_save_team_btn, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
 
@@ -771,7 +770,7 @@ func _on_save_team_pressed() -> void:
 	ApiClient.replace_team(_current_team_type, request_members, func(success: bool, data: Variant, error: Dictionary) -> void:
 		_api_in_flight = false
 		if not success:
-			DialogManager.show_info(UiText.CONFIG_SAVE_FAILED_TITLE, UiText.CONFIG_SAVE_FAILED_BODY_FORMAT % error.get("message", UiText.CONFIG_UNKNOWN_ERROR))
+			ToastManager.error(UiText.CONFIG_SAVE_FAILED_TITLE, str(error.get("message", UiText.CONFIG_UNKNOWN_ERROR)))
 			_refresh_team()
 			_refresh_cats_list()
 			return
@@ -786,6 +785,7 @@ func _on_save_team_pressed() -> void:
 
 		_refresh_team()
 		_refresh_cats_list()
+		ToastManager.success(UiText.CONFIG_SAVE_HINT_CLEAN)
 	)
 
 
@@ -842,12 +842,6 @@ func _show_skill_popup(cat_file_id: String) -> void:
 
 func _make_separator() -> HSeparator:
 	return HSeparator.new()
-
-
-func _make_card_panel(accent: Color = OverlaySceneChrome.CARD_BORDER) -> PanelContainer:
-	var panel: PanelContainer = PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.CARD_FILL, accent, 14))
-	return panel
 
 
 func _make_chip_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:

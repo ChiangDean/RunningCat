@@ -2,6 +2,7 @@ class_name CatRosterCard
 extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 
 
@@ -30,7 +31,7 @@ static func build(options: Dictionary) -> PanelContainer:
 	card.custom_minimum_size = Vector2(0.0, card_height)
 	card.add_theme_stylebox_override(
 		"panel",
-		_make_panel_style(
+		OverlaySceneChrome.make_panel_style(
 			selected_card_fill if is_selected else card_fill,
 			selected_card_border if is_selected else card_border,
 			int(options.get("card_radius", 14))
@@ -48,7 +49,7 @@ static func build(options: Dictionary) -> PanelContainer:
 	art_panel.custom_minimum_size = Vector2(0.0, float(options.get("art_height", 112.0)))
 	art_panel.add_theme_stylebox_override(
 		"panel",
-		_make_panel_style(
+		OverlaySceneChrome.make_panel_style(
 			selected_art_fill if is_selected else art_fill,
 			selected_art_border if is_selected else art_border,
 			int(options.get("art_radius", 12))
@@ -159,7 +160,7 @@ static func _make_meta_chip(text: String, is_selected: bool, options: Dictionary
 	chip.custom_minimum_size = Vector2(float(options.get("chip_min_width", 75.0)), 0.0)
 	chip.add_theme_stylebox_override(
 		"panel",
-		_make_panel_style(
+		OverlaySceneChrome.make_panel_style(
 			selected_chip_fill if is_selected else chip_fill,
 			selected_chip_border if is_selected else chip_border,
 			int(options.get("chip_radius", 12))
@@ -187,18 +188,3 @@ static func _make_content_margin(value: int) -> MarginContainer:
 	margin.add_theme_constant_override("margin_right", value)
 	margin.add_theme_constant_override("margin_bottom", value)
 	return margin
-
-
-static func _make_panel_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.border_color = border
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
-	return style

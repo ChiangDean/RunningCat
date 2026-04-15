@@ -16,7 +16,7 @@ static func on_dungeon_overview_completed(scene, success: bool, data: Variant, e
 		return
 
 	var message: String = str(error.get("message", UiText.DUNGEON_FETCH_FAILED_DEFAULT))
-	DialogManager.show_info(UiText.DUNGEON_FETCH_FAILED_TITLE, message)
+	ToastManager.error(UiText.DUNGEON_FETCH_FAILED_TITLE, message)
 	scene._rebuild_dungeon_panels()
 
 
@@ -38,7 +38,7 @@ static func on_dungeon_action_completed(scene, success: bool, data: Variant, err
 		return
 
 	var message: String = str(error.get("message", UiText.DUNGEON_ACTION_FAILED_DEFAULT))
-	DialogManager.show_info(UiText.DUNGEON_ACTION_FAILED_TITLE, message)
+	ToastManager.error(UiText.DUNGEON_ACTION_FAILED_TITLE, message)
 	scene._rebuild_dungeon_panels()
 
 
@@ -106,7 +106,7 @@ static func on_challenge_pressed(scene, dungeon_id: int) -> void:
 static func _prompt_ad_ticket(scene, dungeon: Dictionary) -> void:
 	var ad_count: int = int(dungeon.get("remainingAdTicketCount", 0))
 	if ad_count <= 0:
-		DialogManager.show_info(UiText.DUNGEON_ACTION_FAILED_TITLE, "\u4eca\u65e5\u88dc\u7968\u6b21\u6578\u5df2\u7528\u5b8c\u3002")
+		ToastManager.error(UiText.DUNGEON_ACTION_FAILED_TITLE, "\u4eca\u65e5\u88dc\u7968\u6b21\u6578\u5df2\u7528\u5b8c\u3002")
 		return
 
 	var on_confirm: Callable = func() -> void:
@@ -119,7 +119,7 @@ static func _prompt_ad_ticket(scene, dungeon: Dictionary) -> void:
 				scene._rebuild_dungeon_panels()
 				return
 			var message: String = str(error.get("message", UiText.DUNGEON_ACTION_FAILED_DEFAULT))
-			DialogManager.show_info(UiText.DUNGEON_ACTION_FAILED_TITLE, message)
+			ToastManager.error(UiText.DUNGEON_ACTION_FAILED_TITLE, message)
 			scene._rebuild_dungeon_panels()
 		)
 

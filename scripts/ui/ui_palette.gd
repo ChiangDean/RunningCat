@@ -1,8 +1,11 @@
 class_name UiPalette
 extends RefCounted
 
-const BUTTON_PRIMARY_BG := Color(0.94, 0.77, 0.39, 1.0)
-const BUTTON_PRIMARY_FG := Color(0.16, 0.11, 0.05, 1.0)
+const BUTTON_PRIMARY_BG := Color(0.80, 0.70, 0.43, 0.98)
+const BUTTON_PRIMARY_FG := Color(0.22, 0.17, 0.10, 1.0)
+const BUTTON_DISABLED_BG := Color(0.28, 0.26, 0.24, 0.84)
+const BUTTON_DISABLED_BORDER := Color(0.41, 0.38, 0.35, 0.92)
+const BUTTON_DISABLED_FG := Color(0.67, 0.64, 0.60, 0.92)
 const BUTTON_SECONDARY_BG := Color(0.63, 0.46, 0.20, 0.96)
 const BUTTON_SECONDARY_FG := Color(0.98, 0.95, 0.88, 1.0)
 const BUTTON_RANK_BG := Color(0.30, 0.22, 0.10, 0.96)
@@ -104,15 +107,16 @@ static func apply_button_palette(button: Button, bg: Color, fg: Color) -> void:
 	pressed.bg_color = bg.darkened(0.08)
 
 	var disabled: StyleBoxFlat = normal.duplicate()
-	disabled.bg_color = bg.darkened(0.18)
-	disabled.border_color = bg.lightened(0.04)
+	disabled.bg_color = BUTTON_DISABLED_BG
+	disabled.border_color = BUTTON_DISABLED_BORDER
+	disabled.shadow_color = Color(0.0, 0.0, 0.0, 0.0)
 
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_stylebox_override("pressed", pressed)
 	button.add_theme_stylebox_override("disabled", disabled)
 	button.add_theme_color_override("font_color", fg)
-	button.add_theme_color_override("font_disabled_color", fg.darkened(0.25))
+	button.add_theme_color_override("font_disabled_color", BUTTON_DISABLED_FG)
 
 
 static func style_rank_progress_bar(bar: ProgressBar) -> void:

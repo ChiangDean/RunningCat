@@ -146,6 +146,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	var action_btn: Button = Button.new()
 	action_btn.custom_minimum_size = Vector2(190.0, 42.0)
 	action_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiPalette.apply_button_kind(action_btn, "confirm")
 	card.add_child(action_btn)
 
 	if unlocked:

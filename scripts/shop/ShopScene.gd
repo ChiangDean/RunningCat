@@ -110,7 +110,7 @@ func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
 			_refresh_content()
 			return
 		if show_error_dialog:
-			DialogManager.show_info(UiText.SHOP_LOAD_FAILED_TITLE, str(error.get("message", UiText.SHOP_LOAD_FAILED_BODY)))
+			ToastManager.error(UiText.SHOP_LOAD_FAILED_TITLE, str(error.get("message", UiText.SHOP_LOAD_FAILED_BODY)))
 	)
 
 
@@ -333,9 +333,9 @@ func _build_bundle_detail_card(bundle: Dictionary) -> Control:
 	action_button.text = _build_bundle_button_text(bundle)
 	if bool(bundle.get("isSoldOut", false)):
 		action_button.disabled = true
-		UiPalette.apply_button_palette(action_button, Color(0.23, 0.18, 0.18, 0.96), Color(0.82, 0.74, 0.70, 0.9))
+		UiPalette.apply_button_kind(action_button, "neutral")
 	else:
-		UiPalette.apply_button_kind(action_button, "primary")
+		UiPalette.apply_button_kind(action_button, "confirm")
 		action_button.pressed.connect(func() -> void:
 			_confirm_bundle_purchase(bundle)
 		)
@@ -466,7 +466,7 @@ func _build_arena_ticket_card() -> Control:
 		UiPalette.apply_button_kind(button, "primary")
 	else:
 		button.disabled = true
-		UiPalette.apply_button_palette(button, Color(0.23, 0.18, 0.18, 0.96), Color(0.82, 0.74, 0.70, 0.9))
+		UiPalette.apply_button_kind(button, "neutral")
 	action_row.add_child(button)
 
 	return panel
@@ -583,10 +583,14 @@ func _open_quantity_keypad(anchor: Control, initial_value: int, on_submit: Calla
 	grid.add_theme_constant_override("v_separation", 8)
 	content.add_child(grid)
 
-	var state := {"buffer": str(initial_value)}
+	var state := {"buffer": "" if initial_value <= 0 else str(initial_value)}
 	var close_dialog: Callable = Callable()
+	var ok_button: Button = null
 	var refresh_display := func() -> void:
 		display.text = state["buffer"] if str(state["buffer"]) != "" else "0"
+		var has_value: bool = str(state["buffer"]) != "" and int(str(state["buffer"])) > 0
+		if ok_button != null:
+			ok_button.disabled = not has_value
 
 	for key_label: String in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "OK"]:
 		var button: Button = Button.new()
@@ -595,14 +599,21 @@ func _open_quantity_keypad(anchor: Control, initial_value: int, on_submit: Calla
 		button.custom_minimum_size = Vector2(0.0, 52.0)
 		button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		if key_label == "OK":
+			ok_button = button
 			UiPalette.apply_button_kind(button, "primary")
+			button.disabled = true
+		elif key_label == "C":
+			UiPalette.apply_button_kind(button, "neutral")
 		grid.add_child(button)
 		button.pressed.connect(func() -> void:
 			match key_label:
 				"C":
 					state["buffer"] = ""
 				"OK":
-					var value: int = maxi(1, int(str(state["buffer"]) if str(state["buffer"]) != "" else "0"))
+					if str(state["buffer"]) == "" or int(str(state["buffer"])) <= 0:
+						refresh_display.call()
+						return
+					var value: int = int(str(state["buffer"]))
 					if on_submit.is_valid():
 						on_submit.call(value)
 					if close_dialog.is_valid():
@@ -634,10 +645,10 @@ func _open_quantity_keypad(anchor: Control, initial_value: int, on_submit: Calla
 func _purchase_trap_cages(quantity: int) -> void:
 	_api_client.purchase_trap_cages(quantity, func(success: bool, _data: Variant, error: Dictionary) -> void:
 		if not success:
-			DialogManager.show_info(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_TRAP_CAGE_PURCHASE_FAILED_BODY)))
+			ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_TRAP_CAGE_PURCHASE_FAILED_BODY)))
 			return
 		refresh_from_bootstrap(false)
-		DialogManager.show_info(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_TRAP_CAGE_PURCHASE_SUCCESS_BODY)
+		ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_TRAP_CAGE_PURCHASE_SUCCESS_BODY)
 	)
 
 
@@ -657,14 +668,14 @@ func _confirm_collision_coin_purchase(item: Dictionary) -> void:
 func _purchase_collision_coin(amount: int) -> void:
 	_api_client.purchase_trap_points(amount, func(success: bool, data: Variant, error: Dictionary) -> void:
 		if not success:
-			DialogManager.show_info(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_COLLISION_COIN_PURCHASE_FAILED_BODY)))
+			ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_COLLISION_COIN_PURCHASE_FAILED_BODY)))
 			return
 		var payload: Dictionary = data if data is Dictionary else {}
 		var overview: Dictionary = payload.get("overview", {})
 		if not overview.is_empty():
 			GameState.update_shop(overview)
 		_refresh_content()
-		DialogManager.show_info(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_COLLISION_COIN_PURCHASE_SUCCESS_BODY % amount)
+		ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_COLLISION_COIN_PURCHASE_SUCCESS_BODY % amount)
 	)
 
 
@@ -695,7 +706,7 @@ func _open_trap_cage_keypad_dialog() -> void:
 		return
 	_trap_cage_keypad_close = _open_quantity_keypad(
 		_trap_cage_quantity_button,
-		_trap_cage_quantity,
+		0,
 		Callable(self, "_set_trap_cage_quantity")
 	)
 
@@ -737,7 +748,7 @@ func _on_trap_cage_quantity_dialog_closed() -> void:
 func _purchase_arena_tickets() -> void:
 	_api_client.purchase_arena_tickets(func(success: bool, data: Variant, error: Dictionary) -> void:
 		if not success:
-			DialogManager.show_info(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_ARENA_TICKET_PURCHASE_FAILED_BODY)))
+			ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_ARENA_TICKET_PURCHASE_FAILED_BODY)))
 			return
 		if data is Dictionary:
 			var response: Dictionary = data
@@ -745,6 +756,7 @@ func _purchase_arena_tickets() -> void:
 			if not overview.is_empty():
 				GameState.update_arena(overview)
 		refresh_from_bootstrap(false)
+		ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_ARENA_TICKET_TITLE)
 	)
 
 
@@ -773,7 +785,7 @@ func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictiona
 			)
 			return
 		_pending_bundle_purchase.clear()
-		DialogManager.show_info(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_BUNDLE_PURCHASE_FAILED_BODY)))
+		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_BUNDLE_PURCHASE_FAILED_BODY)))
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
 	_pending_bundle_purchase.clear()
@@ -791,7 +803,7 @@ func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictiona
 				])
 	if reward_lines.is_empty():
 		reward_lines.append(UiText.SHOP_REWARD_SENT)
-	DialogManager.show_info(UiText.SHOP_PURCHASE_SUCCESS_TITLE, "\n".join(reward_lines))
+	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, " / ".join(reward_lines))
 
 
 func _should_redirect_to_collision_coin_store(error: Dictionary) -> bool:

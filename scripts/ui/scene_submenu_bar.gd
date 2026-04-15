@@ -2,6 +2,7 @@ class_name SceneSubmenuBar
 extends RefCounted
 
 const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
+const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 
 static func build(host: Control, options: Dictionary) -> Dictionary:
 	var button_map: Dictionary = {}
@@ -28,7 +29,7 @@ static func build(host: Control, options: Dictionary) -> Dictionary:
 	back_panel.offset_top = float(options.get("top", -222.0))
 	back_panel.offset_right = back_right
 	back_panel.offset_bottom = float(options.get("bottom", -110.0))
-	back_panel.add_theme_stylebox_override("panel", _make_panel_style(panel_fill, panel_border, 16))
+	back_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(panel_fill, panel_border, 16))
 	host.add_child(back_panel)
 
 	var back_margin := _make_content_margin(int(options.get("margin", 12)))
@@ -52,7 +53,7 @@ static func build(host: Control, options: Dictionary) -> Dictionary:
 	dock_panel.offset_top = float(options.get("top", -222.0))
 	dock_panel.offset_right = right
 	dock_panel.offset_bottom = float(options.get("bottom", -110.0))
-	dock_panel.add_theme_stylebox_override("panel", _make_panel_style(panel_fill, panel_border, 16))
+	dock_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(panel_fill, panel_border, 16))
 	host.add_child(dock_panel)
 
 	var dock_margin := _make_content_margin(int(options.get("margin", 12)))
@@ -110,18 +111,3 @@ static func _make_content_margin(value: int) -> MarginContainer:
 	margin.add_theme_constant_override("margin_right", value)
 	margin.add_theme_constant_override("margin_bottom", value)
 	return margin
-
-
-static func _make_panel_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.border_color = border
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
-	return style

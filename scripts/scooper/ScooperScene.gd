@@ -298,9 +298,8 @@ func _show_loading_in(container: VBoxContainer) -> void:
 
 
 func _make_card_panel(accent: Color = OverlaySceneChrome.CARD_BORDER) -> PanelContainer:
-	var panel: PanelContainer = PanelContainer.new()
+	var panel: PanelContainer = OverlaySceneChrome.make_card_panel(accent)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.CARD_FILL, accent, 14))
 	return panel
 
 

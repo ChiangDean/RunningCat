@@ -78,7 +78,7 @@ func _build_ui() -> void:
 	_free_button.pressed.connect(func() -> void:
 		_request_pull(1, true)
 	)
-	UiPalette.apply_button_kind(_free_button, "rank")
+	UiPalette.apply_button_kind(_free_button, "confirm")
 	pull_box.add_child(_free_button)
 
 	var hint: Label = Label.new()
@@ -133,7 +133,7 @@ func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
 			_refresh_view()
 			return
 		if show_error_dialog:
-			DialogManager.show_info(UiText.GACHA_LOAD_FAILED_TITLE, str(error.get("message", UiText.GACHA_LOAD_FAILED_BODY)))
+			ToastManager.error(UiText.GACHA_LOAD_FAILED_TITLE, str(error.get("message", UiText.GACHA_LOAD_FAILED_BODY)))
 	)
 
 
@@ -377,7 +377,7 @@ func _on_pull_button_pressed(pull_count: int) -> void:
 
 func _on_pull_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success:
-		DialogManager.show_info(UiText.GACHA_PULL_FAILED_TITLE, str(error.get("message", UiText.GACHA_PULL_FAILED_BODY)))
+		ToastManager.error(UiText.GACHA_PULL_FAILED_TITLE, str(error.get("message", UiText.GACHA_PULL_FAILED_BODY)))
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
 	var results_variant: Variant = payload.get("results", [])

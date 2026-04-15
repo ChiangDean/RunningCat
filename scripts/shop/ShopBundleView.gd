@@ -156,8 +156,10 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 	if bool(bundle.get("isSoldOut", false)):
 		button.text = "\u5df2\u552e\u5b8c"
 		button.disabled = true
+		UiPalette.apply_button_kind(button, "neutral")
 	else:
 		button.text = "\u8cfc\u8cb7"
+		UiPalette.apply_button_kind(button, "confirm")
 		button.pressed.connect(_confirm_purchase.bind(
 			int(bundle.get("bundleId", 0)),
 			str(bundle.get("displayName", "\u5546\u57ce\u79ae\u5305")),
@@ -182,7 +184,7 @@ func _on_category_selected(category_id: String) -> void:
 
 func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success:
-		DialogManager.show_info("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u79ae\u5305\u5931\u6557\u3002"))
+		ToastManager.error("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u79ae\u5305\u5931\u6557\u3002"))
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
 	emit_signal("request_refresh")
@@ -203,7 +205,7 @@ func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> 
 				])
 	if reward_lines.is_empty():
 		reward_lines.append("\u734e\u52f5\u5df2\u767c\u9001\u5b8c\u6210\u3002")
-	DialogManager.show_info("\u8cfc\u8cb7\u6210\u529f", "\n".join(reward_lines))
+	ToastManager.success("\u8cfc\u8cb7\u6210\u529f", " / ".join(reward_lines))
 
 
 func _build_limit_text(bundle: Dictionary) -> String:

@@ -1256,7 +1256,7 @@ func _show_sandbox_dialog() -> void:
 			ApiClient.claim_idle_rewards(func(ok: bool, data: Variant, err: Dictionary) -> void:
 				claim_btn.disabled = false
 				if not ok:
-					DialogManager.show_info(UiText.HOME_CLAIM_FAILED_TITLE, str(err.get("message", UiText.HOME_CLAIM_FAILED_MESSAGE)))
+					ToastManager.error(UiText.HOME_CLAIM_FAILED_TITLE, str(err.get("message", UiText.HOME_CLAIM_FAILED_MESSAGE)))
 					return
 
 				var response: Dictionary = data if data is Dictionary else {}

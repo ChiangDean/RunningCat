@@ -82,6 +82,7 @@ func _build_offer_card(offer: Dictionary) -> Control:
 	var button := Button.new()
 	button.text = "\u8cfc\u8cb7"
 	button.custom_minimum_size = Vector2(140.0, 48.0)
+	UiPalette.apply_button_kind(button, "confirm")
 	button.pressed.connect(_confirm_purchase.bind(count, cost))
 	row.add_child(button)
 
@@ -97,7 +98,7 @@ func _confirm_purchase(count: int, cost: int) -> void:
 
 func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success:
-		DialogManager.show_info("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u8a98\u6355\u7c60\u5931\u6557\u3002"))
+		ToastManager.error("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u8a98\u6355\u7c60\u5931\u6557\u3002"))
 		return
 	emit_signal("request_refresh")
 	var owner := get_parent()
@@ -105,7 +106,7 @@ func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> 
 		var scene := owner.get_parent()
 		if scene != null and scene.has_method("refresh_from_bootstrap"):
 			scene.refresh_from_bootstrap(false)
-	DialogManager.show_info("\u8cfc\u8cb7\u6210\u529f", "\u5df2\u6210\u529f\u8cfc\u8cb7\u8a98\u6355\u7c60\u3002")
+	ToastManager.success("\u8cfc\u8cb7\u6210\u529f", "\u5df2\u6210\u529f\u8cfc\u8cb7\u8a98\u6355\u7c60\u3002")
 
 
 func _extract_error_message(error: Dictionary, fallback: String) -> String:

@@ -49,7 +49,7 @@ static func on_enhance_action_completed(
 		return
 
 	var message := str(error.get("message", UiText.ENHANCE_ACTION_FAILED_DEFAULT))
-	DialogManager.show_info(UiText.ENHANCE_ACTION_FAILED_TITLE, message)
+	ToastManager.error(UiText.ENHANCE_ACTION_FAILED_TITLE, message)
 	scene._refresh_all_labels()
 
 
@@ -152,7 +152,7 @@ static func _run_special_point_operations(scene, player_cat_id: int, operations:
 			scene._action_inflight = false
 			scene._set_loading_overlay(false)
 			var message := str(error.get("message", UiText.ENHANCE_ACTION_FAILED_DEFAULT))
-			DialogManager.show_info(UiText.ENHANCE_ACTION_FAILED_TITLE, message)
+			ToastManager.error(UiText.ENHANCE_ACTION_FAILED_TITLE, message)
 			scene._refresh_all_labels()
 			return
 		var next_last_data: Dictionary = data if data is Dictionary else last_data
