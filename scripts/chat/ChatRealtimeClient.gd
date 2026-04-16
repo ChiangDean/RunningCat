@@ -31,7 +31,7 @@ func _process(_delta: float) -> void:
 			_send_json({
 				"action": "connect",
 				"token": GameState.chat_token,
-				"resume": GameState.chat_last_received_seq_by_channel,
+				"resume": _build_resume_payload(),
 			})
 			_handshake_sent = true
 			GameState.set_chat_connection_state("connecting")
@@ -120,13 +120,27 @@ func _handle_payload(packet: String) -> void:
 			_reconnect_attempts = 0
 			GameState.set_chat_connection_state("connected")
 		"chat.message.received", "chat.message.replay":
-			var channel_key := str(data.get("channelKey", data.get("channel", "world"))).to_lower()
+			var channel_key := _resolve_client_channel(str(data.get("channelKey", data.get("channel", "world"))).to_lower())
 			var message_variant: Variant = data.get("message", {})
 			if message_variant is Dictionary:
 				GameState.append_chat_message_envelope(channel_key, int(data.get("sequence", 0)), message_variant)
 		"chat.unread.sync":
-			GameState.set_chat_unread_count(str(data.get("channelKey", "")).to_lower(), int(data.get("unreadCount", 0)))
+			GameState.set_chat_unread_count(_resolve_client_channel(str(data.get("channelKey", "")).to_lower()), int(data.get("unreadCount", 0)))
 		"chat.pong":
 			pass
 		"chat.error":
 			GameState.set_chat_connection_state("reconnecting")
+
+
+func _build_resume_payload() -> Dictionary:
+	var payload := GameState.chat_last_received_seq_by_channel.duplicate(true)
+	if GameState.chat_party_channel_key != "":
+		payload[GameState.chat_party_channel_key] = int(payload.get("party", 0))
+		payload.erase("party")
+	return payload
+
+
+func _resolve_client_channel(channel_key: String) -> String:
+	if GameState.chat_party_channel_key != "" and channel_key == GameState.chat_party_channel_key.to_lower():
+		return "party"
+	return channel_key

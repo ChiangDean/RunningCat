@@ -23,6 +23,7 @@ var current_stage: int = 1
 
 var last_quit_time: int = 0
 var poop_count: int = 0
+var party_cheer_coupon_count: int = 0
 
 var memory_shards: int = 0
 var unlocked_memory_ids: Array = []
@@ -87,6 +88,7 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.whisker_shards = data.get("whisker_shards", 0)
 	p.last_quit_time = data.get("last_quit_time", 0)
 	p.poop_count = data.get("poop_count", 0)
+	p.party_cheer_coupon_count = data.get("party_cheer_coupon_count", 0)
 	p.memory_shards = data.get("memory_shards", 0)
 	p.unlocked_memory_ids = data.get("unlocked_memory_ids", [])
 	p.treasures = data.get("treasures", {})
@@ -137,6 +139,7 @@ func _to_dict() -> Dictionary:
 		"whisker_shards": whisker_shards,
 		"last_quit_time": last_quit_time,
 		"poop_count": poop_count,
+		"party_cheer_coupon_count": party_cheer_coupon_count,
 		"memory_shards": memory_shards,
 		"unlocked_memory_ids": unlocked_memory_ids,
 		"treasures": treasures,

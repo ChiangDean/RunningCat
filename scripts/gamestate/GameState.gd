@@ -17,6 +17,7 @@ signal achievements_changed
 signal chat_connection_state_changed(state: String)
 signal chat_messages_changed(channel_key: String)
 signal chat_unread_changed(channel_key: String, count: int)
+signal party_cheer_coupon_count_changed(count: int)
 
 # Primary player state and runtime caches.
 var player_data: PlayerData
@@ -26,13 +27,16 @@ var chat_connection_state: String = "disconnected"
 var chat_world_messages: Array = []
 var chat_system_messages: Array = []
 var chat_guild_messages: Array = []
-var chat_unread_counts: Dictionary = {"system": 0, "world": 0, "guild": 0}
-var chat_last_received_seq_by_channel: Dictionary = {"system": 0, "world": 0, "guild": 0}
+var chat_party_messages: Array = []
+var chat_unread_counts: Dictionary = {"system": 0, "world": 0, "guild": 0, "party": 0}
+var chat_last_received_seq_by_channel: Dictionary = {"system": 0, "world": 0, "guild": 0, "party": 0}
 var chat_last_snapshot_at_unix: int = 0
 var chat_guild_context: Dictionary = {}
 var chat_endpoint: String = ""
 var chat_token: String = ""
 var chat_guild_available: bool = false
+var chat_party_available: bool = false
+var chat_party_channel_key: String = ""
 
 
 func set_auth_session(base_url: String, session: Dictionary) -> void:
@@ -73,6 +77,7 @@ func clear_persisted_player_state() -> void:
 	gacha_data = {}
 	shop_data = {}
 	clear_chat_state()
+	set_party_cheer_coupon_count(0)
 
 
 func clear_auth_and_player_state() -> void:
@@ -139,6 +144,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
 	player_data.last_quit_time = int(data.get("lastQuitTimeUnixSeconds", player_data.last_quit_time))
 	player_data.poop_count = int(data.get("poopCount", player_data.poop_count))
+	player_data.party_cheer_coupon_count = int(data.get("partyCheerCouponCount", player_data.party_cheer_coupon_count))
 	player_data.memory_shards = int(data.get("memoryShards", player_data.memory_shards))
 	player_data.scooper_level = int(data.get("scooperLevel", player_data.scooper_level))
 	player_data.scooper_exp = int(data.get("scooperExp", player_data.scooper_exp))
@@ -153,6 +159,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 		update_mail_list(mail_inbox)
 		update_selected_mail({})
 	player_data.save()
+	party_cheer_coupon_count_changed.emit(player_data.party_cheer_coupon_count)
 
 	var cat_cat: Variant = data.get("catCatalog", [])
 	cat_catalog = cat_cat if cat_cat is Array else []
@@ -596,7 +603,30 @@ func update_scooper_profile(data: Dictionary) -> void:
 	player_data.poop_count = int(scooper_profile_data.get("poopCount", player_data.poop_count))
 	player_data.memory_shards = int(scooper_profile_data.get("memoryShards", player_data.memory_shards))
 	player_data.whisker_shards = int(scooper_profile_data.get("whiskers", player_data.whisker_shards))
+	player_data.party_cheer_coupon_count = int(scooper_profile_data.get("partyCheerCouponCount", player_data.party_cheer_coupon_count))
 	player_data.save()
+	party_cheer_coupon_count_changed.emit(player_data.party_cheer_coupon_count)
+
+
+func get_party_cheer_coupon_count() -> int:
+	if player_data == null:
+		return 0
+	return max(0, player_data.party_cheer_coupon_count)
+
+
+func set_party_cheer_coupon_count(count: int) -> void:
+	if player_data == null:
+		player_data = PlayerData.load_or_default()
+	var normalized_count: int = max(0, count)
+	if player_data.party_cheer_coupon_count == normalized_count:
+		return
+	player_data.party_cheer_coupon_count = normalized_count
+	player_data.save()
+	party_cheer_coupon_count_changed.emit(normalized_count)
+
+
+func adjust_party_cheer_coupon_count(delta: int) -> void:
+	set_party_cheer_coupon_count(get_party_cheer_coupon_count() + delta)
 
 ## 更新裝備快取（記憶體 + 本地檔案）
 func update_scooper_equipment(data: Array) -> void:
@@ -1357,15 +1387,18 @@ func clear_chat_state() -> void:
 	chat_world_messages = []
 	chat_system_messages = []
 	chat_guild_messages = []
-	chat_unread_counts = {"system": 0, "world": 0, "guild": 0}
-	chat_last_received_seq_by_channel = {"system": 0, "world": 0, "guild": 0}
+	chat_party_messages = []
+	chat_unread_counts = {"system": 0, "world": 0, "guild": 0, "party": 0}
+	chat_last_received_seq_by_channel = {"system": 0, "world": 0, "guild": 0, "party": 0}
 	chat_last_snapshot_at_unix = 0
 	chat_guild_context = {}
 	chat_endpoint = ""
 	chat_token = ""
 	chat_guild_available = false
+	chat_party_available = false
+	chat_party_channel_key = ""
 	emit_signal("chat_connection_state_changed", chat_connection_state)
-	for channel_key: String in ["system", "world", "guild"]:
+	for channel_key: String in ["system", "world", "guild", "party"]:
 		emit_signal("chat_messages_changed", channel_key)
 		emit_signal("chat_unread_changed", channel_key, 0)
 
@@ -1381,6 +1414,8 @@ func apply_chat_summary(summary: Dictionary) -> void:
 	chat_endpoint = str(summary.get("chatEndpoint", chat_endpoint))
 	chat_token = str(summary.get("chatToken", chat_token))
 	chat_guild_available = bool(summary.get("guildChatAvailable", false))
+	chat_party_channel_key = str(summary.get("partyChatChannelKey", chat_party_channel_key))
+	chat_party_available = bool(summary.get("partyChatAvailable", chat_party_channel_key != ""))
 	chat_last_snapshot_at_unix = Time.get_unix_time_from_system()
 	if summary.has("unreadSystemCount"):
 		chat_unread_counts["system"] = int(summary.get("unreadSystemCount", 0))
@@ -1395,6 +1430,8 @@ func apply_chat_summary(summary: Dictionary) -> void:
 		chat_last_received_seq_by_channel["world"] = int(summary.get("worldHistoryCursor", 0))
 	if summary.has("guildHistoryCursor"):
 		chat_last_received_seq_by_channel["guild"] = int(summary.get("guildHistoryCursor", 0))
+	if summary.has("partyChatCursor"):
+		chat_last_received_seq_by_channel["party"] = int(summary.get("partyChatCursor", 0))
 	var channels_variant: Variant = summary.get("channels", [])
 	if channels_variant is Array:
 		for item: Variant in channels_variant:
@@ -1402,6 +1439,8 @@ func apply_chat_summary(summary: Dictionary) -> void:
 				continue
 			var channel: Dictionary = item
 			var channel_key := str(channel.get("channelKey", "")).to_lower()
+			if chat_party_channel_key != "" and channel_key == chat_party_channel_key.to_lower():
+				channel_key = "party"
 			if channel_key == "":
 				continue
 			chat_unread_counts[channel_key] = int(channel.get("unreadCount", 0))
@@ -1415,6 +1454,8 @@ func get_chat_messages(channel_key: String) -> Array:
 			return chat_system_messages
 		"guild":
 			return chat_guild_messages
+		"party":
+			return chat_party_messages
 		_:
 			return chat_world_messages
 
@@ -1424,7 +1465,10 @@ func get_chat_latest_sequence(channel_key: String) -> int:
 
 
 func get_chat_total_unread() -> int:
-	return int(chat_unread_counts.get("system", 0)) + int(chat_unread_counts.get("world", 0)) + int(chat_unread_counts.get("guild", 0))
+	var total := 0
+	for count: Variant in chat_unread_counts.values():
+		total += int(count)
+	return total
 
 
 func set_chat_unread_count(channel_key: String, count: int) -> void:
@@ -1468,6 +1512,8 @@ func replace_chat_history(channel_key: String, messages: Array) -> void:
 			chat_system_messages = target
 		"guild":
 			chat_guild_messages = target
+		"party":
+			chat_party_messages = target
 		_:
 			chat_world_messages = target
 	_trim_chat_channel(channel_key)
@@ -1493,6 +1539,8 @@ func _trim_chat_channel(channel_key: String) -> void:
 			chat_system_messages = filtered
 		"guild":
 			chat_guild_messages = filtered
+		"party":
+			chat_party_messages = filtered
 		_:
 			chat_world_messages = filtered
 
