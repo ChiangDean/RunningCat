@@ -127,6 +127,30 @@ func get_refresh_token() -> String:
 	return str(auth_session.get("refreshToken", "")).strip_edges()
 
 
+func is_admin_session() -> bool:
+	var role_type: String = str(auth_session.get("roleType", "")).strip_edges().to_lower()
+	if role_type == "admin":
+		return true
+
+	var role_name: String = str(auth_session.get("role", "")).strip_edges().to_lower()
+	if role_name == "admin":
+		return true
+
+	var permissions_variant: Variant = auth_session.get("permissions", [])
+	if permissions_variant is Array:
+		for permission_variant: Variant in permissions_variant:
+			var permission: String = str(permission_variant).strip_edges().to_lower()
+			if permission == "admin":
+				return true
+	elif permissions_variant is Dictionary:
+		for key_variant: Variant in permissions_variant.keys():
+			var permission_key: String = str(key_variant).strip_edges().to_lower()
+			if permission_key == "admin" and bool(permissions_variant.get(key_variant, false)):
+				return true
+
+	return false
+
+
 func apply_player_bootstrap(data: Dictionary) -> void:
 	if player_data == null:
 		player_data = PlayerData.load_or_default()

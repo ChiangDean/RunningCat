@@ -1,7 +1,12 @@
-[gd_resource type="Theme" format=3]
+[gd_resource type="Theme" format=3 uid="uid://b2vhdk7k3wwmo"]
 
-[ext_resource type="FontFile" path="res://assets/fonts/NotoSansTC-Regular.ttf" id="1"]
+[ext_resource type="FontFile" uid="uid://fnh5ub5pt71" path="res://assets/fonts/NotoSansTC-Regular.ttf" id="1"]
+[ext_resource type="FontFile" uid="uid://dilnjlwvdobk0" path="res://assets/fonts/LuckiestGuy-Regular.ttf" id="2"]
+
+[sub_resource type="FontVariation" id="FontVariation_default"]
+fallbacks = Array[Font]([ExtResource("1")])
+base_font = ExtResource("2")
 
 [resource]
-default_font = ExtResource("1")
+default_font = SubResource("FontVariation_default")
 default_font_size = 24
