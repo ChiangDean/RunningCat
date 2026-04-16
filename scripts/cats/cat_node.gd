@@ -2,6 +2,8 @@ class_name CatNode
 extends Node2D
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const DAMAGE_GRADIENT_SHADER := preload("res://scripts/ui/damage_number_gradient.gdshader")
+const DAMAGE_NUMBER_FONT := preload("res://assets/fonts/LuckiestGuy-Regular.ttf")
 
 signal died(node: CatNode)
 
@@ -21,6 +23,8 @@ var _name_label: Label
 var _active_animation: String = ""
 var _revert_timer: SceneTreeTimer
 var _revert_token: int = 0
+var _damage_pop_index: int = 0
+var _damage_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 const BODY_W := 56.0
 const BODY_H := 72.0
@@ -32,6 +36,16 @@ const SPRITE_TARGET_SIZE := Vector2(SPRITE_TARGET_W, SPRITE_TARGET_H)
 const SPRITE_VERTICAL_OFFSET_Y := 10.0
 const HP_BAR_OFFSET_Y := 170.0
 const NAME_LABEL_OFFSET_Y := 198.0
+const DAMAGE_DIGIT_SPACING := 18.0
+const DAMAGE_POP_BASE_Y := 172.0
+const DAMAGE_POP_STACK_STEP := 18.0
+const DAMAGE_POP_LIFETIME := 0.52
+const DAMAGE_POP_FLOAT_Y := 54.0
+const DAMAGE_POP_DRIFT_X := 18.0
+const DAMAGE_TEAM_OFFSET_X := 10.0
+const DAMAGE_POP_LABEL_W := 40.0
+const DAMAGE_POP_LABEL_H := 42.0
+const DAMAGE_DIGIT_DELAY := 0.05
 
 
 func setup(id: int, team_name: String, name_str: String, hp: int, file_id: String = "") -> void:
@@ -41,6 +55,7 @@ func setup(id: int, team_name: String, name_str: String, hp: int, file_id: Strin
 	max_hp = hp
 	current_hp = hp
 	cat_file_id = file_id
+	_damage_rng.randomize()
 	_build_visuals()
 
 
@@ -58,6 +73,8 @@ func _build_visuals() -> void:
 	_hp_bar_fill.position = _hp_bar_bg.position
 	_hp_bar_fill.color = Color(0.2, 0.9, 0.3, 1.0)
 	add_child(_hp_bar_fill)
+	_hp_bar_bg.visible = false
+	_hp_bar_fill.visible = false
 
 	_name_label = Label.new()
 	_name_label.text = cat_display_name
@@ -66,6 +83,7 @@ func _build_visuals() -> void:
 	_name_label.size = Vector2(HP_BAR_W, 20.0)
 	_name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
 	add_child(_name_label)
+	_name_label.visible = false
 
 	play_idle()
 
@@ -125,26 +143,69 @@ func update_hp(hp: int) -> void:
 func show_damage_number(damage: int) -> void:
 	if damage <= 0:
 		return
-	var dmg_label := Label.new()
-	dmg_label.text = "-" + str(damage)
-	dmg_label.position = Vector2(-HP_BAR_W / 2.0, -NAME_LABEL_OFFSET_Y)
-	dmg_label.size = Vector2(HP_BAR_W, 20.0)
-	dmg_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dmg_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	dmg_label.add_theme_color_override("font_outline_color", Color(1, 1, 1, 1))
-	dmg_label.add_theme_constant_override("outline_size", 2)
-	if team == "player":
-		dmg_label.add_theme_color_override("font_color", Color(1, 0.2, 0.2, 1))
-	else:
-		dmg_label.add_theme_color_override("font_color", Color(0.7, 0.3, 1.0, 1))
-	add_child(dmg_label)
+	if not SceneNavigator.get_current_overlay_scene_path().is_empty():
+		return
+	var pop_root := Node2D.new()
+	var stack_slot: int = _damage_pop_index % 4
+	_damage_pop_index += 1
+	var anchor_offset := Vector2(
+		(_damage_rng.randf_range(-10.0, 10.0) - DAMAGE_TEAM_OFFSET_X) if team == "player" else (_damage_rng.randf_range(-10.0, 10.0) + DAMAGE_TEAM_OFFSET_X),
+		-DAMAGE_POP_BASE_Y - float(stack_slot) * DAMAGE_POP_STACK_STEP
+	)
+	pop_root.top_level = false
+	pop_root.z_as_relative = false
+	pop_root.z_index = 1
+	var damage_host: Node = self
+	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
+	if battle_scene != null and battle_scene.has_method("get_damage_fx_host"):
+		damage_host = battle_scene.call("get_damage_fx_host")
+	elif battle_scene != null:
+		damage_host = battle_scene
+	damage_host.add_child(pop_root)
+	pop_root.global_position = global_position + anchor_offset
+	pop_root.rotation = deg_to_rad(_damage_rng.randf_range(-4.0, 4.0))
+	pop_root.scale = Vector2(0.45, 0.45)
 
-	var tween := create_tween()
-	tween.tween_property(dmg_label, "position:y", dmg_label.position.y - 24.0, 0.6).set_ease(Tween.EASE_OUT)
-	tween.tween_property(dmg_label, "modulate:a", 0.0, 0.6)
-	tween.tween_callback(func():
-		if is_instance_valid(dmg_label):
-			dmg_label.queue_free()
+	var palette: Dictionary = _get_damage_palette()
+	var damage_text: String = str(damage)
+	var digit_count: int = damage_text.length()
+	var total_width: float = maxf(0.0, float(digit_count - 1) * DAMAGE_DIGIT_SPACING)
+	var label_nodes: Array[Control] = []
+	for i in range(digit_count):
+		var digit_text: String = damage_text.substr(i, 1)
+		var digit_x: float = float(i) * DAMAGE_DIGIT_SPACING - total_width * 0.5
+		var digit_y: float = sin(float(i) * 0.85) * 4.0
+		var nodes: Array[Control] = _add_damage_digit(
+			pop_root,
+			digit_text,
+			Vector2(digit_x, digit_y),
+			palette.get("front_top", Color.WHITE),
+			palette.get("front_mid", Color.WHITE),
+			palette.get("front_bottom", Color.WHITE),
+			palette.get("outline", Color.BLACK),
+			float(i) * DAMAGE_DIGIT_DELAY
+		)
+		label_nodes.append_array(nodes)
+
+	_play_hit_feedback()
+
+	var drift_target_x: float = _damage_rng.randf_range(-DAMAGE_POP_DRIFT_X, DAMAGE_POP_DRIFT_X)
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(pop_root, "scale", Vector2(1.22, 1.22), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	for label_node: Control in label_nodes:
+		if label_node == null:
+			continue
+		var start_pos: Vector2 = label_node.position
+		var offset_x: float = drift_target_x
+		var fade_delay: float = 0.24 + float(label_node.get_meta("digit_delay", 0.0))
+		tween.tween_property(label_node, "position:y", start_pos.y - DAMAGE_POP_FLOAT_Y, DAMAGE_POP_LIFETIME).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tween.tween_property(label_node, "position:x", start_pos.x + offset_x, DAMAGE_POP_LIFETIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tween.parallel().tween_property(label_node, "modulate:a", 0.0, 0.18).set_delay(fade_delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.chain().tween_property(pop_root, "scale", Vector2(0.96, 0.96), 0.12).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN_OUT)
+	tween.chain().tween_callback(func() -> void:
+		if is_instance_valid(pop_root):
+			pop_root.queue_free()
 	)
 
 
@@ -242,3 +303,113 @@ func _cancel_revert() -> void:
 
 func _has_animation(animation_name: String) -> bool:
 	return _animated_sprite != null and _animated_sprite.sprite_frames != null and _animated_sprite.sprite_frames.has_animation(animation_name)
+
+
+func _get_damage_palette() -> Dictionary:
+	if team == "player":
+		return {
+			"front_top": Color(1.0, 0.82, 0.98, 1.0),
+			"front_mid": Color(0.96, 0.34, 0.88, 1.0),
+			"front_bottom": Color(0.56, 0.10, 0.84, 1.0),
+			"outline": Color(0.42, 0.03, 0.03, 1.0),
+		}
+	return {
+		"front_top": Color(1.0, 0.62, 0.26, 1.0),
+		"front_mid": Color(1.0, 0.24, 0.14, 1.0),
+		"front_bottom": Color(0.78, 0.04, 0.06, 1.0),
+		"outline": Color(0.53, 0.19, 0.0, 1.0),
+	}
+
+
+func _add_damage_digit(parent_node: Node2D, damage_text: String, digit_position: Vector2,
+		front_top_color: Color, front_mid_color: Color, front_bottom_color: Color,
+		outline_color: Color,
+		digit_delay: float) -> Array[Control]:
+	var digit_rotation: float = deg_to_rad(_damage_rng.randf_range(-8.0, 8.0))
+	var black_outline_label := Label.new()
+	black_outline_label.name = "DamageBlackOutline%s" % damage_text
+	black_outline_label.text = damage_text
+	black_outline_label.position = digit_position
+	black_outline_label.size = Vector2(DAMAGE_POP_LABEL_W, DAMAGE_POP_LABEL_H)
+	black_outline_label.rotation = digit_rotation
+	black_outline_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	black_outline_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	black_outline_label.add_theme_font_override("font", DAMAGE_NUMBER_FONT)
+	black_outline_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING + 15)
+	black_outline_label.add_theme_color_override("font_color", Color(0.0, 0.0, 0.0, 0.0))
+	black_outline_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 1.0))
+	black_outline_label.add_theme_constant_override("outline_size", 10)
+	black_outline_label.modulate.a = 0.0
+	black_outline_label.set_meta("digit_delay", digit_delay)
+	parent_node.add_child(black_outline_label)
+
+	var front_label := Label.new()
+	front_label.name = "DamageLabel%s" % damage_text
+	front_label.text = damage_text
+	front_label.position = digit_position
+	front_label.size = Vector2(DAMAGE_POP_LABEL_W, DAMAGE_POP_LABEL_H)
+	front_label.rotation = digit_rotation
+	front_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	front_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	front_label.add_theme_font_override("font", DAMAGE_NUMBER_FONT)
+	front_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING + 15)
+	front_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	front_label.add_theme_color_override("font_outline_color", Color(1.0, 1.0, 1.0, 1.0))
+	front_label.add_theme_constant_override("outline_size", 6)
+	front_label.modulate.a = 0.0
+	front_label.set_meta("digit_delay", digit_delay)
+	var gradient_material := ShaderMaterial.new()
+	gradient_material.shader = DAMAGE_GRADIENT_SHADER
+	gradient_material.set_shader_parameter("top_color", front_top_color)
+	gradient_material.set_shader_parameter("mid_color", front_mid_color)
+	gradient_material.set_shader_parameter("bottom_color", front_bottom_color)
+	front_label.material = gradient_material
+	parent_node.add_child(front_label)
+
+	var reveal_tween: Tween = create_tween()
+	reveal_tween.set_parallel(true)
+	reveal_tween.tween_property(front_label, "modulate:a", 1.0, 0.04).set_delay(digit_delay).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	reveal_tween.tween_property(black_outline_label, "modulate:a", 1.0, 0.04).set_delay(digit_delay).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	reveal_tween.tween_property(front_label, "scale", Vector2(1.16, 1.16), 0.08).set_delay(digit_delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	reveal_tween.tween_property(black_outline_label, "scale", Vector2(1.16, 1.16), 0.08).set_delay(digit_delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	reveal_tween.chain().tween_property(front_label, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	reveal_tween.parallel().tween_property(black_outline_label, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	return [black_outline_label, front_label]
+
+
+func _play_hit_feedback() -> void:
+	var body_target: Variant = _static_sprite if _static_sprite != null else _animated_sprite
+	if body_target == null:
+		body_target = _body_rect
+	if body_target != null:
+		var body_base_position: Vector2 = body_target.position
+		var body_base_scale: Vector2 = body_target.scale
+		var body_tween: Tween = create_tween()
+		body_tween.set_parallel(true)
+		body_tween.tween_property(
+			body_target,
+			"position",
+			body_base_position + Vector2(6.0 if team == "player" else -6.0, -4.0),
+			0.05
+		).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		body_tween.tween_property(
+			body_target,
+			"scale",
+			Vector2(body_base_scale.x * 1.08, body_base_scale.y * 0.93),
+			0.06
+		).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		body_tween.tween_property(
+			body_target,
+			"modulate",
+			Color(1.25, 1.25, 1.25, 1.0),
+			0.04
+		).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+		body_tween.chain().tween_property(body_target, "position", body_base_position, 0.12).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		body_tween.parallel().tween_property(body_target, "scale", body_base_scale, 0.14).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		body_tween.parallel().tween_property(body_target, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	if _hp_bar_fill != null:
+		var hp_fill_base_scale: Vector2 = _hp_bar_fill.scale
+		var hp_tween: Tween = create_tween()
+		hp_tween.tween_property(_hp_bar_fill, "scale", Vector2(1.12, 1.35), 0.05).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		hp_tween.tween_property(_hp_bar_fill, "scale", hp_fill_base_scale, 0.10).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)

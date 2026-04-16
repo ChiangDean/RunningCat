@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://h06vqw2jdof3"]
 
 [ext_resource type="Texture2D" uid="uid://d4g4lcr3sgac2" path="res://assets/sprites/ui/home/v2/home_hud_main_v2.png" id="1"]
-[ext_resource type="Theme" path="res://resources/default_theme.tres" id="2"]
-[ext_resource type="Texture2D" uid="uid://dflkpr4h23lov" path="res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
-[ext_resource type="Texture2D" uid="uid://bkasqyqpqkjyo" path="res://assets/sprites/ui/rewards/diamonds.png" id="4"]
-[ext_resource type="Texture2D" uid="uid://d1kx363chdagy" path="res://assets/sprites/ui/rewards/gold.png.png" id="5"]
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="2"]
+[ext_resource type="Texture2D" uid="uid://dsr2bhbkssjhs" path="res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://bakdwyhnhd6rl" path="res://assets/sprites/ui/rewards/diamonds.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://dji0cn00sr1pf" path="res://assets/sprites/ui/rewards/gold.png.png" id="5"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.31, 0.19, 0.09, 0.8)
@@ -46,17 +46,17 @@ stretch_mode = 6
 
 [node name="NameLabel" type="Label" parent="." unique_id=896545259]
 layout_mode = 0
-offset_left = 8.0
+offset_left = 9.0
 offset_top = 138.0
-offset_right = 164.0
+offset_right = 165.0
 offset_bottom = 176.0
-theme_override_colors/font_color = Color(0.31, 0.18, 0.08, 1)
-theme_override_colors/font_outline_color = Color(0.96, 0.92, 0.82, 0.95)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 22
 text = "Admin001"
 horizontal_alignment = 1
-vertical_alignment = 1
+vertical_alignment = 2
 
 [node name="LevelLabel" type="Label" parent="." unique_id=2043426033]
 layout_mode = 1
@@ -66,13 +66,13 @@ anchor_top = 0.294
 anchor_right = 0.34300002
 anchor_bottom = 0.294
 offset_left = -29.701813
-offset_top = -27.5358
+offset_top = -24.5358
 offset_right = 30.298187
-offset_bottom = 27.4642
-theme_override_colors/font_color = Color(0.05, 0.05, 0.05, 1)
-theme_override_colors/font_outline_color = Color(0.95, 0.88, 0.76, 0.95)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 16
+offset_bottom = 30.4642
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 28
 text = "7"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -93,11 +93,11 @@ offset_left = 276.0
 offset_top = 48.0
 offset_right = 513.0
 offset_bottom = 66.0
-theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
-theme_override_colors/font_outline_color = Color(0.95, 0.9, 0.8, 0.92)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 11
-text = "ScooperExp 58/80"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 16
+text = "EXP 58/80"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -110,10 +110,10 @@ offset_bottom = 129.0
 
 [node name="Icon" type="TextureRect" parent="DiamondsPanel" unique_id=136946146]
 layout_mode = 0
-offset_left = -122.0
-offset_top = 8.0
-offset_right = -80.0
-offset_bottom = 50.0
+offset_left = -131.0
+offset_top = -2.0
+offset_right = -74.0
+offset_bottom = 55.0
 texture = ExtResource("4")
 expand_mode = 1
 stretch_mode = 5
@@ -125,17 +125,17 @@ anchor_left = -0.54300004
 anchor_top = 0.77900004
 anchor_right = -0.54300004
 anchor_bottom = 0.77900004
-offset_left = -49.527996
-offset_top = -15.486002
-offset_right = 49.472004
-offset_bottom = 15.513998
-theme_override_colors/font_color = Color(0.05, 0.05, 0.05, 1)
-theme_override_colors/font_outline_color = Color(0.78, 0.72, 0.62, 0.92)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 13
+offset_left = -39.527996
+offset_top = -22.486002
+offset_right = 57.472004
+offset_bottom = 14.513998
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
 text = "9,951"
 horizontal_alignment = 2
-vertical_alignment = 1
+vertical_alignment = 2
 
 [node name="GoldPanel" type="Control" parent="." unique_id=712850697]
 anchors_preset = 0
@@ -146,10 +146,10 @@ offset_bottom = 129.0
 
 [node name="Icon" type="TextureRect" parent="GoldPanel" unique_id=1257757891]
 layout_mode = 0
-offset_left = -84.0
-offset_top = 8.0
-offset_right = -42.0
-offset_bottom = 50.0
+offset_left = -95.0
+offset_top = -7.0
+offset_right = -34.0
+offset_bottom = 54.0
 texture = ExtResource("5")
 expand_mode = 1
 stretch_mode = 5
@@ -161,17 +161,17 @@ anchor_left = -0.187
 anchor_top = 0.721
 anchor_right = -0.187
 anchor_bottom = 0.721
-offset_left = -52.552002
-offset_top = -15.514
-offset_right = 52.447998
+offset_left = -41.552002
+offset_top = -20.514
+offset_right = 57.447998
 offset_bottom = 15.486
-theme_override_colors/font_color = Color(0.05, 0.05, 0.05, 1)
-theme_override_colors/font_outline_color = Color(0.78, 0.72, 0.62, 0.92)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
 text = "11,896"
 horizontal_alignment = 2
-vertical_alignment = 1
+vertical_alignment = 2
 
 [node name="PowerPanel" type="Control" parent="." unique_id=148356241]
 anchors_preset = 0
@@ -183,28 +183,27 @@ offset_bottom = 129.0
 [node name="Chip" type="Label" parent="PowerPanel" unique_id=471739984]
 layout_mode = 0
 offset_left = -49.0
-offset_top = 8.0
-offset_right = -4.529419
-offset_bottom = 50.0
-theme_override_colors/font_color = Color(0.05, 0.05, 0.05, 1)
-theme_override_colors/font_outline_color = Color(0.78, 0.72, 0.62, 0.92)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 11
+offset_top = -2.0
+offset_right = -15.0
+offset_bottom = 49.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 34
 text = "戰"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Value" type="Label" parent="PowerPanel" unique_id=304272263]
 layout_mode = 0
-offset_left = -35.0
-offset_top = 10.0
-offset_right = 69.0
-offset_bottom = 42.0
-theme_override_colors/font_color = Color(0.05, 0.05, 0.05, 1)
-theme_override_colors/font_outline_color = Color(0.78, 0.72, 0.62, 0.92)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 13
+offset_left = -22.0
+offset_top = 4.0
+offset_right = 75.0
+offset_bottom = 41.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
 text = "10,538"
 horizontal_alignment = 2
-vertical_alignment = 1
-
+vertical_alignment = 2

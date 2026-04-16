@@ -33,9 +33,9 @@ const NAV_Y := SH - NAV_H
 
 # Skill bar baseline positioned just below BATTLE_Y.
 const SKILL_BAR_Y := BATTLE_Y + 10.0
-const SKILL_BAR_H := 100.0
-const SKILL_SLOT_W := 100.0
-const SKILL_SLOT_H := 90.0
+const SKILL_BAR_H := 126.0
+const SKILL_SLOT_W := 132.0
+const SKILL_SLOT_H := 126.0
 
 # Stage and boss actions stay aligned with the result banner.
 const STAGE_BTN_Y := 310.0
@@ -45,8 +45,19 @@ const ACTION_STACK_X := 586.0
 const ACTION_STACK_Y := 250.0
 const ACTION_STACK_W := 96.0
 const ACTION_STACK_H := 42.0
-const SKILL_PANEL_Y := 844.0
-const SKILL_PANEL_H := 184.0
+const SKILL_PANEL_CONTENT_PAD := 8.0
+const SKILL_BAR_EDGE_PAD := 8.0
+const SKILL_PANEL_X := 0.0
+const SKILL_PANEL_W := SW
+const SKILL_PANEL_Y := 790.0
+const SKILL_PANEL_H := NAV_Y - SKILL_PANEL_Y
+const SKILL_PANEL_ALL_H := NAV_Y - SKILL_PANEL_Y
+const DEFAULT_FREE_SPEED_BOOST_MULT: float = 1.2
+const FREE_SPEED_BOOST_DURATION_SECONDS: int = 30 * 60
+const ENHANCE_APPLY_DISABLED_BG := Color(0.24, 0.21, 0.18, 0.86)
+const ENHANCE_APPLY_DISABLED_FG := Color(0.72, 0.69, 0.64, 1.0)
+const ENHANCE_DETAIL_TAB_ACTIVE_FILL := Color(0.43, 0.31, 0.14, 0.98)
+const ENHANCE_DETAIL_TAB_ACTIVE_FG := Color(1.0, 0.95, 0.82, 1.0)
 const IDLE_BAR_Y := 1054.0
 const IDLE_BAR_W := 412.0
 const IDLE_BAR_H := 18.0
@@ -71,11 +82,13 @@ const REWARD_FLOAT_DEMO_INTERVAL := 0.3
 # Battle nodes
 var _player_team: Node2D
 var _enemy_team: Node2D
+var _damage_fx_layer: Node2D
 var _battle_manager: BattleManager
 
 # UI nodes
 var _ui_layer: Control
 var _timer_label: Label
+var _skill_filter_btn: Button
 var _speed_1x: Button
 var _speed_2x: Button
 var _speed_3x: Button
@@ -84,6 +97,16 @@ var _level_label: Label
 var _boss_btn: Button
 var _result_display: Label
 var _result_backdrop: Control
+var _result_glow: Label
+var _result_shadow_label: Label
+var _result_streak_left: ColorRect
+var _result_streak_right: ColorRect
+var _skill_panel: Control
+var _skill_shadow: ColorRect
+var _skill_body: ColorRect
+var _skill_inner: ColorRect
+var _skill_top_glow: ColorRect
+var _skill_header_rule: ColorRect
 var _skill_bar: Control      # Skill bar container
 var _sandbox_btn: Button     # Idle rewards action button
 var _mail_btn: Button
@@ -123,6 +146,11 @@ var _home_scoop_cooldown_remaining: float = 0.0
 var _nav_buttons: Dictionary = {}
 var _nav_canvas: CanvasLayer
 var _last_overlay_scene_path: String = ""
+var _skill_filter_mode: String = "player"
+var _current_speed_mult: float = 1.0
+var _free_speed_boost_end_unix: int = 0
+var _free_speed_boost_mult: float = 1.0
+var _free_speed_boost_used: bool = false
 
 
 func _ready() -> void:
@@ -156,10 +184,13 @@ func _process(_delta: float) -> void:
 		_home_scoop_cooldown_remaining = maxf(0.0, _home_scoop_cooldown_remaining - _delta)
 		_refresh_home_scoop_panel()
 
+	_refresh_speed_boost_state()
+
 	var overlay_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
 	if overlay_scene_path != _last_overlay_scene_path:
 		_last_overlay_scene_path = overlay_scene_path
 		_refresh_main_nav_state()
+		_refresh_overlay_fx_state()
 
 
 # Scene construction
@@ -185,20 +216,20 @@ func _build_background() -> void:
 	add_child(bg_tint)
 
 	var ground := ColorRect.new()
-	ground.color = Color(0.16, 0.13, 0.12, 0.48)
+	ground.color = Color(0.16, 0.13, 0.12, 0.0)
 	ground.position = Vector2(0.0, BATTLE_Y)
 	ground.size = Vector2(SW, NAV_Y - BATTLE_Y)
 	add_child(ground)
 
 	var wall_l := ColorRect.new()
-	wall_l.color = Color(0.34, 0.24, 0.6, 1.0)
-	wall_l.position = Vector2(0.0, 200.0)
+	wall_l.color = Color(0.34, 0.24, 0.6, 0.0)
+	wall_l.position = Vector2(-20.0, 200.0)
 	wall_l.size = Vector2(20.0, BATTLE_Y - 200.0)
 	add_child(wall_l)
 
 	var wall_r := ColorRect.new()
-	wall_r.color = Color(0.34, 0.24, 0.6, 1.0)
-	wall_r.position = Vector2(SW - 20.0, 200.0)
+	wall_r.color = Color(0.34, 0.24, 0.6, 0.0)
+	wall_r.position = Vector2(SW, 200.0)
 	wall_r.size = Vector2(20.0, BATTLE_Y - 200.0)
 	add_child(wall_r)
 
@@ -211,6 +242,10 @@ func _build_battle_area() -> void:
 	_enemy_team = Node2D.new()
 	_enemy_team.position = Vector2(0.0, BATTLE_Y)
 	add_child(_enemy_team)
+
+	_damage_fx_layer = Node2D.new()
+	_damage_fx_layer.name = "DamageFxLayer"
+	add_child(_damage_fx_layer)
 
 	_battle_manager = BattleManager.new()
 	add_child(_battle_manager)
@@ -315,101 +350,86 @@ func _build_ui() -> void:
 	_ui_layer.add_child(_boss_btn)
 	_boss_btn.pressed.connect(_on_challenge_boss_pressed)
 
-	var skill_panel := _make_panel(
-		Vector2(42.0, SKILL_PANEL_Y),
-		Vector2(SW - 84.0, SKILL_PANEL_H),
-		Color(0.13, 0.09, 0.07, 0.80),
-		Color(0.67, 0.52, 0.29, 0.94)
-	)
-	_ui_layer.add_child(skill_panel)
+	_skill_panel = Control.new()
+	_skill_panel.position = Vector2(SKILL_PANEL_X, SKILL_PANEL_Y)
+	_skill_panel.size = Vector2(SKILL_PANEL_W, SKILL_PANEL_H)
+	_ui_layer.add_child(_skill_panel)
+
+	_skill_shadow = ColorRect.new()
+	_skill_shadow.position = Vector2(0.0, 6.0)
+	_skill_shadow.size = _skill_panel.size
+	_skill_shadow.color = Color(0.03, 0.02, 0.02, 0.28)
+	_skill_panel.add_child(_skill_shadow)
+
+	_skill_body = ColorRect.new()
+	_skill_body.position = Vector2.ZERO
+	_skill_body.size = _skill_panel.size
+	_skill_body.color = Color(0.13, 0.09, 0.07, 0.88)
+	_skill_panel.add_child(_skill_body)
+
+	_skill_inner = ColorRect.new()
+	_skill_inner.position = Vector2(2.0, 2.0)
+	_skill_inner.size = _skill_panel.size - Vector2(4.0, 4.0)
+	_skill_inner.color = Color(0.20, 0.14, 0.10, 0.82)
+	_skill_panel.add_child(_skill_inner)
+
+	_skill_top_glow = ColorRect.new()
+	_skill_top_glow.position = Vector2(SKILL_PANEL_CONTENT_PAD, 6.0)
+	_skill_top_glow.size = Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, 12.0)
+	_skill_top_glow.color = Color(1.0, 0.92, 0.78, 0.0)
+	_skill_panel.add_child(_skill_top_glow)
+
+	_skill_header_rule = ColorRect.new()
+	_skill_header_rule.position = Vector2(SKILL_PANEL_CONTENT_PAD, 34.0)
+	_skill_header_rule.size = Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, 2.0)
+	_skill_header_rule.color = Color(0.84, 0.66, 0.34, 0.26)
+	_skill_panel.add_child(_skill_header_rule)
+
+	_skill_filter_btn = _make_button("切換(我方)", Vector2(SKILL_PANEL_CONTENT_PAD, -16.0), Vector2(104.0, 26.0))
+	_skill_panel.add_child(_skill_filter_btn)
+	_apply_skill_filter_button_style(_skill_filter_btn, true)
+	_skill_filter_btn.pressed.connect(_cycle_skill_filter_mode)
 
 	_skill_bar = _build_skill_bar()
-	_ui_layer.add_child(_skill_bar)
+	_skill_panel.add_child(_skill_bar)
+	_apply_skill_bar_layout()
 
-	_speed_1x = _make_button("1x", Vector2(492.0, SKILL_PANEL_Y + 10.0), Vector2(56.0, 34.0))
-	_speed_2x = _make_button("2x", Vector2(552.0, SKILL_PANEL_Y + 10.0), Vector2(56.0, 34.0))
-	_speed_3x = _make_button("3x", Vector2(612.0, SKILL_PANEL_Y + 10.0), Vector2(56.0, 34.0))
-	_ui_layer.add_child(_speed_1x)
-	_ui_layer.add_child(_speed_2x)
-	_ui_layer.add_child(_speed_3x)
-	_speed_1x.pressed.connect(func(): _set_speed(1.0, _speed_1x))
-	_speed_2x.pressed.connect(func(): _set_speed(2.0, _speed_2x))
-	_speed_3x.pressed.connect(func(): _set_speed(3.0, _speed_3x))
+	_speed_1x = _make_button("加速", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD - 128.0, -16.0), Vector2(128.0, 26.0))
+	_skill_panel.add_child(_speed_1x)
+	_apply_skill_speed_button_style(_speed_1x, false)
+	_speed_2x = null
+	_speed_3x = null
+	_speed_1x.pressed.connect(_cycle_speed)
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
+	_highlight_skill_filter_btn()
 
-	_sandbox_btn = _make_button("Idle 00:00:00", Vector2(230.0, 982.0), Vector2(260.0, 28.0))
-	_sandbox_btn.add_theme_font_size_override("font_size", 15)
+	_sandbox_btn = _make_button("Idle 00:00:00", Vector2(0.0, -16.0), Vector2(224.0, 26.0))
+	_sandbox_btn.add_theme_font_size_override("font_size", 14)
 	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
-	_ui_layer.add_child(_sandbox_btn)
+	_skill_panel.add_child(_sandbox_btn)
+	_layout_sandbox_btn()
 
 	_home_scoop_panel = Control.new()
 	_home_scoop_panel.position = Vector2(HOME_SCOOP_PANEL_X, HOME_SCOOP_PANEL_Y)
 	_home_scoop_panel.size = Vector2(HOME_SCOOP_PANEL_W, HOME_SCOOP_PANEL_H)
 	_ui_layer.add_child(_home_scoop_panel)
 
-	var scoop_title := _make_label(UiText.HOME_SCOOPER_EXP_TITLE, Vector2(18.0, 10.0), Vector2(164.0, 20.0), 16)
-	scoop_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	scoop_title.add_theme_color_override("font_color", Color(0.34, 0.18, 0.08, 1.0))
-	_home_scoop_panel.add_child(scoop_title)
+	_home_exp_label = null
+	_home_exp_bar = null
 
-	_home_exp_label = _make_label("EXP 0 / 0", Vector2(190.0, 10.0), Vector2(198.0, 20.0), 15)
-	_home_exp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_home_exp_label.add_theme_color_override("font_color", Color(0.34, 0.18, 0.08, 1.0))
-	_home_scoop_panel.add_child(_home_exp_label)
-
-	var exp_bg_rect := ColorRect.new()
-	exp_bg_rect.position = Vector2(28.0, 40.0)
-	exp_bg_rect.size = Vector2(HOME_SCOOP_PANEL_W - 92.0, 20.0)
-	exp_bg_rect.color = Color(0.35, 0.20, 0.08, 0.82)
-	_home_scoop_panel.add_child(exp_bg_rect)
-
-	var exp_bg_inner := ColorRect.new()
-	exp_bg_inner.position = Vector2(2.0, 2.0)
-	exp_bg_inner.size = Vector2(HOME_SCOOP_PANEL_W - 96.0, 16.0)
-	exp_bg_inner.color = Color(0.62, 0.40, 0.12, 0.30)
-	exp_bg_rect.add_child(exp_bg_inner)
-
-	_home_exp_bar = ProgressBar.new()
-	_home_exp_bar.position = Vector2(30.0, 42.0)
-	_home_exp_bar.size = Vector2(HOME_SCOOP_PANEL_W - 96.0, 16.0)
-	_home_exp_bar.min_value = 0
-	_home_exp_bar.show_percentage = false
-	var exp_bar_bg_style := StyleBoxFlat.new()
-	exp_bar_bg_style.bg_color = Color(0.31, 0.19, 0.09, 0.80)
-	exp_bar_bg_style.corner_radius_top_left = 7
-	exp_bar_bg_style.corner_radius_top_right = 7
-	exp_bar_bg_style.corner_radius_bottom_left = 7
-	exp_bar_bg_style.corner_radius_bottom_right = 7
-	var exp_bar_fill_style := StyleBoxFlat.new()
-	exp_bar_fill_style.bg_color = Color(0.96, 0.78, 0.29, 0.96)
-	exp_bar_fill_style.corner_radius_top_left = 7
-	exp_bar_fill_style.corner_radius_top_right = 7
-	exp_bar_fill_style.corner_radius_bottom_left = 7
-	exp_bar_fill_style.corner_radius_bottom_right = 7
-	_home_exp_bar.add_theme_stylebox_override("background", exp_bar_bg_style)
-	_home_exp_bar.add_theme_stylebox_override("fill", exp_bar_fill_style)
-	_home_scoop_panel.add_child(_home_exp_bar)
-
-	_home_scoop_result_label = _make_label("", Vector2(18.0, 70.0), Vector2(176.0, 24.0), 11)
+	_home_scoop_result_label = _make_label("", Vector2(18.0, 32.0), Vector2(176.0, 24.0), 11)
 	_home_scoop_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_home_scoop_result_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_home_scoop_result_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_home_scoop_result_label.add_theme_color_override("font_color", Color(0.84, 0.98, 0.80, 1.0))
 	_home_scoop_panel.add_child(_home_scoop_result_label)
 
-	_home_coupon_button = Button.new()
-	_home_coupon_button.position = Vector2(242.0, 36.0)
-	_home_coupon_button.size = Vector2(154.0, 24.0)
-	_home_coupon_button.add_theme_font_size_override("font_size", 14)
-	_home_coupon_button.modulate = Color(0.97, 0.93, 0.88, 1.0)
-	_home_coupon_button.pressed.connect(UiAudio.play_ui_click)
-	_home_coupon_button.pressed.connect(_on_home_coupon_pressed)
-	_home_scoop_panel.add_child(_home_coupon_button)
+	_home_coupon_button = null
 
 	_home_scoop_button = Button.new()
 	_home_scoop_button.text = UiText.HOME_SCOOPER_BUTTON
-	_home_scoop_button.position = Vector2(242.0, 66.0)
+	_home_scoop_button.position = Vector2(242.0, 36.0)
 	_home_scoop_button.size = Vector2(154.0, 26.0)
 	_home_scoop_button.add_theme_font_size_override("font_size", 15)
 	_home_scoop_button.modulate = Color(0.97, 0.93, 0.88, 1.0)
@@ -431,39 +451,58 @@ func _build_ui() -> void:
 	_home_scoop_cd_label.visible = false
 	_home_scoop_button.add_child(_home_scoop_cd_label)
 
-	_skip_btn = _make_button("Skip", Vector2(608.0, 1000.0), Vector2(90.0, 40.0))
+	_skip_btn = _make_button("Skip", Vector2(SW - 104.0, 76.0), Vector2(90.0, 34.0))
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
-	_skip_btn.visible = GameState.can_skip_battle()
+	_skip_btn.visible = GameState.is_admin_session()
 
-	_result_backdrop = _make_panel(
-		Vector2((SW - RESULT_BANNER_W) / 2.0, 356.0),
-		Vector2(RESULT_BANNER_W, RESULT_BANNER_H),
-		Color(0.16, 0.09, 0.06, 0.86),
-		Color(0.90, 0.73, 0.34, 0.94)
-	)
+	_result_backdrop = Control.new()
+	_result_backdrop.position = Vector2((SW - RESULT_BANNER_W) / 2.0, 356.0)
+	_result_backdrop.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
 	_result_backdrop.visible = false
 	_ui_layer.add_child(_result_backdrop)
 
-	var result_top_glow := ColorRect.new()
-	result_top_glow.position = Vector2(14.0, 10.0)
-	result_top_glow.size = Vector2(RESULT_BANNER_W - 28.0, 14.0)
-	result_top_glow.color = Color(1.0, 0.95, 0.82, 0.10)
-	_result_backdrop.add_child(result_top_glow)
+	_result_streak_left = ColorRect.new()
+	_result_streak_left.position = Vector2(20.0, 38.0)
+	_result_streak_left.size = Vector2(116.0, 9.0)
+	_result_streak_left.color = Color(1.0, 1.0, 1.0, 0.0)
+	_result_streak_left.rotation_degrees = -18.0
+	_result_backdrop.add_child(_result_streak_left)
 
-	var result_bottom_rule := ColorRect.new()
-	result_bottom_rule.position = Vector2(26.0, RESULT_BANNER_H - 16.0)
-	result_bottom_rule.size = Vector2(RESULT_BANNER_W - 52.0, 2.0)
-	result_bottom_rule.color = Color(0.92, 0.78, 0.42, 0.42)
-	_result_backdrop.add_child(result_bottom_rule)
+	_result_streak_right = ColorRect.new()
+	_result_streak_right.position = Vector2(RESULT_BANNER_W - 136.0, 38.0)
+	_result_streak_right.size = Vector2(116.0, 9.0)
+	_result_streak_right.color = Color(1.0, 1.0, 1.0, 0.0)
+	_result_streak_right.rotation_degrees = 18.0
+	_result_backdrop.add_child(_result_streak_right)
+
+	_result_glow = Label.new()
+	_result_glow.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
+	_result_glow.position = Vector2.ZERO
+	_result_glow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_glow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_result_glow.add_theme_font_size_override("font_size", 78)
+	_result_glow.add_theme_constant_override("outline_size", 18)
+	_result_glow.visible = false
+	_result_backdrop.add_child(_result_glow)
+
+	_result_shadow_label = Label.new()
+	_result_shadow_label.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
+	_result_shadow_label.position = Vector2(6.0, 8.0)
+	_result_shadow_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_shadow_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_result_shadow_label.add_theme_font_size_override("font_size", 62)
+	_result_shadow_label.add_theme_constant_override("outline_size", 10)
+	_result_shadow_label.visible = false
+	_result_backdrop.add_child(_result_shadow_label)
 
 	_result_display = Label.new()
 	_result_display.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
 	_result_display.position = Vector2.ZERO
 	_result_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_display.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_result_display.add_theme_font_size_override("font_size", 50)
-	_result_display.add_theme_constant_override("outline_size", 6)
+	_result_display.add_theme_font_size_override("font_size", 66)
+	_result_display.add_theme_constant_override("outline_size", 10)
 	_result_display.add_theme_color_override("font_outline_color", Color(0.20, 0.09, 0.04, 0.98))
 	_result_display.visible = false
 	_result_backdrop.add_child(_result_display)
@@ -500,6 +539,7 @@ func _build_ui() -> void:
 		_nav_buttons[String(nav_items[i][1])] = nav_btn
 
 	_refresh_main_nav_state()
+	_layout_home_scoop_panel()
 
 	_reward_fx_canvas = CanvasLayer.new()
 	_reward_fx_canvas.layer = 99
@@ -512,18 +552,15 @@ func _build_ui() -> void:
 	_reward_fx_canvas.add_child(_reward_fx_layer)
 
 
-## Build the centered five-slot skill bar.
+## Build the skill bar container. Layout is adjusted by filter mode.
 func _build_skill_bar() -> Control:
 	var bar := Control.new()
 	bar.name = "SkillBar"
-	var total_w := SKILL_SLOT_W * MAX_CATS_ON_FIELD + 8.0 * (MAX_CATS_ON_FIELD - 1)
-	var bar_x := (SW - total_w) / 2.0
-	bar.position = Vector2(bar_x, 880.0)
-	bar.size = Vector2(total_w, SKILL_BAR_H)
+	bar.position = Vector2(SKILL_PANEL_CONTENT_PAD, 48.0)
+	bar.size = Vector2(SKILL_PANEL_W - SKILL_PANEL_CONTENT_PAD * 2.0, SKILL_BAR_H)
 
-	for i in range(MAX_CATS_ON_FIELD):
+	for i in range(MAX_CATS_ON_FIELD * 2):
 		var slot := _make_skill_slot(i)
-		slot.position = Vector2(i * (SKILL_SLOT_W + 8.0), 0.0)
 		bar.add_child(slot)
 
 	return bar
@@ -535,46 +572,121 @@ func _make_skill_slot(idx: int) -> Control:
 	slot.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
 	slot.custom_minimum_size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
 
-	# Slot background
+	var shadow := ColorRect.new()
+	shadow.position = Vector2(0.0, 4.0)
+	shadow.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 1.0)
+	shadow.color = Color(0.02, 0.02, 0.02, 0.28)
+	slot.add_child(shadow)
+
 	var bg := ColorRect.new()
 	bg.name = "Bg"
 	bg.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
-	bg.color = Color(0.15, 0.15, 0.18, 1.0)
+	bg.color = Color(0.39, 0.28, 0.14, 0.96)
 	slot.add_child(bg)
+
+	var inner := ColorRect.new()
+	inner.position = Vector2(2.0, 2.0)
+	inner.size = Vector2(SKILL_SLOT_W - 4.0, SKILL_SLOT_H - 4.0)
+	inner.color = Color(0.14, 0.10, 0.08, 0.96)
+	slot.add_child(inner)
+
+	var top_glow := ColorRect.new()
+	top_glow.position = Vector2(4.0, 4.0)
+	top_glow.size = Vector2(SKILL_SLOT_W - 8.0, 10.0)
+	top_glow.color = Color(1.0, 0.92, 0.80, 0.08)
+	slot.add_child(top_glow)
+
+	var icon_shell := ColorRect.new()
+	icon_shell.name = "IconShell"
+	icon_shell.position = Vector2(8.0, 8.0)
+	icon_shell.size = Vector2(SKILL_SLOT_W - 16.0, 62.0)
+	icon_shell.color = Color(0.26, 0.18, 0.12, 0.96)
+	slot.add_child(icon_shell)
+
+	var icon_shell_inner := ColorRect.new()
+	icon_shell_inner.position = Vector2(2.0, 2.0)
+	icon_shell_inner.size = icon_shell.size - Vector2(4.0, 4.0)
+	icon_shell_inner.color = Color(0.10, 0.08, 0.08, 0.98)
+	icon_shell.add_child(icon_shell_inner)
 
 	var icon := TextureRect.new()
 	icon.name = "Icon"
-	icon.position = Vector2(10.0, 8.0)
-	icon.size = Vector2(SKILL_SLOT_W - 20.0, SKILL_SLOT_H - 36.0)
+	icon.position = Vector2(1.2, 4.2)
+	icon.size = Vector2((SKILL_SLOT_W - 24.0) * 1.2, 58.0 * 1.2)
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.visible = false
 	slot.add_child(icon)
 
-	# Skill name placeholder populated after battle setup
-	var name_lbl := Label.new()
-	name_lbl.name = "NameLabel"
-	name_lbl.size = Vector2(SKILL_SLOT_W, 22.0)
-	name_lbl.position = Vector2(0.0, SKILL_SLOT_H - 24.0)
-	name_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
-	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.clip_contents = true
-	slot.add_child(name_lbl)
+	var death_overlay := ColorRect.new()
+	death_overlay.name = "DeathOverlay"
+	death_overlay.position = Vector2(8.0, 8.0)
+	death_overlay.size = Vector2(SKILL_SLOT_W - 16.0, 62.0)
+	death_overlay.color = Color(0.82, 0.10, 0.10, 0.42)
+	death_overlay.visible = false
+	slot.add_child(death_overlay)
+
+	var hp_bar_bg := ColorRect.new()
+	hp_bar_bg.name = "HpBarBg"
+	hp_bar_bg.position = Vector2(10.0, 80.0)
+	hp_bar_bg.size = Vector2(SKILL_SLOT_W - 20.0, 14.0)
+	hp_bar_bg.color = Color(0.08, 0.09, 0.07, 0.96)
+	slot.add_child(hp_bar_bg)
+
+	var hp_bar_fill := ColorRect.new()
+	hp_bar_fill.name = "HpBarFill"
+	hp_bar_fill.position = Vector2(1.0, 1.0)
+	hp_bar_fill.size = Vector2(hp_bar_bg.size.x - 2.0, hp_bar_bg.size.y - 2.0)
+	hp_bar_fill.color = Color(0.30, 0.92, 0.40, 1.0)
+	hp_bar_bg.add_child(hp_bar_fill)
+
+	var hp_value_lbl := Label.new()
+	hp_value_lbl.name = "HpValueLabel"
+	hp_value_lbl.position = Vector2(10.0, 72.0)
+	hp_value_lbl.size = Vector2(SKILL_SLOT_W - 20.0, 12.0)
+	hp_value_lbl.add_theme_font_size_override("font_size", 13)
+	hp_value_lbl.add_theme_constant_override("outline_size", 2)
+	hp_value_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	hp_value_lbl.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.05, 0.96))
+	hp_value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hp_value_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	slot.add_child(hp_value_lbl)
+
+	var cooldown_bar_bg := ColorRect.new()
+	cooldown_bar_bg.name = "CooldownBarBg"
+	cooldown_bar_bg.position = Vector2(10.0, 102.0)
+	cooldown_bar_bg.size = Vector2(SKILL_SLOT_W - 20.0, 12.0)
+	cooldown_bar_bg.color = Color(0.06, 0.12, 0.22, 0.96)
+	slot.add_child(cooldown_bar_bg)
+
+	var cooldown_bar_fill := ColorRect.new()
+	cooldown_bar_fill.name = "CooldownBarFill"
+	cooldown_bar_fill.position = Vector2(1.0, 1.0)
+	cooldown_bar_fill.size = Vector2(0.0, cooldown_bar_bg.size.y - 2.0)
+	cooldown_bar_fill.color = Color(0.28, 0.74, 1.0, 1.0)
+	cooldown_bar_bg.add_child(cooldown_bar_fill)
 
 	# Cooldown overlay shrinks downward over time
 	var overlay := ColorRect.new()
 	overlay.name = "Overlay"
-	overlay.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
-	overlay.color = Color(0.0, 0.0, 0.0, 0.6)
+	overlay.position = Vector2(8.0, 8.0)
+	overlay.size = Vector2(SKILL_SLOT_W - 16.0, 62.0)
+	overlay.color = Color(0.05, 0.03, 0.02, 0.76)
 	overlay.visible = false
+	overlay.set_meta("base_y", overlay.position.y)
+	overlay.set_meta("base_height", overlay.size.y)
 	slot.add_child(overlay)
 
 	# Cooldown number
 	var cd_lbl := Label.new()
 	cd_lbl.name = "CdLabel"
-	cd_lbl.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H - 24.0)
-	cd_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+	cd_lbl.position = Vector2(10.0, 93.0)
+	cd_lbl.size = Vector2(SKILL_SLOT_W - 20.0, 14.0)
+	cd_lbl.add_theme_font_size_override("font_size", 13)
+	cd_lbl.add_theme_constant_override("outline_size", 2)
+	cd_lbl.add_theme_color_override("font_color", Color(0.92, 0.98, 1.0, 1.0))
+	cd_lbl.add_theme_color_override("font_outline_color", Color(0.06, 0.20, 0.42, 0.96))
 	cd_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cd_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	cd_lbl.visible = false
@@ -584,13 +696,13 @@ func _make_skill_slot(idx: int) -> Control:
 	var buff_frame := ColorRect.new()
 	buff_frame.name = "BuffFrame"
 	buff_frame.size = Vector2(SKILL_SLOT_W, SKILL_SLOT_H)
-	buff_frame.color = Color(1.0, 0.85, 0.0, 0.0)
+	buff_frame.color = Color(0.98, 0.82, 0.28, 0.12)
 	buff_frame.visible = false
 	slot.add_child(buff_frame)
 
 	# Build the border from four ColorRect edges
-	var border_color := Color(1.0, 0.85, 0.0, 1.0)
-	var border_thick := 3.0
+	var border_color := Color(0.98, 0.82, 0.28, 1.0)
+	var border_thick := 2.0
 	for side in [
 		[Vector2(0, 0), Vector2(SKILL_SLOT_W, border_thick)],
 		[Vector2(0, SKILL_SLOT_H - border_thick), Vector2(SKILL_SLOT_W, border_thick)],
@@ -604,6 +716,115 @@ func _make_skill_slot(idx: int) -> Control:
 		buff_frame.add_child(border)
 
 	return slot
+
+
+func _apply_skill_bar_layout() -> void:
+	if _skill_bar == null or _skill_panel == null:
+		return
+	var is_all_mode: bool = _skill_filter_mode == "all"
+	_skill_panel.size.y = SKILL_PANEL_ALL_H if is_all_mode else SKILL_PANEL_H
+	if _skill_shadow != null:
+		_skill_shadow.size = _skill_panel.size
+	if _skill_body != null:
+		_skill_body.size = _skill_panel.size
+	if _skill_inner != null:
+		_skill_inner.size = _skill_panel.size - Vector2(4.0, 4.0)
+	if _skill_top_glow != null:
+		_skill_top_glow.position.x = SKILL_PANEL_CONTENT_PAD
+		_skill_top_glow.size.x = _skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0
+	if _skill_header_rule != null:
+		_skill_header_rule.position.x = SKILL_PANEL_CONTENT_PAD
+		_skill_header_rule.size.x = _skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0
+	if _speed_1x != null:
+		_speed_1x.position.x = _skill_panel.size.x - SKILL_PANEL_CONTENT_PAD - _speed_1x.size.x
+	_layout_sandbox_btn()
+	if _sandbox_btn != null:
+		_sandbox_btn.visible = true
+	if _home_scoop_panel != null:
+		_home_scoop_panel.visible = not is_all_mode
+	if _skip_btn != null:
+		_skip_btn.visible = GameState.is_admin_session()
+	_skill_bar.position.x = SKILL_PANEL_CONTENT_PAD
+	_skill_bar.size.x = _skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0
+	var row_gap: float = 24.0
+	var content_w: float = _skill_bar.size.x - SKILL_BAR_EDGE_PAD * 2.0
+	var horizontal_gap: float = (content_w - SKILL_SLOT_W * MAX_CATS_ON_FIELD) / float(MAX_CATS_ON_FIELD - 1)
+	var slot_count: int = MAX_CATS_ON_FIELD * 2
+	if is_all_mode:
+		_skill_bar.position = Vector2(SKILL_PANEL_CONTENT_PAD, 48.0)
+		_skill_bar.size = Vector2(_skill_bar.size.x, SKILL_SLOT_H * 2.0 + row_gap)
+		for i in range(slot_count):
+			var slot_node: Control = _skill_bar.get_node_or_null("Slot%d" % i)
+			if slot_node == null:
+				continue
+			var col: int = i % MAX_CATS_ON_FIELD
+			var row: int = i / MAX_CATS_ON_FIELD
+			slot_node.scale = Vector2.ONE
+			slot_node.position = Vector2(SKILL_BAR_EDGE_PAD + col * (SKILL_SLOT_W + horizontal_gap), row * (SKILL_SLOT_H + row_gap))
+			slot_node.visible = true
+	else:
+		_skill_bar.position = Vector2(SKILL_PANEL_CONTENT_PAD, 48.0)
+		_skill_bar.size = Vector2(_skill_bar.size.x, SKILL_BAR_H)
+		for i in range(slot_count):
+			var slot_node_single: Control = _skill_bar.get_node_or_null("Slot%d" % i)
+			if slot_node_single == null:
+				continue
+			slot_node_single.scale = Vector2.ONE
+			slot_node_single.position = Vector2(SKILL_BAR_EDGE_PAD + i * (SKILL_SLOT_W + horizontal_gap), 0.0)
+			slot_node_single.visible = i < MAX_CATS_ON_FIELD
+
+
+func _apply_skill_filter_button_style(button: Button, is_active: bool) -> void:
+	if button == null:
+		return
+	var bg_color: Color = ENHANCE_DETAIL_TAB_ACTIVE_FILL if is_active else ENHANCE_APPLY_DISABLED_BG
+	var fg_color: Color = ENHANCE_DETAIL_TAB_ACTIVE_FG if is_active else ENHANCE_APPLY_DISABLED_FG
+	UiPalette.apply_button_palette(button, bg_color, fg_color)
+	button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	button.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+
+func _layout_sandbox_btn() -> void:
+	if _sandbox_btn == null or _speed_1x == null:
+		return
+	_sandbox_btn.position = Vector2(
+		_speed_1x.position.x - _sandbox_btn.size.x - 8.0,
+		_speed_1x.position.y
+	)
+
+
+func _highlight_skill_filter_btn() -> void:
+	if _skill_filter_btn == null:
+		return
+	_skill_filter_btn.text = _get_skill_filter_button_label()
+	_apply_skill_filter_button_style(_skill_filter_btn, true)
+
+
+func _set_skill_filter_mode(mode: String) -> void:
+	_skill_filter_mode = mode
+	_apply_skill_bar_layout()
+	_highlight_skill_filter_btn()
+	if _battle_manager != null:
+		_battle_manager.set_skill_bar_filter(mode)
+
+
+func _cycle_skill_filter_mode() -> void:
+	var next_mode: String = "player"
+	if _skill_filter_mode == "player":
+		next_mode = "enemy"
+	elif _skill_filter_mode == "enemy":
+		next_mode = "all"
+	_set_skill_filter_mode(next_mode)
+
+
+func _get_skill_filter_button_label() -> String:
+	match _skill_filter_mode:
+		"enemy":
+			return "切換(敵方)"
+		"all":
+			return "切換(全部)"
+		_:
+			return "切換(我方)"
 
 
 ## Refresh skill slot names from the active player team.
@@ -651,6 +872,17 @@ func _make_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
 	btn.modulate = Color(0.97, 0.93, 0.88, 1.0)
 	btn.pressed.connect(UiAudio.play_ui_click)
 	return btn
+
+
+func _apply_skill_speed_button_style(button: Button, is_active: bool) -> void:
+	if button == null:
+		return
+	var show_enabled_style: bool = is_active or not button.disabled
+	var bg_color: Color = UiPalette.BUTTON_PRIMARY_BG if show_enabled_style else ENHANCE_APPLY_DISABLED_BG
+	var fg_color: Color = UiPalette.BUTTON_PRIMARY_FG if show_enabled_style else ENHANCE_APPLY_DISABLED_FG
+	UiPalette.apply_button_palette(button, bg_color, fg_color)
+	button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	button.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
 func _make_panel(pos: Vector2, size: Vector2, fill: Color, border: Color) -> Control:
@@ -827,24 +1059,99 @@ func _play_reward_float_sfx(reward_key: String) -> void:
 
 
 func _set_speed(mult: float, active_btn: Button) -> void:
-	if mult > GameState.get_special_ability_speed_cap():
-		return
+	_current_speed_mult = mult
 	_battle_manager.set_speed(mult)
+	_refresh_speed_boost_button()
 	_highlight_speed_btn(active_btn)
 
 
+func _cycle_speed() -> void:
+	if _is_free_speed_boost_active() or _free_speed_boost_used:
+		return
+	_free_speed_boost_mult = _get_free_speed_boost_mult()
+	_free_speed_boost_end_unix = int(Time.get_unix_time_from_system()) + FREE_SPEED_BOOST_DURATION_SECONDS
+	_free_speed_boost_used = true
+	_set_speed(_free_speed_boost_mult, _speed_1x)
+
+
+func _get_available_speed_options() -> Array[float]:
+	var options: Array[float] = [1.0]
+	if GameState.get_special_ability_speed_cap() > 1.0:
+		options.append(1.2)
+		options.append(1.5)
+	return options
+
+
+func _format_speed_label(mult: float) -> String:
+	if is_equal_approx(mult, 1.0):
+		return "1x"
+	if is_equal_approx(mult, 1.2):
+		return "1.2x"
+	if is_equal_approx(mult, 1.5):
+		return "1.5x"
+	return "%.1fx" % mult
+
+
 func _apply_speed_unlocks() -> void:
-	var speed_cap: float = GameState.get_special_ability_speed_cap()
-	_speed_2x.visible = speed_cap >= 2.0
-	_speed_3x.visible = speed_cap >= 3.0
+	_refresh_speed_boost_button()
 
 
 func _highlight_speed_btn(active: Button) -> void:
 	for btn: Button in [_speed_1x, _speed_2x, _speed_3x]:
 		if btn == null or not btn.visible:
 			continue
-		btn.modulate = Color(0.7, 0.7, 0.7, 1.0)
-	active.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_apply_skill_speed_button_style(btn, btn == active)
+
+
+func _refresh_speed_boost_state() -> void:
+	var boost_active: bool = _is_free_speed_boost_active()
+	if boost_active and not is_equal_approx(_current_speed_mult, _free_speed_boost_mult):
+		_set_speed(_free_speed_boost_mult, _speed_1x)
+	elif not boost_active and _free_speed_boost_end_unix != 0:
+		_free_speed_boost_end_unix = 0
+		_free_speed_boost_mult = 1.0
+		_set_speed(1.0, _speed_1x)
+	else:
+		_refresh_speed_boost_button()
+
+
+func _is_free_speed_boost_active() -> bool:
+	return _free_speed_boost_end_unix > int(Time.get_unix_time_from_system())
+
+
+func _refresh_speed_boost_button() -> void:
+	if _speed_1x == null:
+		return
+	if _is_free_speed_boost_active():
+		var remaining_seconds: int = _free_speed_boost_end_unix - int(Time.get_unix_time_from_system())
+		_speed_1x.text = "%s加速中 %s" % [_format_speed_label(_free_speed_boost_mult), _format_countdown_time(remaining_seconds)]
+		_speed_1x.disabled = true
+	elif _free_speed_boost_used:
+		_speed_1x.text = "已加速"
+		_speed_1x.disabled = true
+	else:
+		_speed_1x.text = "加速"
+		_speed_1x.disabled = false
+	_highlight_speed_btn(_speed_1x if _is_free_speed_boost_active() else null)
+	_apply_skill_speed_button_style(_speed_1x, _is_free_speed_boost_active() or not _speed_1x.disabled)
+
+
+func _format_countdown_time(total_seconds: int) -> String:
+	var clamped_seconds: int = maxi(total_seconds, 0)
+	var minutes: int = clamped_seconds / 60
+	var seconds: int = clamped_seconds % 60
+	return "%02d:%02d" % [minutes, seconds]
+
+
+func _get_free_speed_boost_mult() -> float:
+	var speed_cap: float = GameState.get_special_ability_speed_cap()
+	if speed_cap >= 3.0:
+		return 3.0
+	if speed_cap >= 2.0:
+		return 2.0
+	if speed_cap >= 1.5:
+		return 1.5
+	return DEFAULT_FREE_SPEED_BOOST_MULT
 
 
 func _refresh_ui() -> void:
@@ -875,7 +1182,7 @@ func _refresh_ui() -> void:
 			top_threshold = max((top_level + 1) * int(GameState.idle_config.get("scooper_exp_per_level", 10)), 1)
 		_top_exp_bar.max_value = top_threshold
 		_top_exp_bar.value = top_exp
-		_top_progress_value_label.text = "鏟屎官Exp %d/%d" % [top_exp, top_threshold]
+		_top_progress_value_label.text = "EXP %d/%d" % [top_exp, top_threshold]
 	_boss_btn.visible = GameState.boss_available and not GameState.is_current_boss()
 	_refresh_resource_strip()
 	_refresh_sandbox_btn()
@@ -891,17 +1198,20 @@ func _refresh_sandbox_btn() -> void:
 	if claimable_minutes < 1:
 		_sandbox_btn.disabled = true
 		_sandbox_btn.text = UiText.HOME_IDLE_NOT_READY
+		UiPalette.apply_button_palette(_sandbox_btn, ENHANCE_APPLY_DISABLED_BG, ENHANCE_APPLY_DISABLED_FG)
 	else:
 		_sandbox_btn.disabled = false
 		var h := elapsed / 3600
 		var m := (elapsed % 3600) / 60
 		var s := elapsed % 60
 		_sandbox_btn.text = "%s %02d:%02d:%02d" % [UiText.HOME_IDLE_READY, h, m, s]
+		UiPalette.apply_button_kind(_sandbox_btn, "primary")
 
 
 func _refresh_home_scoop_panel() -> void:
-	if _home_exp_bar == null or _home_exp_label == null or _home_scoop_button == null or _home_coupon_button == null:
+	if _home_scoop_button == null:
 		return
+	_layout_home_scoop_panel()
 
 	var profile: Dictionary = GameState.scooper_profile_data
 	var level: int
@@ -916,18 +1226,16 @@ func _refresh_home_scoop_panel() -> void:
 		exp = GameState.player_data.scooper_exp
 		threshold = max((level + 1) * int(GameState.idle_config.get("scooper_exp_per_level", 10)), 1)
 
-	_home_exp_bar.max_value = threshold
-	_home_exp_bar.value = exp
-	_home_exp_label.text = "Lv.%d  EXP %d / %d" % [level, exp, threshold]
+	if _home_exp_bar != null:
+		_home_exp_bar.max_value = threshold
+		_home_exp_bar.value = exp
+	if _home_exp_label != null:
+		_home_exp_label.text = "Lv.%d  EXP %d / %d" % [level, exp, threshold]
 
 	var poop_count := GameState.player_data.poop_count
-	var coupon_count: int = GameState.get_party_cheer_coupon_count()
-	var coupon_display_count: int = mini(coupon_count, PARTY_COUPON_DISPLAY_CAP)
 	var cooling_down := _home_scoop_cooldown_remaining > 0.0
 	_home_scoop_button.disabled = cooling_down or poop_count <= 0
 	_home_scoop_button.text = "%s (%d)" % [UiText.HOME_SCOOPER_BUTTON, poop_count]
-	_home_coupon_button.disabled = coupon_count <= 0
-	_home_coupon_button.text = UiText.HOME_PARTY_COUPON_BUTTON_FORMAT % [coupon_display_count, PARTY_COUPON_DISPLAY_CAP]
 	if poop_count <= 0 and _home_scoop_result_label != null and _home_scoop_result_label.text.is_empty():
 		_home_scoop_result_label.text = UiText.HOME_SCOOPER_EMPTY
 
@@ -947,6 +1255,22 @@ func _refresh_home_scoop_panel() -> void:
 			_home_scoop_cd_label.visible = false
 
 
+func _layout_home_scoop_panel() -> void:
+	if _home_scoop_panel == null or _home_scoop_button == null:
+		return
+	var enhance_btn_variant: Variant = _nav_buttons.get("res://scenes/EnhanceScene.tscn")
+	var enhance_btn: Button = enhance_btn_variant as Button
+	if enhance_btn == null:
+		return
+	var target_center_x: float = enhance_btn.position.x + enhance_btn.size.x * 0.5
+	var target_button_x: float = target_center_x - (_home_scoop_button.position.x + _home_scoop_button.size.x * 0.5)
+	var target_button_y: float = enhance_btn.position.y - 50.0 - _home_scoop_button.size.y
+	_home_scoop_panel.position = Vector2(
+		target_button_x,
+		target_button_y - _home_scoop_button.position.y
+	)
+
+
 func _refresh_main_nav_state() -> void:
 	var active_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
 	for scene_path: String in _nav_buttons.keys():
@@ -956,6 +1280,19 @@ func _refresh_main_nav_state() -> void:
 		var is_active: bool = scene_path == active_scene_path
 		btn.modulate = Color(1.0, 0.93, 0.76, 1.0) if is_active else Color(0.97, 0.93, 0.88, 1.0)
 		btn.add_theme_font_size_override("font_size", 30 if is_active else 28)
+
+
+func get_damage_fx_host() -> Node2D:
+	return _damage_fx_layer if _damage_fx_layer != null else self
+
+
+func _refresh_overlay_fx_state() -> void:
+	var overlay_open: bool = not SceneNavigator.get_current_overlay_scene_path().is_empty()
+	if _damage_fx_layer != null:
+		if overlay_open:
+			for child: Node in _damage_fx_layer.get_children():
+				child.queue_free()
+		_damage_fx_layer.visible = not overlay_open
 
 
 func _refresh_mail_badge() -> void:
@@ -973,6 +1310,14 @@ func _refresh_mail_badge() -> void:
 
 func _start_battle() -> void:
 	_result_display.visible = false
+	if _result_glow != null:
+		_result_glow.visible = false
+	if _result_shadow_label != null:
+		_result_shadow_label.visible = false
+	if _result_streak_left != null:
+		_result_streak_left.color = Color(_result_streak_left.color.r, _result_streak_left.color.g, _result_streak_left.color.b, 0.0)
+	if _result_streak_right != null:
+		_result_streak_right.color = Color(_result_streak_right.color.r, _result_streak_right.color.g, _result_streak_right.color.b, 0.0)
 	if _result_backdrop != null:
 		_result_backdrop.visible = false
 	_refresh_ui()
@@ -1035,6 +1380,7 @@ func _start_battle() -> void:
 	var events := simulator.simulate(player_cats, enemy_cats)
 	_battle_manager.setup(events, player_cats, enemy_cats,
 			_player_team, _enemy_team, _timer_label, _skill_bar)
+	_set_skill_filter_mode(_skill_filter_mode)
 
 
 func restart_with_latest_team() -> void:
@@ -1064,29 +1410,80 @@ func _on_battle_finished(result: String) -> void:
 
 
 func _show_result_text(text: String, color: Color, y: float) -> void:
-	_result_display.text = text
-	_result_display.modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_result_display.add_theme_color_override("font_color", color)
 	if _result_backdrop != null:
-		_result_backdrop.position = Vector2((SW - RESULT_BANNER_W) / 2.0, y)
+		_result_backdrop.position = Vector2((SW - RESULT_BANNER_W) / 2.0, y + 26.0)
 		_result_backdrop.visible = true
-		var body: ColorRect = _result_backdrop.get_child(0)
-		if body != null:
-			body.color = Color(
-				lerpf(0.16, color.r * 0.32, 0.24),
-				lerpf(0.09, color.g * 0.20, 0.24),
-				lerpf(0.06, color.b * 0.14, 0.24),
-				0.90
-			)
-		var border_color := color.lightened(0.18)
-		for i in range(1, 5):
-			var border: ColorRect = _result_backdrop.get_child(i)
-			if border != null:
-				border.color = border_color
-		var result_bottom_rule: ColorRect = _result_backdrop.get_child(6)
-		if result_bottom_rule != null:
-			result_bottom_rule.color = border_color.lightened(0.10)
+	_result_backdrop.scale = Vector2(0.54, 0.54)
+	_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_result_backdrop.rotation_degrees = -9.0 if text == UiText.BATTLE_RESULT_WIN else 9.0
+
+	var accent_color: Color = color
+	var glow_color: Color = color.lerp(Color(1.0, 0.98, 0.90, 1.0), 0.62)
+	var streak_color: Color = color.lerp(Color(1.0, 0.95, 0.80, 1.0), 0.50)
+	var shadow_color: Color = Color(0.12, 0.05, 0.03, 0.92)
+
+	if _result_glow != null:
+		_result_glow.text = text
+		_result_glow.position = Vector2(0.0, -3.0)
+		_result_glow.scale = Vector2(1.42, 1.42)
+		_result_glow.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		_result_glow.add_theme_color_override("font_color", glow_color)
+		_result_glow.add_theme_color_override("font_outline_color", Color(1.0, 1.0, 1.0, 0.92))
+		_result_glow.visible = true
+
+	if _result_shadow_label != null:
+		_result_shadow_label.text = text
+		_result_shadow_label.position = Vector2(10.0, 20.0)
+		_result_shadow_label.scale = Vector2(1.10, 1.10)
+		_result_shadow_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		_result_shadow_label.add_theme_color_override("font_color", shadow_color)
+		_result_shadow_label.add_theme_color_override("font_outline_color", Color(0.02, 0.01, 0.01, 0.95))
+		_result_shadow_label.visible = true
+
+	_result_display.text = text
+	_result_display.position = Vector2(0.0, -4.0)
+	_result_display.scale = Vector2(0.60, 0.60)
+	_result_display.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_result_display.add_theme_color_override("font_color", accent_color)
+	_result_display.add_theme_color_override("font_outline_color", Color(0.20, 0.09, 0.04, 0.98))
 	_result_display.visible = true
+
+	if _result_streak_left != null:
+		_result_streak_left.color = Color(streak_color.r, streak_color.g, streak_color.b, 0.0)
+		_result_streak_left.scale = Vector2(0.12, 1.0)
+		_result_streak_left.position = Vector2(42.0, 40.0)
+	if _result_streak_right != null:
+		_result_streak_right.color = Color(streak_color.r, streak_color.g, streak_color.b, 0.0)
+		_result_streak_right.scale = Vector2(0.12, 1.0)
+		_result_streak_right.position = Vector2(RESULT_BANNER_W - 158.0, 40.0)
+
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(_result_backdrop, "modulate:a", 1.0, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_backdrop, "position:y", y, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_backdrop, "scale", Vector2(1.18, 1.18), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_backdrop, "rotation_degrees", 0.0, 0.20).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_display, "modulate:a", 1.0, 0.05).set_delay(0.02).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_display, "scale", Vector2(1.28, 1.28), 0.12).set_delay(0.02).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_shadow_label, "modulate:a", 0.82, 0.07).set_delay(0.01).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_shadow_label, "position:y", 10.0, 0.16).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_glow, "modulate:a", 1.0, 0.06).set_delay(0.00).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_glow, "scale", Vector2(1.06, 1.06), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if _result_streak_left != null:
+		tween.tween_property(_result_streak_left, "color:a", 0.98, 0.04).set_delay(0.03).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+		tween.tween_property(_result_streak_left, "scale:x", 1.0, 0.12).set_delay(0.03).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	if _result_streak_right != null:
+		tween.tween_property(_result_streak_right, "color:a", 0.98, 0.04).set_delay(0.03).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+		tween.tween_property(_result_streak_right, "scale:x", 1.0, 0.12).set_delay(0.03).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(_result_backdrop, "scale", Vector2(0.98, 0.98), 0.10).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(_result_display, "scale", Vector2(0.96, 0.96), 0.09).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(_result_glow, "modulate:a", 0.56, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(_result_backdrop, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(_result_display, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	if _result_streak_left != null:
+		tween.parallel().tween_property(_result_streak_left, "color:a", 0.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	if _result_streak_right != null:
+		tween.parallel().tween_property(_result_streak_right, "color:a", 0.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 
 func _on_challenge_boss_pressed() -> void:
@@ -1127,7 +1524,7 @@ func _on_home_scoop_pressed() -> void:
 			GameState.update_scooper_profile(updated_profile)
 
 		var reward_entries := _build_scoop_reward_entries(result)
-		_home_scoop_result_label.text = _format_scoop_result_text(result)
+		_home_scoop_result_label.text = ""
 		_home_scoop_cooldown_remaining = HOME_SCOOP_COOLDOWN
 		if not reward_entries.is_empty():
 			_queue_reward_floats(reward_entries)
@@ -1293,6 +1690,36 @@ func _show_sandbox_dialog() -> void:
 
 	# Claim rewards action
 	var close_ref := [Callable()]
+	var coupon_btn: Button = Button.new()
+	coupon_btn.text = UiText.HOME_PARTY_COUPON_BUTTON_FORMAT % [
+		mini(GameState.get_party_cheer_coupon_count(), PARTY_COUPON_DISPLAY_CAP),
+		PARTY_COUPON_DISPLAY_CAP
+	]
+	coupon_btn.custom_minimum_size = Vector2(200.0, 46.0)
+	coupon_btn.disabled = GameState.get_party_cheer_coupon_count() <= 0
+	coupon_btn.pressed.connect(func() -> void:
+		if coupon_btn.disabled:
+			return
+		coupon_btn.disabled = true
+		ApiClient.use_party_cheer_coupon(func(ok: bool, data: Variant, err: Dictionary) -> void:
+			if not ok:
+				coupon_btn.disabled = GameState.get_party_cheer_coupon_count() <= 0
+				ToastManager.error(UiText.SOCIAL_PARTY_USE_COUPON, str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR)))
+				return
+
+			GameState.adjust_party_cheer_coupon_count(-1)
+			var result: Dictionary = data if data is Dictionary else {}
+			var coupon_count: int = GameState.get_party_cheer_coupon_count()
+			coupon_btn.text = UiText.HOME_PARTY_COUPON_BUTTON_FORMAT % [
+				mini(coupon_count, PARTY_COUPON_DISPLAY_CAP),
+				PARTY_COUPON_DISPLAY_CAP
+			]
+			coupon_btn.disabled = coupon_count <= 0
+			ToastManager.success(UiText.SOCIAL_PARTY_USE_COUPON, UiText.HOME_PARTY_COUPON_SUCCESS % int(result.get("goldGranted", 0)))
+			_refresh_ui()
+		)
+	)
+	vbox.add_child(coupon_btn)
 
 	if has_rewards:
 		var claim_btn := Button.new()

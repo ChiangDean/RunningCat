@@ -7,8 +7,8 @@ extends RefCounted
 
 const BATTLE_DURATION: float = 60.0
 const SIM_STEP: float = 1.0 / 30.0   # 30fps 模擬精度
-const WALL_LEFT: float = 40.0
-const WALL_RIGHT: float = 680.0
+const WALL_LEFT: float = 20.0
+const WALL_RIGHT: float = 700.0
 const CAT_HALF_W: float = 30.0
 const BASE_CRIT_DAMAGE_MULT: float = 1.5
 const PLAYER_FRONT_START_X: float = 280.0
