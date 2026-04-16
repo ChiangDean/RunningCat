@@ -186,6 +186,130 @@ func post_chat_read(channel_key: String, last_read_sequence: int, callback: Call
 	_api_post("chat/read", {"channelKey": channel_key, "lastReadSequence": last_read_sequence}, callback)
 
 
+func get_friends(callback: Callable) -> void:
+	_api_get("friend", callback)
+
+
+func get_friend_inbox(callback: Callable) -> void:
+	_api_get("friend/request/inbox", callback)
+
+
+func get_friend_outbox(callback: Callable) -> void:
+	_api_get("friend/request/outbox", callback)
+
+
+func send_friend_request(receiver_player_uid: String, callback: Callable) -> void:
+	_api_post("friend/request", {"receiverPlayerUid": receiver_player_uid}, callback)
+
+
+func accept_friend_request(request_id: int, callback: Callable) -> void:
+	_api_post("friend/request/%d/accept" % request_id, {}, callback)
+
+
+func reject_friend_request(request_id: int, callback: Callable) -> void:
+	_api_post("friend/request/%d/reject" % request_id, {}, callback)
+
+
+func cancel_friend_request(request_id: int, callback: Callable) -> void:
+	_api_delete("friend/request/%d" % request_id, callback)
+
+
+func remove_friend(friend_user_id: int, callback: Callable) -> void:
+	_api_delete("friend/%d" % friend_user_id, callback)
+
+
+func send_friend_gifts(callback: Callable) -> void:
+	_api_post("friend/gift/send-all", {}, callback)
+
+
+func set_friend_showcase_cat(player_cat_id: int, callback: Callable) -> void:
+	_api_put("friend/showcase-cat", {"playerCatId": player_cat_id}, callback)
+
+
+func clear_friend_showcase_cat(callback: Callable) -> void:
+	_api_put("friend/showcase-cat", {"playerCatId": null}, callback)
+
+
+func get_my_party(callback: Callable) -> void:
+	_api_get("party/my", callback)
+
+
+func get_party(party_id: int, callback: Callable) -> void:
+	_api_get("party/%d" % party_id, callback)
+
+
+func create_party(name: String, callback: Callable) -> void:
+	_api_post("party", {"name": name}, callback)
+
+
+func update_party_name(party_id: int, name: String, callback: Callable) -> void:
+	_api_put("party/%d/name" % party_id, {"name": name}, callback)
+
+
+func disband_party(party_id: int, callback: Callable) -> void:
+	_api_delete("party/%d" % party_id, callback)
+
+
+func transfer_party_leadership(party_id: int, callback: Callable) -> void:
+	_api_post("party/%d/transfer-leadership" % party_id, {}, callback)
+
+
+func kick_party_member(party_id: int, target_user_id: int, callback: Callable) -> void:
+	_api_post("party/%d/kick/%d" % [party_id, target_user_id], {}, callback)
+
+
+func leave_party(party_id: int, callback: Callable) -> void:
+	_api_delete("party/%d/leave" % party_id, callback)
+
+
+func apply_to_party_by_id(party_id: int, callback: Callable) -> void:
+	_api_post("party/apply", {"partyId": party_id}, callback)
+
+
+func apply_to_party_by_name(party_name: String, callback: Callable) -> void:
+	_api_post("party/apply", {"partyName": party_name}, callback)
+
+
+func invite_player_to_party(party_id: int, target_player_uid: String, callback: Callable) -> void:
+	_api_post("party/%d/invite" % party_id, {"targetPlayerUid": target_player_uid}, callback)
+
+
+func get_party_applications(party_id: int, callback: Callable) -> void:
+	_api_get("party/%d/applications" % party_id, callback)
+
+
+func get_my_party_applications(callback: Callable) -> void:
+	_api_get("party/applications/my", callback)
+
+
+func accept_party_application(application_id: int, callback: Callable) -> void:
+	_api_post("party/application/%d/accept" % application_id, {}, callback)
+
+
+func reject_party_application(application_id: int, callback: Callable) -> void:
+	_api_post("party/application/%d/reject" % application_id, {}, callback)
+
+
+func cancel_party_application(application_id: int, callback: Callable) -> void:
+	_api_delete("party/application/%d" % application_id, callback)
+
+
+func usurp_party_leadership(party_id: int, callback: Callable) -> void:
+	_api_post("party/%d/usurp" % party_id, {}, callback)
+
+
+func get_party_cheer_status(party_id: int, callback: Callable) -> void:
+	_api_get("party/%d/cheer" % party_id, callback)
+
+
+func cheer_party(party_id: int, is_ad_boost: bool, callback: Callable) -> void:
+	_api_post("party/%d/cheer" % party_id, {"isAdBoost": is_ad_boost}, callback)
+
+
+func use_party_cheer_coupon(callback: Callable) -> void:
+	_api_post("party/cheer-coupon/use", {}, callback)
+
+
 func get_teams(callback: Callable) -> void:
 	_api_get("config/teams", callback)
 

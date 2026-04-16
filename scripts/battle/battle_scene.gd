@@ -23,6 +23,7 @@ const REWARD_SFX_BY_KEY := {
 
 const MAX_CATS_ON_FIELD: int = 5
 const CHAT_SCENE := preload("res://scenes/chat/ChatScene.tscn")
+const SOCIAL_SCENE := preload("res://scenes/social/SocialScene.tscn")
 
 const SW := 720.0
 const SH := 1280.0
@@ -55,6 +56,7 @@ const HOME_SCOOP_PANEL_Y := 1032.0
 const HOME_SCOOP_PANEL_W := 412.0
 const HOME_SCOOP_PANEL_H := 112.0
 const HOME_SCOOP_COOLDOWN := 0.5
+const PARTY_COUPON_DISPLAY_CAP := 5
 const RESULT_BANNER_W := 296.0
 const RESULT_BANNER_H := 84.0
 const REWARD_FLOAT_START_Y := 620.0
@@ -87,6 +89,8 @@ var _sandbox_btn: Button     # Idle rewards action button
 var _mail_btn: Button
 var _mail_badge: Label
 
+var _friend_btn: Button
+var _party_btn: Button
 var _chat_btn: Button
 var _chat_badge: Label
 var _resource_value_labels: Dictionary = {}
@@ -110,6 +114,7 @@ var _last_result: String = ""
 var _home_scoop_panel: Control
 var _home_exp_bar: ProgressBar
 var _home_exp_label: Label
+var _home_coupon_button: Button
 var _home_scoop_button: Button
 var _home_scoop_result_label: Label
 var _home_scoop_overlay: ColorRect
@@ -281,7 +286,15 @@ func _build_ui() -> void:
 	_mail_badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 	_ui_layer.add_child(_mail_badge)
 
-	_chat_btn = _make_button(UiText.HOME_CHAT, Vector2(ACTION_STACK_X, ACTION_STACK_Y + ACTION_STACK_H + 10.0), Vector2(ACTION_STACK_W, ACTION_STACK_H))
+	_friend_btn = _make_button(UiText.HOME_FRIEND, Vector2(ACTION_STACK_X, ACTION_STACK_Y + ACTION_STACK_H + 10.0), Vector2(ACTION_STACK_W, ACTION_STACK_H))
+	_friend_btn.pressed.connect(_open_friend)
+	_ui_layer.add_child(_friend_btn)
+
+	_party_btn = _make_button(UiText.HOME_PARTY, Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 2.0), Vector2(ACTION_STACK_W, ACTION_STACK_H))
+	_party_btn.pressed.connect(_open_party)
+	_ui_layer.add_child(_party_btn)
+
+	_chat_btn = _make_button(UiText.HOME_CHAT, Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 3.0), Vector2(ACTION_STACK_W, ACTION_STACK_H))
 	_chat_btn.pressed.connect(_open_chat)
 	_ui_layer.add_child(_chat_btn)
 
@@ -290,6 +303,9 @@ func _build_ui() -> void:
 	_ui_layer.add_child(_chat_badge)
 	GameState.chat_unread_changed.connect(func(_channel_key: String, _count: int) -> void:
 		_refresh_chat_badge()
+	)
+	GameState.party_cheer_coupon_count_changed.connect(func(_count: int) -> void:
+		_refresh_home_scoop_panel()
 	)
 	_refresh_chat_badge()
 
@@ -381,6 +397,15 @@ func _build_ui() -> void:
 	_home_scoop_result_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_home_scoop_result_label.add_theme_color_override("font_color", Color(0.84, 0.98, 0.80, 1.0))
 	_home_scoop_panel.add_child(_home_scoop_result_label)
+
+	_home_coupon_button = Button.new()
+	_home_coupon_button.position = Vector2(242.0, 36.0)
+	_home_coupon_button.size = Vector2(154.0, 24.0)
+	_home_coupon_button.add_theme_font_size_override("font_size", 14)
+	_home_coupon_button.modulate = Color(0.97, 0.93, 0.88, 1.0)
+	_home_coupon_button.pressed.connect(UiAudio.play_ui_click)
+	_home_coupon_button.pressed.connect(_on_home_coupon_pressed)
+	_home_scoop_panel.add_child(_home_coupon_button)
 
 	_home_scoop_button = Button.new()
 	_home_scoop_button.text = UiText.HOME_SCOOPER_BUTTON
@@ -875,7 +900,7 @@ func _refresh_sandbox_btn() -> void:
 
 
 func _refresh_home_scoop_panel() -> void:
-	if _home_exp_bar == null or _home_exp_label == null or _home_scoop_button == null:
+	if _home_exp_bar == null or _home_exp_label == null or _home_scoop_button == null or _home_coupon_button == null:
 		return
 
 	var profile: Dictionary = GameState.scooper_profile_data
@@ -896,9 +921,13 @@ func _refresh_home_scoop_panel() -> void:
 	_home_exp_label.text = "Lv.%d  EXP %d / %d" % [level, exp, threshold]
 
 	var poop_count := GameState.player_data.poop_count
+	var coupon_count: int = GameState.get_party_cheer_coupon_count()
+	var coupon_display_count: int = mini(coupon_count, PARTY_COUPON_DISPLAY_CAP)
 	var cooling_down := _home_scoop_cooldown_remaining > 0.0
 	_home_scoop_button.disabled = cooling_down or poop_count <= 0
 	_home_scoop_button.text = "%s (%d)" % [UiText.HOME_SCOOPER_BUTTON, poop_count]
+	_home_coupon_button.disabled = coupon_count <= 0
+	_home_coupon_button.text = UiText.HOME_PARTY_COUPON_BUTTON_FORMAT % [coupon_display_count, PARTY_COUPON_DISPLAY_CAP]
 	if poop_count <= 0 and _home_scoop_result_label != null and _home_scoop_result_label.text.is_empty():
 		_home_scoop_result_label.text = UiText.HOME_SCOOPER_EMPTY
 
@@ -1102,6 +1131,24 @@ func _on_home_scoop_pressed() -> void:
 		_home_scoop_cooldown_remaining = HOME_SCOOP_COOLDOWN
 		if not reward_entries.is_empty():
 			_queue_reward_floats(reward_entries)
+		_refresh_ui()
+	)
+
+
+func _on_home_coupon_pressed() -> void:
+	if _home_coupon_button == null or _home_coupon_button.disabled:
+		return
+
+	_home_coupon_button.disabled = true
+	ApiClient.use_party_cheer_coupon(func(ok: bool, data: Variant, err: Dictionary) -> void:
+		if not ok:
+			_home_scoop_result_label.text = str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR))
+			_refresh_home_scoop_panel()
+			return
+
+		GameState.adjust_party_cheer_coupon_count(-1)
+		var result: Dictionary = data if data is Dictionary else {}
+		_home_scoop_result_label.text = UiText.HOME_PARTY_COUPON_SUCCESS % int(result.get("goldGranted", 0))
 		_refresh_ui()
 	)
 
@@ -1311,6 +1358,18 @@ func _on_nav_mail() -> void:
 func _open_chat() -> void:
 	var chat_view: Control = CHAT_SCENE.instantiate()
 	DialogManager.show_info_node(UiText.HOME_CHAT_DIALOG_TITLE, chat_view, Callable(), "large")
+
+
+func _open_friend() -> void:
+	var social_view = SOCIAL_SCENE.instantiate()
+	social_view.set_mode("friend")
+	DialogManager.show_info_node(UiText.HOME_FRIEND_DIALOG_TITLE, social_view, Callable(), "large")
+
+
+func _open_party() -> void:
+	var social_view = SOCIAL_SCENE.instantiate()
+	social_view.set_mode("party")
+	DialogManager.show_info_node(UiText.HOME_PARTY_DIALOG_TITLE, social_view, Callable(), "large")
 
 
 func _refresh_chat_badge() -> void:

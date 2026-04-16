@@ -6,6 +6,7 @@ const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 var _active_channel := "system"
 var _tab_buttons: Dictionary = {}
+var _initial_channel := ""
 var _status_label: Label
 var _list_root: VBoxContainer
 var _scroll: ScrollContainer
@@ -21,9 +22,15 @@ func _ready() -> void:
 	GameState.chat_connection_state_changed.connect(_on_connection_state_changed)
 	GameState.chat_messages_changed.connect(_on_messages_changed)
 	GameState.chat_unread_changed.connect(_on_unread_changed)
+	if _initial_channel != "" and _available_channels().has(_initial_channel):
+		_active_channel = _initial_channel
 	_refresh_tabs()
 	_refresh_connection_state(GameState.chat_connection_state)
 	_load_history(_active_channel, 0)
+
+
+func set_initial_channel(channel_key: String) -> void:
+	_initial_channel = channel_key.to_lower()
 
 
 func _build_ui() -> void:
@@ -36,7 +43,7 @@ func _build_ui() -> void:
 	var header := HBoxContainer.new()
 	root.add_child(header)
 
-	for item: Array in [["system", "System"], ["world", "World"], ["guild", "Guild"]]:
+	for item: Array in _build_channel_defs():
 		var tab := ChatTabScript.new()
 		tab.configure(item[0], item[1])
 		tab.pressed.connect(_on_tab_pressed.bind(item[0]))
@@ -96,7 +103,10 @@ func _on_load_more_pressed() -> void:
 
 
 func _load_history(channel_key: String, before_seq: int) -> void:
-	ApiClient.get_chat_history(channel_key, before_seq, 50, func(success: bool, data: Variant, error: Dictionary) -> void:
+	var resolved_channel_key := _resolve_channel_key(channel_key)
+	if resolved_channel_key == "":
+		return
+	ApiClient.get_chat_history(resolved_channel_key, before_seq, 50, func(success: bool, data: Variant, error: Dictionary) -> void:
 		if not success:
 			_hint_label.text = str(error.get("message", "Failed to load chat history."))
 			return
@@ -115,8 +125,12 @@ func _submit_message() -> void:
 	if content == "":
 		return
 	if _active_channel != "world":
+		if _active_channel != "party":
+			return
+	var resolved_channel_key := _resolve_channel_key(_active_channel)
+	if resolved_channel_key == "":
 		return
-	ApiClient.post_chat_message(_active_channel, content, func(success: bool, _data: Variant, error: Dictionary) -> void:
+	ApiClient.post_chat_message(resolved_channel_key, content, func(success: bool, _data: Variant, error: Dictionary) -> void:
 		if success:
 			_input.text = ""
 		else:
@@ -148,13 +162,17 @@ func _refresh_tabs() -> void:
 
 
 func _refresh_input_state() -> void:
-	var can_send := _active_channel == "world"
+	var can_send := _active_channel == "world" or (_active_channel == "party" and GameState.chat_party_available)
 	_input.editable = can_send
 	_send_button.disabled = not can_send
 	if _active_channel == "guild":
 		_hint_label.text = "Guild chat unlocks after guild system is implemented."
 	elif _active_channel == "system":
 		_hint_label.text = "System messages are read only."
+	elif _active_channel == "party":
+		_hint_label.text = "Party chat is available to current party members only."
+	else:
+		_hint_label.text = ""
 
 
 func _mark_active_channel_read() -> void:
@@ -162,7 +180,9 @@ func _mark_active_channel_read() -> void:
 	if latest_seq <= 0:
 		return
 	GameState.set_chat_unread_count(_active_channel, 0)
-	ChatRealtimeClient.mark_read(_active_channel, latest_seq)
+	var resolved_channel_key := _resolve_channel_key(_active_channel)
+	if resolved_channel_key != "":
+		ChatRealtimeClient.mark_read(resolved_channel_key, latest_seq)
 
 
 func _on_connection_state_changed(state: String) -> void:
@@ -180,3 +200,27 @@ func _on_messages_changed(channel_key: String) -> void:
 
 func _on_unread_changed(_channel_key: String, _count: int) -> void:
 	_refresh_tabs()
+
+
+func _build_channel_defs() -> Array:
+	var defs: Array = [
+		["system", "System"],
+		["world", "World"],
+		["guild", "Guild"],
+	]
+	if GameState.chat_party_available:
+		defs.append(["party", "Party"])
+	return defs
+
+
+func _available_channels() -> Array[String]:
+	var keys: Array[String] = []
+	for item: Array in _build_channel_defs():
+		keys.append(String(item[0]))
+	return keys
+
+
+func _resolve_channel_key(channel_key: String) -> String:
+	if channel_key == "party":
+		return GameState.chat_party_channel_key
+	return channel_key
