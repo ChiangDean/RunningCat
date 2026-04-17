@@ -1,6 +1,7 @@
 extends Control
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const ADMIN_CATALOG_SCENE_PATH := "res://scenes/AdminCatalogScene.tscn"
 
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
 const SECTION_HINT_COLOR := Color(0.84, 0.80, 0.72, 0.88)
@@ -190,6 +191,8 @@ func _build_profile_section() -> Control:
 	_bind_profile_edit_events()
 	_refresh_avatar_selection()
 	_refresh_profile_save_state()
+	if GameState.is_admin_session():
+		column.add_child(_build_admin_catalog_row())
 	return section
 
 
@@ -262,6 +265,47 @@ func _build_game_settings_section() -> Control:
 	column.add_child(_build_audio_row("sfx", "音效"))
 
 	return section
+
+
+func _build_admin_catalog_row() -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	panel.add_child(margin)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	margin.add_child(row)
+
+	var text_box: VBoxContainer = VBoxContainer.new()
+	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_box.add_theme_constant_override("separation", 4)
+	row.add_child(text_box)
+
+	var title: Label = Label.new()
+	title.text = "Admin Catalog"
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	text_box.add_child(title)
+
+	var hint: Label = Label.new()
+	hint.text = "Every visit re-validates admin access before loading catalog settings."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	text_box.add_child(hint)
+
+	var button: Button = Button.new()
+	button.text = "Open"
+	button.custom_minimum_size = Vector2(160.0, 46.0)
+	UiPalette.apply_button_kind(button, "confirm")
+	button.pressed.connect(UiAudio.play_ui_click)
+	button.pressed.connect(func() -> void:
+		SceneNavigator.open_overlay_scene(ADMIN_CATALOG_SCENE_PATH)
+	)
+	row.add_child(button)
+
+	return panel
 
 
 func _build_avatar_card(avatar_id: String) -> Control:

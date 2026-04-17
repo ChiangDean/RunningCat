@@ -142,12 +142,12 @@ func is_admin_session() -> bool:
 	if permissions_variant is Array:
 		for permission_variant: Variant in permissions_variant:
 			var permission: String = str(permission_variant).strip_edges().to_lower()
-			if permission == "admin":
+			if permission == "admin" or permission == "catalog.manage":
 				return true
 	elif permissions_variant is Dictionary:
 		for key_variant: Variant in permissions_variant.keys():
 			var permission_key: String = str(key_variant).strip_edges().to_lower()
-			if permission_key == "admin" and bool(permissions_variant.get(key_variant, false)):
+			if (permission_key == "admin" or permission_key == "catalog.manage") and bool(permissions_variant.get(key_variant, false)):
 				return true
 
 	return false
