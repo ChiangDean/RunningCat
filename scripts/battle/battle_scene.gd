@@ -146,6 +146,8 @@ var _home_scoop_cooldown_remaining: float = 0.0
 var _nav_buttons: Dictionary = {}
 var _nav_canvas: CanvasLayer
 var _last_overlay_scene_path: String = ""
+var _stats_btn: Button
+var _stats_panel: StatsPanel
 var _skill_filter_mode: String = "player"
 var _current_speed_mult: float = 1.0
 var _free_speed_boost_end_unix: int = 0
@@ -343,6 +345,16 @@ func _build_ui() -> void:
 		_refresh_home_scoop_panel()
 	)
 	_refresh_chat_badge()
+
+	_stats_btn = _make_button(UiText.STATS_BTN_LABEL,
+			Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 4.0),
+			Vector2(ACTION_STACK_W, ACTION_STACK_H))
+	_stats_btn.pressed.connect(_on_stats_btn_pressed)
+	_ui_layer.add_child(_stats_btn)
+
+	_stats_panel = StatsPanel.new()
+	_stats_panel.visible = false
+	_ui_layer.add_child(_stats_panel)
 
 	_boss_btn = _make_button(UiText.HOME_BOSS, Vector2(252.0, 350.0), Vector2(216.0, 42.0))
 	_boss_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
@@ -1790,6 +1802,14 @@ func _on_nav_mail() -> void:
 func _open_chat() -> void:
 	var chat_view: Control = CHAT_SCENE.instantiate()
 	DialogManager.show_info_node(UiText.HOME_CHAT_DIALOG_TITLE, chat_view, Callable(), "large")
+
+
+func _on_stats_btn_pressed() -> void:
+	if _stats_panel == null:
+		return
+	_stats_panel.visible = not _stats_panel.visible
+	if _stats_panel.visible:
+		_stats_panel.refresh()
 
 
 func _open_friend() -> void:
