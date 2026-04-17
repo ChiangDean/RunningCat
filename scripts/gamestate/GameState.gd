@@ -18,6 +18,8 @@ signal chat_connection_state_changed(state: String)
 signal chat_messages_changed(channel_key: String)
 signal chat_unread_changed(channel_key: String, count: int)
 signal party_cheer_coupon_count_changed(count: int)
+signal player_profile_changed
+signal player_wallet_changed
 
 # Primary player state and runtime caches.
 var player_data: PlayerData
@@ -159,6 +161,21 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	player_data.display_name = data.get("displayName") if data.get("displayName") != null else player_data.display_name
 	player_data.player_public_id = data.get("playerPublicId") if data.get("playerPublicId") != null else player_data.player_public_id
 	player_data.player_name = data.get("playerName") if data.get("playerName") != null else player_data.player_name
+	if data.has("avatarId"):
+		player_data.avatar_id = "" if data.get("avatarId") == null else str(data.get("avatarId", player_data.avatar_id)).strip_edges()
+	if player_data.avatar_id == "":
+		player_data.avatar_id = AssetResolver.DEFAULT_PROFILE_AVATAR_ID
+	if data.has("bio"):
+		player_data.bio = "" if data.get("bio") == null else str(data.get("bio", player_data.bio))
+	if data.has("birthday"):
+		player_data.birthday = "" if data.get("birthday") == null else str(data.get("birthday", player_data.birthday))
+	if data.has("genderType"):
+		player_data.gender_type = "Unspecified" if data.get("genderType") == null else str(data.get("genderType", player_data.gender_type))
+	if data.has("region"):
+		player_data.region = "" if data.get("region") == null else str(data.get("region", player_data.region))
+	if data.has("linkedProviders"):
+		var linked_providers_variant: Variant = data.get("linkedProviders", [])
+		player_data.linked_providers = (linked_providers_variant as Array).duplicate() if linked_providers_variant is Array else []
 	player_data.cat_food = int(data.get("catFood", player_data.cat_food))
 	player_data.special_cat_food = int(data.get("specialCatFood", player_data.special_cat_food))
 	player_data.gold = int(data.get("gold", player_data.gold))
@@ -281,6 +298,58 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	var chat_summary_variant: Variant = data.get("chatSummary", {})
 	if chat_summary_variant is Dictionary:
 		apply_chat_summary(chat_summary_variant)
+	player_profile_changed.emit()
+	player_wallet_changed.emit()
+
+
+func apply_profile_response(data: Dictionary) -> void:
+	if player_data == null:
+		player_data = PlayerData.load_or_default()
+
+	if data.get("account") != null:
+		player_data.account = str(data.get("account", player_data.account))
+	if data.get("displayName") != null:
+		player_data.display_name = str(data.get("displayName", player_data.display_name))
+	if data.get("playerPublicId") != null:
+		player_data.player_public_id = str(data.get("playerPublicId", player_data.player_public_id))
+	if data.get("playerName") != null:
+		player_data.player_name = str(data.get("playerName", player_data.player_name))
+	if data.has("avatarId"):
+		player_data.avatar_id = "" if data.get("avatarId") == null else str(data.get("avatarId", player_data.avatar_id)).strip_edges()
+	if player_data.avatar_id == "":
+		player_data.avatar_id = AssetResolver.DEFAULT_PROFILE_AVATAR_ID
+	if data.has("bio"):
+		player_data.bio = "" if data.get("bio") == null else str(data.get("bio", player_data.bio))
+	if data.has("birthday"):
+		player_data.birthday = "" if data.get("birthday") == null else str(data.get("birthday", player_data.birthday))
+	if data.has("genderType"):
+		player_data.gender_type = "Unspecified" if data.get("genderType") == null else str(data.get("genderType", player_data.gender_type))
+	if data.has("region"):
+		player_data.region = "" if data.get("region") == null else str(data.get("region", player_data.region))
+	if data.has("linkedProviders"):
+		var linked_providers_variant: Variant = data.get("linkedProviders", [])
+		player_data.linked_providers = (linked_providers_variant as Array).duplicate() if linked_providers_variant is Array else []
+
+	player_data.save()
+	player_profile_changed.emit()
+
+
+func get_profile_avatar_id() -> String:
+	if player_data == null:
+		return AssetResolver.DEFAULT_PROFILE_AVATAR_ID
+	var avatar_id: String = player_data.avatar_id.strip_edges()
+	return avatar_id if avatar_id != "" else AssetResolver.DEFAULT_PROFILE_AVATAR_ID
+
+
+func get_profile_display_name() -> String:
+	if player_data == null:
+		return "Scooper"
+	var profile_name: String = player_data.display_name.strip_edges()
+	if profile_name.is_empty():
+		profile_name = player_data.player_name.strip_edges()
+	if profile_name.is_empty():
+		profile_name = "Scooper"
+	return profile_name
 
 
 func _save_auth_session() -> void:
@@ -630,6 +699,7 @@ func update_scooper_profile(data: Dictionary) -> void:
 	player_data.party_cheer_coupon_count = int(scooper_profile_data.get("partyCheerCouponCount", player_data.party_cheer_coupon_count))
 	player_data.save()
 	party_cheer_coupon_count_changed.emit(player_data.party_cheer_coupon_count)
+	player_wallet_changed.emit()
 
 
 func get_party_cheer_coupon_count() -> int:
@@ -723,6 +793,7 @@ func apply_wallet_snapshot(data: Dictionary) -> void:
 	player_data.memory_shards = int(data.get("memoryShards", player_data.memory_shards))
 	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
 	player_data.save()
+	player_wallet_changed.emit()
 
 
 func apply_idle_claim_response(data: Dictionary) -> void:

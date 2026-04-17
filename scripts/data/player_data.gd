@@ -14,6 +14,12 @@ var account: String = ""
 var display_name: String = ""
 var player_public_id: String = ""
 var player_name: String = ""
+var avatar_id: String = "black_cat"
+var bio: String = ""
+var birthday: String = ""
+var gender_type: String = "Unspecified"
+var region: String = ""
+var linked_providers: Array = []
 
 var total_pulls: int = 0
 var free_pull_count: int = 1
@@ -79,6 +85,12 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.display_name = data.get("display_name", "")
 	p.player_public_id = data.get("player_public_id", "")
 	p.player_name = data.get("player_name", "")
+	p.avatar_id = data.get("avatar_id", "black_cat")
+	p.bio = data.get("bio", "")
+	p.birthday = data.get("birthday", "")
+	p.gender_type = data.get("gender_type", "Unspecified")
+	p.region = data.get("region", "")
+	p.linked_providers = data.get("linked_providers", [])
 	p.cat_food = data.get("cat_food", 0)
 	p.special_cat_food = data.get("special_cat_food", 0)
 	p.gold = data.get("gold", 0)
@@ -130,6 +142,12 @@ func _to_dict() -> Dictionary:
 		"display_name": display_name,
 		"player_public_id": player_public_id,
 		"player_name": player_name,
+		"avatar_id": avatar_id,
+		"bio": bio,
+		"birthday": birthday,
+		"gender_type": gender_type,
+		"region": region,
+		"linked_providers": linked_providers,
 		"cat_food": cat_food,
 		"special_cat_food": special_cat_food,
 		"gold": gold,

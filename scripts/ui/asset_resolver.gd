@@ -3,6 +3,7 @@ extends RefCounted
 
 const UI_ROOT := "res://assets/sprites/ui/"
 const BACKGROUND_SHADER := preload("res://scripts/ui/background_desaturate_shader.gdshader")
+const DEFAULT_PROFILE_AVATAR_ID := "black_cat"
 
 const BACKGROUNDS := {
 	"activity": UI_ROOT + "activity_background_v1.png",
@@ -25,6 +26,24 @@ const CAT_ICONS := {
 	"orange_cat": UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
 	"test_enemy": UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
 	"tuxedo_cat": UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
+}
+
+const PROFILE_AVATAR_IDS := [
+	"black_cat",
+	"calico_cat",
+	"milk_cat",
+	"ninja_cat",
+	"orange_cat",
+	"tuxedo_cat",
+]
+
+const PROFILE_AVATAR_LABELS := {
+	"black_cat": "黑貓",
+	"calico_cat": "三花貓",
+	"milk_cat": "乳牛貓",
+	"ninja_cat": "忍者貓",
+	"orange_cat": "橘貓",
+	"tuxedo_cat": "燕尾服貓",
 }
 
 const CAT_SHOWCASE_TEXTURES := {
@@ -240,6 +259,23 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 
 static func resolve_cat_icon(cat_id: String) -> Texture2D:
 	return load_texture(CAT_ICONS.get(cat_id, ""))
+
+
+static func get_profile_avatar_ids() -> Array[String]:
+	return PROFILE_AVATAR_IDS.duplicate()
+
+
+static func get_profile_avatar_label(avatar_id: String) -> String:
+	var normalized_id: String = avatar_id if avatar_id != "" else DEFAULT_PROFILE_AVATAR_ID
+	return str(PROFILE_AVATAR_LABELS.get(normalized_id, normalized_id))
+
+
+static func resolve_profile_avatar(avatar_id: String) -> Texture2D:
+	var normalized_id: String = avatar_id if avatar_id != "" else DEFAULT_PROFILE_AVATAR_ID
+	var texture: Texture2D = resolve_cat_icon(normalized_id)
+	if texture != null:
+		return texture
+	return resolve_cat_icon(DEFAULT_PROFILE_AVATAR_ID)
 
 
 static func resolve_cat_showcase_art(cat_id: String) -> Texture2D:

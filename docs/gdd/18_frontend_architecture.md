@@ -1,9 +1,9 @@
 # 18. Frontend Architecture
 
-> Last updated: 2026-04-11
+> Last updated: 2026-04-17
 > Audience: AI agents and engineers modifying `MeowPartyDashClient`
 
-This document describes the current frontend architecture of `MeowPartyDashClient` so an AI agent can quickly find the correct edit location, understand data flow, and avoid breaking existing project conventions.
+This document describes the current frontend architecture of `MeowPartyDashClient` so an agent can quickly find the correct edit location, understand data flow, and avoid reintroducing the old `ConfigScene = team config` assumption.
 
 ---
 
@@ -12,13 +12,11 @@ This document describes the current frontend architecture of `MeowPartyDashClien
 - Frontend project path: `MeowPartyDashClient/`
 - Engine: Godot 4.6
 - Primary language: GDScript
-- .NET project exists for Godot integration, but current gameplay/frontend logic is implemented in GDScript
 - Main entry scene: `res://scenes/StartScene.tscn`
 - Home shell scene: `res://scenes/HomeShellScene.tscn`
-- Theme resource: `res://resources/default_theme.tres`
 - Runtime viewport baseline: `720 x 1280`
 
-Important rule: most gameplay and UI surfaces are generated directly in GDScript at runtime instead of being heavily authored in `.tscn` files. In many cases, the `.tscn` file is only a root node plus a script attachment.
+Important rule: many UI surfaces are built directly in GDScript at runtime. A `.tscn` file is often only a root node plus a script attachment.
 
 ---
 
@@ -36,7 +34,8 @@ Defined in `project.godot`:
   - `ChatRealtimeClient = res://scripts/chat/ChatRealtimeClient.gd`
   - `SceneNavigator = res://scripts/navigation/SceneNavigator.gd`
   - `UiAudio = res://scripts/ui/UiAudio.gd`
-  - `ToastManager = res://scripts/ui/ToastManager.gd` — non-blocking toast notifications (success / error / hint)
+  - `ClientSettings = res://scripts/gamestate/ClientSettings.gd`
+  - `ToastManager = res://scripts/ui/ToastManager.gd`
 
 ### 2.2 Start Flow
 
@@ -46,12 +45,12 @@ Primary startup logic lives in:
 
 Responsibilities:
 
-- build the login/register/start UI in code
+- build the login / register / restore-session UI in code
 - resolve runtime API base URL from config files
 - load or create local device id
 - restore persisted auth session from `GameState`
 - run authenticated bootstrap if a valid session exists
-- transition into the main gameplay flow after login/bootstrap
+- transition into the home gameplay flow after login / bootstrap
 
 Project rule from `AGENTS.md`: preserve the established visual identity of `StartScene` unless the task explicitly requires changing it.
 
@@ -63,31 +62,30 @@ Project rule from `AGENTS.md`: preserve the established visual identity of `Star
 
 - `scenes/`
 
-Contains top-level scene entry files such as:
+Current important top-level scenes:
 
 - `StartScene.tscn`
 - `HomeShellScene.tscn`
 - `BattleScene.tscn`
+- `ConfigScene.tscn` — real settings center
+- `LineupScene.tscn` — team composition and delay setup
+- `EnhanceScene.tscn`
 - `ActivityScene.tscn`
 - `DungeonScene.tscn`
 - `ArenaScene.tscn`
 - `ArenaBattleScene.tscn`
-- `ConfigScene.tscn`
-- `EnhanceScene.tscn`
 - `GachaScene.tscn`
 - `ShopScene.tscn`
 - `ScooperScene.tscn`
 - `LevelScene.tscn`
 
-These usually serve as entry wrappers for a paired script.
-
 ### 3.2 Frontend Scripts
 
 - `scripts/`
 
-Main codebase for client behavior. Key subfolders:
+Main subfolders:
 
-- `scripts/gamestate/`: app-wide state, persistence, cache helpers
+- `scripts/gamestate/`: global state, persistence, cache helpers, `ClientSettings`
 - `scripts/battle/`: battle runtime, simulator, manager, battle scenes
 - `scripts/arenaScene/`: arena UI shell and helpers
 - `scripts/dungeon/`: dungeon UI split into shell, UI builder, and action handlers
@@ -95,12 +93,13 @@ Main codebase for client behavior. Key subfolders:
 - `scripts/gacha/`: gacha flow and result panel
 - `scripts/shop/`: shop menu and subviews
 - `scripts/scooper/`: scooper scene and per-tab logic
-- `scripts/configs/`: config/team setup scene
-- `scripts/data/`: frontend-side data models and data adapters
+- `scripts/configs/`: settings center scene
+- `scripts/lineup/`: team setup scene and lineup constants
+- `scripts/data/`: frontend-side data models and adapters
 - `scripts/cats/`: cat runtime classes and type-specific behavior
 - `scripts/managers/`: registries for cats and skills
 - `scripts/systems/`: local systems such as idle, arena rank, gacha, special ability
-- `scripts/ui/`: reusable UI helpers such as inertial scrolling
+- `scripts/ui/`: reusable UI helpers
 
 ### 3.3 Static Assets
 
@@ -108,9 +107,9 @@ Main codebase for client behavior. Key subfolders:
 
 Current structure:
 
-- `assets/fonts/`: fonts
-- `assets/audio/`: audio
-- `assets/sprites/ui/`: UI visuals, backgrounds, icons, poses
+- `assets/fonts/`
+- `assets/audio/`
+- `assets/sprites/ui/`
 
 ### 3.4 Static Data and Runtime Samples
 
@@ -118,39 +117,41 @@ Current structure:
 
 Current structure:
 
-- `data/default/`: static default config JSON
-- `data/default/cats/`: cat definitions in JSON
-- `data/default/skills/`: active/passive skill definitions in JSON
-- `data/arena/`: arena seed/test data
-- `data/saves/`: local sample or persisted save-oriented data inside repo
+- `data/default/`
+- `data/default/cats/`
+- `data/default/skills/`
+- `data/arena/`
+- `data/saves/`
 
 ### 3.5 Config and Docs
 
 - `config/`: runtime config templates
-- `docs/gdd/`: game and architecture documents for implementation reference
+- `docs/gdd/`: game and architecture documents
 
 ---
 
 ## 4. Architectural Layers
 
-The frontend is easiest to reason about as five layers:
+The frontend is easiest to reason about as six layers:
 
 1. Scene shell layer
-2. Feature UI/action helper layer
+2. Feature UI / action helper layer
 3. Service layer
-4. State and cache layer
-5. Static data layer
+4. Runtime state layer
+5. Local device settings layer
+6. Static data layer
 
 ### 4.1 Scene Shell Layer
 
 Representative files:
 
 - `scripts/StartScene.gd`
-- `scripts/ActivityScene.gd`
-- `scripts/LevelScene.gd`
+- `scripts/battle/battle_scene.gd`
+- `scripts/configs/ConfigScene.gd`
+- `scripts/lineup/LineupScene.gd`
+- `scripts/arenaScene/ArenaScene.gd`
 - `scripts/dungeon/DungeonScene.gd`
 - `scripts/enhance/EnhanceScene.gd`
-- `scripts/arenaScene/ArenaScene.gd`
 - `scripts/shop/ShopScene.gd`
 - `scripts/gacha/GachaScene.gd`
 
@@ -159,7 +160,7 @@ Typical responsibilities:
 - build top-level UI
 - wire button navigation
 - call feature actions
-- read already-loaded state from `GameState`
+- read shared state from `GameState`
 - trigger API refresh if needed
 
 ### 4.2 Feature Helper Layer
@@ -174,14 +175,12 @@ Examples:
 - `scripts/enhance/EnhanceSceneRefresh.gd`
 - `scripts/enhance/EnhanceSceneActions.gd`
 - `scripts/arenaScene/arena_scene_helpers.gd`
-- `scripts/arenaScene/arena_scene_reward_popup.gd`
 
 Pattern:
 
-- `Scene.gd` acts as the shell/controller
+- `Scene.gd` acts as the shell / controller
 - `*UI.gd` builds and refreshes UI
 - `*Actions.gd` performs API-triggered actions and handles result callbacks
-- helper files format labels, reward popups, or feature-specific transforms
 
 ### 4.3 Service Layer
 
@@ -191,51 +190,55 @@ Primary service:
 
 Responsibilities:
 
-- owns a small `HTTPRequest` pool
-- queues requests when all slots are busy
+- owns the HTTP request pool
 - applies bearer token headers
 - parses API envelopes
-- handles `401` by refreshing with refresh token and retrying
-- exposes feature-specific convenience methods instead of forcing scenes to build URLs manually
+- handles `401` by refreshing and retrying
+- exposes feature-specific methods such as:
+  - `get_profile_me(...)`
+  - `update_profile_me(...)`
+  - `redeem_code(...)`
+  - `replace_team(...)`
 
-The rest of the frontend should prefer calling `ApiClient` convenience methods, not constructing ad hoc HTTP logic in scene scripts.
+Scenes should prefer `ApiClient` convenience methods, not hand-built HTTP code.
 
-### 4.4 State and Cache Layer
+### 4.4 Runtime State Layer
 
 Primary state owner:
 
 - `scripts/gamestate/GameState.gd`
 
-Supporting helpers:
-
-- `scripts/gamestate/GameStateCacheIO.gd`
-- `scripts/gamestate/GameStateFileUtils.gd`
-- `scripts/gamestate/GameStateBossStage.gd`
-
 Responsibilities:
 
 - owns auth session and API base URL
 - applies bootstrap payloads
-- stores current player-facing state
+- stores player-facing runtime state
 - persists cache files under `user://`
 - exposes accessors used by scenes
-- keeps feature overviews in memory after API refresh
+- emits update signals when player profile or wallet changes
 
-### 4.5 Static Data Layer
+### 4.5 Local Device Settings Layer
+
+Primary owner:
+
+- `scripts/gamestate/ClientSettings.gd`
+
+Responsibilities:
+
+- loads and saves `user://client_settings.json`
+- manages `masterVolume`, `bgmVolume`, `sfxVolume`
+- manages `masterMuted`, `bgmMuted`, `sfxMuted`
+- applies changes through `UiAudio.apply_settings(...)`
+
+This data is device-local and intentionally does not go through backend persistence.
+
+### 4.6 Static Data Layer
 
 Primary static loader:
 
 - `scripts/data/static_game_data.gd`
 
-This layer provides local default configuration such as:
-
-- cat definitions
-- active/passive skill definitions
-- dungeon config
-- arena config
-- idle config
-
-Use this layer when data is part of shipped client defaults, not player-specific live state.
+Use this layer when data is shipped client defaults, not player-specific live state.
 
 ---
 
@@ -245,58 +248,56 @@ Use this layer when data is part of shipped client defaults, not player-specific
 
 `GameState` is the main source of truth for runtime state that must survive scene changes.
 
-Examples of state currently owned there:
+Examples:
 
 - auth session
 - `player_data`
+- player profile fields used by settings center
 - player cat and enhance data
-- team config data
+- confirmed team config data
 - dungeon overview
 - arena overview
 - gacha overview
 - shop overview
-- scooper catalog data
-- scooper live data
+- scooper catalog and live data
 
-If a feature needs to be read by multiple scenes or must survive scene transitions, it usually belongs in `GameState`.
+### 5.2 Device-Local Ownership
 
-### 5.2 Scene-Local Ownership
+`ClientSettings` owns values that should persist on the device but should not sync to backend.
 
-Scene-local transient state should stay in the scene script when it is only used for temporary UI behavior.
+Examples:
+
+- master volume
+- BGM volume
+- SFX volume
+- muted flags
+
+### 5.3 Scene-Local Ownership
+
+Keep transient widget state in the scene when only that screen needs it.
 
 Examples:
 
 - selected tab
-- currently expanded panel
-- draft edits before save
 - request-in-flight flags
-- cooldown timers
+- lineup draft edits
+- selected avatar card while form is dirty
 
-Do not put temporary widget state into `GameState` unless multiple scenes depend on it.
+Do not put one-screen-only widget state into `GameState` unless multiple scenes depend on it.
 
 ---
 
 ## 6. Data Sources and Persistence
 
-Frontend data comes from four places:
+Frontend data comes from five places:
 
-1. hardcoded/static config in script
+1. hardcoded / script defaults
 2. JSON files under `res://data/default/`
 3. API responses
-4. cached/persisted runtime files under `user://`
+4. cached runtime files under `user://`
+5. device-local settings under `user://client_settings.json`
 
-### 6.1 Static Config
-
-Loaded through `StaticGameData` and repo JSON/config files.
-
-Common sources:
-
-- `scripts/data/static_game_data.gd`
-- `data/default/*.json`
-- `data/default/cats/*.json`
-- `data/default/skills/**/*.json`
-
-### 6.2 Auth and Runtime Config
+### 6.1 Auth and Runtime Config
 
 Key files:
 
@@ -306,25 +307,23 @@ Key files:
   - `res://config/runtime_config.json`
   - `res://config/runtime_config.local.json`
 
-Rule: CI-generated runtime config and local override config are environment-specific. Do not hardcode production URLs into random scene scripts.
+### 6.2 Persistent `user://` Storage
 
-### 6.3 Persistent `user://` Storage
-
-Important persisted paths used by frontend architecture:
+Important paths:
 
 - `user://auth_session.json`
 - `user://device_id.txt`
 - `user://catalog/*.json`
-- `user://config/*.json`
+- `user://config/player_cats.json`
+- `user://config/teams.json`
 - `user://player_data/scooper/*.json`
+- `user://client_settings.json`
 
-Player-specific runtime persistence should flow through `PlayerData`, per-cat save files, and `GameState` cache files under `user://`. Arena and dungeon overview state should not read from repo-local save JSON.
+Project rule: persistent runtime data must use `user://`, not `res://`.
 
-Project rule: persistent local runtime data must use `user://`, not `res://`.
+### 6.3 API Envelope Shape
 
-### 6.4 API Envelope Shape
-
-`ApiClient.gd` expects JSON responses shaped like:
+`ApiClient.gd` expects:
 
 ```json
 {
@@ -334,7 +333,7 @@ Project rule: persistent local runtime data must use `user://`, not `res://`.
 }
 ```
 
-Scenes and action handlers should work with the `data` payload delivered by `ApiClient`, not raw HTTP body parsing.
+Scenes should work with the `data` payload delivered by `ApiClient`, not raw HTTP body parsing.
 
 ---
 
@@ -342,72 +341,85 @@ Scenes and action handlers should work with the `data` payload delivered by `Api
 
 ### 7.1 Bootstrap Flow
 
-Normal authenticated startup:
-
-1. `StartScene.gd` resolves API base URL and device/session state
+1. `StartScene.gd` resolves API base URL and device / session state
 2. auth succeeds or persisted session is restored
-3. bootstrap API returns player snapshot plus feature overviews/catalogs
+3. bootstrap API returns player snapshot plus feature overviews
 4. `GameState.apply_player_bootstrap(data)` writes runtime state
 5. `GameState` persists relevant cache files under `user://`
 6. later scenes read from `GameState` first and refresh from API only when needed
 
-### 7.2 Scene Refresh Flow
+Bootstrap now includes the startup copy of settings-center fields:
 
-Typical feature refresh path:
+- `displayName`
+- `playerName`
+- `avatarId`
+- `bio`
+- `birthday`
+- `genderType`
+- `region`
+- `linkedProviders`
 
-1. scene opens
-2. scene reads cached `GameState` state
-3. if state is missing or stale, scene calls `ApiClient`
-4. callback updates `GameState`
-5. scene rebuilds or refreshes UI from updated `GameState`
+### 7.2 Settings Center Flow
 
-This is the dominant frontend pattern.
+1. user clicks the top-left profile block in `BattleScene`
+2. `ConfigScene` opens and renders from local `GameState.player_data`
+3. `ConfigScene` calls `ApiClient.get_profile_me(...)`
+4. response flows through `GameState.apply_profile_response(...)`
+5. save uses `ApiClient.update_profile_me(...)`
+6. success emits `player_profile_changed` and refreshes the home HUD
 
-### 7.3 Mutating Action Flow
+### 7.3 Redeem Code Flow
 
-Typical action path:
+1. user enters a code in `ConfigScene`
+2. `ApiClient.redeem_code(...)` calls backend
+3. success returns `walletSnapshot` and `grantedRewards`
+4. `GameState.apply_wallet_snapshot(...)` updates resources
+5. `player_wallet_changed` refreshes the home resource UI
 
-1. user presses button
-2. scene or `*Actions.gd` calls `ApiClient`
-3. server returns updated overview or changed entities
-4. callback writes response into `GameState`
-5. UI refreshes from `GameState`
+### 7.4 Local Audio Settings Flow
 
-Do not manually patch many labels from raw response if the feature already has a `GameState.update_*()` path. Prefer updating shared state first, then re-rendering.
+1. `ClientSettings` loads `user://client_settings.json`
+2. `UiAudio.ensure_audio_buses()` guarantees `Master`, `BGM`, `SFX`
+3. slider / mute changes call `ClientSettings.set_volume(...)` or `set_muted(...)`
+4. `UiAudio.apply_settings(...)` applies changes immediately
+
+### 7.5 Lineup Save Flow
+
+1. `LineupScene` edits only local draft state
+2. save calls `ApiClient.replace_team(...)`
+3. response updates `GameState.teams_data`
+4. cache writes back to `user://config/teams.json`
+5. saving the `Boss` lineup re-applies the home battle team immediately
 
 ---
 
 ## 8. Navigation Map
 
-Current high-level navigation uses `HomeShellScene` for the main home loop, plus direct `get_tree().change_scene_to_file(...)` for dedicated flows.
-
-Common flow:
+Current high-level navigation:
 
 - `StartScene` -> `HomeShellScene`
 - `HomeShellScene` keeps `BattleScene` mounted in the background
+- `BattleScene` top-left profile block opens `ConfigScene`
 - `BattleScene` bottom nav opens home overlays through `SceneNavigator`:
   - `ScooperScene`
-  - `ConfigScene`
+  - `LineupScene`
   - `EnhanceScene`
   - `ActivityScene`
   - `ShopScene`
   - `MailScene`
-- `ActivityScene` can open `DungeonScene` and `ArenaScene` as deeper home overlays
-- `ShopScene` can open `GachaScene` as another home overlay
-- `ActivityScene` opens:
+- `ActivityScene` can open deeper activity routes such as:
   - `DungeonScene`
   - `ArenaScene`
+- `ShopScene` can open `GachaScene`
 - battle-specific routes also open:
   - `ArenaBattleScene`
   - `DungeonBattleScene`
 
-`SceneNavigator` coordinates the home overlays, while dedicated battle/activity routes still change scenes directly when leaving the home shell.
+`SceneNavigator` coordinates home overlays, while dedicated battle / activity routes still change scenes directly when leaving the home shell.
 
 ---
 
 ## 9. Feature Ownership Map
-
-Use this section to find the correct edit surface quickly.
 
 ### 9.1 Auth / Startup
 
@@ -416,75 +428,80 @@ Use this section to find the correct edit surface quickly.
 - `scripts/gamestate/GameState.gd`
 - `config/runtime_config*.json`
 
-### 9.2 Core Battle
+### 9.2 Core Battle / Home HUD
 
 - `scripts/battle/battle_scene.gd`
 - `scripts/battle/battle_manager.gd`
 - `scripts/battle/battle_simulator.gd`
-- `scripts/battle/battle_event.gd`
-- `scripts/cats/`
-- `scripts/systems/special_ability_system.gd`
+- `scripts/ui/asset_resolver.gd`
+- `scripts/ui/UiAudio.gd`
 
-Current behavior notes:
+Current notes:
 
 - `BattleScene` is the persistent home battle surface mounted under `HomeShellScene`.
-- `BattleScene.restart_with_latest_team()` is the public hook used when a Boss team save should immediately restart the home battle with the newest confirmed team and delay settings.
-- `BattleManager` must treat cached `CatNode` references defensively because the home battle can now restart while old nodes are being freed.
+- It now owns the top-left settings entry and home BGM playback.
+- It listens to `player_profile_changed` and `player_wallet_changed`.
 
-### 9.3 Team Config
+### 9.3 Settings Center
 
 - `scripts/configs/ConfigScene.gd`
-- `scripts/configs/ConfigConstants.gd`
+- `scripts/ApiClient.gd`
+- `scripts/gamestate/GameState.gd`
+- `scripts/gamestate/ClientSettings.gd`
+- `scripts/ui/UiAudio.gd`
+- related docs:
+  - `docs/gdd/08_ui.md`
+  - `docs/gdd/11_account.md`
+  - `docs/gdd/15_config_data_architecture.md`
+
+Current notes:
+
+- `ConfigScene` is now the real settings center.
+- It owns profile editing, account / linked-provider display, redeem code UI, and local audio settings.
+- OAuth is currently status-only: `Google` and `Apple` cards are visible but disabled when unbound.
+
+### 9.4 Team Lineup
+
+- `scripts/lineup/LineupScene.gd`
+- `scripts/lineup/LineupConstants.gd`
 - `scripts/gamestate/GameState.gd`
 - related doc: `docs/gdd/15_config_data_architecture.md`
 
-Current behavior notes:
+Current notes:
 
-- `ConfigScene` keeps a per-tab draft for `boss`, `dungeon`, `arena_attack`, and `arena_defense`.
-- Team members are slot-based. Removing a member leaves an empty slot instead of compacting later members forward.
-- All four team types now allow editing `initialDelaySeconds`.
-- Saving the Boss tab updates `GameState` and immediately restarts the mounted home `BattleScene`.
+- This is the old team-config feature moved out of `ConfigScene`.
+- It keeps per-tab draft state for `boss`, `dungeon`, `arena_attack`, and `arena_defense`.
+- Team members remain slot-based and are not compacted automatically.
 
-### 9.4 Enhance
+### 9.5 Enhance
 
 - `scripts/enhance/EnhanceScene.gd`
 - `scripts/enhance/EnhanceSceneUI.gd`
 - `scripts/enhance/EnhanceSceneRefresh.gd`
 - `scripts/enhance/EnhanceSceneActions.gd`
 
-### 9.5 Dungeon
+### 9.6 Dungeon
 
 - `scripts/dungeon/DungeonScene.gd`
 - `scripts/dungeon/DungeonSceneUI.gd`
 - `scripts/dungeon/DungeonSceneActions.gd`
 - `scripts/gamestate/GameState.gd`
-- related doc: `docs/gdd/16_dungeon_data_architecture.md`
 
-### 9.6 Arena
+### 9.7 Arena
 
 - `scripts/arenaScene/ArenaScene.gd`
 - `scripts/arenaScene/arena_scene_helpers.gd`
-- `scripts/arenaScene/arena_scene_reward_popup.gd`
 - `scripts/battle/arena_battle_scene.gd`
 - `scripts/gamestate/GameState.gd`
-- related doc: `docs/gdd/17_arena_data_architecture.md`
 
-Current behavior notes:
-
-- Arena overview still comes from `/api/arena`, not from bootstrap.
-- Arena attack battle startup resolves an effective team type in this order: `ArenaAttack`, then `Boss` fallback.
-- Before opening `ArenaBattleScene`, `ArenaScene` applies the chosen confirmed team through `GameState.apply_active_team_from_config(...)` so arena attacks use the saved delay settings.
-- `ArenaDefense` delay is stored through the Config/API contract even though the client does not currently have a local defense battle entrypoint.
-
-### 9.7 Scooper
+### 9.8 Scooper
 
 - `scripts/ScooperScene.gd`
 - `scripts/scooper/`
 - `scripts/ApiClient.gd`
 - `scripts/gamestate/GameState.gd`
-- related doc: `docs/gdd/14_scooper_data_architecture.md`
 
-### 9.8 Gacha / Shop
+### 9.9 Gacha / Shop
 
 - `scripts/gacha/GachaScene.gd`
 - `scripts/gacha/GachaResultPanel.gd`
@@ -497,66 +514,45 @@ Current behavior notes:
 
 ## 10. Current Frontend Conventions
 
-These conventions are important when AI agents make changes.
-
 ### 10.1 Build UI in Script First
 
-Many screens are code-built. Before assuming a `.tscn` contains the UI tree, inspect the paired `.gd` file.
+Before assuming a `.tscn` contains the UI tree, inspect the paired `.gd` file.
 
-### 10.2 Prefer Small Feature Splits
+### 10.2 Prefer Existing Scene Boundaries
 
-When a screen becomes large, the existing pattern is to split into:
-
-- shell scene script
-- UI builder helpers
-- refresh helpers
-- action handlers
-
-Prefer following that pattern instead of introducing a new architecture style for one screen only.
-
-### 10.3 Use Autoloads for Shared Services
-
-Common shared dependencies should go through:
-
-- `GameState` — runtime state and persistence
-- `ApiClient` — all HTTP requests
-- `DialogManager` — blocking dialogs (info and confirm)
-- `ToastManager` — non-blocking ephemeral notifications
-- `UiAudio` — button click and UI sounds
-
-Do not create duplicate global state containers for the same concern.
-
-### 10.7 UI Component Rules
-
-All UI styling must use the shared helpers. Do not re-implement them inline.
-
-**Buttons** — always call `UiPalette.apply_button_kind(button, kind)`. Accepted kinds: `confirm`, `cancel`, `neutral`, `info`, `destruct`, `remove`, `add` (semantic aliases) or their color equivalents `primary`, `secondary`, `rank`, `danger`, `minus`, `plus`.
-
-**Panels and cards** — always call `OverlaySceneChrome.make_panel_style(...)` or `OverlaySceneChrome.make_card_panel(...)`. Do not define a local `_make_panel_style()` function.
-
-**Non-blocking feedback** — use `ToastManager.success/error/hint(message)`. Reserve `DialogManager` for cases where the player must actively choose or acknowledge before continuing.
-
-**Rarity colors** — use `GameConstants.get_rarity_color_from_string(rarity_type)` or `GameConstants.get_rarity_color(GameConstants.Rarity.LEGENDARY)`. Do not hardcode rarity colors inline.
-
-Full usage rules and situation guides: `docs/gdd/08_ui.md` and `docs/ui_component_spec.md`.
-
-### 10.4 Persist Through `GameState`
-
-If API data needs to survive scene changes, add or update a `GameState.update_*()` style path and persist via `GameStateCacheIO` if applicable.
-
-### 10.5 Keep Feature-Specific State Local
-
-Do not pollute `GameState` with one-screen-only toggles, scroll positions, or draft widget flags.
-
-### 10.6 Respect Existing Scene Boundaries
+Follow the project’s current splits instead of inventing a new pattern for one feature.
 
 Examples:
 
-- `EnhanceScene` is already split into UI, refresh, and actions
-- `DungeonScene` is already split into UI and actions
-- `ArenaScene` keeps helper formatting in a separate helper file
+- `ConfigScene` owns settings-center logic
+- `LineupScene` owns lineup draft logic
+- `EnhanceScene` is already split into UI / refresh / actions
+- `DungeonScene` is already split into UI / actions
 
-Extend the existing boundary before inventing another one.
+### 10.3 Use Autoloads For Shared Services
+
+Shared dependencies should go through:
+
+- `GameState`
+- `ApiClient`
+- `DialogManager`
+- `ToastManager`
+- `UiAudio`
+- `ClientSettings`
+
+### 10.4 Persist Through Shared Owners
+
+- API-backed cross-scene state -> `GameState`
+- device-local audio settings -> `ClientSettings`
+
+### 10.5 UI Component Rules
+
+Do not re-implement shared UI styling inline.
+
+- Buttons -> `UiPalette.apply_button_kind(...)`
+- Panels / cards -> `OverlaySceneChrome.make_panel_style(...)` or `make_card_panel(...)`
+- Non-blocking feedback -> `ToastManager`
+- Blocking choices / acknowledgements -> `DialogManager`
 
 ---
 
@@ -567,45 +563,44 @@ Extend the existing boundary before inventing another one.
 Check in this order:
 
 1. scene shell file
-2. related `*Actions.gd` or helper file
+2. related helper / action file
 3. `ApiClient.gd`
-4. `GameState.gd`
-5. related `docs/gdd/*_architecture.md`
+4. `GameState.gd` or `ClientSettings.gd`
+5. related `docs/gdd/*.md`
 
 ### 11.2 If You Need To Add A New Persisted API Feature
 
 Expected work usually includes:
 
 1. add `ApiClient` convenience method
-2. add `GameState` state fields and update method
-3. add cache save/load if the data should persist locally
-4. update scene/action files to read from `GameState`
-5. update architecture docs if the data flow becomes durable
+2. add `GameState` update method and state fields
+3. add cache save / load if needed
+4. update the scene to read from shared state
+5. update architecture docs
 
-### 11.3 If You Need To Change Visual Layout
+### 11.3 If You Need To Add A New Device-Local Setting
 
-Check whether the screen is:
+Expected work usually includes:
 
-- mostly code-built in `.gd`
-- partially composed from helper files
-- constrained by an existing visual identity such as `StartScene`
-
-### 11.4 If You Need To Change Navigation
-
-Search for `change_scene_to_file` in the related scene scripts. Navigation is decentralized.
+1. add key to `ClientSettings.DEFAULT_SETTINGS`
+2. normalize / save / load it in `ClientSettings`
+3. apply it through the relevant runtime subsystem
+4. expose it in the correct settings-center section
+5. update docs
 
 ---
 
 ## 12. Paths AI Should Inspect First
 
-When an AI agent needs orientation, inspect these files first:
+When orientation is needed, inspect these files first:
 
 - `project.godot`
 - `AGENTS.md`
 - `scripts/StartScene.gd`
 - `scripts/ApiClient.gd`
 - `scripts/gamestate/GameState.gd`
-- `scripts/gamestate/GameStateCacheIO.gd`
+- `scripts/gamestate/ClientSettings.gd`
+- `scripts/ui/UiAudio.gd`
 - `scripts/data/static_game_data.gd`
 
 Then inspect the feature-specific scene and helper folder.
@@ -616,20 +611,21 @@ Then inspect the feature-specific scene and helper folder.
 
 - Do not assume `.tscn` files fully describe the UI
 - Do not store persistent runtime data in `res://`
-- Do not bypass `ApiClient` with random per-scene HTTP implementations unless there is a strong architectural reason
-- Do not duplicate global state that already belongs to `GameState`
+- Do not bypass `ApiClient` with ad hoc per-scene HTTP code
+- Do not duplicate state already owned by `GameState` or `ClientSettings`
+- Do not reintroduce the old assumption that `ConfigScene` means team setup
 - Do not rewrite `StartScene` visual identity unless explicitly requested
-- Do not move frontend logic into C# unless the task explicitly requires changing the technology boundary
 
 ---
 
 ## 14. Related Documents
 
-- `docs/gdd/08_ui.md` — UI component usage rules and situation guides
-- `docs/ui_component_spec.md` — code-level API reference for all UI helpers
+- `docs/gdd/08_ui.md`
+- `docs/gdd/11_account.md`
 - `docs/gdd/14_scooper_data_architecture.md`
 - `docs/gdd/15_config_data_architecture.md`
 - `docs/gdd/16_dungeon_data_architecture.md`
 - `docs/gdd/17_arena_data_architecture.md`
+- `docs/ui_component_spec.md`
 
-This document should be updated whenever the client introduces a new durable frontend subsystem, a new global singleton, or a materially different data flow pattern.
+Update this document whenever the client introduces a new durable subsystem, a new singleton, or a materially different data flow pattern.

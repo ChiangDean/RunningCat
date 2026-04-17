@@ -10,6 +10,7 @@ const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
 const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
 const PROFILE_AVATAR_TEXTURE := preload("res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png")
+const HOME_BGM_STREAM := preload("res://assets/audio/sfx/ui/mainmenu_scene.mp3")
 const REWARD_DEFAULT_SFX := preload("res://assets/audio/sfx/rewards/ui_reward_float_default.mp3")
 const REWARD_SFX_BY_KEY := {
 	"gold": preload("res://assets/audio/sfx/rewards/reward_gold.mp3"),
@@ -157,7 +158,14 @@ var _free_speed_boost_used: bool = false
 
 func _ready() -> void:
 	add_to_group("battle_scene")
+	GameState.player_profile_changed.connect(func() -> void:
+		_refresh_ui()
+	)
+	GameState.player_wallet_changed.connect(func() -> void:
+		_refresh_ui()
+	)
 	_build_scene()
+	UiAudio.play_bgm(HOME_BGM_STREAM)
 	_start_battle()
 	# Update the idle button text every second.
 	var sandbox_timer := Timer.new()
@@ -265,11 +273,22 @@ func _build_ui() -> void:
 	_ui_layer.add_child(top_bar_root)
 
 	_top_avatar_rect = top_bar_root.get_node("Avatar") as TextureRect
-	_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
+	_top_avatar_rect.texture = AssetResolver.resolve_profile_avatar(GameState.get_profile_avatar_id())
+	if _top_avatar_rect.texture == null:
+		_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
 	var avatar_circle_material := ShaderMaterial.new()
 	avatar_circle_material.shader = Shader.new()
 	avatar_circle_material.shader.code = "shader_type canvas_item;\nvoid fragment(){\n\tvec2 uv = UV - vec2(0.5);\n\tif (length(uv) > 0.5) {\n\t\tdiscard;\n\t}\n\tCOLOR = texture(TEXTURE, UV) * COLOR;\n}\n"
 	_top_avatar_rect.material = avatar_circle_material
+	var profile_entry_button := Button.new()
+	profile_entry_button.flat = true
+	profile_entry_button.focus_mode = Control.FOCUS_NONE
+	profile_entry_button.position = Vector2(0.0, 14.0)
+	profile_entry_button.size = Vector2(180.0, 170.0)
+	profile_entry_button.modulate = Color(1.0, 1.0, 1.0, 0.01)
+	profile_entry_button.pressed.connect(UiAudio.play_ui_click)
+	profile_entry_button.pressed.connect(_open_settings_scene)
+	top_bar_root.add_child(profile_entry_button)
 	_profile_name_label = top_bar_root.get_node("NameLabel") as Label
 	_profile_level_label = top_bar_root.get_node("LevelLabel") as Label
 	_top_exp_bar = top_bar_root.get_node("TopExpBar") as ProgressBar
@@ -533,7 +552,7 @@ func _build_ui() -> void:
 
 	var nav_items: Array = [
 		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper],
-		[UiText.NAV_CONFIG, "res://scenes/ConfigScene.tscn", _on_nav_config],
+		[UiText.NAV_CONFIG, "res://scenes/LineupScene.tscn", _on_nav_config],
 		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance],
 		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity],
 		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop],
@@ -1064,11 +1083,7 @@ func _play_reward_float_sfx(reward_key: String) -> void:
 	var stream: AudioStream = REWARD_SFX_BY_KEY.get(reward_key, REWARD_DEFAULT_SFX)
 	if stream == null:
 		return
-	var player := AudioStreamPlayer.new()
-	player.stream = stream
-	add_child(player)
-	player.finished.connect(player.queue_free)
-	player.play()
+	UiAudio.play_sfx(stream)
 
 
 func _set_speed(mult: float, active_btn: Button) -> void:
@@ -1172,14 +1187,12 @@ func _refresh_ui() -> void:
 	if _stage_task_label != null:
 		_stage_task_label.text = UiText.HOME_DAILY_TASK
 	if _profile_name_label != null:
-		var profile_name := GameState.player_data.display_name.strip_edges()
-		if profile_name.is_empty():
-			profile_name = GameState.player_data.player_name.strip_edges()
-		if profile_name.is_empty():
-			profile_name = "Scooper"
-		_profile_name_label.text = profile_name
+		_profile_name_label.text = GameState.get_profile_display_name()
 	if _profile_level_label != null:
 		_profile_level_label.text = str(GameState.player_data.scooper_level)
+	if _top_avatar_rect != null:
+		var avatar_texture: Texture2D = AssetResolver.resolve_profile_avatar(GameState.get_profile_avatar_id())
+		_top_avatar_rect.texture = avatar_texture if avatar_texture != null else PROFILE_AVATAR_TEXTURE
 	if _top_exp_bar != null and _top_progress_value_label != null:
 		var top_profile: Dictionary = GameState.scooper_profile_data
 		var top_level: int
@@ -1768,6 +1781,10 @@ func _show_sandbox_dialog() -> void:
 
 
 func _on_nav_config() -> void:
+	_toggle_overlay_scene("res://scenes/LineupScene.tscn")
+
+
+func _open_settings_scene() -> void:
 	_toggle_overlay_scene("res://scenes/ConfigScene.tscn")
 
 

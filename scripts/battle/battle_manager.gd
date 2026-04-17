@@ -263,13 +263,7 @@ func _play_audio_sfx(stream: AudioStream, volume_db: float, pitch_scale: float) 
 		return
 	if not _should_play_battle_audio():
 		return
-	var player: AudioStreamPlayer = AudioStreamPlayer.new()
-	player.stream = stream
-	player.volume_db = volume_db
-	player.pitch_scale = pitch_scale
-	add_child(player)
-	player.finished.connect(player.queue_free)
-	player.play()
+	UiAudio.play_sfx(stream, volume_db, pitch_scale)
 
 
 func _should_play_battle_audio() -> bool:

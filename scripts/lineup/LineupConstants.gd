@@ -1,4 +1,4 @@
-class_name ConfigConstants
+class_name LineupConstants
 
 ## ConfigScene 共用常數：尺寸、隊伍類型、標籤、貓咪檔案對映
 
