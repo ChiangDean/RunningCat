@@ -23,3 +23,4 @@
 | 圖像創作總規範 | [13_image_art_direction.md](gdd/13_image_art_direction.md) |
 | 鏟屎官資料架構 | [14_scooper_data_architecture.md](gdd/14_scooper_data_architecture.md) |
 | 屬性數值總覽面板 | [24_stats_panel.md](gdd/24_stats_panel.md) |
+| Admin Catalog 後台 | [25_admin_catalog_frontend.md](gdd/25_admin_catalog_frontend.md) |
