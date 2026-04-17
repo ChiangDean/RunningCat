@@ -1,6 +1,6 @@
 # MeowPartyDashClient Game Design Document
 
-> 更新日期：2026-04-10
+> 更新日期：2026-04-17
 > 文件索引總表
 
 ## 目錄
@@ -22,3 +22,4 @@
 | 鏟屎官系統 | [12_scooper.md](gdd/12_scooper.md) |
 | 圖像創作總規範 | [13_image_art_direction.md](gdd/13_image_art_direction.md) |
 | 鏟屎官資料架構 | [14_scooper_data_architecture.md](gdd/14_scooper_data_architecture.md) |
+| 屬性數值總覽面板 | [24_stats_panel.md](gdd/24_stats_panel.md) |
