@@ -10,7 +10,6 @@ const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
 const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
 const PROFILE_AVATAR_TEXTURE := preload("res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png")
-const HOME_BGM_STREAM := preload("res://assets/audio/sfx/ui/mainmenu_scene.mp3")
 const REWARD_DEFAULT_SFX := preload("res://assets/audio/sfx/rewards/ui_reward_float_default.mp3")
 const REWARD_SFX_BY_KEY := {
 	"gold": preload("res://assets/audio/sfx/rewards/reward_gold.mp3"),
@@ -118,7 +117,6 @@ var _party_btn: Button
 var _chat_btn: Button
 var _chat_badge: Label
 var _resource_value_labels: Dictionary = {}
-var _stage_task_label: Label
 var _battle_countdown_fill: ColorRect
 var _profile_name_label: Label
 var _profile_level_label: Label
@@ -165,7 +163,7 @@ func _ready() -> void:
 		_refresh_ui()
 	)
 	_build_scene()
-	UiAudio.play_bgm(HOME_BGM_STREAM)
+	UiAudio.stop_bgm()
 	_start_battle()
 	# Update the idle button text every second.
 	var sandbox_timer := Timer.new()
@@ -304,21 +302,16 @@ func _build_ui() -> void:
 	)
 	_ui_layer.add_child(stage_panel)
 
-	_stage_task_label = _make_label(UiText.HOME_DAILY_TASK, Vector2(18.0, 10.0), Vector2(308.0, 18.0), 11)
-	_stage_task_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_stage_task_label.add_theme_color_override("font_color", Color(0.90, 0.82, 0.63, 0.86))
-	stage_panel.add_child(_stage_task_label)
-
-	_level_label = _make_label("", Vector2(18.0, 28.0), Vector2(308.0, 28.0), 25)
+	_level_label = _make_label("", Vector2(18.0, 16.0), Vector2(308.0, 28.0), 25)
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stage_panel.add_child(_level_label)
 
-	_timer_label = _make_label("60.0", Vector2(18.0, 54.0), Vector2(308.0, 20.0), 18)
+	_timer_label = _make_label("60.0", Vector2(18.0, 50.0), Vector2(308.0, 20.0), 18)
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stage_panel.add_child(_timer_label)
 
 	var countdown_bar_bg := ColorRect.new()
-	countdown_bar_bg.position = Vector2(28.0, 80.0)
+	countdown_bar_bg.position = Vector2(28.0, 76.0)
 	countdown_bar_bg.size = Vector2(288.0, 8.0)
 	countdown_bar_bg.color = Color(0.20, 0.14, 0.10, 0.92)
 	stage_panel.add_child(countdown_bar_bg)
@@ -1184,8 +1177,6 @@ func _get_free_speed_boost_mult() -> float:
 
 func _refresh_ui() -> void:
 	_level_label.text = GameState.get_level_display()
-	if _stage_task_label != null:
-		_stage_task_label.text = UiText.HOME_DAILY_TASK
 	if _profile_name_label != null:
 		_profile_name_label.text = GameState.get_profile_display_name()
 	if _profile_level_label != null:

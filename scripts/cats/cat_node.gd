@@ -15,6 +15,7 @@ var current_hp: int = 100
 var cat_file_id: String = ""
 
 var _body_rect: ColorRect
+var _shadow_polygon: Polygon2D
 var _animated_sprite: AnimatedSprite2D
 var _static_sprite: Sprite2D
 var _hp_bar_bg: ColorRect
@@ -34,6 +35,11 @@ const SPRITE_TARGET_W := 96.0
 const SPRITE_TARGET_H := 128.0
 const SPRITE_TARGET_SIZE := Vector2(SPRITE_TARGET_W, SPRITE_TARGET_H)
 const SPRITE_VERTICAL_OFFSET_Y := 10.0
+const SHADOW_RADIUS_X := 28.0
+const SHADOW_RADIUS_Y := 9.0
+const SHADOW_OFFSET_Y := -10.0
+const SHADOW_POINT_COUNT := 20
+const SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.22)
 const HP_BAR_OFFSET_Y := 170.0
 const NAME_LABEL_OFFSET_Y := 198.0
 const DAMAGE_DIGIT_SPACING := 18.0
@@ -89,6 +95,9 @@ func _build_visuals() -> void:
 
 
 func _build_body() -> void:
+	_build_shadow()
+	_build_animated_body()
+
 	var sprite_texture: Texture2D = AssetResolver.resolve_cat_battle_static_art(cat_file_id)
 	if sprite_texture != null:
 		_static_sprite = Sprite2D.new()
@@ -121,6 +130,94 @@ func _build_body() -> void:
 	_body_rect.position = Vector2(-BODY_W / 2.0, -BODY_H)
 	_body_rect.color = Color(0.2, 0.5, 0.9, 1.0) if team == "player" else Color(0.9, 0.3, 0.2, 1.0)
 	add_child(_body_rect)
+
+
+func _build_shadow() -> void:
+	_shadow_polygon = Polygon2D.new()
+	_shadow_polygon.position = Vector2(0.0, SHADOW_OFFSET_Y)
+	_shadow_polygon.color = SHADOW_COLOR
+	_shadow_polygon.antialiased = true
+	var points: PackedVector2Array = PackedVector2Array()
+	for point_index: int in range(SHADOW_POINT_COUNT):
+		var angle_ratio: float = float(point_index) / float(SHADOW_POINT_COUNT)
+		var angle: float = TAU * angle_ratio
+		points.append(Vector2(cos(angle) * SHADOW_RADIUS_X, sin(angle) * SHADOW_RADIUS_Y))
+	_shadow_polygon.polygon = points
+	add_child(_shadow_polygon)
+
+
+func _build_animated_body() -> void:
+	var sprite_frames: SpriteFrames = SpriteFrames.new()
+	var preview_texture: Texture2D
+	for animation_name: String in AssetResolver.get_cat_battle_animation_names():
+		var animation_path: String = AssetResolver.resolve_cat_battle_animation_path(cat_file_id, animation_name)
+		if animation_path == "":
+			continue
+
+		var sheet_texture: Texture2D = AssetResolver.load_texture(animation_path)
+		if sheet_texture == null:
+			continue
+
+		var animation_spec: Dictionary = AssetResolver.resolve_cat_battle_animation_spec(cat_file_id, animation_name)
+		var sheet_width: int = int(animation_spec.get("sheet_width", sheet_texture.get_width()))
+		var sheet_height: int = int(animation_spec.get("sheet_height", sheet_texture.get_height()))
+		var frame_width: int = int(animation_spec.get("frame_width", 0))
+		var frame_height: int = int(animation_spec.get("frame_height", sheet_texture.get_height()))
+		var fps: float = float(animation_spec.get("fps", 12.0))
+		var should_loop: bool = bool(animation_spec.get("loop", false))
+		if sheet_width <= 0 or sheet_height <= 0 or frame_width <= 0 or frame_height <= 0:
+			continue
+
+		var effective_sheet_width: int = mini(sheet_texture.get_width(), sheet_width)
+		var effective_sheet_height: int = mini(sheet_texture.get_height(), sheet_height)
+		var effective_frame_height: int = mini(frame_height, effective_sheet_height)
+		var frame_count: int = int(effective_sheet_width / frame_width)
+		if frame_count <= 0:
+			continue
+
+		sprite_frames.add_animation(animation_name)
+		sprite_frames.set_animation_loop(animation_name, should_loop)
+		sprite_frames.set_animation_speed(animation_name, fps)
+		for frame_index: int in range(frame_count):
+			var atlas_texture: AtlasTexture = AtlasTexture.new()
+			atlas_texture.atlas = sheet_texture
+			atlas_texture.region = Rect2(
+				float(frame_index * frame_width),
+				0.0,
+				float(frame_width),
+				float(effective_frame_height)
+			)
+			sprite_frames.add_frame(animation_name, atlas_texture)
+			if preview_texture == null:
+				preview_texture = atlas_texture
+
+	if preview_texture == null:
+		return
+
+	_animated_sprite = AnimatedSprite2D.new()
+	_animated_sprite.sprite_frames = sprite_frames
+	_animated_sprite.centered = true
+	_animated_sprite.flip_h = team != "player"
+	_animated_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_animated_sprite.visible = false
+
+	var visible_rect: Rect2 = _get_texture_visible_rect(preview_texture)
+	var safe_width: float = maxf(1.0, visible_rect.size.x)
+	var safe_height: float = maxf(1.0, visible_rect.size.y)
+	var scale_ratio: float = minf(
+		SPRITE_TARGET_SIZE.x / safe_width,
+		SPRITE_TARGET_SIZE.y / safe_height
+	)
+	_animated_sprite.scale = Vector2(scale_ratio, scale_ratio)
+	var texture_size: Vector2 = preview_texture.get_size()
+	var texture_center: Vector2 = texture_size * 0.5
+	var visible_center_x: float = visible_rect.position.x + visible_rect.size.x * 0.5
+	var visible_bottom_y: float = visible_rect.position.y + visible_rect.size.y
+	_animated_sprite.position = Vector2(
+		-(visible_center_x - texture_center.x) * scale_ratio,
+		-(visible_bottom_y - texture_center.y) * scale_ratio - SPRITE_VERTICAL_OFFSET_Y
+	)
+	add_child(_animated_sprite)
 
 
 func _get_texture_visible_rect(texture: Texture2D) -> Rect2:
@@ -215,7 +312,13 @@ func move_to(target_x: float) -> void:
 
 
 func play_idle() -> void:
-	_play_loop("idle")
+	_cancel_revert()
+	_active_animation = "idle"
+	if _has_animation("idle"):
+		_set_animation_visual_active(true)
+		_animated_sprite.play("idle")
+		return
+	_set_animation_visual_active(false)
 
 
 func play_run() -> void:
@@ -241,6 +344,7 @@ func play_death() -> void:
 	_cancel_revert()
 	if _has_animation("death_fly"):
 		_active_animation = "death_fly"
+		_set_animation_visual_active(true)
 		_animated_sprite.play("death_fly")
 
 	var dir := -1.0 if team == "player" else 1.0
@@ -257,7 +361,7 @@ func play_death() -> void:
 
 func flash_skill() -> void:
 	play_skill()
-	var target: CanvasItem = _animated_sprite if _animated_sprite != null else _static_sprite
+	var target: CanvasItem = _animated_sprite if _animated_sprite != null and _animated_sprite.visible else _static_sprite
 	if target == null:
 		target = _body_rect
 	if target == null:
@@ -274,8 +378,12 @@ func _play_loop(animation_name: String) -> void:
 		return
 	_cancel_revert()
 	if _active_animation == animation_name:
+		_set_animation_visual_active(true)
+		if not _animated_sprite.is_playing():
+			_animated_sprite.play(animation_name)
 		return
 	_active_animation = animation_name
+	_set_animation_visual_active(true)
 	_animated_sprite.play(animation_name)
 
 
@@ -286,6 +394,7 @@ func _play_temporary(animation_name: String, duration: float) -> void:
 	_revert_token += 1
 	var revert_token := _revert_token
 	_active_animation = animation_name
+	_set_animation_visual_active(true)
 	_animated_sprite.play(animation_name)
 	_revert_timer = get_tree().create_timer(duration)
 	_revert_timer.timeout.connect(func():
@@ -303,6 +412,17 @@ func _cancel_revert() -> void:
 
 func _has_animation(animation_name: String) -> bool:
 	return _animated_sprite != null and _animated_sprite.sprite_frames != null and _animated_sprite.sprite_frames.has_animation(animation_name)
+
+
+func _set_animation_visual_active(is_active: bool) -> void:
+	if _animated_sprite != null:
+		_animated_sprite.visible = is_active
+		if not is_active:
+			_animated_sprite.stop()
+	if _static_sprite != null:
+		_static_sprite.visible = not is_active
+	if _body_rect != null:
+		_body_rect.visible = not is_active
 
 
 func _get_damage_palette() -> Dictionary:
@@ -378,7 +498,7 @@ func _add_damage_digit(parent_node: Node2D, damage_text: String, digit_position:
 
 
 func _play_hit_feedback() -> void:
-	var body_target: Variant = _static_sprite if _static_sprite != null else _animated_sprite
+	var body_target: Variant = _animated_sprite if _animated_sprite != null and _animated_sprite.visible else _static_sprite
 	if body_target == null:
 		body_target = _body_rect
 	if body_target != null:
