@@ -144,6 +144,18 @@ func get_authenticated_bootstrap(callback: Callable) -> void:
 	_api_get("auth/bootstrap", callback)
 
 
+func get_profile_me(callback: Callable) -> void:
+	_api_get("profile/me", callback)
+
+
+func update_profile_me(payload: Dictionary, callback: Callable) -> void:
+	_api_put("profile/me", payload, callback)
+
+
+func redeem_code(code: String, callback: Callable) -> void:
+	_api_post("redeem-codes/redeem", {"code": code}, callback)
+
+
 func get_mail_summary(callback: Callable) -> void:
 	_api_get("mail/summary", callback)
 

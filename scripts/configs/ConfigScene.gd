@@ -1,890 +1,746 @@
 extends Control
 
-const Constants = preload("res://scripts/configs/ConfigConstants.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
 
-const DANGER_BUTTON_COLOR := Color(0.94, 0.48, 0.42, 1.0)
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
-const DISABLED_TEXT_COLOR := Color(0.70, 0.70, 0.72, 0.92)
-const EMPTY_SLOT_TEXT_COLOR := Color(0.75, 0.70, 0.62, 0.9)
-const SLOT_IMAGE_BG := Color(0.24, 0.20, 0.16, 0.96)
-const SLOT_IMAGE_BORDER := Color(0.98, 0.84, 0.54, 0.95)
-const SLOT_DELAY_BG := Color(0.18, 0.12, 0.08, 0.94)
-const SLOT_HOLD_SECONDS := 0.4
-const SLOT_EMPTY_FILL := Color(0.20, 0.18, 0.16, 0.88)
-const SLOT_EMPTY_BORDER := Color(0.62, 0.54, 0.40, 0.78)
-const SLOT_NAME_COLOR := Color(0.98, 0.95, 0.88, 1.0)
-const SLOT_META_COLOR := Color(0.88, 0.80, 0.67, 0.92)
-const SLOT_REMOVE_BG := Color(0.56, 0.18, 0.18, 0.96)
-const CAT_CARD_HOLD_SECONDS := 2.0
+const SECTION_HINT_COLOR := Color(0.84, 0.80, 0.72, 0.88)
+const FIELD_BG := Color(0.14, 0.12, 0.11, 0.98)
+const FIELD_BORDER := Color(0.42, 0.36, 0.26, 0.96)
+const SELECTED_BORDER := Color(0.92, 0.79, 0.44, 1.0)
+const UNSELECTED_BORDER := Color(0.42, 0.36, 0.26, 0.96)
+const GENDER_OPTIONS := [
+	{"label": "未指定", "value": "Unspecified"},
+	{"label": "男性", "value": "Male"},
+	{"label": "女性", "value": "Female"},
+	{"label": "非二元", "value": "NonBinary"},
+	{"label": "不透露", "value": "PreferNotToSay"},
+]
 
-var _current_team_type: String = "boss"
-var _api_in_flight: bool = false
+var _profile_dirty: bool = false
+var _profile_loading: bool = false
+var _profile_saving: bool = false
+var _redeem_in_flight: bool = false
+var _applying_profile_form: bool = false
+var _selected_avatar_id: String = AssetResolver.DEFAULT_PROFILE_AVATAR_ID
 
-var _team_type_btns: Dictionary = {}
-var _page_title: Label
-var _team_summary_label: Label
-var _team_container: GridContainer
-var _cats_title: Label
-var _cats_sort_btns: Dictionary = {}
-var _cats_scroll: ScrollContainer
-var _cats_container: GridContainer
-var _save_team_btn: Button
-var _cats_scroller: InertialScroller
-
-var _team_drafts: Dictionary = {}
-var _team_dirty: Dictionary = {}
-var _cats_sort_mode: String = "level"
+var _avatar_preview: TextureRect
+var _avatar_name_label: Label
+var _avatar_buttons: Dictionary = {}
+var _display_name_input: LineEdit
+var _player_name_input: LineEdit
+var _bio_input: TextEdit
+var _birthday_input: LineEdit
+var _gender_option: OptionButton
+var _region_input: LineEdit
+var _save_profile_button: Button
+var _save_profile_hint_label: Label
+var _account_value_label: LineEdit
+var _player_uid_value_label: LineEdit
+var _provider_status_labels: Dictionary = {}
+var _redeem_input: LineEdit
+var _redeem_button: Button
+var _audio_value_labels: Dictionary = {}
+var _audio_sliders: Dictionary = {}
+var _audio_mute_boxes: Dictionary = {}
 
 
 func _ready() -> void:
 	_build_ui()
+	_apply_profile_data(_build_local_profile_snapshot())
+	_apply_audio_settings()
+	_load_profile_from_api()
 
 
 func _build_ui() -> void:
-	var bg: Control = AssetResolver.make_fullscreen_background("config")
-	add_child(bg)
-
-	var dim: ColorRect = ColorRect.new()
-	dim.color = Color(0.04, 0.03, 0.05, 0.34)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
-
-	var content_panel: PanelContainer = PanelContainer.new()
-	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content_panel.offset_left = 20.0
-	content_panel.offset_top = OverlaySceneChrome.CONTENT_TOP_GAP
-	content_panel.offset_right = -20.0
-	content_panel.offset_bottom = -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H + 12.0)
-	content_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.PANEL_FILL, OverlaySceneChrome.PANEL_BORDER, 18))
-	add_child(content_panel)
-
-	var content_margin: MarginContainer = OverlaySceneChrome.make_content_margin(18)
-	content_panel.add_child(content_margin)
-
-	var content_vbox: VBoxContainer = VBoxContainer.new()
-	content_vbox.add_theme_constant_override("separation", 14)
-	content_margin.add_child(content_vbox)
-
-	_page_title = Label.new()
-	_page_title.text = UiText.CONFIG_PAGE_TITLE
-	_page_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	content_vbox.add_child(_page_title)
-
-	var page_desc: Label = Label.new()
-	page_desc.text = UiText.CONFIG_PAGE_DESC
-	page_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	page_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	page_desc.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
-	content_vbox.add_child(page_desc)
-
-	var main_split: VBoxContainer = VBoxContainer.new()
-	main_split.add_theme_constant_override("separation", 12)
-	main_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_vbox.add_child(main_split)
-
-	var team_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	team_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	team_panel.size_flags_vertical = 0
-	main_split.add_child(team_panel)
-
-	var team_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	team_panel.add_child(team_margin)
-
-	var team_vbox: VBoxContainer = VBoxContainer.new()
-	team_vbox.add_theme_constant_override("separation", 10)
-	team_vbox.size_flags_vertical = 0
-	team_margin.add_child(team_vbox)
-
-	_team_summary_label = Label.new()
-	_team_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_team_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	_team_summary_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
-	_team_summary_label.visible = false
-	team_vbox.add_child(_team_summary_label)
-
-	_team_container = GridContainer.new()
-	_team_container.columns = 5
-	_team_container.add_theme_constant_override("separation", 6)
-	_team_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_team_container.size_flags_vertical = 0
-	team_vbox.add_child(_team_container)
-
-	_save_team_btn = Button.new()
-	_save_team_btn.text = UiText.CONFIG_SAVE_BUTTON
-	_save_team_btn.custom_minimum_size = Vector2(0.0, 52.0)
-	_save_team_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	_save_team_btn.pressed.connect(_on_save_team_pressed)
-	UiPalette.apply_button_kind(_save_team_btn, "confirm")
-	team_vbox.add_child(_save_team_btn)
-
-	var cats_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	cats_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cats_panel.size_flags_stretch_ratio = 1.05
-	main_split.add_child(cats_panel)
-
-	var cats_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	cats_panel.add_child(cats_margin)
-
-	var cats_vbox: VBoxContainer = VBoxContainer.new()
-	cats_vbox.add_theme_constant_override("separation", 10)
-	cats_margin.add_child(cats_vbox)
-
-	var cats_header: HBoxContainer = HBoxContainer.new()
-	cats_header.add_theme_constant_override("separation", 8)
-	cats_vbox.add_child(cats_header)
-
-	_cats_title = Label.new()
-	_cats_title.text = UiText.CONFIG_OWNED_CATS_TITLE
-	_cats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
-	_cats_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cats_header.add_child(_cats_title)
-
-	var sort_row: HBoxContainer = HBoxContainer.new()
-	sort_row.add_theme_constant_override("separation", 6)
-	cats_header.add_child(sort_row)
-
-	for sort_key: String in ["level", "rank"]:
-		var sort_btn: Button = Button.new()
-		sort_btn.text = UiText.CONFIG_SORT_LEVEL if sort_key == "level" else UiText.CONFIG_SORT_RANK
-		sort_btn.custom_minimum_size = Vector2(64.0, 28.0)
-		sort_btn.add_theme_font_size_override("font_size", 13)
-		sort_btn.pressed.connect(func() -> void:
-			_set_cats_sort_mode(sort_key)
-		)
-		sort_row.add_child(sort_btn)
-		_cats_sort_btns[sort_key] = sort_btn
-
-	_cats_scroll = ScrollContainer.new()
-	_cats_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_cats_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	cats_vbox.add_child(_cats_scroll)
-
-	_cats_container = GridContainer.new()
-	_cats_container.columns = 3
-	_cats_container.add_theme_constant_override("separation", 12)
-	_cats_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_cats_scroll.add_child(_cats_container)
-	_cats_scroller = InertialScroller.attach(_cats_scroll, "vertical")
-
-	var submenu_items: Array = []
-	for type_key: String in ["boss", "dungeon", "arena_attack", "arena_defense"]:
-		submenu_items.append({
-			"key": type_key,
-			"label": str(Constants.TEAM_LABELS[type_key]),
-		})
-	var submenu: Dictionary = SceneSubmenuBar.build(self, {
-		"items": submenu_items,
-		"active_key": _current_team_type,
-		"back_label": UiText.CONFIG_BACK,
-		"back_pressed": Callable(self, "_on_back_pressed"),
-		"button_pressed": Callable(self, "_switch_team_type"),
-		"panel_fill": OverlaySceneChrome.PANEL_FILL,
-		"panel_border": OverlaySceneChrome.PANEL_BORDER,
-		"top": -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H),
-		"bottom": -OverlaySceneChrome.HOME_MAIN_NAV_H,
+	var chrome: Dictionary = OverlaySceneChrome.build(self, "config", Callable(self, "_on_back_pressed"), {
+		"show_dock": false,
+		"content_bottom": -(OverlaySceneChrome.HOME_MAIN_NAV_H + 14.0),
+		"content_separation": 12,
 	})
-	_team_type_btns = submenu.get("buttons", {})
+	var content_box: VBoxContainer = chrome.get("content_box") as VBoxContainer
 
-	_switch_team_type("boss")
+	var title: Label = Label.new()
+	title.text = "設定中心"
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
+	content_box.add_child(title)
 
+	var subtitle: Label = Label.new()
+	subtitle.text = "管理角色資料、帳號資訊與本機遊戲設定。"
+	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	subtitle.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	subtitle.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+	content_box.add_child(subtitle)
 
-func _switch_team_type(type_key: String) -> void:
-	_ensure_team_draft(type_key)
-	_current_team_type = type_key
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content_box.add_child(scroll)
 
-	SceneSubmenuBar.refresh(_team_type_btns, type_key, {
-		"active_color": SceneMenuTheme.ACTIVE_COLOR,
-		"inactive_color": SceneMenuTheme.INACTIVE_COLOR,
-	})
+	var body: VBoxContainer = VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 14)
+	scroll.add_child(body)
 
-	_refresh_team()
-	_refresh_cats_list()
-	_update_team_title()
-	_update_save_section()
-	_refresh_cats_sort_buttons()
-
-
-func _get_team_type_key(type_key: String = "") -> String:
-	if type_key == "":
-		type_key = _current_team_type
-	return str(Constants.TEAM_TYPE_MAP.get(type_key, "Boss"))
-
-
-func _get_editing_team_members() -> Array:
-	_ensure_team_draft(_current_team_type)
-	var team: Dictionary = _team_drafts[_current_team_type]
-	return team.get("members", [])
+	body.add_child(_build_profile_section())
+	body.add_child(_build_account_section())
+	body.add_child(_build_game_settings_section())
 
 
-func _get_filled_editing_team_members() -> Array:
-	var filled: Array = []
-	for member_variant: Variant in _get_editing_team_members():
-		if member_variant is Dictionary and not (member_variant as Dictionary).is_empty():
-			filled.append(member_variant)
-	return filled
-
-
-func _ensure_team_draft(type_key: String) -> void:
-	if _team_drafts.has(type_key):
-		return
-	_reset_team_draft(type_key, GameState.get_team(_get_team_type_key(type_key)))
-
-
-func _reset_team_draft(type_key: String, source_team: Dictionary) -> void:
-	var draft: Dictionary = source_team.duplicate(true)
-	draft["teamType"] = _get_team_type_key(type_key)
-	draft["members"] = _normalize_members(draft.get("members", []), type_key)
-	_team_drafts[type_key] = draft
-	_team_dirty[type_key] = false
-
-
-func _normalize_members(members: Array, type_key: String = "") -> Array:
-	if type_key == "":
-		type_key = _current_team_type
-	var max_count: int = _get_max_team_size_for(type_key)
-	var normalized: Array = []
-	normalized.resize(max_count)
-	for index: int in range(max_count):
-		normalized[index] = {}
-
-	for member_variant: Variant in members:
-		if member_variant is Dictionary and (member_variant as Dictionary).is_empty():
-			continue
-		if not (member_variant is Dictionary):
-			continue
-
-		var member: Dictionary = (member_variant as Dictionary).duplicate(true)
-		var slot_no: int = int(member.get("slotNo", -1))
-		if slot_no < 0 or slot_no >= max_count:
-			slot_no = _find_first_empty_slot_index(normalized)
-			if slot_no < 0:
-				continue
-
-		member["slotNo"] = slot_no
-		member["initialDelaySeconds"] = float(member.get("initialDelaySeconds", 0.0))
-		normalized[slot_no] = member
-	return normalized
-
-
-func _find_first_empty_slot_index(members: Array) -> int:
-	for index: int in range(members.size()):
-		var slot_variant: Variant = members[index]
-		if slot_variant is Dictionary and (slot_variant as Dictionary).is_empty():
-			return index
-	return -1
-
-
-func _get_max_team_size_for(type_key: String) -> int:
-	match type_key:
-		"boss":
-			return int(GameState.boss_config.get("max_team_size", 5))
-		"dungeon":
-			return int(GameState.dungeon_config.get("max_team_size", 5))
-		"arena_attack", "arena_defense":
-			return int(GameState.arena_config.get("max_team_size", 5))
-	return 5
-
-
-func _is_current_team_dirty() -> bool:
-	return bool(_team_dirty.get(_current_team_type, false))
-
-
-func _mark_current_team_dirty() -> void:
-	_team_dirty[_current_team_type] = true
-	_update_save_section()
-
-
-func _update_team_title() -> void:
-	var mode_label: String = str(Constants.TEAM_LABELS.get(_current_team_type, _current_team_type))
-	var members: Array = _get_filled_editing_team_members()
-	var max_count: int = _get_max_team_size()
-	var title_text: String = UiText.CONFIG_TEAM_TITLE_FORMAT % [mode_label, members.size(), max_count]
-	_page_title.text = title_text
-
-	_team_summary_label.text = UiText.CONFIG_TEAM_SUMMARY_WITH_DELAY
-
-
-func _refresh_team() -> void:
-	for child: Node in _team_container.get_children():
-		child.queue_free()
-
-	var members: Array = _get_editing_team_members()
-	var max_count: int = _get_max_team_size()
-	_team_container.columns = maxi(1, max_count)
-	for i: int in range(max_count):
-		var member: Dictionary = members[i] if i < members.size() else {}
-		_team_container.add_child(_make_team_slot_card(i, member))
-
-	_update_team_title()
-	_update_save_section()
-
-
-func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer:
-	var is_filled: bool = not member.is_empty()
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER if is_filled else SLOT_EMPTY_BORDER)
-	card.custom_minimum_size = Vector2(0.0, 166.0)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(4)
-	card.add_child(margin)
+func _build_profile_section() -> Control:
+	var section: PanelContainer = OverlaySceneChrome.make_card_panel()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
+	section.add_child(margin)
 
 	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
+	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	var cat_name: String = str(member.get("catDisplayName", "")) if is_filled else UiText.CONFIG_EMPTY_SLOT
-	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
-	var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
-	var cat_file_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id) if is_filled else ""
+	column.add_child(_make_section_header("角色資料", "可設定頭像、暱稱、自介、生日與性別。"))
 
-	var top_row: HBoxContainer = HBoxContainer.new()
-	top_row.add_theme_constant_override("separation", 4)
-	column.add_child(top_row)
+	var avatar_row: HBoxContainer = HBoxContainer.new()
+	avatar_row.add_theme_constant_override("separation", 14)
+	column.add_child(avatar_row)
 
-	var slot_badge: Label = Label.new()
-	slot_badge.text = UiText.CONFIG_SLOT_BADGE_FORMAT % [slot_index + 1]
-	slot_badge.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
-	slot_badge.add_theme_color_override("font_color", Color(0.98, 0.90, 0.72, 1.0))
-	top_row.add_child(slot_badge)
+	var preview_panel: PanelContainer = PanelContainer.new()
+	preview_panel.custom_minimum_size = Vector2(156.0, 184.0)
+	preview_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 16))
+	avatar_row.add_child(preview_panel)
 
-	var top_name: Label = Label.new()
-	top_name.text = cat_name if is_filled else UiText.CONFIG_TEAM_SLOT_EMPTY_NAME
-	top_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_name.clip_text = true
-	top_name.add_theme_font_size_override("font_size", 17)
-	top_name.add_theme_color_override("font_color", SLOT_NAME_COLOR if is_filled else EMPTY_SLOT_TEXT_COLOR)
-	top_row.add_child(top_name)
+	var preview_margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	preview_panel.add_child(preview_margin)
 
-	var image_shell: PanelContainer = PanelContainer.new()
-	image_shell.custom_minimum_size = Vector2(0.0, 96.0)
-	image_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	image_shell.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(SLOT_IMAGE_BG if is_filled else SLOT_EMPTY_FILL, SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER, 14))
-	image_shell.mouse_filter = Control.MOUSE_FILTER_STOP
-	column.add_child(image_shell)
+	var preview_box: VBoxContainer = VBoxContainer.new()
+	preview_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	preview_box.add_theme_constant_override("separation", 8)
+	preview_margin.add_child(preview_box)
 
-	var image_button: Button = Button.new()
-	image_button.flat = true
-	image_button.text = UiText.CONFIG_EMPTY_SLOT_ICON if not is_filled else ""
-	image_button.custom_minimum_size = Vector2(0.0, 96.0)
-	image_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	image_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	image_button.clip_text = true
-	image_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	image_button.add_theme_color_override("font_color", EMPTY_SLOT_TEXT_COLOR)
-	image_shell.add_child(image_button)
+	_avatar_preview = TextureRect.new()
+	_avatar_preview.custom_minimum_size = Vector2(108.0, 108.0)
+	_avatar_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_avatar_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_avatar_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	preview_box.add_child(_avatar_preview)
 
-	var overlay_root: Control = Control.new()
-	overlay_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	image_shell.add_child(overlay_root)
+	_avatar_name_label = Label.new()
+	_avatar_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_avatar_name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	preview_box.add_child(_avatar_name_label)
 
-	var image_margin: MarginContainer = OverlaySceneChrome.make_content_margin(4)
-	image_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay_root.add_child(image_margin)
+	var avatar_picker_shell: VBoxContainer = VBoxContainer.new()
+	avatar_picker_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	avatar_picker_shell.add_theme_constant_override("separation", 8)
+	avatar_row.add_child(avatar_picker_shell)
 
-	var icon_holder: CenterContainer = CenterContainer.new()
-	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_margin.add_child(icon_holder)
+	var avatar_hint: Label = Label.new()
+	avatar_hint.text = "選擇預設頭像"
+	avatar_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	avatar_picker_shell.add_child(avatar_hint)
 
-	var team_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(cat_file_id)
-	if team_icon != null:
-		icon_holder.add_child(AssetResolver.create_icon_rect(team_icon, Vector2(72.0, 72.0)))
-	elif is_filled:
-		var fallback_name: Label = Label.new()
-		fallback_name.text = _get_cat_visual_fallback(cat_name)
-		fallback_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		fallback_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fallback_name.add_theme_font_size_override("font_size", 30)
-		fallback_name.add_theme_color_override("font_color", SLOT_NAME_COLOR)
-		icon_holder.add_child(fallback_name)
+	var avatar_grid: GridContainer = GridContainer.new()
+	avatar_grid.columns = 3
+	avatar_grid.add_theme_constant_override("h_separation", 8)
+	avatar_grid.add_theme_constant_override("v_separation", 8)
+	avatar_picker_shell.add_child(avatar_grid)
 
-	if is_filled:
-		var remove_btn: Button = Button.new()
-		remove_btn.text = "－"
-		remove_btn.custom_minimum_size = Vector2(22.0, 22.0)
-		remove_btn.add_theme_font_size_override("font_size", 11)
-		remove_btn.add_theme_color_override("font_color", Color(1.0, 0.97, 0.95, 1.0))
-		remove_btn.anchor_left = 1.0
-		remove_btn.anchor_top = 0.0
-		remove_btn.anchor_right = 1.0
-		remove_btn.anchor_bottom = 0.0
-		remove_btn.offset_left = -20.0
-		remove_btn.offset_top = -10.0
-		remove_btn.offset_right = 2.0
-		remove_btn.offset_bottom = 12.0
-		remove_btn.disabled = _api_in_flight
-		var remove_style: StyleBoxFlat = StyleBoxFlat.new()
-		remove_style.bg_color = SLOT_REMOVE_BG
-		remove_style.corner_radius_top_left = 999
-		remove_style.corner_radius_top_right = 999
-		remove_style.corner_radius_bottom_left = 999
-		remove_style.corner_radius_bottom_right = 999
-		remove_style.border_width_left = 1
-		remove_style.border_width_right = 1
-		remove_style.border_width_top = 1
-		remove_style.border_width_bottom = 1
-		remove_style.border_color = Color(1.0, 0.82, 0.78, 0.95)
-		remove_btn.add_theme_stylebox_override("normal", remove_style)
-		var remove_hover: StyleBoxFlat = remove_style.duplicate()
-		remove_hover.bg_color = SLOT_REMOVE_BG.lightened(0.08)
-		var remove_pressed: StyleBoxFlat = remove_style.duplicate()
-		remove_pressed.bg_color = SLOT_REMOVE_BG.darkened(0.08)
-		remove_btn.add_theme_stylebox_override("hover", remove_hover)
-		remove_btn.add_theme_stylebox_override("pressed", remove_pressed)
-		if not _api_in_flight:
-			remove_btn.pressed.connect(func() -> void:
-				_remove_member_from_draft(slot_index)
-			)
-		overlay_root.add_child(remove_btn)
+	for avatar_id: String in AssetResolver.get_profile_avatar_ids():
+		avatar_grid.add_child(_build_avatar_card(avatar_id))
 
-	image_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if is_filled and cat_file_id != "":
-		image_shell.gui_input.connect(func(event: InputEvent) -> void:
-			if not (event is InputEventMouseButton):
-				return
-			var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-			if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
-				return
-			_show_skill_popup(cat_file_id)
-			image_shell.accept_event()
-		)
-	else:
-		image_button.disabled = true
+	_display_name_input = _make_line_edit("請輸入暱稱")
+	_player_name_input = _make_line_edit("請輸入角色名稱")
+	_birthday_input = _make_line_edit("YYYY-MM-DD")
+	_region_input = _make_line_edit("例如：台北 / Kaohsiung")
 
-	var delay_button: Button = Button.new()
-	delay_button.text = UiText.CONFIG_DELAY_BUTTON_FORMAT % [_format_delay_label(delay_seconds)] if is_filled else UiText.CONFIG_DELAY_BUTTON_EMPTY
-	delay_button.custom_minimum_size = Vector2(0.0, 24.0)
-	delay_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	delay_button.add_theme_font_size_override("font_size", 13)
-	delay_button.disabled = not is_filled or _api_in_flight
-	UiPalette.apply_button_palette(delay_button, SLOT_DELAY_BG, Color(0.98, 0.90, 0.72, 1.0))
-	if is_filled and not _api_in_flight:
-		delay_button.pressed.connect(func() -> void:
-			_update_member_delay_in_draft(slot_index, _get_next_delay_value(delay_seconds))
-		)
-	column.add_child(delay_button)
+	_bio_input = TextEdit.new()
+	_bio_input.custom_minimum_size = Vector2(0.0, 112.0)
+	_bio_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	_bio_input.add_theme_stylebox_override("normal", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
 
-	return card
+	_gender_option = OptionButton.new()
+	_gender_option.custom_minimum_size = Vector2(0.0, 48.0)
+	for option: Dictionary in GENDER_OPTIONS:
+		_gender_option.add_item(str(option.get("label", "")))
+
+	column.add_child(_build_field_row("暱稱", _display_name_input))
+	column.add_child(_build_field_row("角色名稱", _player_name_input))
+	column.add_child(_build_field_row("自介", _bio_input))
+	column.add_child(_build_field_row("生日", _birthday_input))
+	column.add_child(_build_field_row("性別", _gender_option))
+	column.add_child(_build_field_row("地區", _region_input))
+
+	var save_row: HBoxContainer = HBoxContainer.new()
+	save_row.add_theme_constant_override("separation", 12)
+	column.add_child(save_row)
+
+	_save_profile_button = Button.new()
+	_save_profile_button.text = "儲存角色資料"
+	_save_profile_button.custom_minimum_size = Vector2(220.0, 50.0)
+	UiPalette.apply_button_kind(_save_profile_button, "confirm")
+	_save_profile_button.pressed.connect(UiAudio.play_ui_click)
+	_save_profile_button.pressed.connect(_on_save_profile_pressed)
+	save_row.add_child(_save_profile_button)
+
+	_save_profile_hint_label = Label.new()
+	_save_profile_hint_label.text = "資料會同步到帳號。"
+	_save_profile_hint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_save_profile_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_save_profile_hint_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	_save_profile_hint_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	save_row.add_child(_save_profile_hint_label)
+
+	_bind_profile_edit_events()
+	_refresh_avatar_selection()
+	_refresh_profile_save_state()
+	return section
 
 
-func _refresh_cats_list() -> void:
-	for child: Node in _cats_container.get_children():
-		child.queue_free()
+func _build_account_section() -> Control:
+	var section: PanelContainer = OverlaySceneChrome.make_card_panel()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
+	section.add_child(margin)
 
-	var in_team_ids: Array = _get_editing_team_members().map(func(member: Dictionary) -> int:
-		return int(member.get("playerCatId", 0))
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	margin.add_child(column)
+
+	column.add_child(_make_section_header("帳號資料", "顯示目前綁定狀態，OAuth 入口先以佔位方式展示。"))
+
+	_account_value_label = _make_readonly_value("載入中")
+	_player_uid_value_label = _make_readonly_value("載入中")
+	column.add_child(_build_field_row("帳號", _account_value_label))
+	column.add_child(_build_field_row("Player UID", _player_uid_value_label))
+
+	var provider_row: HBoxContainer = HBoxContainer.new()
+	provider_row.add_theme_constant_override("separation", 10)
+	column.add_child(provider_row)
+
+	provider_row.add_child(_build_provider_card("Google"))
+	provider_row.add_child(_build_provider_card("Apple"))
+
+	var redeem_title: Label = Label.new()
+	redeem_title.text = "兌換碼"
+	redeem_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	column.add_child(redeem_title)
+
+	var redeem_hint: Label = Label.new()
+	redeem_hint.text = "輸入活動碼即可直接領取獎勵。"
+	redeem_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	redeem_hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	column.add_child(redeem_hint)
+
+	var redeem_row: HBoxContainer = HBoxContainer.new()
+	redeem_row.add_theme_constant_override("separation", 10)
+	column.add_child(redeem_row)
+
+	_redeem_input = _make_line_edit("請輸入兌換碼")
+	_redeem_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	redeem_row.add_child(_redeem_input)
+
+	_redeem_button = Button.new()
+	_redeem_button.text = "兌換"
+	_redeem_button.custom_minimum_size = Vector2(132.0, 48.0)
+	UiPalette.apply_button_kind(_redeem_button, "confirm")
+	_redeem_button.pressed.connect(UiAudio.play_ui_click)
+	_redeem_button.pressed.connect(_on_redeem_pressed)
+	redeem_row.add_child(_redeem_button)
+
+	return section
+
+
+func _build_game_settings_section() -> Control:
+	var section: PanelContainer = OverlaySceneChrome.make_card_panel()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
+	section.add_child(margin)
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	margin.add_child(column)
+
+	column.add_child(_make_section_header("遊戲設定", "音量設定保存在本機裝置，不會覆蓋其他裝置。"))
+
+	column.add_child(_build_audio_row("master", "總音量"))
+	column.add_child(_build_audio_row("bgm", "背景音樂"))
+	column.add_child(_build_audio_row("sfx", "音效"))
+
+	return section
+
+
+func _build_avatar_card(avatar_id: String) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0.0, 96.0)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(8)
+	panel.add_child(margin)
+
+	var box: VBoxContainer = VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 6)
+	margin.add_child(box)
+
+	var icon: TextureRect = TextureRect.new()
+	icon.custom_minimum_size = Vector2(54.0, 54.0)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.texture = AssetResolver.resolve_profile_avatar(avatar_id)
+	box.add_child(icon)
+
+	var label: Label = Label.new()
+	label.text = AssetResolver.get_profile_avatar_label(avatar_id)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	box.add_child(label)
+
+	var button: Button = Button.new()
+	button.flat = true
+	button.focus_mode = Control.FOCUS_NONE
+	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	button.pressed.connect(UiAudio.play_ui_click)
+	button.pressed.connect(func() -> void:
+		_selected_avatar_id = avatar_id
+		_mark_profile_dirty()
+		_refresh_avatar_selection()
 	)
-	in_team_ids = in_team_ids.filter(func(id: int) -> bool:
-		return id > 0
+	panel.add_child(button)
+
+	_avatar_buttons[avatar_id] = {"panel": panel, "label": label}
+	return panel
+
+
+func _build_provider_card(provider_name: String) -> Control:
+	var panel: PanelContainer = OverlaySceneChrome.make_card_panel(FIELD_BORDER, FIELD_BG, 12)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	panel.add_child(margin)
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	margin.add_child(column)
+
+	var title: Label = Label.new()
+	title.text = provider_name
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	column.add_child(title)
+
+	var status_label: Label = Label.new()
+	status_label.text = "即將開放"
+	status_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	column.add_child(status_label)
+	_provider_status_labels[provider_name] = status_label
+
+	var action_button: Button = Button.new()
+	action_button.text = "即將開放"
+	action_button.disabled = true
+	action_button.custom_minimum_size = Vector2(0.0, 42.0)
+	UiPalette.apply_button_palette(action_button, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
+	column.add_child(action_button)
+
+	return panel
+
+
+func _build_audio_row(bus_key: String, label_text: String) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	panel.add_child(margin)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	margin.add_child(row)
+
+	var label: Label = Label.new()
+	label.text = label_text
+	label.custom_minimum_size = Vector2(110.0, 0.0)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	row.add_child(label)
+
+	var slider: HSlider = HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 1.0
+	slider.step = 0.01
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.value_changed.connect(func(value: float) -> void:
+		_on_audio_slider_changed(bus_key, value)
 	)
-	var owned_cats: Array = _get_sorted_owned_cats()
-	for cat_variant: Variant in owned_cats:
-		if cat_variant is Dictionary:
-			_cats_container.add_child(_make_cat_card(cat_variant as Dictionary, in_team_ids))
+	row.add_child(slider)
+	_audio_sliders[bus_key] = slider
+
+	var value_label: Label = Label.new()
+	value_label.custom_minimum_size = Vector2(56.0, 0.0)
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	value_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	row.add_child(value_label)
+	_audio_value_labels[bus_key] = value_label
+
+	var mute_box: CheckBox = CheckBox.new()
+	mute_box.text = "靜音"
+	mute_box.toggled.connect(func(pressed: bool) -> void:
+		_on_audio_mute_toggled(bus_key, pressed)
+	)
+	row.add_child(mute_box)
+	_audio_mute_boxes[bus_key] = mute_box
+
+	return panel
 
 
-func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
-	var player_cat_id: int = int(cat.get("playerCatId", 0))
-	var display_name: String = str(cat.get("displayName", ""))
-	var lv: int = int(cat.get("catFoodLevel", 1))
-	var rank: int = int(cat.get("rank", 0))
-	var cat_catalog_id: int = int(cat.get("catCatalogId", 0))
-	var already_in: bool = player_cat_id in in_team_ids
-	var team_full: bool = _get_filled_editing_team_members().size() >= _get_max_team_size()
-	var action_disabled: bool = (not already_in and team_full) or _api_in_flight
+func _make_section_header(title_text: String, subtitle_text: String) -> Control:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
 
-	var local_cat_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id)
-	var cat_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(local_cat_id)
-	var hold_timer: Timer = Timer.new()
-	hold_timer.one_shot = true
-	hold_timer.wait_time = CAT_CARD_HOLD_SECONDS
-	var pointer_down: Array[bool] = [false]
-	var long_press_triggered: Array[bool] = [false]
-	hold_timer.timeout.connect(func() -> void:
-		if not pointer_down[0]:
-			return
-		if local_cat_id == "":
-			return
-		if _cats_scroller != null and _cats_scroller.consume_moved():
-			return
-		long_press_triggered[0] = true
-		_show_skill_popup(local_cat_id)
+	var title: Label = Label.new()
+	title.text = title_text
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
+	column.add_child(title)
+
+	var subtitle: Label = Label.new()
+	subtitle.text = subtitle_text
+	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	subtitle.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	subtitle.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+	column.add_child(subtitle)
+
+	return column
+
+
+func _build_field_row(label_text: String, field: Control) -> Control:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+
+	var label: Label = Label.new()
+	label.text = label_text
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	column.add_child(label)
+
+	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(field)
+	return column
+
+
+func _make_line_edit(placeholder_text: String) -> LineEdit:
+	var input: LineEdit = LineEdit.new()
+	input.custom_minimum_size = Vector2(0.0, 48.0)
+	input.placeholder_text = placeholder_text
+	input.add_theme_stylebox_override("normal", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
+	return input
+
+
+func _make_readonly_value(text: String) -> LineEdit:
+	var input: LineEdit = LineEdit.new()
+	input.text = text
+	input.editable = false
+	input.custom_minimum_size = Vector2(0.0, 42.0)
+	input.add_theme_stylebox_override("normal", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
+	return input
+
+
+func _bind_profile_edit_events() -> void:
+	_display_name_input.text_changed.connect(func(_value: String) -> void:
+		_mark_profile_dirty()
+	)
+	_player_name_input.text_changed.connect(func(_value: String) -> void:
+		_mark_profile_dirty()
+	)
+	_birthday_input.text_changed.connect(func(_value: String) -> void:
+		_mark_profile_dirty()
+	)
+	_region_input.text_changed.connect(func(_value: String) -> void:
+		_mark_profile_dirty()
+	)
+	_bio_input.text_changed.connect(_mark_profile_dirty)
+	_gender_option.item_selected.connect(func(_index: int) -> void:
+		_mark_profile_dirty()
 	)
 
-	var whole_card_gui_input: Callable = func(event: InputEvent) -> void:
-		if not (event is InputEventMouseButton):
-			return
-		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-		if mouse_event.button_index != MOUSE_BUTTON_LEFT:
-			return
-		if mouse_event.pressed:
-			pointer_down[0] = true
-			long_press_triggered[0] = false
-			if local_cat_id != "":
-				hold_timer.start()
-			return
 
-		var was_pressed: bool = pointer_down[0]
-		pointer_down[0] = false
-		hold_timer.stop()
-		if not was_pressed:
-			return
-		if _cats_scroller != null and _cats_scroller.consume_moved():
-			return
-		if long_press_triggered[0]:
-			long_press_triggered[0] = false
-			return
-		if action_disabled:
-			return
-		_toggle_member_in_draft(player_cat_id)
-
-	var card: PanelContainer = CatRosterCard.build({
-		"is_selected": already_in,
-		"title_text": display_name,
-		"show_title": false,
-		"icon_texture": cat_icon,
-		"fallback_text": _get_cat_visual_fallback(display_name),
-		"chips": [
-			UiText.CONFIG_CAT_LEVEL_ONLY_FORMAT % [lv],
-			UiText.CONFIG_CAT_STARS_FORMAT % [rank],
-		],
-		"show_action": false,
-		"whole_card_gui_input": whole_card_gui_input,
-		"card_height": 228.0,
-		"art_height": 108.0,
-		"icon_size": Vector2(84.0, 84.0),
-		"card_fill": OverlaySceneChrome.CARD_FILL,
-		"card_border": OverlaySceneChrome.CARD_BORDER,
-		"selected_card_border": OverlaySceneChrome.PANEL_BORDER,
-		"selected_card_fill": Color(0.24, 0.20, 0.13, 0.98),
-		"art_fill": Color(0.19, 0.17, 0.15, 0.96),
-		"art_border": Color(0.90, 0.77, 0.46, 0.88),
-		"selected_art_border": Color(0.90, 0.77, 0.46, 0.88),
-		"selected_art_fill": Color(0.26, 0.21, 0.14, 0.98),
-		"title_color": SLOT_NAME_COLOR,
-		"selected_chip_fill": Color(0.42, 0.29, 0.14, 0.98),
-		"selected_chip_border": Color(0.98, 0.83, 0.48, 1.0),
-		"selected_chip_text_color": Color(1.0, 0.97, 0.86, 1.0),
-	})
-	card.add_child(hold_timer)
-	return card
-
-
-func _set_cats_sort_mode(sort_mode: String) -> void:
-	if _cats_sort_mode == sort_mode:
-		return
-	_cats_sort_mode = sort_mode
-	_refresh_cats_sort_buttons()
-	_refresh_cats_list()
-
-
-func _refresh_cats_sort_buttons() -> void:
-	for key: String in _cats_sort_btns.keys():
-		var button: Button = _cats_sort_btns[key]
-		var is_active: bool = key == _cats_sort_mode
-		if is_active:
-			UiPalette.apply_button_palette(button, Color(0.58, 0.48, 0.26, 0.88), Color(0.97, 0.93, 0.84, 1.0))
-		else:
-			UiPalette.apply_button_palette(button, Color(0.20, 0.18, 0.17, 0.88), Color(0.62, 0.58, 0.54, 1.0))
-
-
-func _get_sorted_owned_cats() -> Array:
-	var owned_cats: Array = GameState.get_config_owned_cats().duplicate(true)
-	owned_cats.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if _cats_sort_mode == "rank":
-			var a_rank: int = int(a.get("rank", 0))
-			var b_rank: int = int(b.get("rank", 0))
-			if a_rank != b_rank:
-				return a_rank > b_rank
-			var a_level: int = int(a.get("catFoodLevel", 1))
-			var b_level: int = int(b.get("catFoodLevel", 1))
-			if a_level != b_level:
-				return a_level > b_level
-			return int(a.get("playerCatId", 0)) < int(b.get("playerCatId", 0))
-
-		var a_level_default: int = int(a.get("catFoodLevel", 1))
-		var b_level_default: int = int(b.get("catFoodLevel", 1))
-		if a_level_default != b_level_default:
-			return a_level_default > b_level_default
-		var a_rank_default: int = int(a.get("rank", 0))
-		var b_rank_default: int = int(b.get("rank", 0))
-		if a_rank_default != b_rank_default:
-			return a_rank_default > b_rank_default
-		return int(a.get("playerCatId", 0)) < int(b.get("playerCatId", 0))
-	)
-	return owned_cats
-
-
-func _build_member_from_player_cat(player_cat_id: int) -> Dictionary:
-	for cat_variant: Variant in GameState.get_config_owned_cats():
-		if not (cat_variant is Dictionary):
-			continue
-
-		var cat: Dictionary = cat_variant as Dictionary
-		if int(cat.get("playerCatId", 0)) != player_cat_id:
-			continue
-
-		return {
-			"slotNo": 0,
-			"playerCatId": player_cat_id,
-			"catCatalogId": int(cat.get("catCatalogId", 0)),
-			"catDisplayName": str(cat.get("displayName", "")),
-			"catFoodLevel": int(cat.get("catFoodLevel", 1)),
-			"rank": int(cat.get("rank", 0)),
-			"initialDelaySeconds": 0.0,
-		}
-
-	return {}
-
-
-func _draft_has_player_cat(members: Array, player_cat_id: int) -> bool:
-	for member_variant: Variant in members:
-		if member_variant is Dictionary:
-			var member: Dictionary = member_variant
-			if int(member.get("playerCatId", 0)) == player_cat_id:
-				return true
-	return false
-
-
-func _find_member_slot_no_by_player_cat_id(player_cat_id: int) -> int:
-	for member_variant: Variant in _get_editing_team_members():
-		if not (member_variant is Dictionary):
-			continue
-		var member: Dictionary = member_variant as Dictionary
-		if member.is_empty():
-			continue
-		if int(member.get("playerCatId", 0)) == player_cat_id:
-			return int(member.get("slotNo", -1))
-	return -1
-
-
-func _toggle_member_in_draft(player_cat_id: int) -> void:
-	if _api_in_flight:
-		return
-
-	var slot_no: int = _find_member_slot_no_by_player_cat_id(player_cat_id)
-	if slot_no >= 0:
-		_remove_member_from_draft(slot_no)
-		return
-
-	_add_member_to_draft(player_cat_id)
-
-
-func _add_member_to_draft(player_cat_id: int) -> void:
-	if _api_in_flight:
-		return
-
-	var members: Array = _get_editing_team_members().duplicate(true)
-	if _get_filled_editing_team_members().size() >= _get_max_team_size():
-		return
-	if _draft_has_player_cat(members, player_cat_id):
-		return
-
-	var new_member: Dictionary = _build_member_from_player_cat(player_cat_id)
-	if new_member.is_empty():
-		return
-
-	var target_index: int = -1
-	for index: int in range(members.size()):
-		var slot_variant: Variant = members[index]
-		if slot_variant is Dictionary and (slot_variant as Dictionary).is_empty():
-			target_index = index
-			break
-
-	if target_index >= 0:
-		new_member["slotNo"] = target_index
-		members[target_index] = new_member
-	else:
-		new_member["slotNo"] = members.size()
-		members.append(new_member)
-
-	_team_drafts[_current_team_type]["members"] = _normalize_members(members)
-	_mark_current_team_dirty()
-	_refresh_team()
-	_refresh_cats_list()
-
-
-func _remove_member_from_draft(slot_no: int) -> void:
-	if _api_in_flight:
-		return
-
-	var members: Array = _get_editing_team_members().duplicate(true)
-	if slot_no < 0 or slot_no >= members.size():
-		return
-
-	members[slot_no] = {}
-	_team_drafts[_current_team_type]["members"] = _normalize_members(members)
-	_mark_current_team_dirty()
-	_refresh_team()
-	_refresh_cats_list()
-
-
-func _update_member_delay_in_draft(slot_no: int, delay_seconds: float) -> void:
-	if _api_in_flight:
-		return
-
-	var members: Array = _get_editing_team_members().duplicate(true)
-	if slot_no < 0 or slot_no >= members.size():
-		return
-
-	var member: Dictionary = members[slot_no]
-	member["initialDelaySeconds"] = maxf(0.0, delay_seconds)
-	members[slot_no] = member
-	_team_drafts[_current_team_type]["members"] = _normalize_members(members)
-	_mark_current_team_dirty()
-	_refresh_team()
-
-
-func _update_save_section() -> void:
-	var dirty: bool = _is_current_team_dirty()
-	_save_team_btn.disabled = _api_in_flight or not dirty
-	if dirty and not _api_in_flight:
-		UiPalette.apply_button_kind(_save_team_btn, "confirm")
-	else:
-		UiPalette.apply_button_palette(_save_team_btn, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
-
-
-func _on_save_team_pressed() -> void:
-	if _api_in_flight or not _is_current_team_dirty():
-		return
-
-	var request_members: Array = []
-	for member: Dictionary in _get_editing_team_members():
-		if member.is_empty():
-			continue
-		request_members.append({
-			"slotNo": int(member.get("slotNo", 0)),
-			"playerCatId": int(member.get("playerCatId", 0)),
-			"initialDelaySeconds": float(member.get("initialDelaySeconds", 0.0)),
-		})
-
-	_api_in_flight = true
-	_update_save_section()
-	_refresh_team()
-	_refresh_cats_list()
-
-	ApiClient.replace_team(_current_team_type, request_members, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_api_in_flight = false
+func _load_profile_from_api() -> void:
+	_profile_loading = true
+	_refresh_profile_save_state()
+	ApiClient.get_profile_me(func(success: bool, data: Variant, error: Dictionary) -> void:
+		_profile_loading = false
+		_refresh_profile_save_state()
 		if not success:
-			ToastManager.error(UiText.CONFIG_SAVE_FAILED_TITLE, str(error.get("message", UiText.CONFIG_UNKNOWN_ERROR)))
-			_refresh_team()
-			_refresh_cats_list()
+			ToastManager.hint("設定資料使用快取", str(error.get("message", "目前改用本地快取顯示。")))
 			return
 
 		if data is Dictionary:
-			var team_response: Dictionary = data as Dictionary
-			_apply_team_update(team_response)
-			var saved_type_key: String = _team_scene_type_to_key(str(team_response.get("teamType", "")))
-			if saved_type_key != "":
-				_reset_team_draft(saved_type_key, team_response)
-				_restart_home_battle_if_needed(saved_type_key)
-
-		_refresh_team()
-		_refresh_cats_list()
-		ToastManager.success(UiText.CONFIG_SAVE_HINT_CLEAN)
+			var profile: Dictionary = data as Dictionary
+			GameState.apply_profile_response(profile)
+			_apply_profile_data(profile)
 	)
 
 
-func _team_scene_type_to_key(team_type: String) -> String:
-	for key: String in Constants.TEAM_TYPE_MAP.keys():
-		if str(Constants.TEAM_TYPE_MAP[key]) == team_type:
-			return key
+func _apply_profile_data(data: Dictionary) -> void:
+	_applying_profile_form = true
+	_selected_avatar_id = str(data.get("avatarId", AssetResolver.DEFAULT_PROFILE_AVATAR_ID)).strip_edges()
+	if _selected_avatar_id == "":
+		_selected_avatar_id = AssetResolver.DEFAULT_PROFILE_AVATAR_ID
+
+	_display_name_input.text = str(data.get("displayName", ""))
+	_player_name_input.text = str(data.get("playerName", ""))
+	_bio_input.text = str(data.get("bio", ""))
+	_birthday_input.text = str(data.get("birthday", ""))
+	_region_input.text = str(data.get("region", ""))
+	_set_gender_value(str(data.get("genderType", "Unspecified")))
+	_account_value_label.text = str(data.get("account", ""))
+	_player_uid_value_label.text = str(data.get("playerPublicId", ""))
+	_refresh_provider_cards(data.get("linkedProviders", []))
+	_applying_profile_form = false
+	_profile_dirty = false
+	_refresh_avatar_selection()
+	_refresh_profile_save_state()
+
+
+func _apply_audio_settings() -> void:
+	var settings: Dictionary = ClientSettings.get_settings()
+	for bus_key: String in ["master", "bgm", "sfx"]:
+		var slider: HSlider = _audio_sliders.get(bus_key) as HSlider
+		var mute_box: CheckBox = _audio_mute_boxes.get(bus_key) as CheckBox
+		if slider != null:
+			slider.value = float(settings.get("%sVolume" % bus_key, 1.0))
+		if mute_box != null:
+			mute_box.button_pressed = bool(settings.get("%sMuted" % bus_key, false))
+		_refresh_audio_value_label(bus_key)
+
+
+func _build_local_profile_snapshot() -> Dictionary:
+	var player = GameState.player_data
+	return {
+		"account": player.account,
+		"displayName": player.display_name,
+		"playerPublicId": player.player_public_id,
+		"playerName": player.player_name,
+		"avatarId": player.avatar_id,
+		"bio": player.bio,
+		"birthday": player.birthday,
+		"genderType": player.gender_type,
+		"region": player.region,
+		"linkedProviders": player.linked_providers.duplicate(),
+	}
+
+
+func _refresh_avatar_selection() -> void:
+	_avatar_preview.texture = AssetResolver.resolve_profile_avatar(_selected_avatar_id)
+	_avatar_name_label.text = AssetResolver.get_profile_avatar_label(_selected_avatar_id)
+	for avatar_id: String in _avatar_buttons.keys():
+		var refs: Dictionary = _avatar_buttons.get(avatar_id, {})
+		var panel: PanelContainer = refs.get("panel") as PanelContainer
+		var label: Label = refs.get("label") as Label
+		if panel == null or label == null:
+			continue
+		var is_selected: bool = avatar_id == _selected_avatar_id
+		panel.add_theme_stylebox_override(
+			"panel",
+			OverlaySceneChrome.make_panel_style(
+				FIELD_BG if not is_selected else Color(0.22, 0.17, 0.10, 0.98),
+				SELECTED_BORDER if is_selected else UNSELECTED_BORDER,
+				14
+			)
+		)
+		label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.84, 1.0) if is_selected else MUTED_TEXT_COLOR)
+
+
+func _refresh_provider_cards(linked_providers_variant: Variant) -> void:
+	var linked: Array = linked_providers_variant if linked_providers_variant is Array else []
+	for provider_name: String in _provider_status_labels.keys():
+		var status_label: Label = _provider_status_labels.get(provider_name) as Label
+		if status_label == null:
+			continue
+		if linked.has(provider_name):
+			status_label.text = "已綁定"
+			status_label.add_theme_color_override("font_color", Color(0.72, 0.94, 0.72, 1.0))
+		else:
+			status_label.text = "即將開放"
+			status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+
+
+func _refresh_profile_save_state() -> void:
+	if _save_profile_button == null:
+		return
+	_save_profile_button.disabled = _profile_loading or _profile_saving or not _profile_dirty
+	if _profile_saving:
+		_save_profile_button.text = "儲存中..."
+	elif _profile_loading:
+		_save_profile_button.text = "載入中..."
+	else:
+		_save_profile_button.text = "儲存角色資料"
+
+	if _save_profile_hint_label == null:
+		return
+	if _profile_saving:
+		_save_profile_hint_label.text = "正在同步角色資料..."
+	elif _profile_dirty:
+		_save_profile_hint_label.text = "有未儲存的修改。"
+	else:
+		_save_profile_hint_label.text = "資料會同步到帳號。"
+
+
+func _refresh_audio_value_label(bus_key: String) -> void:
+	var slider: HSlider = _audio_sliders.get(bus_key) as HSlider
+	var value_label: Label = _audio_value_labels.get(bus_key) as Label
+	if slider == null or value_label == null:
+		return
+	value_label.text = "%d%%" % int(round(slider.value * 100.0))
+
+
+func _set_gender_value(value: String) -> void:
+	var target_index: int = 0
+	for index: int in range(GENDER_OPTIONS.size()):
+		if str(GENDER_OPTIONS[index].get("value", "")) == value:
+			target_index = index
+			break
+	_gender_option.select(target_index)
+
+
+func _get_selected_gender_value() -> String:
+	var index: int = maxi(0, _gender_option.selected)
+	if index >= GENDER_OPTIONS.size():
+		return "Unspecified"
+	return str(GENDER_OPTIONS[index].get("value", "Unspecified"))
+
+
+func _mark_profile_dirty() -> void:
+	if _applying_profile_form:
+		return
+	_profile_dirty = true
+	_refresh_profile_save_state()
+
+
+func _on_save_profile_pressed() -> void:
+	if _profile_saving:
+		return
+
+	var validation_error: String = _validate_profile_form()
+	if validation_error != "":
+		ToastManager.error("角色資料有誤", validation_error)
+		return
+
+	var payload := {
+		"displayName": _display_name_input.text.strip_edges(),
+		"playerName": _player_name_input.text.strip_edges(),
+		"avatarId": _selected_avatar_id,
+		"bio": _bio_input.text.strip_edges(),
+		"birthday": _birthday_input.text.strip_edges(),
+		"genderType": _get_selected_gender_value(),
+		"region": _region_input.text.strip_edges(),
+	}
+	if str(payload.get("birthday", "")) == "":
+		payload.erase("birthday")
+
+	_profile_saving = true
+	_refresh_profile_save_state()
+	ApiClient.update_profile_me(payload, func(success: bool, data: Variant, error: Dictionary) -> void:
+		_profile_saving = false
+		if not success:
+			_profile_dirty = true
+			_refresh_profile_save_state()
+			ToastManager.error("角色資料儲存失敗", str(error.get("message", "請稍後再試。")))
+			return
+
+		if data is Dictionary:
+			var profile: Dictionary = data as Dictionary
+			GameState.apply_profile_response(profile)
+			_apply_profile_data(profile)
+		ToastManager.success("角色資料已更新")
+	)
+
+
+func _on_redeem_pressed() -> void:
+	if _redeem_in_flight:
+		return
+
+	var code: String = _redeem_input.text.strip_edges()
+	if code == "":
+		ToastManager.error("請輸入兌換碼")
+		return
+
+	_redeem_in_flight = true
+	_redeem_button.disabled = true
+	_redeem_button.text = "兌換中..."
+	ApiClient.redeem_code(code, func(success: bool, data: Variant, error: Dictionary) -> void:
+		_redeem_in_flight = false
+		_redeem_button.disabled = false
+		_redeem_button.text = "兌換"
+		if not success:
+			ToastManager.error("兌換失敗", str(error.get("message", "請稍後再試。")))
+			return
+
+		var response: Dictionary = data if data is Dictionary else {}
+		var wallet_snapshot: Variant = response.get("walletSnapshot", {})
+		if wallet_snapshot is Dictionary:
+			GameState.apply_wallet_snapshot(wallet_snapshot)
+		_redeem_input.text = ""
+		_show_redeem_result(response)
+		ToastManager.success("兌換成功", str(response.get("redeemedCode", "")))
+	)
+
+
+func _show_redeem_result(response: Dictionary) -> void:
+	var lines: Array[String] = []
+	var rewards_variant: Variant = response.get("grantedRewards", [])
+	if rewards_variant is Array:
+		for reward_variant: Variant in rewards_variant:
+			if not (reward_variant is Dictionary):
+				continue
+			var reward: Dictionary = reward_variant
+			var display_name: String = str(reward.get("displayName", reward.get("rewardType", "Reward")))
+			lines.append("%s x%d" % [display_name, int(reward.get("quantity", 0))])
+
+	if lines.is_empty():
+		lines.append("獎勵已發送到帳號。")
+
+	DialogManager.show_info("兌換成功", "\n".join(lines))
+
+
+func _on_audio_slider_changed(bus_key: String, value: float) -> void:
+	ClientSettings.set_volume(bus_key, value)
+	_refresh_audio_value_label(bus_key)
+
+
+func _on_audio_mute_toggled(bus_key: String, pressed: bool) -> void:
+	ClientSettings.set_muted(bus_key, pressed)
+
+
+func _validate_profile_form() -> String:
+	var display_name: String = _display_name_input.text.strip_edges()
+	var player_name: String = _player_name_input.text.strip_edges()
+	var birthday: String = _birthday_input.text.strip_edges()
+	var bio: String = _bio_input.text.strip_edges()
+
+	if display_name == "":
+		return "請填寫暱稱。"
+	if player_name == "":
+		return "請填寫角色名稱。"
+	if bio.length() > 140:
+		return "自介最多 140 字。"
+	if birthday != "" and not _is_valid_birthday_text(birthday):
+		return "生日格式請使用 YYYY-MM-DD。"
 	return ""
 
 
-func _apply_team_update(team_response: Dictionary) -> void:
-	var type_str: String = str(team_response.get("teamType", ""))
-	if type_str == "":
-		return
+func _is_valid_birthday_text(text: String) -> bool:
+	var parts: PackedStringArray = text.split("-")
+	if parts.size() != 3:
+		return false
+	for part: String in parts:
+		if not part.is_valid_int():
+			return false
 
-	GameState.teams_data[type_str] = team_response
-	GameState._save_config_cache("teams", GameState.teams_data.values())
-
-	if type_str == "Boss":
-		GameState.apply_active_team_from_config("Boss")
-
-
-func _restart_home_battle_if_needed(type_key: String) -> void:
-	if type_key != "boss":
-		return
-	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
-	if battle_scene != null and battle_scene.has_method("restart_with_latest_team"):
-		battle_scene.call_deferred("restart_with_latest_team")
-
-
-func _show_skill_popup(cat_file_id: String) -> void:
-	var cat_data: Variant = CatData.from_json_file(cat_file_id + ".json")
-	if cat_data == null:
-		return
-
-	var lines: Array = [str(cat_data.display_name) + UiText.CONFIG_SKILL_DIALOG_SUFFIX]
-
-	for sid: String in cat_data.passive_skill_ids:
-		var passive_skill: Dictionary = CatData._read_skill_json(sid)
-		if passive_skill.is_empty():
-			continue
-		lines.append(UiText.CONFIG_SKILL_PASSIVE_FORMAT % passive_skill.get("display_name", sid))
-		lines.append("  " + str(passive_skill.get("description", "")))
-
-	for active_skill: Dictionary in cat_data.active_skills_data:
-		lines.append(UiText.CONFIG_SKILL_ACTIVE_FORMAT % [
-			active_skill.get("display_name", ""),
-			float(active_skill.get("cooldown", 0.0)),
-		])
-		lines.append("  " + str(active_skill.get("description", "")))
-
-	DialogManager.show_info(UiText.CONFIG_SKILL_DIALOG_TITLE, "\n".join(lines))
-
-
-func _make_separator() -> HSeparator:
-	return HSeparator.new()
-
-
-func _make_chip_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
-	var style: StyleBoxFlat = OverlaySceneChrome.make_panel_style(fill, border, radius)
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	return style
-
-
-func _get_next_delay_value(current_delay: float) -> float:
-	var current_seconds: int = maxi(0, int(round(current_delay)))
-	return float((current_seconds + 1) % 10)
-
-
-func _format_delay_label(delay_seconds: float) -> String:
-	var seconds: int = maxi(0, int(round(delay_seconds)))
-	return str(seconds) + "秒"
-
-
-func _get_cat_visual_fallback(cat_name: String) -> String:
-	var trimmed: String = cat_name.strip_edges()
-	if trimmed == "":
-		return "?"
-	return trimmed.substr(0, 1)
-
-
-func _get_max_team_size() -> int:
-	match _current_team_type:
-		"boss":
-			return int(GameState.boss_config.get("max_team_size", 5))
-		"dungeon":
-			return int(GameState.dungeon_config.get("max_team_size", 5))
-		"arena_attack", "arena_defense":
-			return int(GameState.arena_config.get("max_team_size", 5))
-	return 5
+	var year: int = int(parts[0])
+	var month: int = int(parts[1])
+	var day: int = int(parts[2])
+	if year < 1900 or year > 3000:
+		return false
+	if month < 1 or month > 12:
+		return false
+	if day < 1 or day > 31:
+		return false
+	return true
 
 
 func _on_back_pressed() -> void:
-	var boss_team: Dictionary = GameState.get_team("Boss")
-	var boss_members: Array = boss_team.get("members", [])
-	GameState.player_team = boss_members.map(func(member: Dictionary) -> int:
-		return int(member.get("playerCatId", 0))
-	)
 	SceneNavigator.return_to_battle()

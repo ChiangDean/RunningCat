@@ -1,196 +1,271 @@
-# 15. Config Data Architecture
+# 15. Settings And Lineup Data Architecture
 
-> Last updated: 2026-04-13
+> Last updated: 2026-04-17
 
-本文件記錄 `ConfigScene` 改為後端 API 驅動後的資料來源、前端 draft 行為、送出流程，以及與主戰鬥 / 競技場的同步規則。
+本文記錄 2026-04 後 `ConfigScene` 拆分完成後的實際資料流：
+
+- `ConfigScene`：真正的設定中心
+- `LineupScene`：原本的編隊 / 延遲設定頁
+
+這份文件同時說明角色資料、帳號區塊、兌換碼、本機音量設定，以及舊編隊功能如何延續到 `LineupScene`。
 
 ---
 
 ## 1. Local Cache
 
-Bootstrap 會把 Config 相關資料寫入 `user://config/`，`ConfigScene` 開啟時先讀 `GameState` 已載入的快取資料：
+目前設定中心與編隊相關的本機檔案如下：
 
 | 路徑 | 內容 | 資料來源 |
 | --- | --- | --- |
 | `user://config/player_cats.json` | 玩家持有貓咪清單，包含 `playerCatId`、`catCatalogId`、`displayName`、`catFoodLevel`、`rank`、`isOwned` | `/api/auth/bootstrap` |
-| `user://config/teams.json` | 四種隊伍的最新已確認設定，包含 `teamType`、`members[]` | `/api/auth/bootstrap` 與 Config API 成功回應 |
+| `user://config/teams.json` | 已確認的四種隊伍設定，包含 `teamType`、`members[]` | `/api/auth/bootstrap` 與 `PUT /api/config/teams/{teamType}` |
+| `user://client_settings.json` | 本機音量與靜音設定 | `ClientSettings` singleton |
+
+`user://client_settings.json` 固定結構：
+
+```json
+{
+  "masterVolume": 1.0,
+  "bgmVolume": 0.72,
+  "sfxVolume": 0.9,
+  "masterMuted": false,
+  "bgmMuted": false,
+  "sfxMuted": false
+}
+```
 
 ---
 
-## 2. Runtime State
+## 2. Runtime State Ownership
 
-`GameState` 是 Config 相關資料的前端單一來源：
+### 2.1 `GameState`
+
+`GameState` 是設定中心與編隊相關資料的主要來源：
 
 | 欄位 / 方法 | 說明 |
 | --- | --- |
-| `player_cats_data: Array` | 玩家持有貓咪快取 |
-| `teams_data: Dictionary` | 隊伍快取，key 為 `Boss` / `Dungeon` / `ArenaAttack` / `ArenaDefense` |
-| `get_team(team_type)` | 取得指定隊伍資料 |
-| `get_config_owned_cats()` | 取得 `isOwned = true` 的貓咪 |
-| `update_player_teams(data)` | 更新隊伍快取並寫回 `user://config/teams.json` |
-| `apply_active_team_from_config(teamType)` | 依指定隊伍重建目前戰鬥使用的 `player_team` 與 `skill_delays` |
-| `player_team: Array` | 目前戰鬥場景會實際上場的 `playerCatId` 清單 |
+| `player_data.display_name` | 暱稱 |
+| `player_data.player_name` | 角色名稱 |
+| `player_data.avatar_id` | 設定中心選取的頭像 id |
+| `player_data.bio` | 自介 |
+| `player_data.birthday` | 生日字串 |
+| `player_data.gender_type` | 性別 enum 名稱字串 |
+| `player_data.region` | 地區 |
+| `player_data.linked_providers` | 已綁定 provider 名稱清單 |
+| `teams_data` | 已確認隊伍快取，key 為 `Boss` / `Dungeon` / `ArenaAttack` / `ArenaDefense` |
+| `get_team(team_type)` | 取得指定隊伍 |
+| `get_config_owned_cats()` | 取得 `isOwned = true` 的貓咪清單 |
+| `apply_profile_response(data)` | 套用 `profile/me` 回應並同步更新 `player_data` |
+| `apply_wallet_snapshot(data)` | 套用兌換碼成功後的最新錢包快照 |
+| `apply_active_team_from_config(teamType)` | 依指定隊伍重建目前戰鬥使用中的 `player_team` 與 `skill_delays` |
+| `player_profile_changed` | 設定中心儲存成功後發送，首頁 HUD 會跟著刷新 |
+| `player_wallet_changed` | 兌換碼發獎後發送，首頁資源列會跟著刷新 |
+
+### 2.2 `ClientSettings`
+
+`ClientSettings` 是獨立 singleton，專門管理本機音量設定：
+
+| 方法 | 說明 |
+| --- | --- |
+| `get_settings()` | 取得完整本機設定 |
+| `set_volume(busKey, value)` | 更新 `master` / `bgm` / `sfx` 音量 |
+| `set_muted(busKey, muted)` | 更新靜音狀態 |
+| `settings_changed` | 設定變更時發送 |
+
+`ClientSettings` 會在 `_ready()`：
+
+1. 讀取 `user://client_settings.json`
+2. 呼叫 `UiAudio.ensure_audio_buses()`
+3. 把設定套用到 `Master` / `BGM` / `SFX` bus
 
 ---
 
-## 3. ConfigScene Draft Flow
+## 3. ConfigScene Data Flow
 
-`ConfigScene` 不會在每次加入 / 移除 / 調整延遲時立刻送 API。
+### 3.1 Open Flow
 
-### 3.1 Draft State
+- 首頁 `BattleScene` 左上角頭像 / 名稱區塊可點擊，開啟 `ConfigScene` overlay。
+- `ConfigScene` 開啟後先用 `GameState.player_data` 組出本地快照，立即畫出表單內容。
+- 接著呼叫 `ApiClient.get_profile_me()` 對 `GET /api/profile/me` 做同步。
+- 若 API 失敗，畫面保留本地快取並用 Toast 提示「設定資料使用快取」。
 
-- 每個頁籤 `boss / dungeon / arena_attack / arena_defense` 都有自己的本地 draft。
-- 加入貓咪、移除貓咪、調整延遲，都只會先修改 draft 並標記 dirty。
-- 使用者按下 `套用隊伍變更` 時，才會把目前頁籤的 draft 整組送出。
+### 3.2 Profile Form
 
-### 3.2 Slot Behavior
+設定中心角色資料區塊包含：
 
-- draft 內的 `members` 會保留固定槽位概念。
-- 移除中間槽位時，不會讓後面的貓自動補位。
-- 新加入貓咪時，會優先補到第一個空槽。
-- `slotNo` 由前端明確傳給後端，前後端都以 `slotNo` 當成唯一槽位依據。
+- 預設頭像
+- 暱稱
+- 角色名稱
+- 自介
+- 生日
+- 性別
+- 地區
 
-### 3.3 Save Result
+Client 驗證規則：
 
-- API 成功回傳後，`ConfigScene._apply_team_update()` 會更新 `GameState.teams_data`。
-- `GameState._save_config_cache("teams", ...)` 會同步寫回 `user://config/teams.json`。
-- 若此次儲存的是 `Boss` 隊伍，會再同步更新目前首頁戰鬥用的 `player_team` 與 `skill_delays`。
+- `displayName` 不可空白
+- `playerName` 不可空白
+- `bio` 最多 140 字
+- `birthday` 若有填寫，格式需為 `YYYY-MM-DD`
 
----
+儲存流程：
 
-## 4. Config API
+1. 使用者編輯表單後會標記 `_profile_dirty = true`
+2. 按下 `儲存角色資料`
+3. `ApiClient.update_profile_me(payload)` 呼叫 `PUT /api/profile/me`
+4. 成功後 `GameState.apply_profile_response(profile)`
+5. `ConfigScene` 重新套用回傳資料並清掉 dirty state
+6. `BattleScene` 透過 `player_profile_changed` 立即刷新左上角頭像與名稱
 
-目前 `ConfigScene` 使用的隊伍 API 如下：
+### 3.3 Account / OAuth Section
 
-| 功能 | API | Client 呼叫 | 說明 |
-| --- | --- | --- | --- |
-| 取得所有隊伍 | `GET /api/config/teams` | `ApiClient.get_teams()` | 取得四種隊伍的最新已確認設定 |
-| 整組覆蓋隊伍 | `PUT /api/config/teams/{teamType}` | `ApiClient.replace_team(type, members)` | 以目前頁籤 draft 覆蓋 server 隊伍內容 |
+帳號資料區塊顯示：
 
-### 4.1 teamType Mapping
+- `account`
+- `playerPublicId`
+- `linkedProviders`
 
-| Scene key | Route value | Backend enum |
-| --- | --- | --- |
-| `boss` | `boss` | `Boss` |
-| `dungeon` | `dungeon` | `Dungeon` |
-| `arena_attack` | `arena_attack` | `ArenaAttack` |
-| `arena_defense` | `arena_defense` | `ArenaDefense` |
+目前 provider 卡片固定為：
 
-### 4.2 PUT Request Shape
+- `Google`
+- `Apple`
 
-```json
-{
-  "members": [
-    {
-      "slotNo": 0,
-      "playerCatId": 42,
-      "initialDelaySeconds": 0.0
-    },
-    {
-      "slotNo": 4,
-      "playerCatId": 99,
-      "initialDelaySeconds": 2.0
-    }
-  ]
-}
-```
+規則：
 
-### 4.3 Validation Rules
+- 若 provider 在 `linkedProviders` 內，顯示 `已綁定`
+- 否則顯示 `即將開放`
+- 按鈕維持 disabled，本期不啟動真正授權流程
 
-- 每隊最多 5 隻貓。
-- `slotNo` 必須介於 0 到 4，且同一隊內不可重複。
-- 同一隻貓不可在同一隊內重複出現。
-- 所有 `playerCatId` 必須屬於當前玩家且為 `isOwned = true`。
-- `initialDelaySeconds` 不可為負數。
-- 四種隊伍 `Boss / Dungeon / ArenaAttack / ArenaDefense` 都允許設定 `initialDelaySeconds`。
-- 前端可透過缺少某些 `slotNo` 來保留空槽，例如只送出 `slotNo = 0` 與 `slotNo = 4` 代表中間槽位留空。
+### 3.4 Redeem Code Flow
 
----
+設定中心帳號區塊內建兌換碼輸入：
 
-## 5. Bootstrap Response Shape
+1. 玩家輸入 code 後按下 `兌換`
+2. `ApiClient.redeem_code(code)` 呼叫 `POST /api/redeem-codes/redeem`
+3. 成功時取出 `walletSnapshot` 並呼叫 `GameState.apply_wallet_snapshot(...)`
+4. 顯示獎勵列表 Dialog
+5. 額外顯示成功 Toast
 
-`GET /api/auth/bootstrap` 會回傳 `playerTeams`：
+失敗時：
 
-```json
-{
-  "playerTeams": [
-    {
-      "teamType": "Boss",
-      "members": [
-        {
-          "slotNo": 0,
-          "playerCatId": 42,
-          "catCatalogId": 3,
-          "catDisplayName": "黑貓",
-          "catFoodLevel": 5,
-          "rank": 2,
-          "initialDelaySeconds": 0.0
-        }
-      ]
-    },
-    { "teamType": "Dungeon", "members": [] },
-    { "teamType": "ArenaAttack", "members": [] },
-    { "teamType": "ArenaDefense", "members": [] }
-  ]
-}
-```
+- 顯示錯誤 Toast
+- 不修改本地錢包
+
+### 3.5 Audio Settings Flow
+
+設定中心遊戲設定區塊目前只處理本機音量：
+
+- `總音量`
+- `背景音樂`
+- `音效`
+
+每列都包含：
+
+- slider
+- 百分比文字
+- 靜音 checkbox
+
+資料流：
+
+1. 開啟設定中心時，從 `ClientSettings.get_settings()` 讀值
+2. 調整 slider 時，呼叫 `ClientSettings.set_volume(busKey, value)`
+3. 切換靜音時，呼叫 `ClientSettings.set_muted(busKey, pressed)`
+4. `ClientSettings` 立即寫回 `user://client_settings.json`
+5. `UiAudio.apply_settings(...)` 立即更新 `Master` / `BGM` / `SFX`
 
 ---
 
-## 6. Runtime Sync Rules
+## 4. LineupScene Draft Flow
 
-- `GameState.apply_active_team_from_config(teamType)` 會依 `slotNo` 重建目前戰鬥要使用的 `player_team` 與 `skill_delays`。
-- Bootstrap / 本地快取載入完成後，首頁預設會套用 `Boss` 隊伍。
-- `ConfigScene` 儲存 `Boss` 隊伍後，若 `BattleScene` 仍常駐於 `HomeShellScene`，會直接呼叫 `BattleScene.restart_with_latest_team()`，不用等待勝負結算才重新讀隊伍。
-- `ConfigScene` 儲存 `ArenaAttack` / `ArenaDefense` 後，會更新快取，但不會主動重啟任何競技場戰鬥。
-- `ArenaScene` 進入競技場攻擊戰前，會優先套用 `ArenaAttack`；若未設定才 fallback 到 `Boss`。延遲也會一起透過 `GameState.apply_active_team_from_config(...)` 載入。
-- `ArenaDefense` 目前也允許設定並儲存延遲，但 client 端沒有單獨的本地防守戰鬥入口；它主要是提供後端與對戰流程使用的隊伍設定資料。
+舊版 `ConfigScene` 的隊伍設定功能已搬到 `LineupScene`。
+
+### 4.1 Current Tabs
+
+`LineupScene` 目前維持四種隊伍頁籤：
+
+- `boss`
+- `dungeon`
+- `arena_attack`
+- `arena_defense`
+
+### 4.2 Draft State
+
+- 每個頁籤都有自己的本地 draft。
+- 加入貓咪、移除貓咪、調整 `initialDelaySeconds`，都只會先改本地 draft。
+- 使用者按下儲存後，才會把當前頁籤送往 `PUT /api/config/teams/{teamType}`。
+
+### 4.3 Slot Rules
+
+- draft 以固定 `slotNo` 為主，不做自動壓縮。
+- 移除中間槽位時，後面成員不會自動前移。
+- 新加入的貓咪會補到第一個空槽。
+- `slotNo` 仍是前後端共同的正式站位欄位。
+
+### 4.4 Save Result
+
+- API 成功後，`LineupScene` 會更新 `GameState.teams_data` 與 `user://config/teams.json`。
+- 若儲存的是 `Boss` 隊伍，會同步 `GameState.apply_active_team_from_config("Boss")`。
+- 若首頁 `BattleScene` 仍掛在 `HomeShellScene` 底下，會直接重新套用最新主隊伍，讓首頁戰鬥立即反映新編隊。
 
 ---
 
-## 7. Related Files
+## 5. Related Files
 
 | 路徑 | 職責 |
 | --- | --- |
-| `MeowPartyDashClient/scripts/configs/ConfigScene.gd` | Config UI、draft 狀態、確認送出 |
-| `MeowPartyDashClient/scripts/ApiClient.gd` | `get_teams`、`replace_team` |
-| `MeowPartyDashClient/scripts/gamestate/GameState.gd` | Config 快取與當前戰鬥隊伍同步 |
-| `MeowPartyDashClient/scripts/battle/battle_scene.gd` | Boss 隊伍儲存後的首頁戰鬥重啟 |
-| `MeowPartyDashClient/scripts/arenaScene/ArenaScene.gd` | 競技場攻擊戰前套用有效隊伍 |
-| `MeowPartyDashAPI/Controllers/ConfigController.cs` | Config API 路由入口 |
-| `MeowPartyDashAPI/MeowPartyDashAPI.Application/Services/Config/ConfigService.cs` | 隊伍驗證、整組覆蓋、slot 保留 |
+| `MeowPartyDashClient/scripts/configs/ConfigScene.gd` | 設定中心 UI、角色資料、帳號區塊、兌換碼、本機音量 |
+| `MeowPartyDashClient/scripts/lineup/LineupScene.gd` | 編隊 UI、draft 狀態、隊伍儲存 |
+| `MeowPartyDashClient/scripts/lineup/LineupConstants.gd` | 編隊頁常數與 type mapping |
+| `MeowPartyDashClient/scripts/gamestate/GameState.gd` | 角色資料、錢包快照、隊伍快取、首頁同步 |
+| `MeowPartyDashClient/scripts/gamestate/ClientSettings.gd` | 本機音量設定存取與套用 |
+| `MeowPartyDashClient/scripts/ui/UiAudio.gd` | `Master` / `BGM` / `SFX` bus 與播放入口 |
+| `MeowPartyDashClient/scripts/ApiClient.gd` | `get_profile_me`、`update_profile_me`、`redeem_code`、`replace_team` |
+| `MeowPartyDashClient/scripts/battle/battle_scene.gd` | 左上角設定入口、首頁 HUD 即時刷新、BGM 播放 |
+| `MeowPartyDashAPI/Controllers/ProfileController.cs` | `GET/PUT /api/profile/me` |
+| `MeowPartyDashAPI/Controllers/RedeemCodesController.cs` | `POST /api/redeem-codes/redeem` |
+| `MeowPartyDashAPI/Controllers/ConfigController.cs` | `PUT /api/config/teams/{teamType}` |
 
 ---
 
-## 8. Sequence Summary
+## 6. Sequence Summary
 
 ```text
 Bootstrap
   -> /api/auth/bootstrap
   -> GameState.apply_player_bootstrap()
+  -> player_data now contains displayName / playerName / avatarId / bio / birthday / genderType / region / linkedProviders
   -> user://config/player_cats.json
   -> user://config/teams.json
-  -> GameState.apply_active_team_from_config("Boss")
+  -> Boss team applied to home battle
 
 ConfigScene open
-  -> read GameState.player_cats_data / teams_data
-  -> build per-tab draft from cached team
+  -> build from GameState.player_data local snapshot
+  -> GET /api/profile/me
+  -> GameState.apply_profile_response()
+  -> refresh form
 
-User edits team
-  -> local draft only
-  -> dirty state = true
+Profile save
+  -> validate local form
+  -> PUT /api/profile/me
+  -> GameState.apply_profile_response()
+  -> player_profile_changed
+  -> BattleScene refresh HUD
 
-User presses 套用隊伍變更
-  -> ApiClient.replace_team()
+Redeem code
+  -> POST /api/redeem-codes/redeem
+  -> GameState.apply_wallet_snapshot()
+  -> player_wallet_changed
+  -> reward dialog + success toast
+
+Audio change
+  -> ClientSettings.set_volume / set_muted
+  -> save user://client_settings.json
+  -> UiAudio.apply_settings()
+
+LineupScene save
+  -> edit local draft only
   -> PUT /api/config/teams/{teamType}
-  -> TeamResponse
   -> GameState.teams_data update
   -> save user://config/teams.json
-  -> if Boss: GameState.apply_active_team_from_config("Boss")
-  -> if BattleScene is mounted: BattleScene.restart_with_latest_team()
-
-ArenaScene challenge
-  -> resolve effective team type (ArenaAttack first, Boss fallback)
-  -> GameState.apply_active_team_from_config(teamType)
-  -> change_scene_to_file(ArenaBattleScene)
+  -> if Boss: apply_active_team_from_config("Boss")
 ```

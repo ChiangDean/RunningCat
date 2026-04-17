@@ -24,6 +24,7 @@ ApiClient="*res://scripts/ApiClient.gd"
 ChatRealtimeClient="*res://scripts/chat/ChatRealtimeClient.gd"
 SceneNavigator="*res://scripts/navigation/SceneNavigator.gd"
 UiAudio="*res://scripts/ui/UiAudio.gd"
+ClientSettings="*res://scripts/gamestate/ClientSettings.gd"
 ToastManager="*res://scripts/ui/ToastManager.gd"
 
 [display]
