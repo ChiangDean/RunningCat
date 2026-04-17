@@ -13,6 +13,7 @@ const TAB_DAILY := "daily_bundle"
 const TAB_COLLISION_COIN := "collision_coin"
 const TAB_DIAMOND_STORE := "diamond_store"
 const TAB_POINT := "point_bundle"
+const COLLISION_COIN_ICON_PATH := "res://assets/sprites/ui/rewards/collision_coin.png"
 
 const CATEGORY_CONFIGS := [
 	{"key": TAB_VALUE, "label": "SHOP_SUBMENU_VALUE", "category_type": "valuepack"},
@@ -352,6 +353,23 @@ func _build_collision_coin_card(item: Dictionary) -> Control:
 	var root: VBoxContainer = VBoxContainer.new()
 	root.add_theme_constant_override("separation", 12)
 	margin.add_child(root)
+
+	var coin_texture: Texture2D = AssetResolver.load_texture(COLLISION_COIN_ICON_PATH)
+	if coin_texture != null:
+		var icon_shell: PanelContainer = OverlaySceneChrome.make_card_panel(
+			OverlaySceneChrome.CARD_BORDER,
+			Color(0.11, 0.09, 0.15, 0.98),
+			18
+		)
+		icon_shell.custom_minimum_size = Vector2(140.0, 140.0)
+		icon_shell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		root.add_child(icon_shell)
+
+		var icon_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
+		icon_shell.add_child(icon_margin)
+
+		var icon: TextureRect = AssetResolver.create_icon_rect(coin_texture, Vector2(112.0, 112.0))
+		icon_margin.add_child(icon)
 
 	var title: Label = Label.new()
 	title.text = str(item.get("label", UiText.SHOP_COIN_PACK_TITLE))
