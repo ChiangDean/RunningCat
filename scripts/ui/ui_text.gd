@@ -87,6 +87,18 @@ const NAV_CONFIG := "編隊"
 const NAV_ENHANCE := "強化"
 const NAV_ACTIVITY := "活動"
 const NAV_SHOP := "商店"
+const NAV_BACKPACK := "背包"
+
+# Backpack scene labels
+const BACKPACK_TITLE := "背包"
+const BACKPACK_SECTION_CURRENCY := "貨幣"
+const BACKPACK_SECTION_CONSUMABLE := "道具"
+const BACKPACK_SECTION_TICKET := "票券"
+const BACKPACK_SECTION_TREASURE := "寶物"
+const BACKPACK_ARENA_TICKET := "競技場券"
+const BACKPACK_DUNGEON_TICKET := "地下城券"
+const BACKPACK_TRAP_POINTS := "衝撞幣"
+const BACKPACK_WHISKER_SHARDS := "鬍鬚碎片"
 
 # Home scoop and idle labels
 const HOME_SANDBOX_TITLE := "清理貓砂盆"

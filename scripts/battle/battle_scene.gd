@@ -525,6 +525,7 @@ func _build_ui() -> void:
 		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance],
 		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity],
 		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop],
+		[UiText.NAV_BACKPACK, "res://scenes/BackpackScene.tscn", _on_nav_backpack],
 	]
 	var btn_w := SW / nav_items.size()
 	for i in range(nav_items.size()):
@@ -1768,6 +1769,10 @@ func _on_nav_activity() -> void:
 
 func _on_nav_shop() -> void:
 	_toggle_overlay_scene("res://scenes/ShopScene.tscn")
+
+
+func _on_nav_backpack() -> void:
+	_toggle_overlay_scene("res://scenes/BackpackScene.tscn")
 
 
 func _on_nav_mail() -> void:
