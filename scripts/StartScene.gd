@@ -66,6 +66,7 @@ var _bootstrap_retry_timer: Timer
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiAudio.stop_bgm()
 	_api_base_url = _resolve_api_base_url()
 	_device_id = _load_or_create_device_id()
 	_build_ui()

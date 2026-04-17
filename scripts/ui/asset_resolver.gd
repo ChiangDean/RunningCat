@@ -128,20 +128,46 @@ const CAT_BATTLE_STATIC_ARTS := {
 	],
 }
 
-const CAT_BATTLE_IDLE := {
-	"black_cat": "res://assets/sprites/battle/cats/black_cat/black_cat_idle_right.png",
+const CAT_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/cats/"
+const CAT_BATTLE_DEFAULT_SHEET_WIDTH := 1100
+const CAT_BATTLE_DEFAULT_SHEET_HEIGHT := 335
+const CAT_BATTLE_DEFAULT_FRAME_WIDTH := 275
+const CAT_BATTLE_DEFAULT_FRAME_HEIGHT := 335
+const CAT_BATTLE_ANIMATION_NAMES: Array[String] = [
+	"idle",
+	"run",
+	"collide",
+	"knockback",
+	"stagger",
+	"skill",
+	"death_fly",
+]
+const CAT_BATTLE_ANIMATION_SUFFIXES := {
+	"idle": ["idle_right"],
+	"run": ["run_right"],
+	"collide": ["collide_right", "collide_righ"],
+	"knockback": ["knockback_right"],
+	"stagger": ["stagger_right"],
+	"skill": ["skill_right"],
+	"death_fly": ["death_fly_right"],
 }
-
-const CAT_BATTLE_ANIMATIONS := {
-	"black_cat": {
-		"idle": "res://assets/sprites/battle/cats/black_cat/black_cat_idle_right.png",
-		"run": "res://assets/sprites/battle/cats/black_cat/black_cat_run_right.png",
-		"collide": "res://assets/sprites/battle/cats/black_cat/black_cat_collide_right.png",
-		"knockback": "res://assets/sprites/battle/cats/black_cat/black_cat_knockback_right.png",
-		"stagger": "res://assets/sprites/battle/cats/black_cat/black_cat_stagger_right.png",
-		"skill": "res://assets/sprites/battle/cats/black_cat/black_cat_skill_right.png",
-		"death_fly": "res://assets/sprites/battle/cats/black_cat/black_cat_death_fly_right.png",
-	},
+const CAT_BATTLE_ANIMATION_FPS := {
+	"idle": 8.0,
+	"run": 12.0,
+	"collide": 12.0,
+	"knockback": 12.0,
+	"stagger": 12.0,
+	"skill": 12.0,
+	"death_fly": 12.0,
+}
+const CAT_BATTLE_LOOPING_ANIMATIONS := {
+	"idle": true,
+	"run": true,
+	"collide": false,
+	"knockback": false,
+	"stagger": false,
+	"skill": false,
+	"death_fly": false,
 }
 
 const GACHA_FRAMES := {
@@ -299,12 +325,43 @@ static func resolve_cat_battle_static_art(cat_id: String) -> Texture2D:
 
 
 static func resolve_cat_battle_idle(cat_id: String) -> Texture2D:
-	return load_texture(CAT_BATTLE_IDLE.get(cat_id, ""))
+	return load_texture(resolve_cat_battle_animation_path(cat_id, "idle"))
 
 
 static func resolve_cat_battle_animation_path(cat_id: String, animation_name: String) -> String:
-	var animation_map: Dictionary = CAT_BATTLE_ANIMATIONS.get(cat_id, {})
-	return str(animation_map.get(animation_name, ""))
+	var suffixes: Variant = CAT_BATTLE_ANIMATION_SUFFIXES.get(animation_name, [])
+	if not (suffixes is Array):
+		return ""
+	for suffix_variant: Variant in suffixes:
+		var suffix: String = str(suffix_variant)
+		for extension: String in [".png", ".png.png"]:
+			var candidate_path: String = (
+				CAT_BATTLE_SPRITES_ROOT
+				+ cat_id
+				+ "/"
+				+ cat_id
+				+ "_"
+				+ suffix
+				+ extension
+			)
+			if ResourceLoader.exists(candidate_path):
+				return candidate_path
+	return ""
+
+
+static func resolve_cat_battle_animation_spec(_cat_id: String, animation_name: String) -> Dictionary:
+	return {
+		"sheet_width": CAT_BATTLE_DEFAULT_SHEET_WIDTH,
+		"sheet_height": CAT_BATTLE_DEFAULT_SHEET_HEIGHT,
+		"frame_width": CAT_BATTLE_DEFAULT_FRAME_WIDTH,
+		"frame_height": CAT_BATTLE_DEFAULT_FRAME_HEIGHT,
+		"fps": float(CAT_BATTLE_ANIMATION_FPS.get(animation_name, 12.0)),
+		"loop": bool(CAT_BATTLE_LOOPING_ANIMATIONS.get(animation_name, false)),
+	}
+
+
+static func get_cat_battle_animation_names() -> Array[String]:
+	return CAT_BATTLE_ANIMATION_NAMES.duplicate()
 
 
 static func resolve_gacha_frame(result: Dictionary) -> Texture2D:
