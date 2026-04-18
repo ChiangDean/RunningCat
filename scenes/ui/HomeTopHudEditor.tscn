@@ -1,10 +1,11 @@
 [gd_scene format=3 uid="uid://h06vqw2jdof3"]
 
-[ext_resource type="Texture2D" uid="uid://d4g4lcr3sgac2" path="res://assets/sprites/ui/home/v2/home_hud_main_v2.png" id="1"]
+[ext_resource type="Texture2D" uid="uid://bfb1wjwn0evt5" path="res://assets/sprites/ui/home/v2/home_hud_main_v3.png" id="1"]
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="2"]
 [ext_resource type="Texture2D" uid="uid://dsr2bhbkssjhs" path="res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://bakdwyhnhd6rl" path="res://assets/sprites/ui/rewards/diamonds.png" id="4"]
 [ext_resource type="Texture2D" uid="uid://dji0cn00sr1pf" path="res://assets/sprites/ui/rewards/gold.png.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://dp37dv6b4djcv" path="res://assets/sprites/ui/skill_icons/strike_v1.png" id="6"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.31, 0.19, 0.09, 0.8)
@@ -36,39 +37,39 @@ expand_mode = 1
 
 [node name="Avatar" type="TextureRect" parent="." unique_id=1238712086]
 layout_mode = 0
-offset_left = 40.0
-offset_top = 28.0
-offset_right = 141.0
-offset_bottom = 123.0
+offset_left = 22.0
+offset_top = 19.0
+offset_right = 123.0
+offset_bottom = 114.0
 texture = ExtResource("3")
 expand_mode = 1
 stretch_mode = 6
 
 [node name="NameLabel" type="Label" parent="." unique_id=896545259]
 layout_mode = 0
-offset_left = 9.0
-offset_top = 138.0
-offset_right = 165.0
-offset_bottom = 176.0
+offset_left = 158.0
+offset_top = 63.0
+offset_right = 406.0
+offset_bottom = 100.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 22
 text = "Admin001"
 horizontal_alignment = 1
-vertical_alignment = 2
+vertical_alignment = 1
 
 [node name="LevelLabel" type="Label" parent="." unique_id=2043426033]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.34300002
-anchor_top = 0.294
+anchor_top = 0.30900002
 anchor_right = 0.34300002
-anchor_bottom = 0.294
-offset_left = -29.701813
-offset_top = -24.5358
-offset_right = 30.298187
-offset_bottom = 30.4642
+anchor_bottom = 0.30900002
+offset_left = -49.701813
+offset_top = -52.471302
+offset_right = 10.298187
+offset_bottom = 2.528698
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
@@ -79,20 +80,20 @@ vertical_alignment = 1
 
 [node name="TopExpBar" type="ProgressBar" parent="." unique_id=336387738]
 layout_mode = 0
-offset_left = 276.0
-offset_top = 50.0
-offset_right = 513.0
-offset_bottom = 64.0
+offset_left = 238.0
+offset_top = 27.0
+offset_right = 648.0
+offset_bottom = 41.0
 theme_override_styles/background = SubResource("1")
 theme_override_styles/fill = SubResource("2")
 show_percentage = false
 
 [node name="ExpValueLabel" type="Label" parent="." unique_id=717760272]
 layout_mode = 0
-offset_left = 276.0
-offset_top = 48.0
-offset_right = 513.0
-offset_bottom = 66.0
+offset_left = 239.0
+offset_top = 23.0
+offset_right = 650.0
+offset_bottom = 47.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
@@ -110,10 +111,10 @@ offset_bottom = 129.0
 
 [node name="Icon" type="TextureRect" parent="DiamondsPanel" unique_id=136946146]
 layout_mode = 0
-offset_left = -131.0
-offset_top = -2.0
-offset_right = -74.0
-offset_bottom = 55.0
+offset_left = -298.0
+offset_top = 28.0
+offset_right = -241.0
+offset_bottom = 85.0
 texture = ExtResource("4")
 expand_mode = 1
 stretch_mode = 5
@@ -125,10 +126,10 @@ anchor_left = -0.54300004
 anchor_top = 0.77900004
 anchor_right = -0.54300004
 anchor_bottom = 0.77900004
-offset_left = -39.527996
-offset_top = -22.486002
-offset_right = 57.472004
-offset_bottom = 14.513998
+offset_left = -237.528
+offset_top = 11.513998
+offset_right = -29.527996
+offset_bottom = 48.514
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
@@ -146,10 +147,10 @@ offset_bottom = 129.0
 
 [node name="Icon" type="TextureRect" parent="GoldPanel" unique_id=1257757891]
 layout_mode = 0
-offset_left = -95.0
-offset_top = -7.0
-offset_right = -34.0
-offset_bottom = 54.0
+offset_left = -186.0
+offset_top = 26.0
+offset_right = -125.0
+offset_bottom = 87.0
 texture = ExtResource("5")
 expand_mode = 1
 stretch_mode = 5
@@ -161,10 +162,10 @@ anchor_left = -0.187
 anchor_top = 0.721
 anchor_right = -0.187
 anchor_bottom = 0.721
-offset_left = -41.552002
-offset_top = -20.514
-offset_right = 57.447998
-offset_bottom = 15.486
+offset_left = -157.552
+offset_top = 13.486
+offset_right = 25.448
+offset_bottom = 50.486
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
@@ -180,26 +181,22 @@ offset_top = 95.0
 offset_right = 650.0
 offset_bottom = 129.0
 
-[node name="Chip" type="Label" parent="PowerPanel" unique_id=471739984]
+[node name="Chip" type="TextureRect" parent="PowerPanel" unique_id=471739984]
 layout_mode = 0
-offset_left = -49.0
-offset_top = -2.0
-offset_right = -15.0
-offset_bottom = 49.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 34
-text = "戰"
-horizontal_alignment = 1
-vertical_alignment = 1
+offset_left = -92.0
+offset_top = 36.0
+offset_right = -50.0
+offset_bottom = 78.0
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Value" type="Label" parent="PowerPanel" unique_id=304272263]
 layout_mode = 0
-offset_left = -22.0
-offset_top = 4.0
-offset_right = 75.0
-offset_bottom = 41.0
+offset_left = -86.0
+offset_top = 38.0
+offset_right = 98.0
+offset_bottom = 76.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
