@@ -1,0 +1,11 @@
+<svg width="164" height="96" viewBox="0 0 164 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="8" width="154" height="80" rx="28" fill="#30564A"/>
+  <rect x="9" y="12" width="146" height="72" rx="24" fill="#D7F2DB"/>
+  <rect x="18" y="22" width="128" height="52" rx="20" fill="#56A37C"/>
+  <circle cx="116" cy="48" r="22" fill="#F5FFF3"/>
+  <circle cx="116" cy="48" r="17" fill="#2F6F57"/>
+  <path d="M108 48L114 54L126 40" stroke="#EFFFF3" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M48 30H58L53 44H63L45 66L50 50H40L48 30Z" fill="#EFFFF3"/>
+  <text x="38" y="47" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#F7FFF5">AUTO</text>
+  <text x="42" y="64" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#1E4D3C">ON</text>
+</svg>
