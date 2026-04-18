@@ -30,6 +30,7 @@ var _collision_sfx_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _last_collision_sfx_time: float = -1.0
 
 var _cat_nodes: Dictionary = {}
+var _cat_data_by_instance_id: Dictionary = {}
 var _cat_speeds: Dictionary = {}
 var _cat_stagger_timers: Dictionary = {}
 
@@ -57,6 +58,7 @@ func setup(events: Array, player_cats: Array, enemy_cats: Array,
 	_timer_label = timer_lbl
 	_skill_bar = skill_bar
 	_cat_nodes.clear()
+	_cat_data_by_instance_id.clear()
 	_cat_speeds.clear()
 	_cat_stagger_timers.clear()
 	_player_skill_slots.clear()
@@ -67,8 +69,33 @@ func setup(events: Array, player_cats: Array, enemy_cats: Array,
 	_is_running = true
 	_collision_sfx_rng.randomize()
 	_last_collision_sfx_time = -1.0
+	for i in range(_player_cats.size()):
+		_cat_data_by_instance_id[i] = _player_cats[i]
+	for i in range(_enemy_cats.size()):
+		_cat_data_by_instance_id[_player_cats.size() + i] = _enemy_cats[i]
 	_init_skill_slots()
 	_refresh_skill_bar_display()
+
+
+func prime_initial_spawn_state() -> void:
+	var scan_idx: int = _event_idx
+	while scan_idx < _events.size():
+		var ev: BattleEvent = _events[scan_idx]
+		if ev.timestamp > 0.0:
+			break
+		if ev.type == BattleEvent.Type.SPAWN:
+			_apply_event(ev)
+		scan_idx += 1
+
+
+func pause_battle() -> void:
+	_is_running = false
+
+
+func resume_battle() -> void:
+	if _is_finished:
+		return
+	_is_running = true
 
 
 func set_speed(mult: float) -> void:
@@ -133,6 +160,8 @@ func _apply_event(ev: BattleEvent) -> void:
 
 
 func _spawn_cat_node(ev: BattleEvent) -> void:
+	if _cat_nodes.has(ev.cat_id):
+		return
 	var cat_data: CatData = _find_cat_data(ev.cat_id, ev.team)
 	if cat_data == null:
 		return
@@ -271,15 +300,8 @@ func _should_play_battle_audio() -> bool:
 
 
 func _find_cat_data(id: int, team: String) -> CatData:
-	var p_count: int = _player_cats.size()
-	if team == "player":
-		if id < p_count:
-			return _player_cats[id]
-	else:
-		var e_idx: int = id - p_count
-		if e_idx >= 0 and e_idx < _enemy_cats.size():
-			return _enemy_cats[e_idx]
-	return null
+	var cat_data_variant: Variant = _cat_data_by_instance_id.get(id, null)
+	return cat_data_variant as CatData
 
 
 func _init_skill_slots() -> void:

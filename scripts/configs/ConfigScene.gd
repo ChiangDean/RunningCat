@@ -12,11 +12,11 @@ const FIELD_BORDER := Color(0.42, 0.36, 0.26, 0.96)
 const SELECTED_BORDER := Color(0.92, 0.79, 0.44, 1.0)
 const UNSELECTED_BORDER := Color(0.42, 0.36, 0.26, 0.96)
 const GENDER_OPTIONS := [
-	{"label": "?????, "value": "Unspecified"},
-	{"label": "??鞎???, "value": "Male"},
-	{"label": "?鞈察????, "value": "Female"},
-	{"label": "?????, "value": "NonBinary"},
-	{"label": "?鞊??????", "value": "PreferNotToSay"},
+	{"label": UiText.SETTINGS_GENDER_UNSPECIFIED, "value": "Unspecified"},
+	{"label": UiText.SETTINGS_GENDER_MALE, "value": "Male"},
+	{"label": UiText.SETTINGS_GENDER_FEMALE, "value": "Female"},
+	{"label": UiText.SETTINGS_GENDER_NON_BINARY, "value": "NonBinary"},
+	{"label": UiText.SETTINGS_GENDER_PREFER_NOT_TO_SAY, "value": "PreferNotToSay"},
 ]
 
 var _profile_dirty: bool = false
@@ -70,7 +70,7 @@ func _build_ui() -> void:
 	_submenu_buttons = chrome.get("dock_buttons", {})
 
 	var title: Label = Label.new()
-	title.text = "\u8a2d\u5b9a\u4e2d\u5fc3"
+	title.text = UiText.SETTINGS_CENTER_TITLE
 	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	content_box.add_child(title)
 
@@ -92,9 +92,9 @@ func _build_ui() -> void:
 
 func _build_section_items() -> Array:
 	var items: Array = [
-		{"key": "profile", "label": "\u89d2\u8272\u8cc7\u6599"},
-		{"key": "account", "label": "\u5e33\u865f\u8cc7\u6599"},
-		{"key": "game", "label": "\u904a\u6232\u8a2d\u5b9a"},
+		{"key": "profile", "label": UiText.SETTINGS_SECTION_PROFILE},
+		{"key": "account", "label": UiText.SETTINGS_SECTION_ACCOUNT},
+		{"key": "game", "label": UiText.SETTINGS_SECTION_GAME},
 	]
 	if GameState.is_admin_session():
 		items.append({"key": "admin", "label": "Admin Catalog"})
@@ -171,7 +171,7 @@ func _build_profile_section() -> Control:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	column.add_child(_make_section_header("????????", "?????????????????????????拆???鞊?????????????))
+	column.add_child(_make_section_header(UiText.SETTINGS_SECTION_PROFILE_TITLE, UiText.SETTINGS_SECTION_PROFILE_DESC))
 
 	var avatar_row: HBoxContainer = HBoxContainer.new()
 	avatar_row.add_theme_constant_override("separation", 14)
@@ -208,7 +208,7 @@ func _build_profile_section() -> Control:
 	avatar_row.add_child(avatar_picker_shell)
 
 	var avatar_hint: Label = Label.new()
-	avatar_hint.text = "???????????"
+	avatar_hint.text = UiText.SETTINGS_AVATAR_HINT
 	avatar_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	avatar_picker_shell.add_child(avatar_hint)
 
@@ -221,9 +221,9 @@ func _build_profile_section() -> Control:
 	for avatar_id: String in AssetResolver.get_profile_avatar_ids():
 		avatar_grid.add_child(_build_avatar_card(avatar_id))
 
-	_player_name_input = _make_line_edit("????????????)
+	_player_name_input = _make_line_edit(UiText.SETTINGS_PLAYER_NAME_PLACEHOLDER)
 	_birthday_input = _make_line_edit("YYYY-MM-DD")
-	_region_input = _make_line_edit("?雓???雓撥????/ Kaohsiung")
+	_region_input = _make_line_edit(UiText.SETTINGS_REGION_PLACEHOLDER)
 
 	_bio_input = TextEdit.new()
 	_bio_input.custom_minimum_size = Vector2(0.0, 112.0)
@@ -235,18 +235,18 @@ func _build_profile_section() -> Control:
 	for option: Dictionary in GENDER_OPTIONS:
 		_gender_option.add_item(str(option.get("label", "")))
 
-	column.add_child(_build_field_row("??????雓?", _player_name_input))
-	column.add_child(_build_field_row("???", _bio_input))
-	column.add_child(_build_field_row("???蝮?", _birthday_input))
-	column.add_child(_build_field_row("????", _gender_option))
-	column.add_child(_build_field_row("???", _region_input))
+	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_PLAYER_NAME, _player_name_input))
+	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_BIO, _bio_input))
+	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_BIRTHDAY, _birthday_input))
+	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_GENDER, _gender_option))
+	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_REGION, _region_input))
 
 	var save_row: HBoxContainer = HBoxContainer.new()
 	save_row.add_theme_constant_override("separation", 12)
 	column.add_child(save_row)
 
 	_save_profile_button = Button.new()
-	_save_profile_button.text = "???????????"
+	_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE
 	_save_profile_button.custom_minimum_size = Vector2(220.0, 50.0)
 	UiPalette.apply_button_kind(_save_profile_button, "confirm")
 	_save_profile_button.pressed.connect(UiAudio.play_ui_click)
@@ -254,7 +254,7 @@ func _build_profile_section() -> Control:
 	save_row.add_child(_save_profile_button)
 
 	_save_profile_hint_label = Label.new()
-	_save_profile_hint_label.text = "????????????蝘?????
+	_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_CLEAN
 	_save_profile_hint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_save_profile_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_save_profile_hint_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
@@ -276,11 +276,11 @@ func _build_account_section() -> Control:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	column.add_child(_make_section_header("????????", "???????怏???????????OAuth ??????????????????鞈ㄜ???))
+	column.add_child(_make_section_header(UiText.SETTINGS_SECTION_ACCOUNT_TITLE, UiText.SETTINGS_SECTION_ACCOUNT_DESC))
 
-	_account_value_label = _make_readonly_value("?雓丐?????)
-	_player_uid_value_label = _make_readonly_value("?雓丐?????)
-	column.add_child(_build_field_row("????", _account_value_label))
+	_account_value_label = _make_readonly_value(UiText.SETTINGS_ACCOUNT_LOADING)
+	_player_uid_value_label = _make_readonly_value(UiText.SETTINGS_ACCOUNT_LOADING)
+	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_ACCOUNT, _account_value_label))
 	column.add_child(_build_field_row("Player UID", _player_uid_value_label))
 
 	var provider_row: HBoxContainer = HBoxContainer.new()
@@ -291,12 +291,12 @@ func _build_account_section() -> Control:
 	provider_row.add_child(_build_provider_card("Apple"))
 
 	var redeem_title: Label = Label.new()
-	redeem_title.text = "?????
+	redeem_title.text = UiText.SETTINGS_REDEEM_TITLE
 	redeem_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	column.add_child(redeem_title)
 
 	var redeem_hint: Label = Label.new()
-	redeem_hint.text = "?雓???????????????????????????
+	redeem_hint.text = UiText.SETTINGS_REDEEM_HINT
 	redeem_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	redeem_hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 	column.add_child(redeem_hint)
@@ -305,12 +305,12 @@ func _build_account_section() -> Control:
 	redeem_row.add_theme_constant_override("separation", 10)
 	column.add_child(redeem_row)
 
-	_redeem_input = _make_line_edit("?????????偃???)
+	_redeem_input = _make_line_edit(UiText.SETTINGS_REDEEM_PLACEHOLDER)
 	_redeem_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	redeem_row.add_child(_redeem_input)
 
 	_redeem_button = Button.new()
-	_redeem_button.text = "???"
+	_redeem_button.text = UiText.SETTINGS_REDEEM_ACTION
 	_redeem_button.custom_minimum_size = Vector2(132.0, 48.0)
 	UiPalette.apply_button_kind(_redeem_button, "confirm")
 	_redeem_button.pressed.connect(UiAudio.play_ui_click)
@@ -329,11 +329,11 @@ func _build_game_settings_section() -> Control:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	column.add_child(_make_section_header("??頩???Ⅹ??", "?????Ⅹ?????????佇?憯??????謚???鞊???????????????))
+	column.add_child(_make_section_header(UiText.SETTINGS_SECTION_GAME_TITLE, UiText.SETTINGS_SECTION_GAME_DESC))
 
-	column.add_child(_build_audio_row("master", "???瘀賊???))
-	column.add_child(_build_audio_row("bgm", "???????"))
-	column.add_child(_build_audio_row("sfx", "???"))
+	column.add_child(_build_audio_row("master", UiText.SETTINGS_AUDIO_MASTER))
+	column.add_child(_build_audio_row("bgm", UiText.SETTINGS_AUDIO_BGM))
+	column.add_child(_build_audio_row("sfx", UiText.SETTINGS_AUDIO_SFX))
 
 	return section
 
@@ -388,7 +388,7 @@ func _build_admin_section() -> Control:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	column.add_child(_make_section_header("Admin Catalog", "??? Admin ?????????????????????????????橫???祈???鞊??謅?鞊堊??鞊啣???))
+	column.add_child(_make_section_header("Admin Catalog", UiText.SETTINGS_ADMIN_DESC))
 	column.add_child(_build_admin_catalog_row())
 	return section
 
@@ -453,14 +453,14 @@ func _build_provider_card(provider_name: String) -> Control:
 	column.add_child(title)
 
 	var status_label: Label = Label.new()
-	status_label.text = "?????鞊?"
+	status_label.text = UiText.SETTINGS_PROVIDER_UNLINKED
 	status_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 	column.add_child(status_label)
 	_provider_status_labels[provider_name] = status_label
 
 	var action_button: Button = Button.new()
-	action_button.text = "?????鞊?"
+	action_button.text = UiText.SETTINGS_PROVIDER_ACTION_UNAVAILABLE
 	action_button.disabled = true
 	action_button.custom_minimum_size = Vector2(0.0, 42.0)
 	UiPalette.apply_button_palette(action_button, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
@@ -507,7 +507,7 @@ func _build_audio_row(bus_key: String, label_text: String) -> Control:
 	_audio_value_labels[bus_key] = value_label
 
 	var mute_box: CheckBox = CheckBox.new()
-	mute_box.text = "??垮??"
+	mute_box.text = UiText.SETTINGS_AUDIO_MUTE
 	mute_box.toggled.connect(func(pressed: bool) -> void:
 		_on_audio_mute_toggled(bus_key, pressed)
 	)
@@ -590,7 +590,7 @@ func _load_profile_from_api() -> void:
 		_profile_loading = false
 		_refresh_profile_save_state()
 		if not success:
-			ToastManager.hint("??Ⅹ?????????????散??", str(error.get("message", "???怏???謘?????蹎????????????)))
+			ToastManager.hint(UiText.SETTINGS_LOAD_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_LOAD_FAILED_DEFAULT)))
 			return
 
 		if data is Dictionary:
@@ -687,10 +687,10 @@ func _refresh_provider_cards(linked_providers_variant: Variant) -> void:
 		if not is_instance_valid(status_label):
 			continue
 		if linked.has(provider_name):
-			status_label.text = "??頦????
+			status_label.text = UiText.SETTINGS_PROVIDER_LINKED
 			status_label.add_theme_color_override("font_color", Color(0.72, 0.94, 0.72, 1.0))
 		else:
-			status_label.text = "?????鞊?"
+			status_label.text = UiText.SETTINGS_PROVIDER_UNLINKED
 			status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 
 
@@ -699,20 +699,20 @@ func _refresh_profile_save_state() -> void:
 		return
 	_save_profile_button.disabled = _profile_loading or _profile_saving or not _profile_dirty
 	if _profile_saving:
-		_save_profile_button.text = "?????.."
+		_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE_WORKING
 	elif _profile_loading:
-		_save_profile_button.text = "?雓丐?????.."
+		_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE_LOADING
 	else:
-		_save_profile_button.text = "???????????"
+		_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE
 
 	if not is_instance_valid(_save_profile_hint_label):
 		return
 	if _profile_saving:
-		_save_profile_hint_label.text = "???????????????..."
+		_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_WORKING
 	elif _profile_dirty:
-		_save_profile_hint_label.text = "???撕??????????????
+		_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_DIRTY
 	else:
-		_save_profile_hint_label.text = "????????????蝘?????
+		_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_CLEAN
 
 
 func _refresh_audio_value_label(bus_key: String) -> void:
@@ -752,7 +752,7 @@ func _on_save_profile_pressed() -> void:
 
 	var validation_error: String = _validate_profile_form()
 	if validation_error != "":
-		ToastManager.error("????????????", validation_error)
+		ToastManager.error(UiText.SETTINGS_PROFILE_VALIDATION_TITLE, validation_error)
 		return
 
 	var payload := {
@@ -774,14 +774,14 @@ func _on_save_profile_pressed() -> void:
 		if not success:
 			_profile_dirty = true
 			_refresh_profile_save_state()
-			ToastManager.error("???????????????", str(error.get("message", "??????祈?????謅????)))
+			ToastManager.error(UiText.SETTINGS_PROFILE_SAVE_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_PROFILE_SAVE_FAILED_DEFAULT)))
 			return
 
 		if data is Dictionary:
 			var profile: Dictionary = data as Dictionary
 			GameState.apply_profile_response(profile)
 			_apply_profile_data(profile)
-		ToastManager.success("??????????頦????)
+		ToastManager.success(UiText.SETTINGS_PROFILE_SAVE_SUCCESS)
 	)
 
 
@@ -791,18 +791,18 @@ func _on_redeem_pressed() -> void:
 
 	var code: String = _redeem_input.text.strip_edges()
 	if code == "":
-		ToastManager.error("?????????偃???)
+		ToastManager.error(UiText.SETTINGS_REDEEM_EMPTY)
 		return
 
 	_redeem_in_flight = true
 	_redeem_button.disabled = true
-	_redeem_button.text = "?????.."
+	_redeem_button.text = UiText.SETTINGS_REDEEM_ACTION_WORKING
 	ApiClient.redeem_code(code, func(success: bool, data: Variant, error: Dictionary) -> void:
 		_redeem_in_flight = false
 		_redeem_button.disabled = false
-		_redeem_button.text = "???"
+		_redeem_button.text = UiText.SETTINGS_REDEEM_ACTION
 		if not success:
-			ToastManager.error("???????", str(error.get("message", "??????祈?????謅????)))
+			ToastManager.error(UiText.SETTINGS_REDEEM_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_REDEEM_FAILED_DEFAULT)))
 			return
 
 		var response: Dictionary = data if data is Dictionary else {}
@@ -811,7 +811,7 @@ func _on_redeem_pressed() -> void:
 			GameState.apply_wallet_snapshot(wallet_snapshot)
 		_redeem_input.text = ""
 		_show_redeem_result(response)
-		ToastManager.success("??????", str(response.get("redeemedCode", "")))
+		ToastManager.success(UiText.SETTINGS_REDEEM_SUCCESS, str(response.get("redeemedCode", "")))
 	)
 
 
@@ -827,9 +827,9 @@ func _show_redeem_result(response: Dictionary) -> void:
 			lines.append("%s x%d" % [display_name, int(reward.get("quantity", 0))])
 
 	if lines.is_empty():
-		lines.append("???????頦????拆????????)
+		lines.append(UiText.SETTINGS_REDEEM_RESULT_EMPTY)
 
-	DialogManager.show_info("??????", "\n".join(lines))
+	DialogManager.show_info(UiText.SETTINGS_REDEEM_RESULT_TITLE, "\n".join(lines))
 
 
 func _on_audio_slider_changed(bus_key: String, value: float) -> void:
@@ -847,11 +847,11 @@ func _validate_profile_form() -> String:
 	var bio: String = _bio_input.text.strip_edges()
 
 	if player_name == "":
-		return "????????????????
+		return UiText.SETTINGS_VALIDATE_PLAYER_NAME
 	if bio.length() > 140:
-		return "???????140 ?????
+		return UiText.SETTINGS_VALIDATE_BIO_LENGTH
 	if birthday != "" and not _is_valid_birthday_text(birthday):
-		return "???蝮??????????YYYY-MM-DD??
+		return UiText.SETTINGS_VALIDATE_BIRTHDAY
 	return ""
 
 

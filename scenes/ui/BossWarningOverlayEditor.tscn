@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://dhw8sbdx2sqg3"]
+
+[ext_resource type="Texture2D" uid="uid://cfe4g4irsrnnt" path="res://assets/sprites/ui/warning/boss_warning_compact_overlay_v1.png" id="1"]
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="2"]
+[ext_resource type="Texture2D" uid="uid://dsr2bhbkssjhs" path="res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
+
+[node name="BossWarningOverlayEditor" type="Control" unique_id=1536782712]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 700.0
+offset_bottom = 468.0
+mouse_filter = 2
+theme = ExtResource("2")
+
+[node name="WarningFrame" type="TextureRect" parent="." unique_id=1887014435]
+layout_mode = 0
+offset_right = 700.0
+offset_bottom = 468.0
+mouse_filter = 2
+texture = ExtResource("1")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Icon" type="TextureRect" parent="." unique_id=1585835287]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 79.0
+offset_top = -351.0
+offset_right = 235.0
+offset_bottom = -213.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TextLabel" type="Label" parent="." unique_id=897487835]
+layout_mode = 0
+offset_left = 197.0
+offset_top = 246.0
+offset_right = 501.0
+offset_bottom = 290.0
+theme_override_colors/font_color = Color(1, 0.95, 0.82, 1)
+theme_override_colors/font_outline_color = Color(0.27, 0.08, 0.03, 0.98)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 22
+text = "小貓咪！今天我一定會吸到你"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
