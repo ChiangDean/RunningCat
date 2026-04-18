@@ -5,21 +5,15 @@ extends Node2D
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
 const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/HomeTopHudEditor.tscn")
+const BOSS_WARNING_OVERLAY_SCENE := preload("res://scenes/ui/BossWarningOverlayEditor.tscn")
 const HOME_SCOOP_TEMPLATE_SCENE := preload("res://scenes/ui/HomeScoopButtonTemplate.tscn")
 const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v3.png")
-const HOME_NAV_BAR_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_bar_v2.png")
-const HOME_NAV_TAB_IDLE_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_tab_idle_v2.png")
-const HOME_NAV_TAB_ACTIVE_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_tab_active_v2.png")
-const HOME_NAV_TAB_PRESSED_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_tab_pressed_v2.png")
-const HOME_NAV_ICON_SCOOPER_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_icon_scooper_v2.png")
-const HOME_NAV_ICON_ENHANCE_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_icon_enhance_v2.png")
-const HOME_NAV_ICON_ACTIVITY_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_icon_activity_v2.png")
-const HOME_NAV_ICON_SHOP_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_icon_shop_v2.png")
 const HOME_SCOOP_SHEET_TEXTURE := preload("res://assets/sprites/ui/home/scooper/clean_litter_button_sheet.png")
 const HOME_AUTO_SCOOP_TOGGLE_OFF_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_off.svg")
 const HOME_AUTO_SCOOP_TOGGLE_ON_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_on.svg")
 const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
 const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
+const BOSS_WARNING_TEXTURE := preload("res://assets/sprites/ui/warning/boss_warning_compact_overlay_v1.png")
 const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png.png")
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
 const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
@@ -44,11 +38,16 @@ const SH := 1280.0
 const BATTLE_Y := 750.0
 const NAV_H := 110.0
 const NAV_Y := SH - NAV_H
+const HOME_NAV_BG := Color(0.14, 0.10, 0.07, 0.96)
+const HOME_NAV_BG_BORDER := Color(0.38, 0.27, 0.14, 0.96)
+const HOME_NAV_TAB_IDLE_BG := Color(0.27, 0.20, 0.13, 0.94)
+const HOME_NAV_TAB_IDLE_BORDER := Color(0.49, 0.35, 0.18, 0.94)
+const HOME_NAV_TAB_ACTIVE_BG := Color(0.80, 0.68, 0.34, 0.98)
+const HOME_NAV_TAB_ACTIVE_BORDER := Color(0.96, 0.84, 0.53, 0.98)
+const HOME_NAV_TAB_PRESSED_BG := Color(0.66, 0.54, 0.24, 0.98)
 const HOME_NAV_LABEL_IDLE := Color(0.92, 0.86, 0.76, 0.96)
 const HOME_NAV_LABEL_ACTIVE := Color(1.0, 0.95, 0.83, 1.0)
 const HOME_NAV_LABEL_OUTLINE := Color(0.17, 0.09, 0.04, 0.98)
-const HOME_NAV_ICON_IDLE_MODULATE := Color(0.95, 0.93, 0.88, 0.92)
-const HOME_NAV_ICON_ACTIVE_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 
 # Skill bar baseline positioned just below BATTLE_Y.
 const SKILL_BAR_Y := BATTLE_Y + 10.0
@@ -102,6 +101,16 @@ const PARTY_COUPON_DISPLAY_CAP := 5
 const RESULT_OVERLAY_OFFSET_Y := -200.0
 const RESULT_OVERLAY_START_SCALE := 0.56
 const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
+const RESULT_OVERLAY_DISPLAY_SCALE := 0.8
+const BOSS_WARNING_DURATION_SECONDS := 3.0
+const BOSS_WARNING_DISPLAY_W := 700.0
+const BOSS_WARNING_DISPLAY_H := 468.0
+const BOSS_WARNING_DISPLAY_Y := 150.0
+const BOSS_WARNING_FLASH_ALPHA := 0.52
+const BOSS_WARNING_FLASH_DURATION := 0.18
+const BOSS_WARNING_PULSE_SCALE := 1.07
+const BOSS_WARNING_PULSE_DURATION := 0.22
+const BOSS_WARNING_TEXT := "今天我一定會吸到你"
 const REWARD_FLOAT_START_Y := 620.0
 const REWARD_FLOAT_RISE := 168.0
 const REWARD_FLOAT_STEP_DELAY := 0.18
@@ -129,6 +138,9 @@ var _level_label: Label
 var _boss_btn: Button
 var _result_display: TextureRect
 var _result_backdrop: Control
+var _boss_warning_overlay: Control
+var _boss_warning_icon: TextureRect
+var _boss_warning_text_label: Label
 var _skill_panel: Control
 var _skill_shadow: ColorRect
 var _skill_body: ColorRect
@@ -200,6 +212,9 @@ var _current_speed_mult: float = 1.0
 var _free_speed_boost_end_unix: int = 0
 var _free_speed_boost_mult: float = 1.0
 var _free_speed_boost_used: bool = false
+var _boss_warning_flash_tween: Tween
+var _boss_warning_pulse_tween: Tween
+var _current_enemy_cats: Array = []
 
 
 func _ready() -> void:
@@ -546,6 +561,16 @@ func _build_ui() -> void:
 	_result_display.visible = false
 	_result_backdrop.add_child(_result_display)
 
+	_boss_warning_overlay = BOSS_WARNING_OVERLAY_SCENE.instantiate() as Control
+	_boss_warning_overlay.position = Vector2(
+		(SW - BOSS_WARNING_DISPLAY_W) * 0.5,
+		BOSS_WARNING_DISPLAY_Y
+	)
+	_boss_warning_overlay.visible = false
+	_result_backdrop.add_child(_boss_warning_overlay)
+	_boss_warning_icon = _boss_warning_overlay.get_node("Icon") as TextureRect
+	_boss_warning_text_label = _boss_warning_overlay.get_node("TextLabel") as Label
+
 	_nav_canvas = CanvasLayer.new()
 	_nav_canvas.layer = 20
 	add_child(_nav_canvas)
@@ -554,16 +579,15 @@ func _build_ui() -> void:
 	_nav_canvas.add_child(nav_bg)
 
 	var nav_items: Array = [
-		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper, HOME_NAV_ICON_SCOOPER_TEXTURE],
-		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance, HOME_NAV_ICON_ENHANCE_TEXTURE],
-		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity, HOME_NAV_ICON_ACTIVITY_TEXTURE],
-		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop, HOME_NAV_ICON_SHOP_TEXTURE],
+		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper],
+		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance],
+		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity],
+		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop],
 	]
 	var btn_w: float = SW / float(nav_items.size())
 	for i in range(nav_items.size()):
-		var nav_btn: TextureButton = _build_home_nav_button(
+		var nav_btn: Button = _build_home_nav_button(
 			nav_items[i][0],
-			nav_items[i][3],
 			Vector2(i * btn_w + 6.0, NAV_Y + 12.0),
 			Vector2(btn_w - 12.0, NAV_H - 22.0)
 		)
@@ -909,77 +933,92 @@ func _make_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
 
 
 func _build_home_nav_background() -> Control:
-	var background: TextureRect = TextureRect.new()
+	var background: ColorRect = ColorRect.new()
 	background.position = Vector2(0.0, NAV_Y)
 	background.size = Vector2(SW, NAV_H)
-	background.texture = HOME_NAV_BAR_TEXTURE
-	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	background.stretch_mode = TextureRect.STRETCH_SCALE
+	background.color = HOME_NAV_BG
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var border: ColorRect = ColorRect.new()
+	border.position = Vector2(0.0, 0.0)
+	border.size = Vector2(SW, 2.0)
+	border.color = HOME_NAV_BG_BORDER
+	background.add_child(border)
 	return background
 
 
-func _build_home_nav_button(txt: String, icon_texture: Texture2D, pos: Vector2, sz: Vector2) -> TextureButton:
-	var btn: TextureButton = TextureButton.new()
+func _build_home_nav_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
+	var btn: Button = Button.new()
 	btn.position = pos
 	btn.size = sz
-	btn.ignore_texture_size = true
-	btn.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	btn.stretch_mode = TextureButton.STRETCH_SCALE
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	btn.pressed.connect(UiAudio.play_ui_click)
 
-	var icon: TextureRect = TextureRect.new()
-	icon.name = "Icon"
-	icon.position = Vector2((sz.x - 46.0) * 0.5, 12.0)
-	icon.size = Vector2(46.0, 46.0)
-	icon.texture = icon_texture
-	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn.add_child(icon)
-
 	var label: Label = Label.new()
 	label.name = "Label"
-	label.position = Vector2(10.0, sz.y - 28.0)
-	label.size = Vector2(sz.x - 20.0, 18.0)
+	label.position = Vector2(10.0, (sz.y - 24.0) * 0.5)
+	label.size = Vector2(sz.x - 20.0, 24.0)
 	label.text = txt
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	label.add_theme_constant_override("outline_size", 3)
 	label.add_theme_color_override("font_outline_color", HOME_NAV_LABEL_OUTLINE)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(label)
 
 	btn.set_meta("label_node", label)
-	btn.set_meta("icon_node", icon)
 	return btn
 
 
-func _apply_home_nav_button_style(button: TextureButton, is_active: bool) -> void:
+func _apply_home_nav_button_style(button: Button, is_active: bool) -> void:
 	if button == null:
 		return
-	button.texture_normal = HOME_NAV_TAB_ACTIVE_TEXTURE if is_active else HOME_NAV_TAB_IDLE_TEXTURE
-	button.texture_hover = HOME_NAV_TAB_ACTIVE_TEXTURE if is_active else HOME_NAV_TAB_IDLE_TEXTURE
-	button.texture_pressed = HOME_NAV_TAB_PRESSED_TEXTURE
-	button.texture_disabled = HOME_NAV_TAB_IDLE_TEXTURE
+	var normal: StyleBoxFlat = StyleBoxFlat.new()
+	if is_active:
+		normal.bg_color = HOME_NAV_TAB_ACTIVE_BG
+		normal.border_color = HOME_NAV_TAB_ACTIVE_BORDER
+	else:
+		normal.bg_color = HOME_NAV_TAB_IDLE_BG
+		normal.border_color = HOME_NAV_TAB_IDLE_BORDER
+	normal.border_width_left = 2
+	normal.border_width_right = 2
+	normal.border_width_top = 2
+	normal.border_width_bottom = 2
+	normal.corner_radius_top_left = 18
+	normal.corner_radius_top_right = 18
+	normal.corner_radius_bottom_left = 18
+	normal.corner_radius_bottom_right = 18
+
+	var hover: StyleBoxFlat = normal.duplicate()
+	hover.bg_color = normal.bg_color.lightened(0.05)
+
+	var pressed: StyleBoxFlat = normal.duplicate()
+	if is_active:
+		pressed.bg_color = HOME_NAV_TAB_PRESSED_BG
+	else:
+		pressed.bg_color = HOME_NAV_TAB_IDLE_BG.darkened(0.08)
+
+	var disabled: StyleBoxFlat = normal.duplicate()
+	disabled.bg_color = HOME_NAV_TAB_IDLE_BG.darkened(0.14)
+	disabled.border_color = HOME_NAV_TAB_IDLE_BORDER.darkened(0.10)
+
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("disabled", disabled)
 
 	var label_variant: Variant = button.get_meta("label_node", null)
 	var label: Label = label_variant as Label
 	if label != null:
-		label.add_theme_font_size_override("font_size", 17 if is_active else 16)
-		label.add_theme_color_override("font_color", HOME_NAV_LABEL_ACTIVE if is_active else HOME_NAV_LABEL_IDLE)
-
-	var icon_variant: Variant = button.get_meta("icon_node", null)
-	var icon: TextureRect = icon_variant as TextureRect
-	if icon != null:
-		icon.modulate = HOME_NAV_ICON_ACTIVE_MODULATE if is_active else HOME_NAV_ICON_IDLE_MODULATE
+		if is_active:
+			label.add_theme_font_size_override("font_size", 17)
+			label.add_theme_color_override("font_color", HOME_NAV_LABEL_ACTIVE)
+		else:
+			label.add_theme_font_size_override("font_size", 16)
+			label.add_theme_color_override("font_color", HOME_NAV_LABEL_IDLE)
 
 
 func _apply_skill_speed_button_style(button: Button, is_active: bool) -> void:
@@ -1352,7 +1391,7 @@ func _layout_home_scoop_panel() -> void:
 	if _home_scoop_panel == null or _home_scoop_button == null:
 		return
 	var enhance_btn_variant: Variant = _nav_buttons.get("res://scenes/EnhanceScene.tscn")
-	var enhance_btn: TextureButton = enhance_btn_variant as TextureButton
+	var enhance_btn: Button = enhance_btn_variant as Button
 	if enhance_btn == null:
 		return
 	var target_center_x: float = enhance_btn.position.x + enhance_btn.size.x * 0.5
@@ -1367,7 +1406,7 @@ func _layout_home_scoop_panel() -> void:
 func _refresh_main_nav_state() -> void:
 	var active_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
 	for scene_path: String in _nav_buttons.keys():
-		var btn: TextureButton = _nav_buttons[scene_path] as TextureButton
+		var btn: Button = _nav_buttons[scene_path] as Button
 		if btn == null:
 			continue
 		var is_active: bool = scene_path == active_scene_path
@@ -1387,6 +1426,17 @@ func _refresh_overlay_fx_state() -> void:
 		_damage_fx_layer.visible = not overlay_open
 
 
+func _clear_battle_transient_fx() -> void:
+	if _damage_fx_layer != null:
+		for child: Node in _damage_fx_layer.get_children():
+			child.queue_free()
+	if _reward_fx_layer != null:
+		for child: Node in _reward_fx_layer.get_children():
+			child.queue_free()
+	_reward_fx_queue.clear()
+	_reward_fx_active = false
+
+
 func _refresh_mail_badge() -> void:
 	if _mail_badge == null:
 		return
@@ -1401,6 +1451,10 @@ func _refresh_mail_badge() -> void:
 # Battle flow
 
 func _start_battle() -> void:
+	_start_battle_internal()
+
+
+func _start_battle_internal() -> void:
 	if _result_display != null:
 		_result_display.texture = null
 		_result_display.visible = false
@@ -1409,11 +1463,6 @@ func _start_battle() -> void:
 		_result_backdrop.scale = Vector2.ONE
 		_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_refresh_ui()
-
-	for child in _player_team.get_children():
-		child.queue_free()
-	for child in _enemy_team.get_children():
-		child.queue_free()
 
 	var player_cats: Array = []
 	var enemy_cats: Array = []
@@ -1466,9 +1515,17 @@ func _start_battle() -> void:
 
 	var simulator := BattleSimulator.new()
 	var events := simulator.simulate(player_cats, enemy_cats)
+	_current_enemy_cats = enemy_cats.duplicate()
+	_clear_battle_transient_fx()
+	for child in _player_team.get_children():
+		child.queue_free()
+	for child in _enemy_team.get_children():
+		child.queue_free()
 	_battle_manager.setup(events, player_cats, enemy_cats,
 			_player_team, _enemy_team, _timer_label, _skill_bar)
 	_set_skill_filter_mode(_skill_filter_mode)
+	if GameState.is_current_boss():
+		_start_boss_warning_phase()
 
 
 func restart_with_latest_team() -> void:
@@ -1485,9 +1542,11 @@ func _on_battle_finished(result: String) -> void:
 	var is_boss := GameState.is_current_boss()
 
 	if result == "WIN":
-		_show_result_overlay(true)
+		if is_boss:
+			_show_result_overlay(true)
 		GameState.advance_after_win()
-		await get_tree().create_timer(1.0).timeout
+		if is_boss:
+			await get_tree().create_timer(1.0).timeout
 		_start_battle()
 	else:
 		_show_result_overlay(false)
@@ -1501,8 +1560,40 @@ func _show_result_overlay(is_win: bool) -> void:
 	if _result_backdrop == null or _result_display == null:
 		return
 
-	_result_display.texture = RESULT_VICTORY_TEXTURE if is_win else RESULT_DEFEAT_TEXTURE
-	_result_display.visible = true
+	var overlay_texture: Texture2D = RESULT_VICTORY_TEXTURE if is_win else RESULT_DEFEAT_TEXTURE
+	_show_center_overlay(overlay_texture, true)
+
+
+func _show_center_overlay(texture: Texture2D, fill_screen: bool = false) -> void:
+	if _result_backdrop == null or _result_display == null or texture == null:
+		return
+
+	_stop_boss_warning_overlay_fx()
+	_set_boss_warning_overlay_content_visible(not fill_screen)
+	if fill_screen:
+		var result_overlay_size: Vector2 = Vector2(SW, SH) * RESULT_OVERLAY_DISPLAY_SCALE
+		_result_display.texture = texture
+		_result_display.size = result_overlay_size
+		_result_display.position = Vector2(
+			(SW - result_overlay_size.x) * 0.5,
+			RESULT_OVERLAY_OFFSET_Y + ((SH - result_overlay_size.y) * 0.5)
+		)
+		_result_display.visible = true
+		if _boss_warning_overlay != null:
+			_boss_warning_overlay.visible = false
+	else:
+		_result_display.texture = null
+		_result_display.visible = false
+		if _boss_warning_overlay != null:
+			_boss_warning_overlay.position = Vector2(
+				(SW - BOSS_WARNING_DISPLAY_W) * 0.5,
+				BOSS_WARNING_DISPLAY_Y
+			)
+			_boss_warning_overlay.size = Vector2(BOSS_WARNING_DISPLAY_W, BOSS_WARNING_DISPLAY_H)
+			_boss_warning_overlay.scale = Vector2.ONE
+			_boss_warning_overlay.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			_boss_warning_overlay.pivot_offset = _boss_warning_overlay.size * 0.5
+			_boss_warning_overlay.visible = true
 	_result_backdrop.visible = true
 	_result_backdrop.scale = Vector2(RESULT_OVERLAY_START_SCALE, RESULT_OVERLAY_START_SCALE)
 	_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 0.0)
@@ -1515,7 +1606,94 @@ func _show_result_overlay(is_win: bool) -> void:
 	tween.chain().tween_property(_result_backdrop, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 
 
+func _play_boss_warning_overlay() -> void:
+	_show_center_overlay(BOSS_WARNING_TEXTURE, false)
+	_refresh_boss_warning_overlay_content()
+	_start_boss_warning_overlay_fx()
+
+
+func _refresh_boss_warning_overlay_content() -> void:
+	if _boss_warning_icon == null or _boss_warning_text_label == null:
+		return
+
+	_boss_warning_text_label.text = BOSS_WARNING_TEXT
+	var icon_texture: Texture2D = null
+	if not _current_enemy_cats.is_empty():
+		var boss_cat: CatData = _current_enemy_cats[0] as CatData
+		if boss_cat != null:
+			icon_texture = AssetResolver.resolve_cat_icon(boss_cat.id)
+	_boss_warning_icon.texture = icon_texture
+	_set_boss_warning_overlay_content_visible(_result_backdrop != null and _result_backdrop.visible)
+
+
+func _set_boss_warning_overlay_content_visible(visible: bool) -> void:
+	if _boss_warning_icon != null:
+		_boss_warning_icon.visible = visible and _boss_warning_icon.texture != null
+	if _boss_warning_text_label != null:
+		_boss_warning_text_label.visible = visible
+
+
+func _start_boss_warning_overlay_fx() -> void:
+	if _boss_warning_overlay == null or not _boss_warning_overlay.visible:
+		return
+
+	_stop_boss_warning_overlay_fx()
+	_boss_warning_overlay.scale = Vector2.ONE
+	_boss_warning_overlay.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+	_boss_warning_flash_tween = create_tween()
+	_boss_warning_flash_tween.set_loops()
+	_boss_warning_flash_tween.tween_property(_boss_warning_overlay, "modulate:a", BOSS_WARNING_FLASH_ALPHA, BOSS_WARNING_FLASH_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_boss_warning_flash_tween.tween_property(_boss_warning_overlay, "modulate:a", 1.0, BOSS_WARNING_FLASH_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	_boss_warning_pulse_tween = create_tween()
+	_boss_warning_pulse_tween.set_loops()
+	_boss_warning_pulse_tween.tween_property(_boss_warning_overlay, "scale", Vector2(BOSS_WARNING_PULSE_SCALE, BOSS_WARNING_PULSE_SCALE), BOSS_WARNING_PULSE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_boss_warning_pulse_tween.tween_property(_boss_warning_overlay, "scale", Vector2.ONE, BOSS_WARNING_PULSE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+
+
+func _stop_boss_warning_overlay_fx() -> void:
+	if _boss_warning_flash_tween != null:
+		_boss_warning_flash_tween.kill()
+		_boss_warning_flash_tween = null
+	if _boss_warning_pulse_tween != null:
+		_boss_warning_pulse_tween.kill()
+		_boss_warning_pulse_tween = null
+
+
+func _hide_center_overlay() -> void:
+	_stop_boss_warning_overlay_fx()
+	if _result_backdrop != null:
+		_result_backdrop.visible = false
+		_result_backdrop.scale = Vector2.ONE
+		_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	if _result_display != null:
+		_result_display.scale = Vector2.ONE
+		_result_display.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_result_display.texture = null
+		_result_display.visible = false
+	if _boss_warning_overlay != null:
+		_boss_warning_overlay.scale = Vector2.ONE
+		_boss_warning_overlay.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_boss_warning_overlay.visible = false
+	_set_boss_warning_overlay_content_visible(false)
+
+
+func _start_boss_warning_phase() -> void:
+	_battle_manager.prime_initial_spawn_state()
+	_battle_manager.pause_battle()
+	_play_boss_warning_overlay()
+	var warning_timer: SceneTreeTimer = get_tree().create_timer(BOSS_WARNING_DURATION_SECONDS)
+	warning_timer.timeout.connect(_on_boss_warning_finished, CONNECT_ONE_SHOT)
+
+
+func _on_boss_warning_finished() -> void:
+	_hide_center_overlay()
+	_battle_manager.resume_battle()
+
+
 func _on_challenge_boss_pressed() -> void:
+	_clear_battle_transient_fx()
 	GameState.challenge_boss()
 	_start_battle()
 
