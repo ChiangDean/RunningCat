@@ -5,7 +5,11 @@ extends Node2D
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
 const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/HomeTopHudEditor.tscn")
+const HOME_SCOOP_TEMPLATE_SCENE := preload("res://scenes/ui/HomeScoopButtonTemplate.tscn")
 const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v2.png")
+const HOME_SCOOP_SHEET_TEXTURE := preload("res://assets/sprites/ui/home/scooper/clean_litter_button_sheet.png")
+const HOME_AUTO_SCOOP_TOGGLE_OFF_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_off.svg")
+const HOME_AUTO_SCOOP_TOGGLE_ON_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_on.svg")
 const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png.png")
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
 const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
@@ -65,8 +69,20 @@ const IDLE_PROGRESS_CAP_SECONDS := 8 * 3600.0
 const HOME_SCOOP_PANEL_X := 154.0
 const HOME_SCOOP_PANEL_Y := 1032.0
 const HOME_SCOOP_PANEL_W := 412.0
-const HOME_SCOOP_PANEL_H := 112.0
-const HOME_SCOOP_COOLDOWN := 0.5
+const HOME_SCOOP_PANEL_H := 228.0
+const HOME_SCOOP_COOLDOWN := 2.0
+const HOME_SCOOP_FRAME_SIZE := Vector2i(256, 256)
+const HOME_SCOOP_FRAME_COUNT := 14
+const HOME_SCOOP_ANIMATION_START_FRAME := 1
+const HOME_SCOOP_TEMPLATE_BUTTON_SIZE := Vector2(192.0, 192.0)
+const HOME_SCOOP_TEMPLATE_BUTTON_OFFSET := Vector2(136.0, 0.0)
+const HOME_SCOOP_TEMPLATE_ENHANCE_CENTER_OFFSET_X := 34.0
+const HOME_SCOOP_TEMPLATE_COUNT_LABEL_OFFSET := Vector2(110, 145.0)
+const HOME_SCOOP_TEMPLATE_COUNT_LABEL_SIZE := Vector2(88.0, 36.0)
+const HOME_SCOOP_TEMPLATE_COUNT_LABEL_FONT_SIZE := 24
+const HOME_SCOOP_TEMPLATE_COUNT_LABEL_OUTLINE_SIZE := 4
+const HOME_SCOOP_TEMPLATE_RESULT_LABEL_OFFSET := Vector2(12.0, 196.0)
+const HOME_SCOOP_TEMPLATE_RESULT_LABEL_SIZE := Vector2(212.0, 24.0)
 const PARTY_COUPON_DISPLAY_CAP := 5
 const RESULT_BANNER_W := 296.0
 const RESULT_BANNER_H := 84.0
@@ -137,11 +153,29 @@ var _home_scoop_panel: Control
 var _home_exp_bar: ProgressBar
 var _home_exp_label: Label
 var _home_coupon_button: Button
-var _home_scoop_button: Button
+var _home_scoop_button: TextureButton
 var _home_scoop_result_label: Label
 var _home_scoop_overlay: ColorRect
 var _home_scoop_cd_label: Label
+var _home_scoop_count_debug_frame: PanelContainer
+var _home_scoop_count_label: Label
+var _home_auto_scoop_toggle_button: TextureButton
+var _home_auto_scoop_enabled: bool = false
+var _home_scoop_frames: Array[Texture2D] = []
+var _home_scoop_animation_active: bool = false
+var _home_scoop_animation_elapsed: float = 0.0
+var _home_scoop_frame_index: int = 0
 var _home_scoop_cooldown_remaining: float = 0.0
+var _home_scoop_request_in_flight: bool = false
+var _home_scoop_response_ready: bool = false
+var _home_scoop_profile_fetch_in_flight: bool = false
+var _home_scoop_pending_profile: Dictionary = {}
+var _home_scoop_pending_result: Dictionary = {}
+var _home_scoop_pending_reward_entries: Array[Dictionary] = []
+var _home_scoop_previous_profile: Dictionary = {}
+var _home_scoop_previous_player_exp: int = 0
+var _home_scoop_previous_player_memory_shards: int = 0
+var _home_scoop_previous_player_whiskers: int = 0
 var _nav_buttons: Dictionary = {}
 var _nav_canvas: CanvasLayer
 var _last_overlay_scene_path: String = ""
@@ -156,6 +190,7 @@ var _free_speed_boost_used: bool = false
 
 func _ready() -> void:
 	add_to_group("battle_scene")
+	_build_home_scoop_frames()
 	GameState.player_profile_changed.connect(func() -> void:
 		_refresh_ui()
 	)
@@ -191,6 +226,9 @@ func _process(_delta: float) -> void:
 	if _home_scoop_cooldown_remaining > 0.0:
 		_home_scoop_cooldown_remaining = maxf(0.0, _home_scoop_cooldown_remaining - _delta)
 		_refresh_home_scoop_panel()
+	if _home_scoop_animation_active:
+		_update_home_scoop_animation(_delta)
+	_update_home_auto_scoop()
 
 	_refresh_speed_boost_state()
 
@@ -434,46 +472,29 @@ func _build_ui() -> void:
 	_skill_panel.add_child(_sandbox_btn)
 	_layout_sandbox_btn()
 
-	_home_scoop_panel = Control.new()
+	_home_scoop_panel = HOME_SCOOP_TEMPLATE_SCENE.instantiate() as Control
 	_home_scoop_panel.position = Vector2(HOME_SCOOP_PANEL_X, HOME_SCOOP_PANEL_Y)
-	_home_scoop_panel.size = Vector2(HOME_SCOOP_PANEL_W, HOME_SCOOP_PANEL_H)
 	_ui_layer.add_child(_home_scoop_panel)
 
 	_home_exp_label = null
 	_home_exp_bar = null
-
-	_home_scoop_result_label = _make_label("", Vector2(18.0, 32.0), Vector2(176.0, 24.0), 11)
-	_home_scoop_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_home_scoop_result_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_home_scoop_result_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	_home_scoop_result_label.add_theme_color_override("font_color", Color(0.84, 0.98, 0.80, 1.0))
-	_home_scoop_panel.add_child(_home_scoop_result_label)
-
 	_home_coupon_button = null
 
-	_home_scoop_button = Button.new()
-	_home_scoop_button.text = UiText.HOME_SCOOPER_BUTTON
-	_home_scoop_button.position = Vector2(242.0, 36.0)
-	_home_scoop_button.size = Vector2(154.0, 26.0)
-	_home_scoop_button.add_theme_font_size_override("font_size", 15)
+	_home_scoop_result_label = _home_scoop_panel.get_node("ResultLabel") as Label
+	_home_scoop_button = _home_scoop_panel.get_node("ScoopButton") as TextureButton
+	_home_scoop_overlay = _home_scoop_panel.get_node("ScoopButton/CooldownOverlay") as ColorRect
+	_home_scoop_cd_label = _home_scoop_panel.get_node("ScoopButton/CooldownLabel") as Label
+	_home_scoop_count_debug_frame = _home_scoop_panel.get_node_or_null("ScoopButton/CountDebugFrame") as PanelContainer
+	_home_scoop_count_label = _home_scoop_panel.get_node_or_null("ScoopButton/CountDebugFrame/CountLabel") as Label
+	if _home_scoop_count_label == null:
+		_home_scoop_count_label = _home_scoop_panel.get_node_or_null("ScoopButton/CountLabel") as Label
+	_home_auto_scoop_toggle_button = _home_scoop_panel.get_node_or_null("AutoScoopToggleButton") as TextureButton
 	_home_scoop_button.modulate = Color(0.97, 0.93, 0.88, 1.0)
-	_home_scoop_button.pressed.connect(UiAudio.play_ui_click)
 	_home_scoop_button.pressed.connect(_on_home_scoop_pressed)
-	_home_scoop_panel.add_child(_home_scoop_button)
-
-	_home_scoop_overlay = ColorRect.new()
-	_home_scoop_overlay.color = Color(0.0, 0.0, 0.0, 0.42)
-	_home_scoop_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_home_scoop_overlay.visible = false
-	_home_scoop_button.add_child(_home_scoop_overlay)
-
-	_home_scoop_cd_label = Label.new()
-	_home_scoop_cd_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_home_scoop_cd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_home_scoop_cd_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_home_scoop_cd_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	_home_scoop_cd_label.visible = false
-	_home_scoop_button.add_child(_home_scoop_cd_label)
+	if _home_auto_scoop_toggle_button != null:
+		_home_auto_scoop_toggle_button.pressed.connect(_on_home_auto_scoop_toggle_pressed)
+		_refresh_home_auto_scoop_toggle_button()
+	_set_home_scoop_frame(0)
 
 	_skip_btn = _make_button("Skip", Vector2(SW - 104.0, 76.0), Vector2(90.0, 34.0))
 	_ui_layer.add_child(_skip_btn)
@@ -1250,26 +1271,19 @@ func _refresh_home_scoop_panel() -> void:
 		_home_exp_label.text = "Lv.%d  EXP %d / %d" % [level, exp, threshold]
 
 	var poop_count := GameState.player_data.poop_count
-	var cooling_down := _home_scoop_cooldown_remaining > 0.0
-	_home_scoop_button.disabled = cooling_down or poop_count <= 0
-	_home_scoop_button.text = "%s (%d)" % [UiText.HOME_SCOOPER_BUTTON, poop_count]
-	if poop_count <= 0 and _home_scoop_result_label != null and _home_scoop_result_label.text.is_empty():
-		_home_scoop_result_label.text = UiText.HOME_SCOOPER_EMPTY
+	_home_scoop_button.disabled = poop_count <= 0 or _home_scoop_request_in_flight or _home_scoop_animation_active
+	_home_scoop_button.modulate = Color(0.97, 0.93, 0.88, 1.0) if poop_count > 0 else Color(0.62, 0.60, 0.58, 1.0)
+	if poop_count <= 0 and _home_auto_scoop_enabled:
+		_set_home_auto_scoop_enabled(false)
+	if _home_scoop_count_label != null:
+		_home_scoop_count_label.text = _format_resource_count(poop_count)
+	if _home_scoop_result_label != null and _home_scoop_result_label.text.is_empty():
+		_home_scoop_result_label.visible = false
 
 	if _home_scoop_overlay != null and _home_scoop_cd_label != null:
-		if cooling_down:
-			var button_size := _home_scoop_button.size
-			var ratio := clampf(_home_scoop_cooldown_remaining / HOME_SCOOP_COOLDOWN, 0.0, 1.0)
-			_home_scoop_overlay.visible = true
-			_home_scoop_overlay.position = Vector2(button_size.x * (1.0 - ratio), 0.0)
-			_home_scoop_overlay.size = Vector2(button_size.x * ratio, button_size.y)
-			_home_scoop_cd_label.visible = false
-			_home_scoop_cd_label.position = Vector2.ZERO
-			_home_scoop_cd_label.size = button_size
-			_home_scoop_cd_label.text = "%.1f" % _home_scoop_cooldown_remaining
-		else:
-			_home_scoop_overlay.visible = false
-			_home_scoop_cd_label.visible = false
+		_home_scoop_overlay.visible = false
+		_home_scoop_cd_label.visible = false
+	_refresh_home_auto_scoop_toggle_button()
 
 
 func _layout_home_scoop_panel() -> void:
@@ -1280,10 +1294,10 @@ func _layout_home_scoop_panel() -> void:
 	if enhance_btn == null:
 		return
 	var target_center_x: float = enhance_btn.position.x + enhance_btn.size.x * 0.5
-	var target_button_x: float = target_center_x - (_home_scoop_button.position.x + _home_scoop_button.size.x * 0.5)
-	var target_button_y: float = enhance_btn.position.y - 50.0 - _home_scoop_button.size.y
+	var target_button_x: float = target_center_x - (_home_scoop_button.size.x * 0.5) + HOME_SCOOP_TEMPLATE_ENHANCE_CENTER_OFFSET_X
+	var target_button_y: float = NAV_Y - _home_scoop_button.size.y
 	_home_scoop_panel.position = Vector2(
-		target_button_x,
+		target_button_x - _home_scoop_button.position.x,
 		target_button_y - _home_scoop_button.position.y
 	)
 
@@ -1524,29 +1538,169 @@ func _toggle_overlay_scene(scene_path: String) -> void:
 
 
 func _on_home_scoop_pressed() -> void:
-	if _home_scoop_cooldown_remaining > 0.0 or GameState.player_data.poop_count <= 0:
+	_trigger_home_scoop(true)
+
+
+func _on_home_auto_scoop_toggle_pressed() -> void:
+	UiAudio.play_ui_click()
+	_set_home_auto_scoop_enabled(not _home_auto_scoop_enabled)
+
+
+func _set_home_auto_scoop_enabled(enabled: bool) -> void:
+	_home_auto_scoop_enabled = enabled
+	_refresh_home_auto_scoop_toggle_button()
+
+
+func _refresh_home_auto_scoop_toggle_button() -> void:
+	if _home_auto_scoop_toggle_button == null:
+		return
+	var toggle_texture: Texture2D = HOME_AUTO_SCOOP_TOGGLE_ON_TEXTURE if _home_auto_scoop_enabled else HOME_AUTO_SCOOP_TOGGLE_OFF_TEXTURE
+	_home_auto_scoop_toggle_button.texture_normal = toggle_texture
+	_home_auto_scoop_toggle_button.texture_pressed = toggle_texture
+	_home_auto_scoop_toggle_button.texture_hover = toggle_texture
+	_home_auto_scoop_toggle_button.texture_disabled = toggle_texture
+	_home_auto_scoop_toggle_button.texture_focused = toggle_texture
+	_home_auto_scoop_toggle_button.modulate = Color(1.0, 1.0, 1.0, 0.72) if GameState.player_data.poop_count <= 0 and not _home_auto_scoop_enabled else Color(1.0, 1.0, 1.0, 1.0)
+
+
+func _update_home_auto_scoop() -> void:
+	if not _home_auto_scoop_enabled:
+		return
+	if GameState.player_data.poop_count <= 0:
+		_set_home_auto_scoop_enabled(false)
+		return
+	if _home_scoop_request_in_flight or _home_scoop_animation_active or _home_scoop_cooldown_remaining > 0.0:
+		return
+	_trigger_home_scoop(false)
+
+
+func _get_home_auto_scoop_batch_size() -> int:
+	var profile: Dictionary = GameState.scooper_profile_data
+	if int(profile.get("autoScoopBatchSize", 0)) > 0:
+		return int(profile.get("autoScoopBatchSize", 1))
+	if int(GameState.idle_config.get("auto_scoop_batch_size", 0)) > 0:
+		return int(GameState.idle_config.get("auto_scoop_batch_size", 1))
+	var ability_summary: Dictionary = GameState.get_special_ability_summary()
+	if int(ability_summary.get("auto_scoop_batch_size", 0)) > 0:
+		return int(ability_summary.get("auto_scoop_batch_size", 1))
+	return 1
+
+
+func _trigger_home_scoop(play_click_sound: bool) -> void:
+	if _home_scoop_request_in_flight or _home_scoop_cooldown_remaining > 0.0 or _home_scoop_animation_active or GameState.player_data.poop_count <= 0:
 		return
 
-	_home_scoop_button.disabled = true
-	_home_scoop_result_label.text = ""
-	ApiClient.scoop_poop(1, func(ok: bool, data: Variant, err: Dictionary) -> void:
+	if play_click_sound:
+		UiAudio.play_ui_click()
+	if _home_scoop_result_label != null:
+		_home_scoop_result_label.text = ""
+		_home_scoop_result_label.visible = false
+	_home_scoop_profile_fetch_in_flight = false
+	_home_scoop_pending_result.clear()
+	_home_scoop_pending_profile.clear()
+	_home_scoop_pending_reward_entries.clear()
+	_home_scoop_previous_profile = GameState.scooper_profile_data.duplicate(true)
+	_home_scoop_previous_player_exp = GameState.player_data.scooper_exp
+	_home_scoop_previous_player_memory_shards = GameState.player_data.memory_shards
+	_home_scoop_previous_player_whiskers = GameState.player_data.whisker_shards
+	_home_scoop_request_in_flight = true
+	_home_scoop_response_ready = false
+	_home_scoop_cooldown_remaining = HOME_SCOOP_COOLDOWN
+	_start_home_scoop_animation()
+	_refresh_home_scoop_panel()
+	var scoop_count: int = mini(_get_home_auto_scoop_batch_size(), max(GameState.player_data.poop_count, 1))
+	ApiClient.scoop_poop_silent(scoop_count, func(ok: bool, data: Variant, err: Dictionary) -> void:
 		if not ok:
-			_home_scoop_result_label.text = str(err.get("message", UiText.HOME_SCOOPER_ERROR))
+			_home_scoop_request_in_flight = false
+			_home_scoop_response_ready = false
+			_home_scoop_profile_fetch_in_flight = false
+			_home_scoop_pending_profile.clear()
+			_home_scoop_pending_result.clear()
+			_home_scoop_pending_reward_entries.clear()
+			_home_scoop_cooldown_remaining = 0.0
+			_home_scoop_animation_active = false
+			_home_scoop_animation_elapsed = 0.0
+			_set_home_scoop_frame(0)
+			if _home_auto_scoop_enabled:
+				_set_home_auto_scoop_enabled(false)
+			if _home_scoop_result_label != null:
+				_home_scoop_result_label.text = str(err.get("message", UiText.HOME_SCOOPER_ERROR))
+				_home_scoop_result_label.visible = true
 			_refresh_home_scoop_panel()
 			return
 
 		var result: Dictionary = data if data is Dictionary else {}
+		_home_scoop_pending_result = result.duplicate(true)
 		var updated_profile: Variant = result.get("updatedProfile", {})
-		if updated_profile is Dictionary:
-			GameState.update_scooper_profile(updated_profile)
+		if updated_profile is Dictionary and not (updated_profile as Dictionary).is_empty():
+			_home_scoop_pending_profile = (updated_profile as Dictionary).duplicate(true)
+			_home_scoop_response_ready = true
+			_try_finalize_home_scoop_resolution()
+			return
 
-		var reward_entries := _build_scoop_reward_entries(result)
-		_home_scoop_result_label.text = ""
-		_home_scoop_cooldown_remaining = HOME_SCOOP_COOLDOWN
-		if not reward_entries.is_empty():
-			_queue_reward_floats(reward_entries)
-		_refresh_ui()
+		_home_scoop_response_ready = true
+		_try_finalize_home_scoop_resolution()
 	)
+
+
+func _build_home_scoop_frames() -> void:
+	_home_scoop_frames.clear()
+	if HOME_SCOOP_SHEET_TEXTURE == null:
+		return
+	for frame_index: int in range(HOME_SCOOP_FRAME_COUNT):
+		var atlas_texture: AtlasTexture = AtlasTexture.new()
+		atlas_texture.atlas = HOME_SCOOP_SHEET_TEXTURE
+		atlas_texture.region = Rect2(
+			float(frame_index * HOME_SCOOP_FRAME_SIZE.x),
+			0.0,
+			float(HOME_SCOOP_FRAME_SIZE.x),
+			float(HOME_SCOOP_FRAME_SIZE.y)
+		)
+		_home_scoop_frames.append(atlas_texture)
+
+
+func _set_home_scoop_frame(frame_index: int) -> void:
+	if _home_scoop_button == null or _home_scoop_frames.is_empty():
+		return
+	var safe_index: int = clampi(frame_index, 0, _home_scoop_frames.size() - 1)
+	_home_scoop_frame_index = safe_index
+	var frame_texture: Texture2D = _home_scoop_frames[safe_index]
+	_home_scoop_button.texture_normal = frame_texture
+	_home_scoop_button.texture_pressed = frame_texture
+	_home_scoop_button.texture_hover = frame_texture
+	_home_scoop_button.texture_disabled = frame_texture
+	_home_scoop_button.texture_focused = frame_texture
+
+
+func _start_home_scoop_animation() -> void:
+	if _home_scoop_frames.size() <= 1:
+		return
+	_home_scoop_animation_active = true
+	_home_scoop_animation_elapsed = 0.0
+	_set_home_scoop_frame(HOME_SCOOP_ANIMATION_START_FRAME)
+
+
+func _update_home_scoop_animation(delta: float) -> void:
+	if _home_scoop_frames.size() <= 1:
+		_home_scoop_animation_active = false
+		return
+	_home_scoop_animation_elapsed += delta
+	var animated_frame_count: int = _home_scoop_frames.size() - HOME_SCOOP_ANIMATION_START_FRAME
+	if animated_frame_count <= 0:
+		_home_scoop_animation_active = false
+		_set_home_scoop_frame(0)
+		return
+	var progress: float = clampf(_home_scoop_animation_elapsed / HOME_SCOOP_COOLDOWN, 0.0, 1.0)
+	var frame_offset: int = int(floor(progress * float(animated_frame_count)))
+	var frame_index: int = HOME_SCOOP_ANIMATION_START_FRAME + frame_offset
+	if frame_index >= _home_scoop_frames.size():
+		_home_scoop_animation_active = false
+		_home_scoop_animation_elapsed = 0.0
+		_set_home_scoop_frame(0)
+		_try_finalize_home_scoop_resolution()
+		return
+	if frame_index != _home_scoop_frame_index:
+		_set_home_scoop_frame(frame_index)
 
 
 func _on_home_coupon_pressed() -> void:
@@ -1556,51 +1710,126 @@ func _on_home_coupon_pressed() -> void:
 	_home_coupon_button.disabled = true
 	ApiClient.use_party_cheer_coupon(func(ok: bool, data: Variant, err: Dictionary) -> void:
 		if not ok:
-			_home_scoop_result_label.text = str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR))
+			if _home_scoop_result_label != null:
+				_home_scoop_result_label.text = str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR))
+				_home_scoop_result_label.visible = true
 			_refresh_home_scoop_panel()
 			return
 
 		GameState.adjust_party_cheer_coupon_count(-1)
 		var result: Dictionary = data if data is Dictionary else {}
-		_home_scoop_result_label.text = UiText.HOME_PARTY_COUPON_SUCCESS % int(result.get("goldGranted", 0))
+		if _home_scoop_result_label != null:
+			_home_scoop_result_label.text = ""
+			_home_scoop_result_label.visible = false
+		var reward_entries: Array[Dictionary] = []
+		var gold_granted: int = int(result.get("goldGranted", 0))
+		if gold_granted > 0:
+			reward_entries.append(_make_reward_float_entry(UiText.REWARD_GOLD, gold_granted, "gold"))
+		if not reward_entries.is_empty():
+			_queue_reward_floats(reward_entries)
 		_refresh_ui()
 	)
 
 
-func _build_scoop_reward_entries(result: Dictionary) -> Array[Dictionary]:
+func _build_scoop_reward_entries(
+	result: Dictionary,
+	previous_profile: Dictionary = {},
+	previous_player_exp: int = 0,
+	previous_player_memory_shards: int = 0,
+	previous_player_whiskers: int = 0,
+	final_profile: Dictionary = {}
+) -> Array[Dictionary]:
 	var reward_entries: Array[Dictionary] = []
 	var exp_gained := int(result.get("expGained", 0))
+	if exp_gained <= 0:
+		var updated_profile_dict: Dictionary = final_profile
+		if updated_profile_dict.is_empty():
+			var updated_profile: Variant = result.get("updatedProfile", {})
+			if updated_profile is Dictionary:
+				updated_profile_dict = updated_profile as Dictionary
+		if not updated_profile_dict.is_empty():
+			var old_level: int = int(previous_profile.get("scooperLevel", GameState.player_data.scooper_level))
+			var new_level: int = int(updated_profile_dict.get("scooperLevel", old_level))
+			var old_exp: int = int(previous_profile.get("scooperExp", previous_player_exp))
+			var new_exp: int = int(updated_profile_dict.get("scooperExp", previous_player_exp))
+			if new_level == old_level:
+				exp_gained = maxi(0, new_exp - old_exp)
+			else:
+				var old_threshold: int = int(previous_profile.get("expThreshold", max((old_level + 1) * 10, 1)))
+				exp_gained = maxi(0, (old_threshold - old_exp) + new_exp)
+	if exp_gained <= 0:
+		exp_gained = maxi(0, int(result.get("exp", 0)))
 	if exp_gained > 0:
 		reward_entries.append(_make_reward_float_entry(UiText.REWARD_EXP, exp_gained, "exp"))
 
 	var memory_shards_gained := int(result.get("memoryShardsGained", 0))
+	if memory_shards_gained <= 0:
+		var new_memory_shards: int = int(final_profile.get("memoryShards", result.get("memoryShards", GameState.player_data.memory_shards)))
+		memory_shards_gained = maxi(0, new_memory_shards - previous_player_memory_shards)
 	if memory_shards_gained > 0:
 		reward_entries.append(_make_reward_float_entry(UiText.REWARD_MEMORY_SHARDS, memory_shards_gained, "memory_shards"))
 
 	var whiskers_gained := int(result.get("WhiskersGained", result.get("whiskersGained", 0)))
+	if whiskers_gained <= 0:
+		var new_whiskers: int = int(final_profile.get("whiskers", result.get("whiskerShards", GameState.player_data.whisker_shards)))
+		whiskers_gained = maxi(0, new_whiskers - previous_player_whiskers)
 	if whiskers_gained > 0:
 		reward_entries.append(_make_reward_float_entry(UiText.REWARD_WHISKERS, whiskers_gained, "whiskers"))
 
 	return reward_entries
 
 
-func _format_scoop_result_text(result: Dictionary) -> String:
-	var parts: Array[String] = []
-	var exp_gained := int(result.get("expGained", 0))
-	if exp_gained > 0:
-		parts.append("%s +%d" % [UiText.REWARD_EXP, exp_gained])
+func _try_finalize_home_scoop_resolution() -> void:
+	if _home_scoop_animation_active:
+		return
+	if _home_scoop_request_in_flight and not _home_scoop_response_ready:
+		return
 
-	var memory_shards_gained := int(result.get("memoryShardsGained", 0))
-	if memory_shards_gained > 0:
-		parts.append("%s +%d" % [UiText.REWARD_MEMORY_SHARDS, memory_shards_gained])
+	if _home_scoop_pending_profile.is_empty() and _home_scoop_response_ready:
+		if _home_scoop_profile_fetch_in_flight:
+			return
+		_home_scoop_profile_fetch_in_flight = true
+		ApiClient.get_scooper_profile_silent(func(profile_ok: bool, profile_data: Variant, _profile_err: Dictionary) -> void:
+			_home_scoop_profile_fetch_in_flight = false
+			if profile_ok and profile_data is Dictionary:
+				_home_scoop_pending_profile = (profile_data as Dictionary).duplicate(true)
+			_try_finalize_home_scoop_resolution()
+		)
+		return
 
-	var whiskers_gained := int(result.get("WhiskersGained", result.get("whiskersGained", 0)))
-	if whiskers_gained > 0:
-		parts.append("%s +%d" % [UiText.REWARD_WHISKERS, whiskers_gained])
+	if _home_scoop_pending_reward_entries.is_empty() and not _home_scoop_pending_profile.is_empty():
+		_home_scoop_pending_reward_entries = _build_scoop_reward_entries(
+			_home_scoop_pending_result,
+			_home_scoop_previous_profile,
+			_home_scoop_previous_player_exp,
+			_home_scoop_previous_player_memory_shards,
+			_home_scoop_previous_player_whiskers,
+			_home_scoop_pending_profile
+		)
 
-	if parts.is_empty():
-		return UiText.HOME_SANDBOX_NONE_EXTRA
-	return UiText.HOME_SCOOPER_RESULT_PREFIX + " / ".join(parts)
+	if _home_scoop_pending_profile.is_empty() and _home_scoop_pending_reward_entries.is_empty():
+		_home_scoop_request_in_flight = false
+		_home_scoop_response_ready = false
+		_home_scoop_profile_fetch_in_flight = false
+		_refresh_home_scoop_panel()
+		return
+
+	if not _home_scoop_pending_profile.is_empty():
+		GameState.update_scooper_profile(_home_scoop_pending_profile)
+	if not _home_scoop_pending_reward_entries.is_empty():
+		_queue_reward_floats(_home_scoop_pending_reward_entries)
+
+	_home_scoop_request_in_flight = false
+	_home_scoop_response_ready = false
+	_home_scoop_profile_fetch_in_flight = false
+	_home_scoop_pending_profile.clear()
+	_home_scoop_pending_result.clear()
+	_home_scoop_pending_reward_entries.clear()
+	_home_scoop_previous_profile.clear()
+	_home_scoop_previous_player_exp = 0
+	_home_scoop_previous_player_memory_shards = 0
+	_home_scoop_previous_player_whiskers = 0
+	_refresh_ui()
 
 
 ## Show the idle rewards and cleanup dialog.

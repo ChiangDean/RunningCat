@@ -282,6 +282,7 @@ Examples:
 - request-in-flight flags
 - lineup draft edits
 - selected avatar card while form is dirty
+- home scoop animation / cooldown / auto-scoop enabled state
 
 Do not put one-screen-only widget state into `GameState` unless multiple scenes depend on it.
 
@@ -441,6 +442,7 @@ Current notes:
 - `BattleScene` is the persistent home battle surface mounted under `HomeShellScene`.
 - It now owns the top-left settings entry and home BGM playback.
 - It listens to `player_profile_changed` and `player_wallet_changed`.
+- It also owns the home scooper shortcut HUD, including `HomeScoopButtonTemplate.tscn`, scoop animation playback, and the auto-scoop toggle state.
 
 ### 9.3 Settings Center
 
