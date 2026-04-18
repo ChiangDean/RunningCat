@@ -4,6 +4,31 @@ extends RefCounted
 const UI_ROOT := "res://assets/sprites/ui/"
 const BACKGROUND_SHADER := preload("res://scripts/ui/background_desaturate_shader.gdshader")
 const DEFAULT_PROFILE_AVATAR_ID := "black_cat"
+const CAT_CARD_FRAME := UI_ROOT + "cards/cat_card_frame_homey_v1.png"
+const CAT_CARD_EMPTY_SILHOUETTE := UI_ROOT + "cards/cat_card_empty_silhouette_v1.png"
+const CAT_CARD_SQUARE_FRAMES := {
+	"common": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"uncommon": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"fine": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"special": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"precious": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"excellent": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"rare": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"epic": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"legendary": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"master": UI_ROOT + "cards/square/cat_card_square_common.png",
+}
+const CAT_TYPE_ICONS := {
+	"tank": UI_ROOT + "cards/type_icons/cat_type_tank_v1.png",
+	"assassin": UI_ROOT + "cards/type_icons/cat_type_assassin_v1.png",
+	"defensive": UI_ROOT + "cards/type_icons/cat_type_defensive_v1.png",
+	"flying": UI_ROOT + "cards/type_icons/cat_type_flying_v1.png",
+	"elemental": UI_ROOT + "cards/type_icons/cat_type_elemental_v1.png",
+	"cute": UI_ROOT + "cards/type_icons/cat_type_cute_v1.png",
+	"speed": UI_ROOT + "cards/type_icons/cat_type_speed_v1.png",
+	"bouncer": UI_ROOT + "cards/type_icons/cat_type_bouncer_v1.png",
+	"base": UI_ROOT + "cards/type_icons/cat_type_tank_v1.png",
+}
 
 const BACKGROUNDS := {
 	"activity": UI_ROOT + "activity_background_v1.png",
@@ -288,7 +313,10 @@ static func resolve_cat_icon(cat_id: String) -> Texture2D:
 
 
 static func get_profile_avatar_ids() -> Array[String]:
-	return PROFILE_AVATAR_IDS.duplicate()
+	var avatar_ids: Array[String] = []
+	for avatar_id_variant: Variant in PROFILE_AVATAR_IDS:
+		avatar_ids.append(str(avatar_id_variant))
+	return avatar_ids
 
 
 static func get_profile_avatar_label(avatar_id: String) -> String:
@@ -361,7 +389,10 @@ static func resolve_cat_battle_animation_spec(_cat_id: String, animation_name: S
 
 
 static func get_cat_battle_animation_names() -> Array[String]:
-	return CAT_BATTLE_ANIMATION_NAMES.duplicate()
+	var animation_names: Array[String] = []
+	for animation_name: String in CAT_BATTLE_ANIMATION_NAMES:
+		animation_names.append(animation_name)
+	return animation_names
 
 
 static func resolve_gacha_frame(result: Dictionary) -> Texture2D:
@@ -381,6 +412,24 @@ static func resolve_ability_icon(item: Dictionary) -> Texture2D:
 
 static func resolve_bundle_art(bundle: Dictionary) -> Texture2D:
 	return load_texture(SHOP_BUNDLES.get(int(bundle.get("bundleId", 0)), ""))
+
+
+static func resolve_cat_card_frame() -> Texture2D:
+	return load_texture(CAT_CARD_FRAME)
+
+
+static func resolve_cat_card_empty_silhouette() -> Texture2D:
+	return load_texture(CAT_CARD_EMPTY_SILHOUETTE)
+
+
+static func resolve_cat_card_square_frame(rarity_key: String) -> Texture2D:
+	var normalized: String = rarity_key.strip_edges().to_lower()
+	return load_texture(CAT_CARD_SQUARE_FRAMES.get(normalized, CAT_CARD_SQUARE_FRAMES["common"]))
+
+
+static func resolve_cat_type_icon(cat_type: String) -> Texture2D:
+	var normalized: String = cat_type.strip_edges().to_lower()
+	return load_texture(CAT_TYPE_ICONS.get(normalized, CAT_TYPE_ICONS["base"]))
 
 
 static func create_icon_rect(texture: Texture2D, size: Vector2) -> TextureRect:

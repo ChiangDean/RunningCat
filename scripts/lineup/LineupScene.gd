@@ -326,19 +326,21 @@ func _refresh_team() -> void:
 func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer:
 	var is_filled: bool = not member.is_empty()
 	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER if is_filled else SLOT_EMPTY_BORDER)
-	card.custom_minimum_size = Vector2(0.0, 166.0)
+	card.custom_minimum_size = Vector2(0.0, 236.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(4)
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(6)
 	card.add_child(margin)
 
 	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
+	column.add_theme_constant_override("separation", 6)
 	margin.add_child(column)
 
 	var cat_name: String = str(member.get("catDisplayName", "")) if is_filled else UiText.CONFIG_EMPTY_SLOT
 	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
 	var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
 	var cat_file_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id) if is_filled else ""
+	var team_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_file_id)
+	var cat_data: CatData = CatData.from_json_file(cat_file_id + ".json") if cat_file_id != "" else null
 
 	var top_row: HBoxContainer = HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 4)
@@ -354,68 +356,16 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 	top_name.text = cat_name if is_filled else UiText.CONFIG_TEAM_SLOT_EMPTY_NAME
 	top_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_name.clip_text = true
-	top_name.add_theme_font_size_override("font_size", 17)
+	top_name.add_theme_font_size_override("font_size", 15)
 	top_name.add_theme_color_override("font_color", SLOT_NAME_COLOR if is_filled else EMPTY_SLOT_TEXT_COLOR)
 	top_row.add_child(top_name)
 
-	var image_shell: PanelContainer = PanelContainer.new()
-	image_shell.custom_minimum_size = Vector2(0.0, 96.0)
-	image_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	image_shell.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(SLOT_IMAGE_BG if is_filled else SLOT_EMPTY_FILL, SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER, 14))
-	image_shell.mouse_filter = Control.MOUSE_FILTER_STOP
-	column.add_child(image_shell)
-
-	var image_button: Button = Button.new()
-	image_button.flat = true
-	image_button.text = UiText.CONFIG_EMPTY_SLOT_ICON if not is_filled else ""
-	image_button.custom_minimum_size = Vector2(0.0, 96.0)
-	image_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	image_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	image_button.clip_text = true
-	image_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	image_button.add_theme_color_override("font_color", EMPTY_SLOT_TEXT_COLOR)
-	image_shell.add_child(image_button)
-
-	var overlay_root: Control = Control.new()
-	overlay_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	image_shell.add_child(overlay_root)
-
-	var image_margin: MarginContainer = OverlaySceneChrome.make_content_margin(4)
-	image_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay_root.add_child(image_margin)
-
-	var icon_holder: CenterContainer = CenterContainer.new()
-	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_margin.add_child(icon_holder)
-
-	var team_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(cat_file_id)
-	if team_icon != null:
-		icon_holder.add_child(AssetResolver.create_icon_rect(team_icon, Vector2(72.0, 72.0)))
-	elif is_filled:
-		var fallback_name: Label = Label.new()
-		fallback_name.text = _get_cat_visual_fallback(cat_name)
-		fallback_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		fallback_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fallback_name.add_theme_font_size_override("font_size", 30)
-		fallback_name.add_theme_color_override("font_color", SLOT_NAME_COLOR)
-		icon_holder.add_child(fallback_name)
-
 	if is_filled:
 		var remove_btn: Button = Button.new()
-		remove_btn.text = "－"
+		remove_btn.text = "X"
 		remove_btn.custom_minimum_size = Vector2(22.0, 22.0)
 		remove_btn.add_theme_font_size_override("font_size", 11)
 		remove_btn.add_theme_color_override("font_color", Color(1.0, 0.97, 0.95, 1.0))
-		remove_btn.anchor_left = 1.0
-		remove_btn.anchor_top = 0.0
-		remove_btn.anchor_right = 1.0
-		remove_btn.anchor_bottom = 0.0
-		remove_btn.offset_left = -20.0
-		remove_btn.offset_top = -10.0
-		remove_btn.offset_right = 2.0
-		remove_btn.offset_bottom = 12.0
 		remove_btn.disabled = _api_in_flight
 		var remove_style: StyleBoxFlat = StyleBoxFlat.new()
 		remove_style.bg_color = SLOT_REMOVE_BG
@@ -439,21 +389,40 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 			remove_btn.pressed.connect(func() -> void:
 				_remove_member_from_draft(slot_index)
 			)
-		overlay_root.add_child(remove_btn)
+		top_row.add_child(remove_btn)
 
-	image_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var card_gui_input: Callable = Callable()
 	if is_filled and cat_file_id != "":
-		image_shell.gui_input.connect(func(event: InputEvent) -> void:
+		card_gui_input = func(event: InputEvent) -> void:
 			if not (event is InputEventMouseButton):
 				return
 			var mouse_event: InputEventMouseButton = event as InputEventMouseButton
 			if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
 				return
 			_show_skill_popup(cat_file_id)
-			image_shell.accept_event()
-		)
-	else:
-		image_button.disabled = true
+
+	var slot_card: PanelContainer = CatRosterCard.build({
+		"template_key": "lineup_team",
+		"title_text": cat_name,
+		"icon_texture": team_icon,
+		"fallback_text": _get_cat_visual_fallback(cat_name),
+		"level_value": int(member.get("catFoodLevel", 1)) if is_filled else 0,
+		"rank_value": int(member.get("rank", 0)) if is_filled else 0,
+		"cat_type": cat_data.cat_type if cat_data != null else "base",
+		"rarity_key": cat_data.rarity if cat_data != null else "common",
+		"whole_card_gui_input": card_gui_input,
+		"card_height": 160.0,
+		"icon_size": Vector2(92.0, 92.0),
+		"card_border": SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER,
+		"selected_card_border": SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER,
+		"title_color": Color(0.42, 0.28, 0.15, 1.0) if is_filled else EMPTY_SLOT_TEXT_COLOR,
+		"title_font_size": 13,
+		"show_type_icon": is_filled,
+		"show_rarity_label": is_filled,
+		"show_level_label": is_filled,
+		"show_rank_label": is_filled,
+	})
+	column.add_child(slot_card)
 
 	var delay_button: Button = Button.new()
 	delay_button.text = UiText.CONFIG_DELAY_BUTTON_FORMAT % [_format_delay_label(delay_seconds)] if is_filled else UiText.CONFIG_DELAY_BUTTON_EMPTY
@@ -469,7 +438,6 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 	column.add_child(delay_button)
 
 	return card
-
 
 func _refresh_cats_list() -> void:
 	for child: Node in _cats_container.get_children():
@@ -498,7 +466,8 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 	var action_disabled: bool = (not already_in and team_full) or _api_in_flight
 
 	var local_cat_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id)
-	var cat_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(local_cat_id)
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(local_cat_id)
+	var cat_data: CatData = CatData.from_json_file(local_cat_id + ".json") if local_cat_id != "" else null
 	var hold_timer: Timer = Timer.new()
 	hold_timer.one_shot = true
 	hold_timer.wait_time = CAT_CARD_HOLD_SECONDS
@@ -544,31 +513,20 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 
 	var card: PanelContainer = CatRosterCard.build({
 		"is_selected": already_in,
+		"template_key": "lineup_owned",
 		"title_text": display_name,
-		"show_title": false,
 		"icon_texture": cat_icon,
 		"fallback_text": _get_cat_visual_fallback(display_name),
-		"chips": [
-			UiText.CONFIG_CAT_LEVEL_ONLY_FORMAT % [lv],
-			UiText.CONFIG_CAT_STARS_FORMAT % [rank],
-		],
-		"show_action": false,
+		"level_value": lv,
+		"rank_value": rank,
+		"cat_type": cat_data.cat_type if cat_data != null else "base",
+		"rarity_key": cat_data.rarity if cat_data != null else "common",
 		"whole_card_gui_input": whole_card_gui_input,
-		"card_height": 228.0,
-		"art_height": 108.0,
-		"icon_size": Vector2(84.0, 84.0),
-		"card_fill": OverlaySceneChrome.CARD_FILL,
+		"card_height": 232.0,
+		"icon_size": Vector2(110.0, 110.0),
 		"card_border": OverlaySceneChrome.CARD_BORDER,
 		"selected_card_border": OverlaySceneChrome.PANEL_BORDER,
-		"selected_card_fill": Color(0.24, 0.20, 0.13, 0.98),
-		"art_fill": Color(0.19, 0.17, 0.15, 0.96),
-		"art_border": Color(0.90, 0.77, 0.46, 0.88),
-		"selected_art_border": Color(0.90, 0.77, 0.46, 0.88),
-		"selected_art_fill": Color(0.26, 0.21, 0.14, 0.98),
-		"title_color": SLOT_NAME_COLOR,
-		"selected_chip_fill": Color(0.42, 0.29, 0.14, 0.98),
-		"selected_chip_border": Color(0.98, 0.83, 0.48, 1.0),
-		"selected_chip_text_color": Color(1.0, 0.97, 0.86, 1.0),
+		"title_color": Color(0.42, 0.28, 0.15, 1.0),
 	})
 	card.add_child(hold_timer)
 	return card

@@ -413,7 +413,7 @@ func _format_rarity_name(rarity_key: String) -> String:
 
 
 func _get_rate_order() -> Array[String]:
-	return [
+	var rate_order: Array[String] = [
 		"legendary",
 		"epic",
 		"rare",
@@ -424,6 +424,7 @@ func _get_rate_order() -> Array[String]:
 		"uncommon",
 		"common",
 	]
+	return rate_order
 
 
 func _on_back_pressed() -> void:

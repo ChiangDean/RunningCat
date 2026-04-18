@@ -1,0 +1,117 @@
+[gd_scene format=3 uid="uid://ctx867rj8tjk2"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://dxmidvy4xsddl" path="res://assets/sprites/ui/cards/square/cat_card_square_common.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://b07pyvi25ndpc" path="res://assets/sprites/ui/character_refs/milk_cat/milk_cat_icon_v1.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://x10cog3l4qm" path="res://assets/sprites/ui/cards/type_icons/cat_type_tank_v1.png" id="6"]
+
+[node name="CatCardSquareTemplateEditor" type="Control" unique_id=946444046]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 560.0
+offset_bottom = 620.0
+theme = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=206118467]
+layout_mode = 0
+offset_right = 560.0
+offset_bottom = 620.0
+color = Color(0.196078, 0.160784, 0.121569, 1)
+
+[node name="CardFrame" type="TextureRect" parent="." unique_id=632954793]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 540.0
+offset_bottom = 540.0
+texture = ExtResource("2")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TypeIcon" type="TextureRect" parent="." unique_id=606194796]
+layout_mode = 0
+offset_left = 89.0
+offset_top = 85.0
+offset_right = 164.0
+offset_bottom = 160.0
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RarityLabel" type="Label" parent="." unique_id=418787166]
+layout_mode = 0
+offset_left = 163.0
+offset_top = 100.0
+offset_right = 399.0
+offset_bottom = 143.0
+theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
+theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.8)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 34
+text = "FINE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LevelLabel" type="Label" parent="." unique_id=1614593167]
+layout_mode = 0
+offset_left = 134.0
+offset_top = 440.0
+offset_right = 196.0
+offset_bottom = 476.0
+theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
+theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.9)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 24
+text = "LV.5"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Portrait" type="TextureRect" parent="." unique_id=1533466550]
+layout_mode = 0
+offset_left = 128.0
+offset_top = 140.0
+offset_right = 434.0
+offset_bottom = 433.0
+texture = ExtResource("5")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="." unique_id=785276717]
+layout_mode = 0
+offset_left = 168.0
+offset_top = 431.0
+offset_right = 388.0
+offset_bottom = 474.0
+theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
+theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.85)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 27
+text = "牛奶貓"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RankLabel" type="Label" parent="." unique_id=1408047271]
+layout_mode = 0
+offset_left = 389.0
+offset_top = 408.0
+offset_right = 481.0
+offset_bottom = 472.0
+theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
+theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.85)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 28
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EditorHint" type="Label" parent="." unique_id=2089830684]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 566.0
+offset_right = 540.0
+offset_bottom = 608.0
+theme_override_colors/font_color = Color(0.980392, 0.94902, 0.886275, 0.86)
+theme_override_font_sizes/font_size = 16
+text = "拖曳各節點即可調整 template，切換 Texture 可預覽不同 rarity 與 type icon。"
+horizontal_alignment = 1
+vertical_alignment = 1
