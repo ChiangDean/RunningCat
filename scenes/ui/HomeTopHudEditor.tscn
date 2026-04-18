@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://dsr2bhbkssjhs" path="res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://bakdwyhnhd6rl" path="res://assets/sprites/ui/rewards/diamonds.png" id="4"]
 [ext_resource type="Texture2D" uid="uid://dji0cn00sr1pf" path="res://assets/sprites/ui/rewards/gold.png.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/rewards/collision_coin.png" id="9"]
 [ext_resource type="Texture2D" uid="uid://dp37dv6b4djcv" path="res://assets/sprites/ui/skill_icons/strike_v1.png" id="6"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
@@ -151,7 +152,7 @@ offset_left = -186.0
 offset_top = 26.0
 offset_right = -125.0
 offset_bottom = 87.0
-texture = ExtResource("5")
+texture = ExtResource("9")
 expand_mode = 1
 stretch_mode = 5
 

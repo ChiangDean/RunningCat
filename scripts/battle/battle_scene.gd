@@ -7,6 +7,14 @@ const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_ho
 const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/HomeTopHudEditor.tscn")
 const HOME_SCOOP_TEMPLATE_SCENE := preload("res://scenes/ui/HomeScoopButtonTemplate.tscn")
 const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v3.png")
+const HOME_NAV_BAR_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_bar_v2.png")
+const HOME_NAV_TAB_IDLE_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_tab_idle_v2.png")
+const HOME_NAV_TAB_ACTIVE_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_tab_active_v2.png")
+const HOME_NAV_TAB_PRESSED_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_tab_pressed_v2.png")
+const HOME_NAV_ICON_SCOOPER_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_icon_scooper_v2.png")
+const HOME_NAV_ICON_ENHANCE_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_icon_enhance_v2.png")
+const HOME_NAV_ICON_ACTIVITY_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_icon_activity_v2.png")
+const HOME_NAV_ICON_SHOP_TEXTURE := preload("res://assets/sprites/ui/home/nav/home_nav_icon_shop_v2.png")
 const HOME_SCOOP_SHEET_TEXTURE := preload("res://assets/sprites/ui/home/scooper/clean_litter_button_sheet.png")
 const HOME_AUTO_SCOOP_TOGGLE_OFF_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_off.svg")
 const HOME_AUTO_SCOOP_TOGGLE_ON_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_on.svg")
@@ -34,6 +42,11 @@ const SH := 1280.0
 const BATTLE_Y := 750.0
 const NAV_H := 110.0
 const NAV_Y := SH - NAV_H
+const HOME_NAV_LABEL_IDLE := Color(0.92, 0.86, 0.76, 0.96)
+const HOME_NAV_LABEL_ACTIVE := Color(1.0, 0.95, 0.83, 1.0)
+const HOME_NAV_LABEL_OUTLINE := Color(0.17, 0.09, 0.04, 0.98)
+const HOME_NAV_ICON_IDLE_MODULATE := Color(0.95, 0.93, 0.88, 0.92)
+const HOME_NAV_ICON_ACTIVE_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 
 # Skill bar baseline positioned just below BATTLE_Y.
 const SKILL_BAR_Y := BATTLE_Y + 10.0
@@ -131,6 +144,8 @@ var _mail_badge: Label
 var _friend_btn: Button
 var _party_btn: Button
 var _chat_btn: Button
+var _backpack_btn: Button
+var _lineup_btn: Button
 var _chat_badge: Label
 var _resource_value_labels: Dictionary = {}
 var _battle_countdown_fill: ColorRect
@@ -318,6 +333,7 @@ func _build_ui() -> void:
 	_top_avatar_rect.material = avatar_circle_material
 	var profile_entry_button := Button.new()
 	profile_entry_button.flat = true
+	profile_entry_button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	profile_entry_button.focus_mode = Control.FOCUS_NONE
 	profile_entry_button.position = Vector2(0.0, 14.0)
 	profile_entry_button.size = Vector2(180.0, 170.0)
@@ -330,7 +346,7 @@ func _build_ui() -> void:
 	_top_exp_bar = top_bar_root.get_node("TopExpBar") as ProgressBar
 	_top_progress_value_label = top_bar_root.get_node("ExpValueLabel") as Label
 	_resource_value_labels["diamonds"] = top_bar_root.get_node("DiamondsPanel/Value") as Label
-	_resource_value_labels["gold"] = top_bar_root.get_node("GoldPanel/Value") as Label
+	_resource_value_labels["trap_points"] = top_bar_root.get_node("GoldPanel/Value") as Label
 	_resource_value_labels["power"] = top_bar_root.get_node("PowerPanel/Value") as Label
 	var stage_panel := _make_panel(
 		Vector2(188.0, 244.0),
@@ -402,8 +418,21 @@ func _build_ui() -> void:
 	_stats_btn.pressed.connect(_on_stats_btn_pressed)
 	_ui_layer.add_child(_stats_btn)
 
+	_backpack_btn = _make_button(UiText.NAV_BACKPACK,
+			Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 5.0),
+			Vector2(ACTION_STACK_W, ACTION_STACK_H))
+	_backpack_btn.pressed.connect(_on_nav_backpack)
+	_ui_layer.add_child(_backpack_btn)
+
+	_lineup_btn = _make_button(UiText.NAV_CONFIG,
+			Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 6.0),
+			Vector2(ACTION_STACK_W, ACTION_STACK_H))
+	_lineup_btn.pressed.connect(_on_nav_config)
+	_ui_layer.add_child(_lineup_btn)
+
 	_stats_panel = StatsPanel.new()
 	_stats_panel.visible = false
+	_stats_panel.z_index = 50
 	_ui_layer.add_child(_stats_panel)
 
 	_boss_btn = _make_button(UiText.HOME_BOSS, Vector2(252.0, 350.0), Vector2(216.0, 42.0))
@@ -556,31 +585,25 @@ func _build_ui() -> void:
 	_nav_canvas.layer = 20
 	add_child(_nav_canvas)
 
-	var nav_bg: Control = _make_panel(
-		Vector2(0.0, NAV_Y),
-		Vector2(SW, NAV_H),
-		Color(0.11, 0.08, 0.06, 0.94),
-		Color(0.52, 0.40, 0.24, 1.0)
-	)
+	var nav_bg: Control = _build_home_nav_background()
 	_nav_canvas.add_child(nav_bg)
 
 	var nav_items: Array = [
-		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper],
-		[UiText.NAV_CONFIG, "res://scenes/LineupScene.tscn", _on_nav_config],
-		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance],
-		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity],
-		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop],
-		[UiText.NAV_BACKPACK, "res://scenes/BackpackScene.tscn", _on_nav_backpack],
+		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper, HOME_NAV_ICON_SCOOPER_TEXTURE],
+		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance, HOME_NAV_ICON_ENHANCE_TEXTURE],
+		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity, HOME_NAV_ICON_ACTIVITY_TEXTURE],
+		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop, HOME_NAV_ICON_SHOP_TEXTURE],
 	]
-	var btn_w := SW / nav_items.size()
+	var btn_w: float = SW / float(nav_items.size())
 	for i in range(nav_items.size()):
-		var nav_btn: Button = _make_button(
+		var nav_btn: TextureButton = _build_home_nav_button(
 			nav_items[i][0],
-			Vector2(i * btn_w + 8.0, NAV_Y + 12.0),
-			Vector2(btn_w - 16.0, NAV_H - 24.0)
+			nav_items[i][3],
+			Vector2(i * btn_w + 6.0, NAV_Y + 12.0),
+			Vector2(btn_w - 12.0, NAV_H - 22.0)
 		)
 		nav_btn.pressed.connect(nav_items[i][2])
-		nav_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
+		_apply_home_nav_button_style(nav_btn, false)
 		_nav_canvas.add_child(nav_btn)
 		_nav_buttons[String(nav_items[i][1])] = nav_btn
 
@@ -920,6 +943,80 @@ func _make_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
 	return btn
 
 
+func _build_home_nav_background() -> Control:
+	var background: TextureRect = TextureRect.new()
+	background.position = Vector2(0.0, NAV_Y)
+	background.size = Vector2(SW, NAV_H)
+	background.texture = HOME_NAV_BAR_TEXTURE
+	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_SCALE
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return background
+
+
+func _build_home_nav_button(txt: String, icon_texture: Texture2D, pos: Vector2, sz: Vector2) -> TextureButton:
+	var btn: TextureButton = TextureButton.new()
+	btn.position = pos
+	btn.size = sz
+	btn.ignore_texture_size = true
+	btn.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	btn.stretch_mode = TextureButton.STRETCH_SCALE
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	btn.pressed.connect(UiAudio.play_ui_click)
+
+	var icon: TextureRect = TextureRect.new()
+	icon.name = "Icon"
+	icon.position = Vector2((sz.x - 46.0) * 0.5, 12.0)
+	icon.size = Vector2(46.0, 46.0)
+	icon.texture = icon_texture
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(icon)
+
+	var label: Label = Label.new()
+	label.name = "Label"
+	label.position = Vector2(10.0, sz.y - 28.0)
+	label.size = Vector2(sz.x - 20.0, 18.0)
+	label.text = txt
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	label.add_theme_constant_override("outline_size", 3)
+	label.add_theme_color_override("font_outline_color", HOME_NAV_LABEL_OUTLINE)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(label)
+
+	btn.set_meta("label_node", label)
+	btn.set_meta("icon_node", icon)
+	return btn
+
+
+func _apply_home_nav_button_style(button: TextureButton, is_active: bool) -> void:
+	if button == null:
+		return
+	button.texture_normal = HOME_NAV_TAB_ACTIVE_TEXTURE if is_active else HOME_NAV_TAB_IDLE_TEXTURE
+	button.texture_hover = HOME_NAV_TAB_ACTIVE_TEXTURE if is_active else HOME_NAV_TAB_IDLE_TEXTURE
+	button.texture_pressed = HOME_NAV_TAB_PRESSED_TEXTURE
+	button.texture_disabled = HOME_NAV_TAB_IDLE_TEXTURE
+
+	var label_variant: Variant = button.get_meta("label_node", null)
+	var label: Label = label_variant as Label
+	if label != null:
+		label.add_theme_font_size_override("font_size", 17 if is_active else 16)
+		label.add_theme_color_override("font_color", HOME_NAV_LABEL_ACTIVE if is_active else HOME_NAV_LABEL_IDLE)
+
+	var icon_variant: Variant = button.get_meta("icon_node", null)
+	var icon: TextureRect = icon_variant as TextureRect
+	if icon != null:
+		icon.modulate = HOME_NAV_ICON_ACTIVE_MODULATE if is_active else HOME_NAV_ICON_IDLE_MODULATE
+
+
 func _apply_skill_speed_button_style(button: Button, is_active: bool) -> void:
 	if button == null:
 		return
@@ -974,8 +1071,8 @@ func _refresh_resource_strip() -> void:
 		return
 	if _resource_value_labels.has("diamonds"):
 		_resource_value_labels["diamonds"].text = _format_resource_count(GameState.player_data.diamonds)
-	if _resource_value_labels.has("gold"):
-		_resource_value_labels["gold"].text = _format_resource_count(GameState.player_data.gold)
+	if _resource_value_labels.has("trap_points"):
+		_resource_value_labels["trap_points"].text = _format_resource_count(GameState.player_data.trap_points)
 	if _resource_value_labels.has("power"):
 		_resource_value_labels["power"].text = _format_resource_count(_cached_team_power)
 
@@ -1290,7 +1387,7 @@ func _layout_home_scoop_panel() -> void:
 	if _home_scoop_panel == null or _home_scoop_button == null:
 		return
 	var enhance_btn_variant: Variant = _nav_buttons.get("res://scenes/EnhanceScene.tscn")
-	var enhance_btn: Button = enhance_btn_variant as Button
+	var enhance_btn: TextureButton = enhance_btn_variant as TextureButton
 	if enhance_btn == null:
 		return
 	var target_center_x: float = enhance_btn.position.x + enhance_btn.size.x * 0.5
@@ -1305,12 +1402,11 @@ func _layout_home_scoop_panel() -> void:
 func _refresh_main_nav_state() -> void:
 	var active_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
 	for scene_path: String in _nav_buttons.keys():
-		var btn: Button = _nav_buttons[scene_path]
+		var btn: TextureButton = _nav_buttons[scene_path] as TextureButton
 		if btn == null:
 			continue
 		var is_active: bool = scene_path == active_scene_path
-		btn.modulate = Color(1.0, 0.93, 0.76, 1.0) if is_active else Color(0.97, 0.93, 0.88, 1.0)
-		btn.add_theme_font_size_override("font_size", 30 if is_active else 28)
+		_apply_home_nav_button_style(btn, is_active)
 
 
 func get_damage_fx_host() -> Node2D:
@@ -2005,7 +2101,7 @@ func _on_nav_config() -> void:
 
 
 func _open_settings_scene() -> void:
-	_toggle_overlay_scene("res://scenes/ConfigScene.tscn")
+	call_deferred("_toggle_overlay_scene", "res://scenes/ConfigScene.tscn")
 
 
 func _on_nav_enhance() -> void:
@@ -2046,6 +2142,7 @@ func _on_stats_btn_pressed() -> void:
 		return
 	_stats_panel.visible = not _stats_panel.visible
 	if _stats_panel.visible:
+		_stats_panel.move_to_front()
 		_stats_panel.refresh()
 
 

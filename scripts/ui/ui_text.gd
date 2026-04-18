@@ -84,7 +84,7 @@ const HOME_IDLE_NOT_READY := "乾淨貓砂盆"
 # Home navigation labels
 const NAV_SCOOPER := "鏟屎官"
 const NAV_CONFIG := "編隊"
-const NAV_ENHANCE := "強化"
+const NAV_ENHANCE := "主子"
 const NAV_ACTIVITY := "活動"
 const NAV_SHOP := "商店"
 const NAV_BACKPACK := "背包"
