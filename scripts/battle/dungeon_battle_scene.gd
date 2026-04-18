@@ -2,6 +2,8 @@ class_name DungeonBattleScene
 extends Node2D
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
+const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
 
 var MAX_CATS_ON_FIELD: int = 5
 
@@ -14,6 +16,9 @@ const NAV_Y := SH - NAV_H
 const SKILL_BAR_Y := BATTLE_Y + 10.0
 const SKILL_SLOT_W := 100.0
 const SKILL_SLOT_H := 90.0
+const RESULT_OVERLAY_OFFSET_Y := -200.0
+const RESULT_OVERLAY_START_SCALE := 0.56
+const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
 
 var _player_team: Node2D
 var _enemy_team: Node2D
@@ -26,7 +31,8 @@ var _speed_2x: Button
 var _speed_3x: Button
 var _skip_btn: Button
 var _level_label: Label
-var _result_display: Label
+var _result_backdrop: Control
+var _result_display: TextureRect
 var _skill_bar: Control
 
 var _dungeon_id: String = ""
@@ -154,12 +160,22 @@ func _build_ui() -> void:
 	retreat_btn.pressed.connect(_on_retreat_pressed)
 	_ui_layer.add_child(retreat_btn)
 
-	_result_display = Label.new()
-	_result_display.size = Vector2(SW, 80.0)
-	_result_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_result_display.add_theme_font_size_override("font_size", 64)
+	_result_backdrop = Control.new()
+	_result_backdrop.position = Vector2.ZERO
+	_result_backdrop.size = Vector2(SW, SH)
+	_result_backdrop.visible = false
+	_result_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_result_backdrop.pivot_offset = Vector2(SW * 0.5, SH * 0.5)
+	_ui_layer.add_child(_result_backdrop)
+
+	_result_display = TextureRect.new()
+	_result_display.position = Vector2(0.0, RESULT_OVERLAY_OFFSET_Y)
+	_result_display.size = Vector2(SW, SH)
+	_result_display.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_result_display.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_result_display.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_result_display.visible = false
-	_ui_layer.add_child(_result_display)
+	_result_backdrop.add_child(_result_display)
 
 
 func _build_skill_bar() -> Control:
@@ -309,7 +325,13 @@ func _highlight_speed_btn(active: Button) -> void:
 
 
 func _start_battle() -> void:
-	_result_display.visible = false
+	if _result_display != null:
+		_result_display.texture = null
+		_result_display.visible = false
+	if _result_backdrop != null:
+		_result_backdrop.visible = false
+		_result_backdrop.scale = Vector2.ONE
+		_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 	for child in _player_team.get_children():
 		child.queue_free()
@@ -372,11 +394,11 @@ func _on_skip_pressed() -> void:
 
 func _on_battle_finished(result: String) -> void:
 	if result == "WIN":
-		_show_result_text("勝利", Color(0.3, 1.0, 0.4, 1.0), 310.0)
+		_show_result_overlay(true)
 		await get_tree().create_timer(1.0).timeout
 		_handle_win()
 	else:
-		_show_result_text("敗北", Color(1.0, 0.3, 0.3, 1.0), 310.0)
+		_show_result_overlay(false)
 		await get_tree().create_timer(1.0).timeout
 		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
 
@@ -425,11 +447,22 @@ func _show_reward_popup(level: int, rewards: Dictionary) -> void:
 	)
 
 
-func _show_result_text(text: String, color: Color, y: float) -> void:
-	_result_display.text = text
-	_result_display.modulate = color
-	_result_display.position = Vector2(0.0, y)
+func _show_result_overlay(is_win: bool) -> void:
+	if _result_backdrop == null or _result_display == null:
+		return
+
+	_result_display.texture = RESULT_VICTORY_TEXTURE if is_win else RESULT_DEFEAT_TEXTURE
 	_result_display.visible = true
+	_result_backdrop.visible = true
+	_result_backdrop.scale = Vector2(RESULT_OVERLAY_START_SCALE, RESULT_OVERLAY_START_SCALE)
+	_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_result_backdrop.pivot_offset = _result_backdrop.size * 0.5
+
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(_result_backdrop, "modulate:a", 1.0, 0.10).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_backdrop, "scale", Vector2(RESULT_OVERLAY_OVERSHOOT_SCALE, RESULT_OVERLAY_OVERSHOOT_SCALE), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(_result_backdrop, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 
 
 func _on_retreat_pressed() -> void:

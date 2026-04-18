@@ -2,6 +2,8 @@ class_name ArenaBattleScene
 extends Node2D
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
+const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
 
 const MAX_CATS_ON_FIELD := 5
 
@@ -14,6 +16,9 @@ const NAV_Y := SH - NAV_H
 const SKILL_BAR_Y := BATTLE_Y + 10.0
 const SKILL_SLOT_W := 100.0
 const SKILL_SLOT_H := 90.0
+const RESULT_OVERLAY_OFFSET_Y := -200.0
+const RESULT_OVERLAY_START_SCALE := 0.56
+const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
 
 var _player_team: Node2D
 var _enemy_team: Node2D
@@ -416,24 +421,19 @@ func _show_result_popup(response: Dictionary) -> void:
 	var new_score := int(response.get("newScore", 0))
 	var rank_name := str(response.get("rankName", "青銅 III"))
 	var delta_str := ("+%d" % delta) if delta >= 0 else "%d" % delta
+	var result_overlay: Control = _show_result_overlay(is_win)
 
 	const POPUP_W := 440.0
-	const POPUP_H := 300.0
+	const POPUP_H := 228.0
 	var popup := PanelContainer.new()
-	popup.position = Vector2((SW - POPUP_W) / 2.0, (SH - POPUP_H) / 2.0)
+	popup.position = Vector2((SW - POPUP_W) / 2.0, 782.0)
 	popup.custom_minimum_size = Vector2(POPUP_W, POPUP_H)
 	_ui_layer.add_child(popup)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 14)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	popup.add_child(vbox)
-
-	var result_lbl := Label.new()
-	result_lbl.text = "勝利" if is_win else "失敗"
-	result_lbl.add_theme_font_size_override("font_size", 40)
-	result_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	result_lbl.add_theme_color_override("font_color", Color(0.3, 1.0, 0.4) if is_win else Color(1.0, 0.3, 0.3))
-	vbox.add_child(result_lbl)
 
 	var rank_lbl := Label.new()
 	rank_lbl.text = rank_name
@@ -469,9 +469,37 @@ func _show_result_popup(response: Dictionary) -> void:
 	area.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed:
 			area.queue_free()
+			result_overlay.queue_free()
 			popup.queue_free()
 			SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
 	)
+
+
+func _show_result_overlay(is_win: bool) -> Control:
+	var overlay := Control.new()
+	overlay.position = Vector2.ZERO
+	overlay.size = Vector2(SW, SH)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.pivot_offset = Vector2(SW * 0.5, SH * 0.5)
+	overlay.scale = Vector2(RESULT_OVERLAY_START_SCALE, RESULT_OVERLAY_START_SCALE)
+	overlay.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_ui_layer.add_child(overlay)
+
+	var display := TextureRect.new()
+	display.position = Vector2(0.0, RESULT_OVERLAY_OFFSET_Y)
+	display.size = Vector2(SW, SH)
+	display.texture = RESULT_VICTORY_TEXTURE if is_win else RESULT_DEFEAT_TEXTURE
+	display.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	display.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	display.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	overlay.add_child(display)
+
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(overlay, "modulate:a", 1.0, 0.10).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(overlay, "scale", Vector2(RESULT_OVERLAY_OVERSHOOT_SCALE, RESULT_OVERLAY_OVERSHOOT_SCALE), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(overlay, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	return overlay
 
 
 func _on_retreat_pressed() -> void:
