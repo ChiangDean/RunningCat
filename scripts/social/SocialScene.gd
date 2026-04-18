@@ -1,17 +1,22 @@
 extends Control
 
-const CHAT_SCENE := preload("res://scenes/chat/ChatScene.tscn")
+const ContentBottomSubmenu = preload("res://scripts/ui/content_bottom_submenu.gd")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 
 var _mode: String = "friend"
 var _friend_list: Dictionary = {}
+var _friend_gift_in_flight: bool = false
 var _party_detail: Dictionary = {}
 var _party_cheer_status: Dictionary = {}
+var _party_section: String = "overview"
+var _party_applications: Array = []
 
 var _root_box: VBoxContainer
 var _scroll: ScrollContainer
 var _content_box: VBoxContainer
+var _footer_panel: PanelContainer
+var _party_footer_buttons: Dictionary = {}
 
 
 func set_mode(mode: String) -> void:
@@ -41,36 +46,29 @@ func _build_shell() -> void:
 	root_panel.add_child(margin)
 
 	_root_box = VBoxContainer.new()
-	_root_box.add_theme_constant_override("separation", 14)
+	_root_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_root_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_root_box.add_theme_constant_override("separation", 12)
 	margin.add_child(_root_box)
 
-	var header: HBoxContainer = HBoxContainer.new()
-	header.add_theme_constant_override("separation", 10)
-	_root_box.add_child(header)
-
-	var title: Label = Label.new()
-	title.text = UiText.HOME_FRIEND_DIALOG_TITLE if _mode == "friend" else UiText.HOME_PARTY_DIALOG_TITLE
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	header.add_child(title)
-
-	var refresh_button: Button = Button.new()
-	refresh_button.text = UiText.SOCIAL_REFRESH
-	refresh_button.custom_minimum_size = Vector2(120.0, 44.0)
-	UiPalette.apply_button_kind(refresh_button, "secondary")
-	refresh_button.pressed.connect(_refresh_current)
-	header.add_child(refresh_button)
-
 	_scroll = ScrollContainer.new()
+	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_root_box.add_child(_scroll)
+	InertialScroller.attach(_scroll, "vertical")
 
 	_content_box = VBoxContainer.new()
 	_content_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_content_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content_box.add_theme_constant_override("separation", 14)
 	_scroll.add_child(_content_box)
+
+	_footer_panel = OverlaySceneChrome.make_card_panel()
+	_footer_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_footer_panel.custom_minimum_size = Vector2(0.0, 56.0)
+	_footer_panel.visible = false
+	_root_box.add_child(_footer_panel)
 
 
 func _refresh_current() -> void:
@@ -117,16 +115,20 @@ func _clear_content() -> void:
 
 func _render_friend() -> void:
 	_clear_content()
+	if _footer_panel != null:
+		_footer_panel.visible = false
 
 	var friend_rows: Array = _friend_list.get("friends", [])
 	var friends_card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
 	friends_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	friends_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content_box.add_child(friends_card)
 
 	var friends_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
 	friends_card.add_child(friends_margin)
 
 	var friends_box: VBoxContainer = VBoxContainer.new()
+	friends_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	friends_box.add_theme_constant_override("separation", 12)
 	friends_margin.add_child(friends_box)
 
@@ -157,8 +159,22 @@ func _render_friend() -> void:
 	gift_button.pressed.connect(_on_friend_gift_pressed)
 	button_row.add_child(gift_button)
 
+	var refresh_button: Button = _make_action_button(UiText.SOCIAL_REFRESH, "secondary")
+	refresh_button.pressed.connect(_refresh_friend)
+	button_row.add_child(refresh_button)
+
 	if friend_rows.is_empty():
-		friends_box.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
+		var empty_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
+		empty_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		empty_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		empty_panel.custom_minimum_size = Vector2(0.0, 220.0)
+		friends_box.add_child(empty_panel)
+
+		var empty_center: CenterContainer = CenterContainer.new()
+		empty_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		empty_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		empty_panel.add_child(empty_center)
+		empty_center.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
 		return
 
 	for item_variant: Variant in friend_rows:
@@ -170,9 +186,62 @@ func _render_friend() -> void:
 func _render_party() -> void:
 	_clear_content()
 	if _party_detail.is_empty():
+		if _footer_panel != null:
+			_footer_panel.visible = false
 		_render_party_empty()
 		return
-	_render_party_detail()
+	_render_party_footer()
+	if _party_section == "applications" and _is_party_leader():
+		_render_party_applications(_content_box)
+		return
+	_party_section = "overview"
+	_render_party_detail(_content_box)
+
+
+
+func _render_party_footer() -> void:
+	if _footer_panel == null:
+		return
+	_footer_panel.visible = true
+	var items: Array = [
+		{"key": "overview", "label": "\u968a\u4f0d\u8cc7\u8a0a"},
+	]
+	if _is_party_leader():
+		items.append({"key": "applications", "label": UiText.SOCIAL_PARTY_APPLICATIONS})
+	var submenu: Dictionary = ContentBottomSubmenu.build(self, {
+		"panel": _footer_panel,
+		"items": items,
+		"active_key": _party_section,
+		"button_pressed": Callable(self, "_on_party_section_selected"),
+	})
+	_party_footer_buttons = submenu.get("buttons", {})
+
+
+
+
+func _on_party_section_selected(section_key: String) -> void:
+	if _party_section == section_key:
+		return
+	_party_section = section_key
+	_refresh_party_footer_buttons()
+	if _party_section == "applications" and _is_party_leader():
+		_load_party_applications()
+		return
+	_render_party()
+
+
+func _refresh_party_footer_buttons() -> void:
+	ContentBottomSubmenu.refresh(_party_footer_buttons, _party_section)
+
+
+func _load_party_applications() -> void:
+	ApiClient.get_party_applications(int(_party_detail.get("partyId", 0)), func(success: bool, data: Variant, error: Dictionary) -> void:
+		if not success:
+			ToastManager.error(UiText.SOCIAL_PARTY_APPLICATIONS, _error_message(error))
+			return
+		_party_applications = data if data is Array else []
+		_render_party()
+	)
 
 
 func _render_party_empty() -> void:
@@ -227,10 +296,10 @@ func _render_party_empty() -> void:
 	))
 
 
-func _render_party_detail() -> void:
+func _render_party_detail(host: VBoxContainer) -> void:
 	var header_card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
 	header_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_content_box.add_child(header_card)
+	host.add_child(header_card)
 
 	var header_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
 	header_card.add_child(header_margin)
@@ -251,14 +320,12 @@ func _render_party_detail() -> void:
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	title_row.add_child(title)
 
-	var free_button: Button = _make_action_button(_get_free_cheer_button_text(), "confirm")
-	free_button.size_flags_horizontal = Control.SIZE_SHRINK_END
-	free_button.custom_minimum_size = Vector2(220.0, 52.0)
-	free_button.disabled = bool(_party_cheer_status.get("hasCheeredFree", false))
-	free_button.pressed.connect(func() -> void:
-		_cheer_party(false)
-	)
-	title_row.add_child(free_button)
+	if _is_party_leader():
+		var rename_button: Button = _make_action_button(UiText.SOCIAL_PARTY_RENAME, "secondary")
+		rename_button.custom_minimum_size = Vector2(140.0, 48.0)
+		rename_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+		rename_button.pressed.connect(_open_rename_party_dialog)
+		title_row.add_child(rename_button)
 
 	var subline: Label = Label.new()
 	subline.text = UiText.SOCIAL_PARTY_LEADER_FORMAT % str(_party_detail.get("leaderDisplayName", ""))
@@ -270,16 +337,16 @@ func _render_party_detail() -> void:
 	quick_row.add_theme_constant_override("separation", 10)
 	header_box.add_child(quick_row)
 
-	var chat_button: Button = _make_action_button(UiText.SOCIAL_PARTY_CHAT, "info")
-	chat_button.pressed.connect(_open_party_chat)
-	quick_row.add_child(chat_button)
+	var refresh_button: Button = _make_action_button(UiText.SOCIAL_REFRESH, "secondary")
+	refresh_button.pressed.connect(_refresh_party)
+	quick_row.add_child(refresh_button)
 
 	var invite_button: Button = _make_action_button(UiText.SOCIAL_PARTY_INVITE, "add")
 	invite_button.pressed.connect(_open_invite_party_dialog)
 	quick_row.add_child(invite_button)
 
 	var leave_button: Button = _make_action_button(
-		UiText.SOCIAL_PARTY_USURP if bool(_party_detail.get("isUsurpationEligible", false)) and not _is_party_leader() else UiText.SOCIAL_PARTY_LEAVE,
+		_get_party_exit_button_text(),
 		"danger"
 	)
 	leave_button.pressed.connect(_on_party_exit_pressed)
@@ -287,7 +354,7 @@ func _render_party_detail() -> void:
 
 	var member_card: PanelContainer = OverlaySceneChrome.make_card_panel()
 	member_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_content_box.add_child(member_card)
+	host.add_child(member_card)
 
 	var member_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
 	member_card.add_child(member_margin)
@@ -296,88 +363,84 @@ func _render_party_detail() -> void:
 	member_box.add_theme_constant_override("separation", 10)
 	member_margin.add_child(member_box)
 
+	var member_header: HBoxContainer = HBoxContainer.new()
+	member_header.add_theme_constant_override("separation", 10)
+	member_box.add_child(member_header)
+
 	var member_title: Label = Label.new()
 	member_title.text = UiText.SOCIAL_PARTY_MEMBER_LIST
+	member_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	member_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	member_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	member_box.add_child(member_title)
+	member_header.add_child(member_title)
+
+	member_header.add_child(_build_party_cheer_button())
 
 	for member_variant: Variant in members:
 		if member_variant is Dictionary:
 			member_box.add_child(_build_party_member_row(member_variant))
 
-	var action_card: PanelContainer = OverlaySceneChrome.make_card_panel()
-	action_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_content_box.add_child(action_card)
 
-	var action_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	action_card.add_child(action_margin)
+func _render_party_applications(host: VBoxContainer) -> void:
+	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	host.add_child(card)
 
-	var action_box: VBoxContainer = VBoxContainer.new()
-	action_box.add_theme_constant_override("separation", 12)
-	action_margin.add_child(action_box)
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
+	card.add_child(margin)
 
-	var action_title: Label = Label.new()
-	action_title.text = UiText.SOCIAL_PARTY_CHEER_TITLE
-	action_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	action_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	action_box.add_child(action_title)
+	var box: VBoxContainer = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	margin.add_child(box)
 
-	var cheer_grid: GridContainer = GridContainer.new()
-	cheer_grid.columns = 1
-	cheer_grid.add_theme_constant_override("h_separation", 10)
-	cheer_grid.add_theme_constant_override("v_separation", 10)
-	action_box.add_child(cheer_grid)
+	var title: Label = Label.new()
+	title.text = UiText.SOCIAL_PARTY_APPLICATIONS
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	box.add_child(title)
 
-	var ad_button: Button = _make_action_button(
-		UiText.SOCIAL_PARTY_AD_CHEER_DONE if bool(_party_cheer_status.get("hasCheeredAd", false)) else UiText.SOCIAL_PARTY_AD_CHEER,
-		"secondary"
+	if _party_applications.is_empty():
+		box.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
+		return
+
+	for item_variant: Variant in _party_applications:
+		if item_variant is Dictionary:
+			box.add_child(_build_party_application_row(item_variant))
+
+
+func _build_party_application_row(item_variant: Variant) -> Control:
+	var item: Dictionary = item_variant
+	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	panel.add_child(margin)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	margin.add_child(row)
+
+	var info: Label = Label.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.text = str(item.get("applicantDisplayName", ""))
+	row.add_child(info)
+
+	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
+	accept_button.custom_minimum_size = Vector2(96.0, 46.0)
+	accept_button.pressed.connect(func() -> void:
+		_accept_party_application(int(item.get("applicationId", 0)), str(item.get("applicantDisplayName", "")))
 	)
-	ad_button.disabled = bool(_party_cheer_status.get("hasCheeredAd", false))
-	ad_button.pressed.connect(func() -> void:
-		_cheer_party(true)
+	row.add_child(accept_button)
+
+	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "danger")
+	reject_button.custom_minimum_size = Vector2(96.0, 46.0)
+	reject_button.pressed.connect(func() -> void:
+		_reject_party_application(int(item.get("applicationId", 0)))
 	)
-	cheer_grid.add_child(ad_button)
+	row.add_child(reject_button)
 
-	if _is_party_leader():
-		var manage_card: PanelContainer = OverlaySceneChrome.make_card_panel()
-		manage_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_content_box.add_child(manage_card)
-
-		var manage_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-		manage_card.add_child(manage_margin)
-
-		var manage_box: VBoxContainer = VBoxContainer.new()
-		manage_box.add_theme_constant_override("separation", 12)
-		manage_margin.add_child(manage_box)
-
-		var manage_title: Label = Label.new()
-		manage_title.text = UiText.SOCIAL_PARTY_MANAGE
-		manage_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-		manage_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-		manage_box.add_child(manage_title)
-
-		var manage_grid: GridContainer = GridContainer.new()
-		manage_grid.columns = 2
-		manage_grid.add_theme_constant_override("h_separation", 10)
-		manage_grid.add_theme_constant_override("v_separation", 10)
-		manage_box.add_child(manage_grid)
-
-		var applications_button: Button = _make_action_button(UiText.SOCIAL_PARTY_APPLICATIONS, "info")
-		applications_button.pressed.connect(_show_party_applications)
-		manage_grid.add_child(applications_button)
-
-		var rename_button: Button = _make_action_button(UiText.SOCIAL_PARTY_RENAME, "secondary")
-		rename_button.pressed.connect(_open_rename_party_dialog)
-		manage_grid.add_child(rename_button)
-
-		var transfer_button: Button = _make_action_button(UiText.SOCIAL_PARTY_TRANSFER, "rank")
-		transfer_button.pressed.connect(_transfer_party)
-		manage_grid.add_child(transfer_button)
-
-		var disband_button: Button = _make_action_button(UiText.SOCIAL_PARTY_DISBAND, "danger")
-		disband_button.pressed.connect(_disband_party)
-		manage_grid.add_child(disband_button)
+	return panel
 
 
 func _build_friend_row(item_variant: Variant) -> PanelContainer:
@@ -404,7 +467,7 @@ func _build_friend_row(item_variant: Variant) -> PanelContainer:
 
 	var remove_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REMOVE, "danger")
 	remove_button.pressed.connect(func() -> void:
-		_remove_friend(int(item.get("friendUserId", 0)))
+		_confirm_remove_friend(int(item.get("friendUserId", 0)), str(item.get("displayName", "")))
 	)
 	box.add_child(remove_button)
 
@@ -469,7 +532,16 @@ func _build_party_member_row(member_variant: Variant) -> PanelContainer:
 	row.add_child(name_label)
 
 	if _is_party_leader() and not _is_current_player_member(member):
+		var member_name: String = str(member.get("displayName", ""))
+		var transfer_button: Button = _make_action_button(UiText.SOCIAL_PARTY_TRANSFER, "rank")
+		transfer_button.custom_minimum_size = Vector2(132.0, 46.0)
+		transfer_button.pressed.connect(func() -> void:
+			_confirm_transfer_party(int(member.get("userId", 0)), member_name)
+		)
+		row.add_child(transfer_button)
+
 		var kick_button: Button = _make_action_button(UiText.SOCIAL_PARTY_KICK, "danger")
+		kick_button.custom_minimum_size = Vector2(96.0, 46.0)
 		kick_button.pressed.connect(func() -> void:
 			_kick_party_member(int(member.get("userId", 0)))
 		)
@@ -499,7 +571,12 @@ func _make_empty_label(text_value: String) -> Label:
 
 
 func _on_friend_gift_pressed() -> void:
+	if _friend_gift_in_flight:
+		return
 	var friend_rows: Array = _friend_list.get("friends", [])
+	if friend_rows.is_empty():
+		ToastManager.hint(UiText.SOCIAL_FRIEND_GIFT_ALL, UiText.SOCIAL_EMPTY)
+		return
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_GIFT_ALL,
 		UiText.SOCIAL_FRIEND_GIFT_CONFIRM % friend_rows.size(),
@@ -508,14 +585,40 @@ func _on_friend_gift_pressed() -> void:
 
 
 func _confirm_friend_gift() -> void:
+	if _friend_gift_in_flight:
+		return
+	_friend_gift_in_flight = true
 	var callback := func(success: bool, data: Variant, error: Dictionary) -> void:
+		_friend_gift_in_flight = false
 		if not success:
 			ToastManager.error(UiText.SOCIAL_FRIEND_GIFT_ALL, _error_message(error))
 			return
 		var payload: Dictionary = data if data is Dictionary else {}
-		ToastManager.success(UiText.SOCIAL_FRIEND_GIFT_ALL, UiText.SOCIAL_FRIEND_GIFT_SUCCESS % int(payload.get("recipientCount", 0)))
+		var recipient_count: int = int(payload.get("recipientCount", 0))
+		if recipient_count <= 0:
+			ToastManager.hint(UiText.SOCIAL_FRIEND_GIFT_ALL, "\u76ee\u524d\u6c92\u6709\u53ef\u9001\u79ae\u7684\u597d\u53cb")
+			_refresh_friend()
+			return
+		ToastManager.success(UiText.SOCIAL_FRIEND_GIFT_ALL, UiText.SOCIAL_FRIEND_GIFT_SUCCESS % recipient_count)
 		_refresh_friend()
 	ApiClient.send_friend_gifts(callback)
+
+
+func _confirm_remove_friend(friend_user_id: int, friend_name: String) -> void:
+	var target_label: String = friend_name.strip_edges()
+	if target_label == "":
+		target_label = "\u9019\u4f4d\u597d\u53cb"
+	DialogManager.show_confirm(
+		UiText.SOCIAL_FRIEND_REMOVE,
+		"\u4f60\u5c07\u79fb\u9664 %s\u3002" % target_label,
+		func() -> void:
+			DialogManager.show_confirm(
+				UiText.SOCIAL_FRIEND_REMOVE,
+				"\u78ba\u8a8d\u5f8c\u9700\u8981\u91cd\u65b0\u52a0\u597d\u53cb\uff0c\u662f\u5426\u78ba\u5b9a\u79fb\u9664 %s\uff1f" % target_label,
+				func() -> void:
+					_remove_friend(friend_user_id)
+			)
+	)
 
 
 func _remove_friend(friend_user_id: int) -> void:
@@ -642,12 +745,6 @@ func _show_my_party_applications() -> void:
 	ApiClient.get_my_party_applications(callback)
 
 
-func _open_party_chat() -> void:
-	var chat_view: Control = CHAT_SCENE.instantiate()
-	chat_view.set_initial_channel("party")
-	DialogManager.show_info_node(UiText.SOCIAL_PARTY_CHAT, chat_view, Callable(), "large")
-
-
 func _open_invite_party_dialog() -> void:
 	_open_text_input(UiText.SOCIAL_PARTY_INVITE, UiText.SOCIAL_FRIEND_UID_PLACEHOLDER, Callable(self, "_submit_invite_party"))
 
@@ -686,19 +783,8 @@ func _use_party_coupon() -> void:
 
 
 func _show_party_applications() -> void:
-	var callback := func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_PARTY_APPLICATIONS, _error_message(error))
-			return
-		var info: Label = Label.new()
-		var lines: Array[String] = []
-		for item_variant: Variant in data:
-			if item_variant is Dictionary:
-				lines.append(str((item_variant as Dictionary).get("applicantDisplayName", "")))
-		info.text = "\n".join(lines) if not lines.is_empty() else UiText.SOCIAL_EMPTY
-		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		DialogManager.show_info_node(UiText.SOCIAL_PARTY_APPLICATIONS, info, Callable(), "medium")
-	ApiClient.get_party_applications(int(_party_detail.get("partyId", 0)), callback)
+	_party_section = "applications"
+	_load_party_applications()
 
 
 func _open_rename_party_dialog() -> void:
@@ -711,10 +797,28 @@ func _submit_rename_party(value: String) -> void:
 	ApiClient.update_party_name(int(_party_detail.get("partyId", 0)), value, callback)
 
 
-func _transfer_party() -> void:
+func _transfer_party(target_user_id: int) -> void:
 	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
 		_after_party_action(success, error, UiText.SOCIAL_PARTY_TRANSFER, UiText.SOCIAL_PARTY_TRANSFER_SUCCESS)
-	ApiClient.transfer_party_leadership(int(_party_detail.get("partyId", 0)), callback)
+	ApiClient.transfer_party_leadership(int(_party_detail.get("partyId", 0)), target_user_id, callback)
+
+
+func _confirm_transfer_party(target_user_id: int, member_name: String) -> void:
+	var target_label: String = member_name.strip_edges()
+	if target_label == "":
+		target_label = "\u9019\u4f4d\u968a\u54e1"
+	DialogManager.show_confirm(
+		UiText.SOCIAL_PARTY_TRANSFER,
+		"\u4f60\u5c07\u628a\u968a\u9577\u6b0a\u9650\u4ea4\u7d66 %s\u3002" % target_label,
+		func() -> void:
+			DialogManager.show_confirm(
+				UiText.SOCIAL_PARTY_TRANSFER,
+				"\u78ba\u8a8d\u5f8c\u4f60\u6703\u6539\u6210\u4e00\u822c\u968a\u54e1\uff0c\u662f\u5426\u78ba\u5b9a\u8f49\u8b93\u7d66 %s\uff1f" % target_label,
+				func() -> void:
+					_transfer_party(target_user_id)
+			)
+	)
+
 
 
 func _disband_party() -> void:
@@ -774,3 +878,55 @@ func _is_current_player_member(member: Dictionary) -> bool:
 func _get_free_cheer_button_text() -> String:
 	var remaining_count: int = 0 if bool(_party_cheer_status.get("hasCheeredFree", false)) else 1
 	return "%s(%d/1)" % [UiText.SOCIAL_PARTY_FREE_CHEER, remaining_count]
+
+
+func _build_party_cheer_button() -> Button:
+	var has_free: bool = bool(_party_cheer_status.get("hasCheeredFree", false))
+	var has_ad: bool = bool(_party_cheer_status.get("hasCheeredAd", false))
+	var button: Button
+	if not has_free:
+		button = _make_action_button("%s(1/1)" % UiText.SOCIAL_PARTY_FREE_CHEER, "confirm")
+		button.pressed.connect(func() -> void:
+			_cheer_party(false)
+		)
+	elif not has_ad:
+		button = _make_action_button("%s(1/1)" % UiText.SOCIAL_PARTY_AD_CHEER, "secondary")
+		button.pressed.connect(func() -> void:
+			_cheer_party(true)
+		)
+	else:
+		button = _make_action_button("%s(0/1)" % UiText.SOCIAL_PARTY_AD_CHEER, "secondary")
+		button.disabled = true
+	button.custom_minimum_size = Vector2(220.0, 52.0)
+	button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	return button
+
+
+func _get_party_exit_button_text() -> String:
+	if bool(_party_detail.get("isUsurpationEligible", false)) and not _is_party_leader():
+		return UiText.SOCIAL_PARTY_USURP
+	var member_variants: Array = _party_detail.get("members", [])
+	if _is_party_leader() and member_variants.size() <= 1:
+		return UiText.SOCIAL_PARTY_DISBAND
+	return UiText.SOCIAL_PARTY_LEAVE
+
+
+func _accept_party_application(application_id: int, applicant_name: String) -> void:
+	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
+		if not success:
+			ToastManager.error(UiText.SOCIAL_PARTY_APPLICATIONS, _error_message(error))
+			return
+		ToastManager.success(UiText.SOCIAL_PARTY_APPLICATIONS, UiText.SOCIAL_PARTY_APPLICATION_ACCEPT_SUCCESS % applicant_name)
+		_load_party_applications()
+		_refresh_party()
+	ApiClient.accept_party_application(application_id, callback)
+
+
+func _reject_party_application(application_id: int) -> void:
+	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
+		if not success:
+			ToastManager.error(UiText.SOCIAL_PARTY_APPLICATIONS, _error_message(error))
+			return
+		ToastManager.success(UiText.SOCIAL_PARTY_APPLICATIONS, UiText.SOCIAL_PARTY_APPLICATION_REJECT_SUCCESS)
+		_load_party_applications()
+	ApiClient.reject_party_application(application_id, callback)

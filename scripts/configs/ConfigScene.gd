@@ -1,6 +1,8 @@
 extends Control
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const InertialScroller = preload("res://scripts/ui/inertial_scroll.gd")
+const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const ADMIN_CATALOG_SCENE_PATH := "res://scenes/AdminCatalogScene.tscn"
 
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
@@ -10,11 +12,11 @@ const FIELD_BORDER := Color(0.42, 0.36, 0.26, 0.96)
 const SELECTED_BORDER := Color(0.92, 0.79, 0.44, 1.0)
 const UNSELECTED_BORDER := Color(0.42, 0.36, 0.26, 0.96)
 const GENDER_OPTIONS := [
-	{"label": "未指定", "value": "Unspecified"},
-	{"label": "男性", "value": "Male"},
-	{"label": "女性", "value": "Female"},
-	{"label": "非二元", "value": "NonBinary"},
-	{"label": "不透露", "value": "PreferNotToSay"},
+	{"label": "?????, "value": "Unspecified"},
+	{"label": "??鞎???, "value": "Male"},
+	{"label": "?鞈察????, "value": "Female"},
+	{"label": "?????, "value": "NonBinary"},
+	{"label": "?鞊??????", "value": "PreferNotToSay"},
 ]
 
 var _profile_dirty: bool = false
@@ -43,6 +45,10 @@ var _redeem_button: Button
 var _audio_value_labels: Dictionary = {}
 var _audio_sliders: Dictionary = {}
 var _audio_mute_boxes: Dictionary = {}
+var _active_section: String = "profile"
+var _submenu_buttons: Dictionary = {}
+var _section_content: VBoxContainer
+var _section_scroll: ScrollContainer
 
 
 func _ready() -> void:
@@ -54,37 +60,106 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	var chrome: Dictionary = OverlaySceneChrome.build(self, "config", Callable(self, "_on_back_pressed"), {
-		"show_dock": false,
-		"content_bottom": -(OverlaySceneChrome.HOME_MAIN_NAV_H + 14.0),
+		"show_dock": true,
+		"dock_items": _build_section_items(),
+		"active_key": _active_section,
+		"button_pressed": Callable(self, "_on_section_selected"),
 		"content_separation": 12,
 	})
 	var content_box: VBoxContainer = chrome.get("content_box") as VBoxContainer
+	_submenu_buttons = chrome.get("dock_buttons", {})
 
 	var title: Label = Label.new()
-	title.text = "設定中心"
+	title.text = "\u8a2d\u5b9a\u4e2d\u5fc3"
 	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	content_box.add_child(title)
 
-	var subtitle: Label = Label.new()
-	subtitle.text = "管理角色資料、帳號資訊與本機遊戲設定。"
-	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	subtitle.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	subtitle.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
-	content_box.add_child(subtitle)
 
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	content_box.add_child(scroll)
+	_section_scroll = ScrollContainer.new()
+	_section_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_section_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_section_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	content_box.add_child(_section_scroll)
+	InertialScroller.attach(_section_scroll, "vertical")
 
-	var body: VBoxContainer = VBoxContainer.new()
-	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 14)
-	scroll.add_child(body)
+	_section_content = VBoxContainer.new()
+	_section_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_section_content.add_theme_constant_override("separation", 12)
+	_section_scroll.add_child(_section_content)
 
-	body.add_child(_build_profile_section())
-	body.add_child(_build_account_section())
-	body.add_child(_build_game_settings_section())
+	_render_active_section()
+
+
+func _build_section_items() -> Array:
+	var items: Array = [
+		{"key": "profile", "label": "\u89d2\u8272\u8cc7\u6599"},
+		{"key": "account", "label": "\u5e33\u865f\u8cc7\u6599"},
+		{"key": "game", "label": "\u904a\u6232\u8a2d\u5b9a"},
+	]
+	if GameState.is_admin_session():
+		items.append({"key": "admin", "label": "Admin Catalog"})
+	return items
+
+
+func _on_section_selected(section_key: String) -> void:
+	if section_key == _active_section:
+		return
+	_active_section = section_key
+	_render_active_section()
+
+
+func _render_active_section() -> void:
+	if _section_content == null:
+		return
+	_clear_section_control_refs()
+	for child: Node in _section_content.get_children():
+		child.queue_free()
+
+	match _active_section:
+		"account":
+			_section_content.add_child(_build_account_section())
+		"game":
+			_section_content.add_child(_build_game_settings_section())
+		"admin":
+			if GameState.is_admin_session():
+				_section_content.add_child(_build_admin_section())
+			else:
+				_active_section = "profile"
+				_section_content.add_child(_build_profile_section())
+		_:
+			_section_content.add_child(_build_profile_section())
+
+	_refresh_submenu_buttons()
+	_apply_profile_data(_build_local_profile_snapshot())
+	_apply_audio_settings()
+	if is_instance_valid(_section_scroll):
+		_section_scroll.scroll_vertical = 0
+
+
+func _refresh_submenu_buttons() -> void:
+	SceneSubmenuBar.refresh(_submenu_buttons, _active_section)
+
+
+func _clear_section_control_refs() -> void:
+	_avatar_preview = null
+	_avatar_name_label = null
+	_avatar_buttons = {}
+	_display_name_input = null
+	_player_name_input = null
+	_bio_input = null
+	_birthday_input = null
+	_gender_option = null
+	_region_input = null
+	_save_profile_button = null
+	_save_profile_hint_label = null
+	_account_value_label = null
+	_player_uid_value_label = null
+	_provider_status_labels = {}
+	_redeem_input = null
+	_redeem_button = null
+	_audio_value_labels = {}
+	_audio_sliders = {}
+	_audio_mute_boxes = {}
 
 
 func _build_profile_section() -> Control:
@@ -96,7 +171,7 @@ func _build_profile_section() -> Control:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	column.add_child(_make_section_header("角色資料", "可設定頭像、暱稱、自介、生日與性別。"))
+	column.add_child(_make_section_header("????????", "?????????????????????????拆???鞊?????????????))
 
 	var avatar_row: HBoxContainer = HBoxContainer.new()
 	avatar_row.add_theme_constant_override("separation", 14)
@@ -133,7 +208,7 @@ func _build_profile_section() -> Control:
 	avatar_row.add_child(avatar_picker_shell)
 
 	var avatar_hint: Label = Label.new()
-	avatar_hint.text = "選擇預設頭像"
+	avatar_hint.text = "???????????"
 	avatar_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	avatar_picker_shell.add_child(avatar_hint)
 
@@ -146,10 +221,9 @@ func _build_profile_section() -> Control:
 	for avatar_id: String in AssetResolver.get_profile_avatar_ids():
 		avatar_grid.add_child(_build_avatar_card(avatar_id))
 
-	_display_name_input = _make_line_edit("請輸入暱稱")
-	_player_name_input = _make_line_edit("請輸入角色名稱")
+	_player_name_input = _make_line_edit("????????????)
 	_birthday_input = _make_line_edit("YYYY-MM-DD")
-	_region_input = _make_line_edit("例如：台北 / Kaohsiung")
+	_region_input = _make_line_edit("?雓???雓撥????/ Kaohsiung")
 
 	_bio_input = TextEdit.new()
 	_bio_input.custom_minimum_size = Vector2(0.0, 112.0)
@@ -161,19 +235,18 @@ func _build_profile_section() -> Control:
 	for option: Dictionary in GENDER_OPTIONS:
 		_gender_option.add_item(str(option.get("label", "")))
 
-	column.add_child(_build_field_row("暱稱", _display_name_input))
-	column.add_child(_build_field_row("角色名稱", _player_name_input))
-	column.add_child(_build_field_row("自介", _bio_input))
-	column.add_child(_build_field_row("生日", _birthday_input))
-	column.add_child(_build_field_row("性別", _gender_option))
-	column.add_child(_build_field_row("地區", _region_input))
+	column.add_child(_build_field_row("??????雓?", _player_name_input))
+	column.add_child(_build_field_row("???", _bio_input))
+	column.add_child(_build_field_row("???蝮?", _birthday_input))
+	column.add_child(_build_field_row("????", _gender_option))
+	column.add_child(_build_field_row("???", _region_input))
 
 	var save_row: HBoxContainer = HBoxContainer.new()
 	save_row.add_theme_constant_override("separation", 12)
 	column.add_child(save_row)
 
 	_save_profile_button = Button.new()
-	_save_profile_button.text = "儲存角色資料"
+	_save_profile_button.text = "???????????"
 	_save_profile_button.custom_minimum_size = Vector2(220.0, 50.0)
 	UiPalette.apply_button_kind(_save_profile_button, "confirm")
 	_save_profile_button.pressed.connect(UiAudio.play_ui_click)
@@ -181,7 +254,7 @@ func _build_profile_section() -> Control:
 	save_row.add_child(_save_profile_button)
 
 	_save_profile_hint_label = Label.new()
-	_save_profile_hint_label.text = "資料會同步到帳號。"
+	_save_profile_hint_label.text = "????????????蝘?????
 	_save_profile_hint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_save_profile_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_save_profile_hint_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
@@ -191,8 +264,6 @@ func _build_profile_section() -> Control:
 	_bind_profile_edit_events()
 	_refresh_avatar_selection()
 	_refresh_profile_save_state()
-	if GameState.is_admin_session():
-		column.add_child(_build_admin_catalog_row())
 	return section
 
 
@@ -205,11 +276,11 @@ func _build_account_section() -> Control:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	column.add_child(_make_section_header("帳號資料", "顯示目前綁定狀態，OAuth 入口先以佔位方式展示。"))
+	column.add_child(_make_section_header("????????", "???????怏???????????OAuth ??????????????????鞈ㄜ???))
 
-	_account_value_label = _make_readonly_value("載入中")
-	_player_uid_value_label = _make_readonly_value("載入中")
-	column.add_child(_build_field_row("帳號", _account_value_label))
+	_account_value_label = _make_readonly_value("?雓丐?????)
+	_player_uid_value_label = _make_readonly_value("?雓丐?????)
+	column.add_child(_build_field_row("????", _account_value_label))
 	column.add_child(_build_field_row("Player UID", _player_uid_value_label))
 
 	var provider_row: HBoxContainer = HBoxContainer.new()
@@ -220,12 +291,12 @@ func _build_account_section() -> Control:
 	provider_row.add_child(_build_provider_card("Apple"))
 
 	var redeem_title: Label = Label.new()
-	redeem_title.text = "兌換碼"
+	redeem_title.text = "?????
 	redeem_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	column.add_child(redeem_title)
 
 	var redeem_hint: Label = Label.new()
-	redeem_hint.text = "輸入活動碼即可直接領取獎勵。"
+	redeem_hint.text = "?雓???????????????????????????
 	redeem_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	redeem_hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 	column.add_child(redeem_hint)
@@ -234,12 +305,12 @@ func _build_account_section() -> Control:
 	redeem_row.add_theme_constant_override("separation", 10)
 	column.add_child(redeem_row)
 
-	_redeem_input = _make_line_edit("請輸入兌換碼")
+	_redeem_input = _make_line_edit("?????????偃???)
 	_redeem_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	redeem_row.add_child(_redeem_input)
 
 	_redeem_button = Button.new()
-	_redeem_button.text = "兌換"
+	_redeem_button.text = "???"
 	_redeem_button.custom_minimum_size = Vector2(132.0, 48.0)
 	UiPalette.apply_button_kind(_redeem_button, "confirm")
 	_redeem_button.pressed.connect(UiAudio.play_ui_click)
@@ -258,11 +329,11 @@ func _build_game_settings_section() -> Control:
 	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
-	column.add_child(_make_section_header("遊戲設定", "音量設定保存在本機裝置，不會覆蓋其他裝置。"))
+	column.add_child(_make_section_header("??頩???Ⅹ??", "?????Ⅹ?????????佇?憯??????謚???鞊???????????????))
 
-	column.add_child(_build_audio_row("master", "總音量"))
-	column.add_child(_build_audio_row("bgm", "背景音樂"))
-	column.add_child(_build_audio_row("sfx", "音效"))
+	column.add_child(_build_audio_row("master", "???瘀賊???))
+	column.add_child(_build_audio_row("bgm", "???????"))
+	column.add_child(_build_audio_row("sfx", "???"))
 
 	return section
 
@@ -306,6 +377,20 @@ func _build_admin_catalog_row() -> Control:
 	row.add_child(button)
 
 	return panel
+
+
+func _build_admin_section() -> Control:
+	var section: PanelContainer = OverlaySceneChrome.make_card_panel()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
+	section.add_child(margin)
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	margin.add_child(column)
+
+	column.add_child(_make_section_header("Admin Catalog", "??? Admin ?????????????????????????????橫???祈???鞊??謅?鞊堊??鞊啣???))
+	column.add_child(_build_admin_catalog_row())
+	return section
 
 
 func _build_avatar_card(avatar_id: String) -> Control:
@@ -368,14 +453,14 @@ func _build_provider_card(provider_name: String) -> Control:
 	column.add_child(title)
 
 	var status_label: Label = Label.new()
-	status_label.text = "即將開放"
+	status_label.text = "?????鞊?"
 	status_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 	column.add_child(status_label)
 	_provider_status_labels[provider_name] = status_label
 
 	var action_button: Button = Button.new()
-	action_button.text = "即將開放"
+	action_button.text = "?????鞊?"
 	action_button.disabled = true
 	action_button.custom_minimum_size = Vector2(0.0, 42.0)
 	UiPalette.apply_button_palette(action_button, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
@@ -422,7 +507,7 @@ func _build_audio_row(bus_key: String, label_text: String) -> Control:
 	_audio_value_labels[bus_key] = value_label
 
 	var mute_box: CheckBox = CheckBox.new()
-	mute_box.text = "靜音"
+	mute_box.text = "??垮??"
 	mute_box.toggled.connect(func(pressed: bool) -> void:
 		_on_audio_mute_toggled(bus_key, pressed)
 	)
@@ -483,9 +568,6 @@ func _make_readonly_value(text: String) -> LineEdit:
 
 
 func _bind_profile_edit_events() -> void:
-	_display_name_input.text_changed.connect(func(_value: String) -> void:
-		_mark_profile_dirty()
-	)
 	_player_name_input.text_changed.connect(func(_value: String) -> void:
 		_mark_profile_dirty()
 	)
@@ -508,7 +590,7 @@ func _load_profile_from_api() -> void:
 		_profile_loading = false
 		_refresh_profile_save_state()
 		if not success:
-			ToastManager.hint("設定資料使用快取", str(error.get("message", "目前改用本地快取顯示。")))
+			ToastManager.hint("??Ⅹ?????????????散??", str(error.get("message", "???怏???謘?????蹎????????????)))
 			return
 
 		if data is Dictionary:
@@ -524,14 +606,22 @@ func _apply_profile_data(data: Dictionary) -> void:
 	if _selected_avatar_id == "":
 		_selected_avatar_id = AssetResolver.DEFAULT_PROFILE_AVATAR_ID
 
-	_display_name_input.text = str(data.get("displayName", ""))
-	_player_name_input.text = str(data.get("playerName", ""))
-	_bio_input.text = str(data.get("bio", ""))
-	_birthday_input.text = str(data.get("birthday", ""))
-	_region_input.text = str(data.get("region", ""))
-	_set_gender_value(str(data.get("genderType", "Unspecified")))
-	_account_value_label.text = str(data.get("account", ""))
-	_player_uid_value_label.text = str(data.get("playerPublicId", ""))
+	if is_instance_valid(_display_name_input):
+		_display_name_input.text = str(data.get("displayName", ""))
+	if is_instance_valid(_player_name_input):
+		_player_name_input.text = str(data.get("playerName", ""))
+	if is_instance_valid(_bio_input):
+		_bio_input.text = str(data.get("bio", ""))
+	if is_instance_valid(_birthday_input):
+		_birthday_input.text = str(data.get("birthday", ""))
+	if is_instance_valid(_region_input):
+		_region_input.text = str(data.get("region", ""))
+	if is_instance_valid(_gender_option):
+		_set_gender_value(str(data.get("genderType", "Unspecified")))
+	if is_instance_valid(_account_value_label):
+		_account_value_label.text = str(data.get("account", ""))
+	if is_instance_valid(_player_uid_value_label):
+		_player_uid_value_label.text = str(data.get("playerPublicId", ""))
 	_refresh_provider_cards(data.get("linkedProviders", []))
 	_applying_profile_form = false
 	_profile_dirty = false
@@ -544,9 +634,9 @@ func _apply_audio_settings() -> void:
 	for bus_key: String in ["master", "bgm", "sfx"]:
 		var slider: HSlider = _audio_sliders.get(bus_key) as HSlider
 		var mute_box: CheckBox = _audio_mute_boxes.get(bus_key) as CheckBox
-		if slider != null:
+		if is_instance_valid(slider):
 			slider.value = float(settings.get("%sVolume" % bus_key, 1.0))
-		if mute_box != null:
+		if is_instance_valid(mute_box):
 			mute_box.button_pressed = bool(settings.get("%sMuted" % bus_key, false))
 		_refresh_audio_value_label(bus_key)
 
@@ -568,13 +658,15 @@ func _build_local_profile_snapshot() -> Dictionary:
 
 
 func _refresh_avatar_selection() -> void:
+	if not is_instance_valid(_avatar_preview) or not is_instance_valid(_avatar_name_label):
+		return
 	_avatar_preview.texture = AssetResolver.resolve_profile_avatar(_selected_avatar_id)
 	_avatar_name_label.text = AssetResolver.get_profile_avatar_label(_selected_avatar_id)
 	for avatar_id: String in _avatar_buttons.keys():
 		var refs: Dictionary = _avatar_buttons.get(avatar_id, {})
 		var panel: PanelContainer = refs.get("panel") as PanelContainer
 		var label: Label = refs.get("label") as Label
-		if panel == null or label == null:
+		if not is_instance_valid(panel) or not is_instance_valid(label):
 			continue
 		var is_selected: bool = avatar_id == _selected_avatar_id
 		panel.add_theme_stylebox_override(
@@ -592,41 +684,41 @@ func _refresh_provider_cards(linked_providers_variant: Variant) -> void:
 	var linked: Array = linked_providers_variant if linked_providers_variant is Array else []
 	for provider_name: String in _provider_status_labels.keys():
 		var status_label: Label = _provider_status_labels.get(provider_name) as Label
-		if status_label == null:
+		if not is_instance_valid(status_label):
 			continue
 		if linked.has(provider_name):
-			status_label.text = "已綁定"
+			status_label.text = "??頦????
 			status_label.add_theme_color_override("font_color", Color(0.72, 0.94, 0.72, 1.0))
 		else:
-			status_label.text = "即將開放"
+			status_label.text = "?????鞊?"
 			status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 
 
 func _refresh_profile_save_state() -> void:
-	if _save_profile_button == null:
+	if not is_instance_valid(_save_profile_button):
 		return
 	_save_profile_button.disabled = _profile_loading or _profile_saving or not _profile_dirty
 	if _profile_saving:
-		_save_profile_button.text = "儲存中..."
+		_save_profile_button.text = "?????.."
 	elif _profile_loading:
-		_save_profile_button.text = "載入中..."
+		_save_profile_button.text = "?雓丐?????.."
 	else:
-		_save_profile_button.text = "儲存角色資料"
+		_save_profile_button.text = "???????????"
 
-	if _save_profile_hint_label == null:
+	if not is_instance_valid(_save_profile_hint_label):
 		return
 	if _profile_saving:
-		_save_profile_hint_label.text = "正在同步角色資料..."
+		_save_profile_hint_label.text = "???????????????..."
 	elif _profile_dirty:
-		_save_profile_hint_label.text = "有未儲存的修改。"
+		_save_profile_hint_label.text = "???撕??????????????
 	else:
-		_save_profile_hint_label.text = "資料會同步到帳號。"
+		_save_profile_hint_label.text = "????????????蝘?????
 
 
 func _refresh_audio_value_label(bus_key: String) -> void:
 	var slider: HSlider = _audio_sliders.get(bus_key) as HSlider
 	var value_label: Label = _audio_value_labels.get(bus_key) as Label
-	if slider == null or value_label == null:
+	if not is_instance_valid(slider) or not is_instance_valid(value_label):
 		return
 	value_label.text = "%d%%" % int(round(slider.value * 100.0))
 
@@ -660,11 +752,11 @@ func _on_save_profile_pressed() -> void:
 
 	var validation_error: String = _validate_profile_form()
 	if validation_error != "":
-		ToastManager.error("角色資料有誤", validation_error)
+		ToastManager.error("????????????", validation_error)
 		return
 
 	var payload := {
-		"displayName": _display_name_input.text.strip_edges(),
+		"displayName": str(GameState.player_data.display_name).strip_edges(),
 		"playerName": _player_name_input.text.strip_edges(),
 		"avatarId": _selected_avatar_id,
 		"bio": _bio_input.text.strip_edges(),
@@ -682,14 +774,14 @@ func _on_save_profile_pressed() -> void:
 		if not success:
 			_profile_dirty = true
 			_refresh_profile_save_state()
-			ToastManager.error("角色資料儲存失敗", str(error.get("message", "請稍後再試。")))
+			ToastManager.error("???????????????", str(error.get("message", "??????祈?????謅????)))
 			return
 
 		if data is Dictionary:
 			var profile: Dictionary = data as Dictionary
 			GameState.apply_profile_response(profile)
 			_apply_profile_data(profile)
-		ToastManager.success("角色資料已更新")
+		ToastManager.success("??????????頦????)
 	)
 
 
@@ -699,18 +791,18 @@ func _on_redeem_pressed() -> void:
 
 	var code: String = _redeem_input.text.strip_edges()
 	if code == "":
-		ToastManager.error("請輸入兌換碼")
+		ToastManager.error("?????????偃???)
 		return
 
 	_redeem_in_flight = true
 	_redeem_button.disabled = true
-	_redeem_button.text = "兌換中..."
+	_redeem_button.text = "?????.."
 	ApiClient.redeem_code(code, func(success: bool, data: Variant, error: Dictionary) -> void:
 		_redeem_in_flight = false
 		_redeem_button.disabled = false
-		_redeem_button.text = "兌換"
+		_redeem_button.text = "???"
 		if not success:
-			ToastManager.error("兌換失敗", str(error.get("message", "請稍後再試。")))
+			ToastManager.error("???????", str(error.get("message", "??????祈?????謅????)))
 			return
 
 		var response: Dictionary = data if data is Dictionary else {}
@@ -719,7 +811,7 @@ func _on_redeem_pressed() -> void:
 			GameState.apply_wallet_snapshot(wallet_snapshot)
 		_redeem_input.text = ""
 		_show_redeem_result(response)
-		ToastManager.success("兌換成功", str(response.get("redeemedCode", "")))
+		ToastManager.success("??????", str(response.get("redeemedCode", "")))
 	)
 
 
@@ -735,9 +827,9 @@ func _show_redeem_result(response: Dictionary) -> void:
 			lines.append("%s x%d" % [display_name, int(reward.get("quantity", 0))])
 
 	if lines.is_empty():
-		lines.append("獎勵已發送到帳號。")
+		lines.append("???????頦????拆????????)
 
-	DialogManager.show_info("兌換成功", "\n".join(lines))
+	DialogManager.show_info("??????", "\n".join(lines))
 
 
 func _on_audio_slider_changed(bus_key: String, value: float) -> void:
@@ -750,19 +842,16 @@ func _on_audio_mute_toggled(bus_key: String, pressed: bool) -> void:
 
 
 func _validate_profile_form() -> String:
-	var display_name: String = _display_name_input.text.strip_edges()
 	var player_name: String = _player_name_input.text.strip_edges()
 	var birthday: String = _birthday_input.text.strip_edges()
 	var bio: String = _bio_input.text.strip_edges()
 
-	if display_name == "":
-		return "請填寫暱稱。"
 	if player_name == "":
-		return "請填寫角色名稱。"
+		return "????????????????
 	if bio.length() > 140:
-		return "自介最多 140 字。"
+		return "???????140 ?????
 	if birthday != "" and not _is_valid_birthday_text(birthday):
-		return "生日格式請使用 YYYY-MM-DD。"
+		return "???蝮??????????YYYY-MM-DD??
 	return ""
 
 

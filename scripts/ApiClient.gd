@@ -2,7 +2,7 @@ extends Node
 
 const POOL_SIZE := 3
 const REQUEST_TIMEOUT := 15.0
-const LOADING_LAYER := 90
+const LOADING_LAYER := 140
 const DEFAULT_LOADING_MESSAGE := "loading."
 const NGROK_SKIP_WARNING_HEADER := "ngrok-skip-browser-warning: true"
 
@@ -278,8 +278,8 @@ func disband_party(party_id: int, callback: Callable) -> void:
 	_api_delete("party/%d" % party_id, callback)
 
 
-func transfer_party_leadership(party_id: int, callback: Callable) -> void:
-	_api_post("party/%d/transfer-leadership" % party_id, {}, callback)
+func transfer_party_leadership(party_id: int, target_user_id: int, callback: Callable) -> void:
+	_api_post("party/%d/transfer-leadership" % party_id, {"targetUserId": target_user_id}, callback)
 
 
 func kick_party_member(party_id: int, target_user_id: int, callback: Callable) -> void:
