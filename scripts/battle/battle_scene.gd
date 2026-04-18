@@ -6,7 +6,7 @@ extends Node2D
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
 const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/HomeTopHudEditor.tscn")
 const HOME_SCOOP_TEMPLATE_SCENE := preload("res://scenes/ui/HomeScoopButtonTemplate.tscn")
-const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v2.png")
+const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v3.png")
 const HOME_SCOOP_SHEET_TEXTURE := preload("res://assets/sprites/ui/home/scooper/clean_litter_button_sheet.png")
 const HOME_AUTO_SCOOP_TOGGLE_OFF_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_off.svg")
 const HOME_AUTO_SCOOP_TOGGLE_ON_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_on.svg")
@@ -44,7 +44,7 @@ const SKILL_SLOT_H := 126.0
 # Stage and boss actions stay aligned with the result banner.
 const STAGE_BTN_Y := 310.0
 const TOP_BAR_FRAME_X := 26.0
-const TOP_BAR_FRAME_Y := 28.0
+const TOP_BAR_FRAME_Y := 18.0
 const ACTION_STACK_X := 586.0
 const ACTION_STACK_Y := 250.0
 const ACTION_STACK_W := 96.0
