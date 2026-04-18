@@ -15,6 +15,72 @@ const ART_FILL := Color(0.19, 0.17, 0.15, 0.96)
 const ART_BORDER := Color(0.90, 0.77, 0.46, 0.88)
 const DETAIL_DIALOG_CONTENT_W := 608.0
 
+
+class IdlePreviewPlayer:
+	extends Control
+
+	var frames: Array[Texture2D] = []
+	var frame_index: int = 0
+	var preview_rect: TextureRect
+	var frame_timer: Timer
+	var cooldown_timer: Timer
+
+	func setup(preview_size: Vector2, preview_frames: Array[Texture2D], fps: float) -> void:
+		custom_minimum_size = preview_size
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		frames = preview_frames
+
+		var center := CenterContainer.new()
+		center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(center)
+
+		preview_rect = TextureRect.new()
+		preview_rect.custom_minimum_size = preview_size
+		preview_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		preview_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		preview_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		preview_rect.texture = frames[0]
+		center.add_child(preview_rect)
+
+		if frames.size() <= 1:
+			return
+
+		frame_timer = Timer.new()
+		frame_timer.one_shot = false
+		frame_timer.wait_time = 1.0 / maxf(1.0, fps)
+		frame_timer.process_mode = Node.PROCESS_MODE_ALWAYS
+		frame_timer.timeout.connect(_on_frame_timer_timeout)
+		add_child(frame_timer)
+
+		cooldown_timer = Timer.new()
+		cooldown_timer.one_shot = true
+		cooldown_timer.wait_time = 10.0
+		cooldown_timer.process_mode = Node.PROCESS_MODE_ALWAYS
+		cooldown_timer.autostart = true
+		cooldown_timer.timeout.connect(_on_cooldown_timer_timeout)
+		add_child(cooldown_timer)
+
+	func _on_frame_timer_timeout() -> void:
+		if preview_rect == null or frames.is_empty():
+			return
+		frame_index += 1
+		if frame_index >= frames.size():
+			frame_timer.stop()
+			frame_index = 0
+			preview_rect.texture = frames[0]
+			if cooldown_timer != null:
+				cooldown_timer.start()
+			return
+		preview_rect.texture = frames[frame_index]
+
+	func _on_cooldown_timer_timeout() -> void:
+		if preview_rect == null or frames.size() <= 1:
+			return
+		frame_index = 0
+		preview_rect.texture = frames[0]
+		if frame_timer != null:
+			frame_timer.start()
+
 static func build_ui(scene) -> void:
 	var bg := AssetResolver.make_fullscreen_background("enhance")
 	scene.add_child(bg)
@@ -242,7 +308,6 @@ static func rebuild_detail_panel(scene) -> void:
 	left_column.add_theme_constant_override("separation", 8)
 	summary_row.add_child(left_column)
 
-	var cat_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(scene._selected_cat_id)
 	var icon_shell := PanelContainer.new()
 	icon_shell.custom_minimum_size = Vector2(152.0, 152.0)
 	icon_shell.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(ART_FILL, ART_BORDER, 14))
@@ -251,8 +316,7 @@ static func rebuild_detail_panel(scene) -> void:
 	var icon_center := CenterContainer.new()
 	icon_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	icon_shell.add_child(icon_center)
-	if cat_icon != null:
-		icon_center.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(120.0, 120.0)))
+	icon_center.add_child(_make_idle_preview(scene._selected_cat_id, Vector2(120.0, 120.0)))
 
 	var left_meta_row := HBoxContainer.new()
 	left_meta_row.add_theme_constant_override("separation", 8)
@@ -583,37 +647,58 @@ static func on_detail_dialog_closed(scene) -> void:
 
 
 static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_selected: bool) -> PanelContainer:
-	var cat_icon: Texture2D = AssetResolver.resolve_cat_showcase_art(cat_id)
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_id)
+	var cat_data: CatData = CatData.from_json_file(cat_id + ".json")
 	var select_button_bg: Color = Color(0.27, 0.29, 0.21, 0.96) if is_selected else UiPalette.BUTTON_PRIMARY_BG
 	var select_button_fg: Color = Color(0.88, 0.90, 0.74, 1.0) if is_selected else Color(0.16, 0.11, 0.05, 1.0)
 	return CatRosterCard.build({
 		"is_selected": is_selected,
+		"template_key": "enhance_list",
 		"title_text": Refresh.get_display_name(cat_id),
-		"show_title": false,
 		"icon_texture": cat_icon,
 		"fallback_text": Refresh.get_display_name(cat_id).substr(0, 1),
-		"chips": [
-			UiText.ENHANCE_CAT_LEVEL_FORMAT % [player_cat.cat_food_level],
-			UiText.ENHANCE_CAT_RANK_FORMAT % [player_cat.rank],
-		],
-		"show_action": false,
+		"level_value": player_cat.cat_food_level,
+		"rank_value": player_cat.rank,
+		"cat_type": cat_data.cat_type if cat_data != null else "base",
+		"rarity_key": cat_data.rarity if cat_data != null else "common",
 		"whole_card_pressed": Callable(scene, "_on_cat_button_pressed").bind(cat_id),
-		"card_fill": OverlaySceneChrome.CARD_FILL,
+		"card_height": 232.0,
+		"icon_size": Vector2(110.0, 110.0),
 		"card_border": OverlaySceneChrome.CARD_BORDER,
 		"selected_card_border": OverlaySceneChrome.PANEL_BORDER,
-		"selected_card_fill": Color(0.25, 0.21, 0.14, 0.98),
-		"art_fill": ART_FILL,
-		"art_border": OverlaySceneChrome.CARD_BORDER,
-		"selected_art_border": ART_BORDER,
-		"selected_art_fill": Color(0.27, 0.22, 0.14, 0.98),
-		"title_color": SLOT_NAME_COLOR,
-		"selected_chip_fill": Color(0.42, 0.29, 0.14, 0.98),
-		"selected_chip_border": Color(0.98, 0.83, 0.48, 1.0),
-		"selected_chip_text_color": Color(1.0, 0.97, 0.86, 1.0),
+		"title_color": Color(0.42, 0.28, 0.15, 1.0),
 		"button_bg": select_button_bg,
 		"button_fg": select_button_fg,
-		"icon_size": Vector2(86.0, 86.0),
 	})
+
+
+static func _make_idle_preview(cat_id: String, preview_size: Vector2) -> Control:
+	var idle_path: String = AssetResolver.resolve_cat_battle_animation_path(cat_id, "idle")
+	var idle_texture: Texture2D = AssetResolver.load_texture(idle_path)
+	if idle_texture == null:
+		var fallback := Control.new()
+		var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_id)
+		if cat_icon != null:
+			fallback.add_child(AssetResolver.create_icon_rect(cat_icon, preview_size))
+		return fallback
+
+	var animation_spec: Dictionary = AssetResolver.resolve_cat_battle_animation_spec(cat_id, "idle")
+	var frame_width: int = int(animation_spec.get("frame_width", 275))
+	var fps: float = float(animation_spec.get("fps", 8.0))
+	var sheet_width: int = idle_texture.get_width()
+	var sheet_height: int = idle_texture.get_height()
+	var frame_count: int = maxi(1, int(sheet_width / max(1, frame_width)))
+
+	var source_image: Image = idle_texture.get_image()
+	var frames: Array[Texture2D] = []
+	for frame_index: int in range(frame_count):
+		var frame_image: Image = source_image.get_region(Rect2i(frame_index * frame_width, 0, frame_width, sheet_height))
+		var frame_texture: ImageTexture = ImageTexture.create_from_image(frame_image)
+		frames.append(frame_texture)
+
+	var holder := IdlePreviewPlayer.new()
+	holder.setup(preview_size, frames, fps)
+	return holder
 
 
 static func _make_card_panel(accent: Color = OverlaySceneChrome.CARD_BORDER) -> PanelContainer:
