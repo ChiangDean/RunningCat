@@ -18,6 +18,8 @@ const HOME_NAV_ICON_SHOP_TEXTURE := preload("res://assets/sprites/ui/home/nav/ho
 const HOME_SCOOP_SHEET_TEXTURE := preload("res://assets/sprites/ui/home/scooper/clean_litter_button_sheet.png")
 const HOME_AUTO_SCOOP_TOGGLE_OFF_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_off.svg")
 const HOME_AUTO_SCOOP_TOGGLE_ON_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_on.svg")
+const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
+const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
 const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png.png")
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
 const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
@@ -97,8 +99,9 @@ const HOME_SCOOP_TEMPLATE_COUNT_LABEL_OUTLINE_SIZE := 4
 const HOME_SCOOP_TEMPLATE_RESULT_LABEL_OFFSET := Vector2(12.0, 196.0)
 const HOME_SCOOP_TEMPLATE_RESULT_LABEL_SIZE := Vector2(212.0, 24.0)
 const PARTY_COUPON_DISPLAY_CAP := 5
-const RESULT_BANNER_W := 296.0
-const RESULT_BANNER_H := 84.0
+const RESULT_OVERLAY_OFFSET_Y := -200.0
+const RESULT_OVERLAY_START_SCALE := 0.56
+const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
 const REWARD_FLOAT_START_Y := 620.0
 const REWARD_FLOAT_RISE := 168.0
 const REWARD_FLOAT_STEP_DELAY := 0.18
@@ -124,12 +127,8 @@ var _speed_3x: Button
 var _skip_btn: Button
 var _level_label: Label
 var _boss_btn: Button
-var _result_display: Label
+var _result_display: TextureRect
 var _result_backdrop: Control
-var _result_glow: Label
-var _result_shadow_label: Label
-var _result_streak_left: ColorRect
-var _result_streak_right: ColorRect
 var _skill_panel: Control
 var _skill_shadow: ColorRect
 var _skill_body: ColorRect
@@ -531,53 +530,19 @@ func _build_ui() -> void:
 	_skip_btn.visible = GameState.is_admin_session()
 
 	_result_backdrop = Control.new()
-	_result_backdrop.position = Vector2((SW - RESULT_BANNER_W) / 2.0, 356.0)
-	_result_backdrop.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
+	_result_backdrop.position = Vector2.ZERO
+	_result_backdrop.size = Vector2(SW, SH)
 	_result_backdrop.visible = false
+	_result_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_result_backdrop.pivot_offset = Vector2(SW * 0.5, SH * 0.5)
 	_ui_layer.add_child(_result_backdrop)
 
-	_result_streak_left = ColorRect.new()
-	_result_streak_left.position = Vector2(20.0, 38.0)
-	_result_streak_left.size = Vector2(116.0, 9.0)
-	_result_streak_left.color = Color(1.0, 1.0, 1.0, 0.0)
-	_result_streak_left.rotation_degrees = -18.0
-	_result_backdrop.add_child(_result_streak_left)
-
-	_result_streak_right = ColorRect.new()
-	_result_streak_right.position = Vector2(RESULT_BANNER_W - 136.0, 38.0)
-	_result_streak_right.size = Vector2(116.0, 9.0)
-	_result_streak_right.color = Color(1.0, 1.0, 1.0, 0.0)
-	_result_streak_right.rotation_degrees = 18.0
-	_result_backdrop.add_child(_result_streak_right)
-
-	_result_glow = Label.new()
-	_result_glow.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
-	_result_glow.position = Vector2.ZERO
-	_result_glow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_result_glow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_result_glow.add_theme_font_size_override("font_size", 78)
-	_result_glow.add_theme_constant_override("outline_size", 18)
-	_result_glow.visible = false
-	_result_backdrop.add_child(_result_glow)
-
-	_result_shadow_label = Label.new()
-	_result_shadow_label.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
-	_result_shadow_label.position = Vector2(6.0, 8.0)
-	_result_shadow_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_result_shadow_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_result_shadow_label.add_theme_font_size_override("font_size", 62)
-	_result_shadow_label.add_theme_constant_override("outline_size", 10)
-	_result_shadow_label.visible = false
-	_result_backdrop.add_child(_result_shadow_label)
-
-	_result_display = Label.new()
-	_result_display.size = Vector2(RESULT_BANNER_W, RESULT_BANNER_H)
-	_result_display.position = Vector2.ZERO
-	_result_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_result_display.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_result_display.add_theme_font_size_override("font_size", 66)
-	_result_display.add_theme_constant_override("outline_size", 10)
-	_result_display.add_theme_color_override("font_outline_color", Color(0.20, 0.09, 0.04, 0.98))
+	_result_display = TextureRect.new()
+	_result_display.size = Vector2(SW, SH)
+	_result_display.position = Vector2(0.0, RESULT_OVERLAY_OFFSET_Y)
+	_result_display.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_result_display.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_result_display.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_result_display.visible = false
 	_result_backdrop.add_child(_result_display)
 
@@ -1436,17 +1401,13 @@ func _refresh_mail_badge() -> void:
 # Battle flow
 
 func _start_battle() -> void:
-	_result_display.visible = false
-	if _result_glow != null:
-		_result_glow.visible = false
-	if _result_shadow_label != null:
-		_result_shadow_label.visible = false
-	if _result_streak_left != null:
-		_result_streak_left.color = Color(_result_streak_left.color.r, _result_streak_left.color.g, _result_streak_left.color.b, 0.0)
-	if _result_streak_right != null:
-		_result_streak_right.color = Color(_result_streak_right.color.r, _result_streak_right.color.g, _result_streak_right.color.b, 0.0)
+	if _result_display != null:
+		_result_display.texture = null
+		_result_display.visible = false
 	if _result_backdrop != null:
 		_result_backdrop.visible = false
+		_result_backdrop.scale = Vector2.ONE
+		_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_refresh_ui()
 
 	for child in _player_team.get_children():
@@ -1524,93 +1485,34 @@ func _on_battle_finished(result: String) -> void:
 	var is_boss := GameState.is_current_boss()
 
 	if result == "WIN":
-		_show_result_text(UiText.BATTLE_RESULT_WIN, Color(0.46, 0.98, 0.48, 1.0), 356.0)
+		_show_result_overlay(true)
 		GameState.advance_after_win()
 		await get_tree().create_timer(1.0).timeout
 		_start_battle()
 	else:
-		_show_result_text(UiText.BATTLE_RESULT_LOSE, Color(1.0, 0.42, 0.38, 1.0), 356.0)
+		_show_result_overlay(false)
 		if is_boss:
 			GameState.on_boss_fail()
 		await get_tree().create_timer(1.0).timeout
 		_start_battle()
 
 
-func _show_result_text(text: String, color: Color, y: float) -> void:
-	if _result_backdrop != null:
-		_result_backdrop.position = Vector2((SW - RESULT_BANNER_W) / 2.0, y + 26.0)
-		_result_backdrop.visible = true
-	_result_backdrop.scale = Vector2(0.54, 0.54)
-	_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 0.0)
-	_result_backdrop.rotation_degrees = -9.0 if text == UiText.BATTLE_RESULT_WIN else 9.0
+func _show_result_overlay(is_win: bool) -> void:
+	if _result_backdrop == null or _result_display == null:
+		return
 
-	var accent_color: Color = color
-	var glow_color: Color = color.lerp(Color(1.0, 0.98, 0.90, 1.0), 0.62)
-	var streak_color: Color = color.lerp(Color(1.0, 0.95, 0.80, 1.0), 0.50)
-	var shadow_color: Color = Color(0.12, 0.05, 0.03, 0.92)
-
-	if _result_glow != null:
-		_result_glow.text = text
-		_result_glow.position = Vector2(0.0, -3.0)
-		_result_glow.scale = Vector2(1.42, 1.42)
-		_result_glow.modulate = Color(1.0, 1.0, 1.0, 0.0)
-		_result_glow.add_theme_color_override("font_color", glow_color)
-		_result_glow.add_theme_color_override("font_outline_color", Color(1.0, 1.0, 1.0, 0.92))
-		_result_glow.visible = true
-
-	if _result_shadow_label != null:
-		_result_shadow_label.text = text
-		_result_shadow_label.position = Vector2(10.0, 20.0)
-		_result_shadow_label.scale = Vector2(1.10, 1.10)
-		_result_shadow_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
-		_result_shadow_label.add_theme_color_override("font_color", shadow_color)
-		_result_shadow_label.add_theme_color_override("font_outline_color", Color(0.02, 0.01, 0.01, 0.95))
-		_result_shadow_label.visible = true
-
-	_result_display.text = text
-	_result_display.position = Vector2(0.0, -4.0)
-	_result_display.scale = Vector2(0.60, 0.60)
-	_result_display.modulate = Color(1.0, 1.0, 1.0, 0.0)
-	_result_display.add_theme_color_override("font_color", accent_color)
-	_result_display.add_theme_color_override("font_outline_color", Color(0.20, 0.09, 0.04, 0.98))
+	_result_display.texture = RESULT_VICTORY_TEXTURE if is_win else RESULT_DEFEAT_TEXTURE
 	_result_display.visible = true
-
-	if _result_streak_left != null:
-		_result_streak_left.color = Color(streak_color.r, streak_color.g, streak_color.b, 0.0)
-		_result_streak_left.scale = Vector2(0.12, 1.0)
-		_result_streak_left.position = Vector2(42.0, 40.0)
-	if _result_streak_right != null:
-		_result_streak_right.color = Color(streak_color.r, streak_color.g, streak_color.b, 0.0)
-		_result_streak_right.scale = Vector2(0.12, 1.0)
-		_result_streak_right.position = Vector2(RESULT_BANNER_W - 158.0, 40.0)
+	_result_backdrop.visible = true
+	_result_backdrop.scale = Vector2(RESULT_OVERLAY_START_SCALE, RESULT_OVERLAY_START_SCALE)
+	_result_backdrop.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_result_backdrop.pivot_offset = _result_backdrop.size * 0.5
 
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(_result_backdrop, "modulate:a", 1.0, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_backdrop, "position:y", y, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_backdrop, "scale", Vector2(1.18, 1.18), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_backdrop, "rotation_degrees", 0.0, 0.20).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_display, "modulate:a", 1.0, 0.05).set_delay(0.02).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_display, "scale", Vector2(1.28, 1.28), 0.12).set_delay(0.02).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_shadow_label, "modulate:a", 0.82, 0.07).set_delay(0.01).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_shadow_label, "position:y", 10.0, 0.16).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_glow, "modulate:a", 1.0, 0.06).set_delay(0.00).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_result_glow, "scale", Vector2(1.06, 1.06), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	if _result_streak_left != null:
-		tween.tween_property(_result_streak_left, "color:a", 0.98, 0.04).set_delay(0.03).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-		tween.tween_property(_result_streak_left, "scale:x", 1.0, 0.12).set_delay(0.03).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	if _result_streak_right != null:
-		tween.tween_property(_result_streak_right, "color:a", 0.98, 0.04).set_delay(0.03).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-		tween.tween_property(_result_streak_right, "scale:x", 1.0, 0.12).set_delay(0.03).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	tween.chain().tween_property(_result_backdrop, "scale", Vector2(0.98, 0.98), 0.10).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(_result_display, "scale", Vector2(0.96, 0.96), 0.09).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(_result_glow, "modulate:a", 0.56, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tween.chain().tween_property(_result_backdrop, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(_result_display, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-	if _result_streak_left != null:
-		tween.parallel().tween_property(_result_streak_left, "color:a", 0.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	if _result_streak_right != null:
-		tween.parallel().tween_property(_result_streak_right, "color:a", 0.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.tween_property(_result_backdrop, "modulate:a", 1.0, 0.10).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_result_backdrop, "scale", Vector2(RESULT_OVERLAY_OVERSHOOT_SCALE, RESULT_OVERLAY_OVERSHOOT_SCALE), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(_result_backdrop, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 
 
 func _on_challenge_boss_pressed() -> void:
