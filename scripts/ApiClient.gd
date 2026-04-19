@@ -168,6 +168,13 @@ func update_profile_me(payload: Dictionary, callback: Callable) -> void:
 	_api_put("profile/me", payload, callback)
 
 
+func revoke_refresh_token(refresh_token: String, reason: String, callback: Callable) -> void:
+	_api_post("auth/revoke", {
+		"refreshToken": refresh_token,
+		"reason": reason,
+	}, callback)
+
+
 func redeem_code(code: String, callback: Callable) -> void:
 	_api_post("redeem-codes/redeem", {"code": code}, callback)
 

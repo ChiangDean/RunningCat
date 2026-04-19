@@ -3,7 +3,9 @@ extends Control
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const InertialScroller = preload("res://scripts/ui/inertial_scroll.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+
 const ADMIN_CATALOG_SCENE_PATH := "res://scenes/AdminCatalogScene.tscn"
+const START_SCENE_PATH := "res://scenes/StartScene.tscn"
 
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
 const SECTION_HINT_COLOR := Color(0.84, 0.80, 0.72, 0.88)
@@ -11,6 +13,240 @@ const FIELD_BG := Color(0.14, 0.12, 0.11, 0.98)
 const FIELD_BORDER := Color(0.42, 0.36, 0.26, 0.96)
 const SELECTED_BORDER := Color(0.92, 0.79, 0.44, 1.0)
 const UNSELECTED_BORDER := Color(0.42, 0.36, 0.26, 0.96)
+
+const PROFILE_NAME_MAX_LENGTH := 15
+const BIO_MAX_LENGTH := 140
+const BIRTHDAY_MIN_YEAR := 1900
+
+const OPTIONAL_TEXT := "\u9078\u586b"
+const EMPTY_SELECT_TEXT := "\u672a\u8a2d\u5b9a"
+const AVATAR_CHANGE_BUTTON_TEXT := "\u66f4\u63db\u982d\u50cf"
+const AVATAR_DIALOG_TITLE := "\u9078\u64c7\u982d\u50cf"
+const AVATAR_DIALOG_HINT := "\u9ede\u9078\u60f3\u4f7f\u7528\u7684\u73a9\u5bb6\u982d\u50cf\u3002"
+const BIRTHDAY_DIALOG_TITLE := "\u9078\u64c7\u751f\u65e5"
+const BIRTHDAY_DIALOG_HINT := "\u751f\u65e5\u70ba\u9078\u586b\uff0c\u53ef\u4ee5\u4fdd\u7559\u70ba\u7a7a\u767d\u3002"
+const BIRTHDAY_PICK_BUTTON_TEXT := "\u9078\u64c7\u65e5\u671f"
+const BIRTHDAY_CLEAR_BUTTON_TEXT := "\u6e05\u9664"
+const BIRTHDAY_YEAR_LABEL := "\u5e74"
+const BIRTHDAY_MONTH_LABEL := "\u6708"
+const BIRTHDAY_DAY_LABEL := "\u65e5"
+const BIRTHDAY_FUTURE_ERROR := "\u751f\u65e5\u4e0d\u80fd\u665a\u65bc\u4eca\u5929\u3002"
+const REGION_DIALOG_TITLE := "\u9078\u64c7\u5730\u5340"
+const REGION_DIALOG_HINT := "\u8acb\u5f9e\u570b\u5bb6\u6e05\u55ae\u4e2d\u9078\u64c7\uff0c\u4e5f\u53ef\u4ee5\u4fdd\u7559\u70ba\u7a7a\u767d\u3002"
+const REGION_PICK_BUTTON_TEXT := "\u9078\u64c7\u5730\u5340"
+const REGION_CLEAR_BUTTON_TEXT := "\u6e05\u9664"
+const ACCOUNT_UID_COPY_BUTTON_TEXT := "\u8907\u88fd"
+const ACCOUNT_UID_COPY_SUCCESS := "\u5df2\u8907\u88fd Player UID"
+const ACCOUNT_UID_COPY_EMPTY := "\u76ee\u524d\u6c92\u6709 Player UID"
+const ACCOUNT_UID_HINT := "\u597d\u53cb\u8207\u7d44\u968a\u641c\u5c0b\u6703\u4f7f\u7528\u9019\u7d44 Player UID\u3002"
+const ACCOUNT_LINKED_TITLE := "OAuth"
+const ACCOUNT_LINKED_DESC := "\u76ee\u524d\u50c5\u986f\u793a Google / Apple \u7d81\u5b9a\u72c0\u614b\uff0c\u5c1a\u672a\u958b\u653e\u5728\u9019\u500b\u756b\u9762\u76f4\u63a5\u64cd\u4f5c\u3002"
+const ACCOUNT_SESSION_TITLE := "\u767b\u5165\u72c0\u614b"
+const ACCOUNT_SESSION_DESC := "\u9700\u8981\u91cd\u65b0\u767b\u5165\u6642\uff0c\u53ef\u4ee5\u5728\u9019\u88e1\u5b89\u5168\u767b\u51fa\u3002"
+const PROFILE_SUMMARY_TITLE := "\u73a9\u5bb6\u5716\u50cf"
+const PROFILE_SUMMARY_DESC := "\u9ede\u64ca\u5716\u7247\u5373\u53ef\u6253\u958b\u982d\u50cf\u9078\u64c7\u8996\u7a97\u3002"
+
+const COUNTRY_OPTIONS: Array[String] = [
+	"Taiwan",
+	"Afghanistan",
+	"Albania",
+	"Algeria",
+	"Andorra",
+	"Angola",
+	"Antigua and Barbuda",
+	"Argentina",
+	"Armenia",
+	"Australia",
+	"Austria",
+	"Azerbaijan",
+	"Bahamas",
+	"Bahrain",
+	"Bangladesh",
+	"Barbados",
+	"Belarus",
+	"Belgium",
+	"Belize",
+	"Benin",
+	"Bhutan",
+	"Bolivia",
+	"Bosnia and Herzegovina",
+	"Botswana",
+	"Brazil",
+	"Brunei",
+	"Bulgaria",
+	"Burkina Faso",
+	"Burundi",
+	"Cabo Verde",
+	"Cambodia",
+	"Cameroon",
+	"Canada",
+	"Central African Republic",
+	"Chad",
+	"Chile",
+	"China",
+	"Colombia",
+	"Comoros",
+	"Congo",
+	"Costa Rica",
+	"Croatia",
+	"Cuba",
+	"Cyprus",
+	"Czech Republic",
+	"Democratic Republic of the Congo",
+	"Denmark",
+	"Djibouti",
+	"Dominica",
+	"Dominican Republic",
+	"Ecuador",
+	"Egypt",
+	"El Salvador",
+	"Equatorial Guinea",
+	"Eritrea",
+	"Estonia",
+	"Eswatini",
+	"Ethiopia",
+	"Fiji",
+	"Finland",
+	"France",
+	"Gabon",
+	"Gambia",
+	"Georgia",
+	"Germany",
+	"Ghana",
+	"Greece",
+	"Grenada",
+	"Guatemala",
+	"Guinea",
+	"Guinea-Bissau",
+	"Guyana",
+	"Haiti",
+	"Honduras",
+	"Hong Kong",
+	"Hungary",
+	"Iceland",
+	"India",
+	"Indonesia",
+	"Iran",
+	"Iraq",
+	"Ireland",
+	"Israel",
+	"Italy",
+	"Jamaica",
+	"Japan",
+	"Jordan",
+	"Kazakhstan",
+	"Kenya",
+	"Kiribati",
+	"Korea, North",
+	"Korea, South",
+	"Kosovo",
+	"Kuwait",
+	"Kyrgyzstan",
+	"Laos",
+	"Latvia",
+	"Lebanon",
+	"Lesotho",
+	"Liberia",
+	"Libya",
+	"Liechtenstein",
+	"Lithuania",
+	"Luxembourg",
+	"Macau",
+	"Madagascar",
+	"Malawi",
+	"Malaysia",
+	"Maldives",
+	"Mali",
+	"Malta",
+	"Marshall Islands",
+	"Mauritania",
+	"Mauritius",
+	"Mexico",
+	"Micronesia",
+	"Moldova",
+	"Monaco",
+	"Mongolia",
+	"Montenegro",
+	"Morocco",
+	"Mozambique",
+	"Myanmar",
+	"Namibia",
+	"Nauru",
+	"Nepal",
+	"Netherlands",
+	"New Zealand",
+	"Nicaragua",
+	"Niger",
+	"Nigeria",
+	"North Macedonia",
+	"Norway",
+	"Oman",
+	"Pakistan",
+	"Palau",
+	"Palestine",
+	"Panama",
+	"Papua New Guinea",
+	"Paraguay",
+	"Peru",
+	"Philippines",
+	"Poland",
+	"Portugal",
+	"Qatar",
+	"Romania",
+	"Russia",
+	"Rwanda",
+	"Saint Kitts and Nevis",
+	"Saint Lucia",
+	"Saint Vincent and the Grenadines",
+	"Samoa",
+	"San Marino",
+	"Sao Tome and Principe",
+	"Saudi Arabia",
+	"Senegal",
+	"Serbia",
+	"Seychelles",
+	"Sierra Leone",
+	"Singapore",
+	"Slovakia",
+	"Slovenia",
+	"Solomon Islands",
+	"Somalia",
+	"South Africa",
+	"South Sudan",
+	"Spain",
+	"Sri Lanka",
+	"Sudan",
+	"Suriname",
+	"Sweden",
+	"Switzerland",
+	"Syria",
+	"Tajikistan",
+	"Tanzania",
+	"Thailand",
+	"Timor-Leste",
+	"Togo",
+	"Tonga",
+	"Trinidad and Tobago",
+	"Tunisia",
+	"Turkey",
+	"Turkmenistan",
+	"Tuvalu",
+	"Uganda",
+	"Ukraine",
+	"United Arab Emirates",
+	"United Kingdom",
+	"United States",
+	"Uruguay",
+	"Uzbekistan",
+	"Vanuatu",
+	"Vatican City",
+	"Venezuela",
+	"Vietnam",
+	"Yemen",
+	"Zambia",
+	"Zimbabwe",
+]
+
 const GENDER_OPTIONS := [
 	{"label": UiText.SETTINGS_GENDER_UNSPECIFIED, "value": "Unspecified"},
 	{"label": UiText.SETTINGS_GENDER_MALE, "value": "Male"},
@@ -23,22 +259,32 @@ var _profile_dirty: bool = false
 var _profile_loading: bool = false
 var _profile_saving: bool = false
 var _redeem_in_flight: bool = false
+var _logout_in_flight: bool = false
 var _applying_profile_form: bool = false
+var _clamping_bio_text: bool = false
 var _selected_avatar_id: String = AssetResolver.DEFAULT_PROFILE_AVATAR_ID
-
+var _selected_region_value: String = ""
 var _avatar_preview: TextureRect
 var _avatar_name_label: Label
 var _avatar_buttons: Dictionary = {}
-var _display_name_input: LineEdit
+var _avatar_dialog_close: Callable = Callable()
 var _player_name_input: LineEdit
+var _player_name_counter_label: Label
 var _bio_input: TextEdit
+var _bio_counter_label: Label
 var _birthday_input: LineEdit
+var _birthday_dialog_close: Callable = Callable()
+var _birthday_year_spin: SpinBox
+var _birthday_month_spin: SpinBox
+var _birthday_day_spin: SpinBox
 var _gender_option: OptionButton
 var _region_input: LineEdit
+var _region_dialog_close: Callable = Callable()
 var _save_profile_button: Button
 var _save_profile_hint_label: Label
 var _account_value_label: LineEdit
 var _player_uid_value_label: LineEdit
+var _account_logout_button: Button
 var _provider_status_labels: Dictionary = {}
 var _redeem_input: LineEdit
 var _redeem_button: Button
@@ -74,7 +320,6 @@ func _build_ui() -> void:
 	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	content_box.add_child(title)
 
-
 	_section_scroll = ScrollContainer.new()
 	_section_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_section_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -88,6 +333,35 @@ func _build_ui() -> void:
 	_section_scroll.add_child(_section_content)
 
 	_render_active_section()
+
+
+func _build_birthday_spin_group(label_text: String, property_name: String, min_value: int, max_value: int) -> Control:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 6)
+
+	var label: Label = Label.new()
+	label.text = label_text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(label)
+
+	var spin: SpinBox = SpinBox.new()
+	spin.min_value = float(min_value)
+	spin.max_value = float(max_value)
+	spin.step = 1.0
+	spin.rounded = true
+	spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spin.custom_minimum_size = Vector2(0.0, 48.0)
+	column.add_child(spin)
+
+	match property_name:
+		"_birthday_year_spin":
+			_birthday_year_spin = spin
+		"_birthday_month_spin":
+			_birthday_month_spin = spin
+		_:
+			_birthday_day_spin = spin
+	return column
 
 
 func _build_section_items() -> Array:
@@ -111,6 +385,7 @@ func _on_section_selected(section_key: String) -> void:
 func _render_active_section() -> void:
 	if _section_content == null:
 		return
+
 	_clear_section_control_refs()
 	for child: Node in _section_content.get_children():
 		child.queue_free()
@@ -132,6 +407,7 @@ func _render_active_section() -> void:
 	_refresh_submenu_buttons()
 	_apply_profile_data(_build_local_profile_snapshot())
 	_apply_audio_settings()
+	_refresh_logout_button_state()
 	if is_instance_valid(_section_scroll):
 		_section_scroll.scroll_vertical = 0
 
@@ -144,9 +420,10 @@ func _clear_section_control_refs() -> void:
 	_avatar_preview = null
 	_avatar_name_label = null
 	_avatar_buttons = {}
-	_display_name_input = null
 	_player_name_input = null
+	_player_name_counter_label = null
 	_bio_input = null
+	_bio_counter_label = null
 	_birthday_input = null
 	_gender_option = null
 	_region_input = null
@@ -154,6 +431,7 @@ func _clear_section_control_refs() -> void:
 	_save_profile_hint_label = null
 	_account_value_label = null
 	_player_uid_value_label = null
+	_account_logout_button = null
 	_provider_status_labels = {}
 	_redeem_input = null
 	_redeem_button = null
@@ -163,24 +441,27 @@ func _clear_section_control_refs() -> void:
 
 
 func _build_profile_section() -> Control:
-	var section: PanelContainer = OverlaySceneChrome.make_card_panel()
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	section.add_child(margin)
+	var root: VBoxContainer = VBoxContainer.new()
+	root.add_theme_constant_override("separation", 12)
+	root.add_child(_build_profile_summary_card())
+	root.add_child(_build_profile_form_card())
+	return root
 
-	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	margin.add_child(column)
 
-	column.add_child(_make_section_header(UiText.SETTINGS_SECTION_PROFILE_TITLE, UiText.SETTINGS_SECTION_PROFILE_DESC))
+func _build_profile_summary_card() -> Control:
+	var shell: Dictionary = _create_card_shell()
+	var panel: PanelContainer = shell.get("panel") as PanelContainer
+	var column: VBoxContainer = shell.get("column") as VBoxContainer
+	column.add_child(_make_section_header(PROFILE_SUMMARY_TITLE, PROFILE_SUMMARY_DESC))
 
-	var avatar_row: HBoxContainer = HBoxContainer.new()
-	avatar_row.add_theme_constant_override("separation", 14)
-	column.add_child(avatar_row)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	column.add_child(row)
 
 	var preview_panel: PanelContainer = PanelContainer.new()
-	preview_panel.custom_minimum_size = Vector2(156.0, 184.0)
+	preview_panel.custom_minimum_size = Vector2(156.0, 180.0)
 	preview_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 16))
-	avatar_row.add_child(preview_panel)
+	row.add_child(preview_panel)
 
 	var preview_margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
 	preview_panel.add_child(preview_margin)
@@ -202,44 +483,98 @@ func _build_profile_section() -> Control:
 	_avatar_name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	preview_box.add_child(_avatar_name_label)
 
-	var avatar_picker_shell: VBoxContainer = VBoxContainer.new()
-	avatar_picker_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	avatar_picker_shell.add_theme_constant_override("separation", 8)
-	avatar_row.add_child(avatar_picker_shell)
+	var preview_button: Button = Button.new()
+	preview_button.flat = true
+	preview_button.focus_mode = Control.FOCUS_NONE
+	preview_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	preview_button.pressed.connect(UiAudio.play_ui_click)
+	preview_button.pressed.connect(_open_avatar_dialog)
+	preview_panel.add_child(preview_button)
 
-	var avatar_hint: Label = Label.new()
-	avatar_hint.text = UiText.SETTINGS_AVATAR_HINT
-	avatar_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	avatar_picker_shell.add_child(avatar_hint)
+	var info_column: VBoxContainer = VBoxContainer.new()
+	info_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info_column.alignment = BoxContainer.ALIGNMENT_CENTER
+	info_column.add_theme_constant_override("separation", 10)
+	row.add_child(info_column)
 
-	var avatar_grid: GridContainer = GridContainer.new()
-	avatar_grid.columns = 3
-	avatar_grid.add_theme_constant_override("h_separation", 8)
-	avatar_grid.add_theme_constant_override("v_separation", 8)
-	avatar_picker_shell.add_child(avatar_grid)
+	var title: Label = Label.new()
+	title.text = UiText.SETTINGS_SECTION_PROFILE_TITLE
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
+	info_column.add_child(title)
 
-	for avatar_id: String in AssetResolver.get_profile_avatar_ids():
-		avatar_grid.add_child(_build_avatar_card(avatar_id))
+	var hint: Label = Label.new()
+	hint.text = UiText.SETTINGS_AVATAR_HINT
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	info_column.add_child(hint)
+
+	var action_button: Button = _make_action_button(AVATAR_CHANGE_BUTTON_TEXT, "secondary", 180.0)
+	action_button.pressed.connect(UiAudio.play_ui_click)
+	action_button.pressed.connect(_open_avatar_dialog)
+	info_column.add_child(action_button)
+
+	return panel
+
+
+func _build_profile_form_card() -> Control:
+	var shell: Dictionary = _create_card_shell()
+	var panel: PanelContainer = shell.get("panel") as PanelContainer
+	var column: VBoxContainer = shell.get("column") as VBoxContainer
+	column.add_child(_make_section_header(UiText.SETTINGS_SECTION_PROFILE_TITLE, UiText.SETTINGS_SECTION_PROFILE_DESC))
 
 	_player_name_input = _make_line_edit(UiText.SETTINGS_PLAYER_NAME_PLACEHOLDER)
-	_birthday_input = _make_line_edit("YYYY-MM-DD")
-	_region_input = _make_line_edit(UiText.SETTINGS_REGION_PLACEHOLDER)
+	_player_name_input.max_length = PROFILE_NAME_MAX_LENGTH
+	var player_name_field: Dictionary = _build_counter_field(UiText.SETTINGS_FIELD_PLAYER_NAME, _player_name_input)
+	_player_name_counter_label = player_name_field.get("counter") as Label
+	column.add_child(player_name_field.get("root") as Control)
 
 	_bio_input = TextEdit.new()
-	_bio_input.custom_minimum_size = Vector2(0.0, 112.0)
+	_bio_input.custom_minimum_size = Vector2(0.0, 132.0)
 	_bio_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	_bio_input.add_theme_stylebox_override("normal", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
+	var bio_field: Dictionary = _build_counter_field(UiText.SETTINGS_FIELD_BIO, _bio_input)
+	_bio_counter_label = bio_field.get("counter") as Label
+	column.add_child(bio_field.get("root") as Control)
 
-	_gender_option = OptionButton.new()
-	_gender_option.custom_minimum_size = Vector2(0.0, 48.0)
+	_birthday_input = _make_readonly_value("")
+	_birthday_input.placeholder_text = EMPTY_SELECT_TEXT
+	var birthday_row: HBoxContainer = HBoxContainer.new()
+	birthday_row.add_theme_constant_override("separation", 8)
+	_birthday_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	birthday_row.add_child(_birthday_input)
+
+	var birthday_pick_button: Button = _make_action_button(BIRTHDAY_PICK_BUTTON_TEXT, "secondary", 144.0)
+	birthday_pick_button.pressed.connect(UiAudio.play_ui_click)
+	birthday_pick_button.pressed.connect(_open_birthday_dialog)
+	birthday_row.add_child(birthday_pick_button)
+
+	var birthday_clear_button: Button = _make_action_button(BIRTHDAY_CLEAR_BUTTON_TEXT, "secondary", 110.0)
+	birthday_clear_button.pressed.connect(UiAudio.play_ui_click)
+	birthday_clear_button.pressed.connect(_clear_birthday_value)
+	birthday_row.add_child(birthday_clear_button)
+	column.add_child(_build_field_row("%s (%s)" % [UiText.SETTINGS_FIELD_BIRTHDAY, OPTIONAL_TEXT], birthday_row))
+
+	var lower_grid: GridContainer = GridContainer.new()
+	lower_grid.columns = 2
+	lower_grid.add_theme_constant_override("h_separation", 10)
+	lower_grid.add_theme_constant_override("v_separation", 10)
+	column.add_child(lower_grid)
+
+	_gender_option = _make_option_button()
 	for option: Dictionary in GENDER_OPTIONS:
 		_gender_option.add_item(str(option.get("label", "")))
+	lower_grid.add_child(_build_field_row(UiText.SETTINGS_FIELD_GENDER, _gender_option))
 
-	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_PLAYER_NAME, _player_name_input))
-	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_BIO, _bio_input))
-	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_BIRTHDAY, _birthday_input))
-	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_GENDER, _gender_option))
-	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_REGION, _region_input))
+	_region_input = _make_readonly_value("")
+	_region_input.placeholder_text = EMPTY_SELECT_TEXT
+	var region_pick_button: Button = _make_action_button(REGION_PICK_BUTTON_TEXT, "secondary", 144.0)
+	region_pick_button.pressed.connect(UiAudio.play_ui_click)
+	region_pick_button.pressed.connect(_open_region_dialog)
+	var region_clear_button: Button = _make_action_button(REGION_CLEAR_BUTTON_TEXT, "secondary", 110.0)
+	region_clear_button.pressed.connect(UiAudio.play_ui_click)
+	region_clear_button.pressed.connect(_clear_region_value)
+	lower_grid.add_child(_build_inline_action_field(UiText.SETTINGS_FIELD_REGION, _region_input, [region_pick_button, region_clear_button]))
 
 	var save_row: HBoxContainer = HBoxContainer.new()
 	save_row.add_theme_constant_override("separation", 12)
@@ -263,25 +598,51 @@ func _build_profile_section() -> Control:
 
 	_bind_profile_edit_events()
 	_refresh_avatar_selection()
+	_refresh_profile_counters()
 	_refresh_profile_save_state()
-	return section
+	return panel
 
 
 func _build_account_section() -> Control:
-	var section: PanelContainer = OverlaySceneChrome.make_card_panel()
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	section.add_child(margin)
+	var root: VBoxContainer = VBoxContainer.new()
+	root.add_theme_constant_override("separation", 12)
+	root.add_child(_build_account_identity_card())
+	root.add_child(_build_account_linked_card())
+	root.add_child(_build_redeem_card())
+	root.add_child(_build_account_session_card())
+	return root
 
-	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	margin.add_child(column)
 
+func _build_account_identity_card() -> Control:
+	var shell: Dictionary = _create_card_shell()
+	var panel: PanelContainer = shell.get("panel") as PanelContainer
+	var column: VBoxContainer = shell.get("column") as VBoxContainer
 	column.add_child(_make_section_header(UiText.SETTINGS_SECTION_ACCOUNT_TITLE, UiText.SETTINGS_SECTION_ACCOUNT_DESC))
 
 	_account_value_label = _make_readonly_value(UiText.SETTINGS_ACCOUNT_LOADING)
-	_player_uid_value_label = _make_readonly_value(UiText.SETTINGS_ACCOUNT_LOADING)
 	column.add_child(_build_field_row(UiText.SETTINGS_FIELD_ACCOUNT, _account_value_label))
-	column.add_child(_build_field_row("Player UID", _player_uid_value_label))
+
+	_player_uid_value_label = _make_readonly_value(UiText.SETTINGS_ACCOUNT_LOADING)
+	var copy_uid_button: Button = _make_action_button(ACCOUNT_UID_COPY_BUTTON_TEXT, "secondary", 108.0)
+	copy_uid_button.pressed.connect(UiAudio.play_ui_click)
+	copy_uid_button.pressed.connect(_on_copy_uid_pressed)
+	column.add_child(_build_inline_action_field("Player UID", _player_uid_value_label, [copy_uid_button]))
+
+	var uid_hint: Label = Label.new()
+	uid_hint.text = ACCOUNT_UID_HINT
+	uid_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	uid_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	uid_hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	column.add_child(uid_hint)
+
+	return panel
+
+
+func _build_account_linked_card() -> Control:
+	var shell: Dictionary = _create_card_shell()
+	var panel: PanelContainer = shell.get("panel") as PanelContainer
+	var column: VBoxContainer = shell.get("column") as VBoxContainer
+	column.add_child(_make_section_header(ACCOUNT_LINKED_TITLE, ACCOUNT_LINKED_DESC))
 
 	var provider_row: HBoxContainer = HBoxContainer.new()
 	provider_row.add_theme_constant_override("separation", 10)
@@ -289,17 +650,14 @@ func _build_account_section() -> Control:
 
 	provider_row.add_child(_build_provider_card("Google"))
 	provider_row.add_child(_build_provider_card("Apple"))
+	return panel
 
-	var redeem_title: Label = Label.new()
-	redeem_title.text = UiText.SETTINGS_REDEEM_TITLE
-	redeem_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	column.add_child(redeem_title)
 
-	var redeem_hint: Label = Label.new()
-	redeem_hint.text = UiText.SETTINGS_REDEEM_HINT
-	redeem_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	redeem_hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
-	column.add_child(redeem_hint)
+func _build_redeem_card() -> Control:
+	var shell: Dictionary = _create_card_shell()
+	var panel: PanelContainer = shell.get("panel") as PanelContainer
+	var column: VBoxContainer = shell.get("column") as VBoxContainer
+	column.add_child(_make_section_header(UiText.SETTINGS_REDEEM_TITLE, UiText.SETTINGS_REDEEM_HINT))
 
 	var redeem_row: HBoxContainer = HBoxContainer.new()
 	redeem_row.add_theme_constant_override("separation", 10)
@@ -316,8 +674,22 @@ func _build_account_section() -> Control:
 	_redeem_button.pressed.connect(UiAudio.play_ui_click)
 	_redeem_button.pressed.connect(_on_redeem_pressed)
 	redeem_row.add_child(_redeem_button)
+	return panel
 
-	return section
+
+func _build_account_session_card() -> Control:
+	var shell: Dictionary = _create_card_shell()
+	var panel: PanelContainer = shell.get("panel") as PanelContainer
+	var column: VBoxContainer = shell.get("column") as VBoxContainer
+	column.add_child(_make_section_header(ACCOUNT_SESSION_TITLE, ACCOUNT_SESSION_DESC))
+
+	_account_logout_button = Button.new()
+	_account_logout_button.custom_minimum_size = Vector2(0.0, 50.0)
+	UiPalette.apply_button_kind(_account_logout_button, "danger")
+	_account_logout_button.pressed.connect(UiAudio.play_ui_click)
+	_account_logout_button.pressed.connect(_on_logout_pressed)
+	column.add_child(_account_logout_button)
+	return panel
 
 
 func _build_game_settings_section() -> Control:
@@ -330,11 +702,9 @@ func _build_game_settings_section() -> Control:
 	margin.add_child(column)
 
 	column.add_child(_make_section_header(UiText.SETTINGS_SECTION_GAME_TITLE, UiText.SETTINGS_SECTION_GAME_DESC))
-
 	column.add_child(_build_audio_row("master", UiText.SETTINGS_AUDIO_MASTER))
 	column.add_child(_build_audio_row("bgm", UiText.SETTINGS_AUDIO_BGM))
 	column.add_child(_build_audio_row("sfx", UiText.SETTINGS_AUDIO_SFX))
-
 	return section
 
 
@@ -366,16 +736,12 @@ func _build_admin_catalog_row() -> Control:
 	hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 	text_box.add_child(hint)
 
-	var button: Button = Button.new()
-	button.text = "Open"
-	button.custom_minimum_size = Vector2(160.0, 46.0)
-	UiPalette.apply_button_kind(button, "confirm")
+	var button: Button = _make_action_button("Open", "confirm", 160.0)
 	button.pressed.connect(UiAudio.play_ui_click)
 	button.pressed.connect(func() -> void:
 		SceneNavigator.open_overlay_scene(ADMIN_CATALOG_SCENE_PATH)
 	)
 	row.add_child(button)
-
 	return panel
 
 
@@ -395,10 +761,10 @@ func _build_admin_section() -> Control:
 
 func _build_avatar_card(avatar_id: String) -> Control:
 	var panel: PanelContainer = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(0.0, 96.0)
+	panel.custom_minimum_size = Vector2(0.0, 120.0)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(8)
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(10)
 	panel.add_child(margin)
 
 	var box: VBoxContainer = VBoxContainer.new()
@@ -407,7 +773,7 @@ func _build_avatar_card(avatar_id: String) -> Control:
 	margin.add_child(box)
 
 	var icon: TextureRect = TextureRect.new()
-	icon.custom_minimum_size = Vector2(54.0, 54.0)
+	icon.custom_minimum_size = Vector2(64.0, 64.0)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -426,9 +792,7 @@ func _build_avatar_card(avatar_id: String) -> Control:
 	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	button.pressed.connect(UiAudio.play_ui_click)
 	button.pressed.connect(func() -> void:
-		_selected_avatar_id = avatar_id
-		_mark_profile_dirty()
-		_refresh_avatar_selection()
+		_on_avatar_selected(avatar_id)
 	)
 	panel.add_child(button)
 
@@ -465,7 +829,6 @@ func _build_provider_card(provider_name: String) -> Control:
 	action_button.custom_minimum_size = Vector2(0.0, 42.0)
 	UiPalette.apply_button_palette(action_button, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
 	column.add_child(action_button)
-
 	return panel
 
 
@@ -513,7 +876,6 @@ func _build_audio_row(bus_key: String, label_text: String) -> Control:
 	)
 	row.add_child(mute_box)
 	_audio_mute_boxes[bus_key] = mute_box
-
 	return panel
 
 
@@ -532,7 +894,6 @@ func _make_section_header(title_text: String, subtitle_text: String) -> Control:
 	subtitle.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	subtitle.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	column.add_child(subtitle)
-
 	return column
 
 
@@ -550,6 +911,52 @@ func _build_field_row(label_text: String, field: Control) -> Control:
 	return column
 
 
+func _build_counter_field(label_text: String, field: Control) -> Dictionary:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+
+	var label_row: HBoxContainer = HBoxContainer.new()
+	label_row.add_theme_constant_override("separation", 8)
+	column.add_child(label_row)
+
+	var label: Label = Label.new()
+	label.text = label_text
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	label_row.add_child(label)
+
+	var counter: Label = Label.new()
+	counter.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	counter.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	label_row.add_child(counter)
+
+	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(field)
+	return {"root": column, "counter": counter}
+
+
+func _build_inline_action_field(label_text: String, field: Control, buttons: Array) -> Control:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+
+	var label: Label = Label.new()
+	label.text = label_text
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	column.add_child(label)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	column.add_child(row)
+
+	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(field)
+
+	for button_variant: Variant in buttons:
+		if button_variant is Control:
+			row.add_child(button_variant)
+	return column
+
+
 func _make_line_edit(placeholder_text: String) -> LineEdit:
 	var input: LineEdit = LineEdit.new()
 	input.custom_minimum_size = Vector2(0.0, 48.0)
@@ -562,22 +969,44 @@ func _make_readonly_value(text: String) -> LineEdit:
 	var input: LineEdit = LineEdit.new()
 	input.text = text
 	input.editable = false
-	input.custom_minimum_size = Vector2(0.0, 42.0)
+	input.custom_minimum_size = Vector2(0.0, 48.0)
 	input.add_theme_stylebox_override("normal", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
 	return input
 
 
+func _make_action_button(text: String, kind: String, width: float) -> Button:
+	var button: Button = Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(width, 48.0)
+	UiPalette.apply_button_kind(button, kind)
+	return button
+
+
+func _make_option_button() -> OptionButton:
+	var button: OptionButton = OptionButton.new()
+	button.custom_minimum_size = Vector2(0.0, 48.0)
+	UiPalette.apply_button_kind(button, "secondary")
+	return button
+
+
+func _create_card_shell(margin_value: int = 16) -> Dictionary:
+	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(margin_value)
+	panel.add_child(margin)
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	margin.add_child(column)
+
+	return {"panel": panel, "column": column}
+
+
 func _bind_profile_edit_events() -> void:
 	_player_name_input.text_changed.connect(func(_value: String) -> void:
+		_refresh_profile_counters()
 		_mark_profile_dirty()
 	)
-	_birthday_input.text_changed.connect(func(_value: String) -> void:
-		_mark_profile_dirty()
-	)
-	_region_input.text_changed.connect(func(_value: String) -> void:
-		_mark_profile_dirty()
-	)
-	_bio_input.text_changed.connect(_mark_profile_dirty)
+	_bio_input.text_changed.connect(_on_bio_text_changed)
 	_gender_option.item_selected.connect(func(_index: int) -> void:
 		_mark_profile_dirty()
 	)
@@ -602,31 +1031,32 @@ func _load_profile_from_api() -> void:
 
 func _apply_profile_data(data: Dictionary) -> void:
 	_applying_profile_form = true
-	_selected_avatar_id = str(data.get("avatarId", AssetResolver.DEFAULT_PROFILE_AVATAR_ID)).strip_edges()
+	_selected_avatar_id = "" if data.get("avatarId") == null else str(data.get("avatarId", AssetResolver.DEFAULT_PROFILE_AVATAR_ID)).strip_edges()
 	if _selected_avatar_id == "":
 		_selected_avatar_id = AssetResolver.DEFAULT_PROFILE_AVATAR_ID
 
-	if is_instance_valid(_display_name_input):
-		_display_name_input.text = str(data.get("displayName", ""))
 	if is_instance_valid(_player_name_input):
-		_player_name_input.text = str(data.get("playerName", ""))
+		_player_name_input.text = "" if data.get("playerName") == null else str(data.get("playerName", ""))
 	if is_instance_valid(_bio_input):
-		_bio_input.text = str(data.get("bio", ""))
+		_bio_input.text = "" if data.get("bio") == null else str(data.get("bio", ""))
 	if is_instance_valid(_birthday_input):
-		_birthday_input.text = str(data.get("birthday", ""))
-	if is_instance_valid(_region_input):
-		_region_input.text = str(data.get("region", ""))
+		_birthday_input.text = "" if data.get("birthday") == null else str(data.get("birthday", ""))
 	if is_instance_valid(_gender_option):
 		_set_gender_value(str(data.get("genderType", "Unspecified")))
+	if is_instance_valid(_region_input):
+		_set_region_value("" if data.get("region") == null else str(data.get("region", "")))
 	if is_instance_valid(_account_value_label):
-		_account_value_label.text = str(data.get("account", ""))
+		_account_value_label.text = "" if data.get("account") == null else str(data.get("account", ""))
 	if is_instance_valid(_player_uid_value_label):
-		_player_uid_value_label.text = str(data.get("playerPublicId", ""))
+		_player_uid_value_label.text = "" if data.get("playerPublicId") == null else str(data.get("playerPublicId", ""))
+
 	_refresh_provider_cards(data.get("linkedProviders", []))
 	_applying_profile_form = false
 	_profile_dirty = false
 	_refresh_avatar_selection()
+	_refresh_profile_counters()
 	_refresh_profile_save_state()
+	_refresh_logout_button_state()
 
 
 func _apply_audio_settings() -> void:
@@ -642,7 +1072,21 @@ func _apply_audio_settings() -> void:
 
 
 func _build_local_profile_snapshot() -> Dictionary:
-	var player = GameState.player_data
+	var player: PlayerData = GameState.player_data
+	if player == null:
+		return {
+			"account": "",
+			"displayName": "",
+			"playerPublicId": "",
+			"playerName": "",
+			"avatarId": AssetResolver.DEFAULT_PROFILE_AVATAR_ID,
+			"bio": "",
+			"birthday": "",
+			"genderType": "Unspecified",
+			"region": "",
+			"linkedProviders": [],
+		}
+
 	return {
 		"account": player.account,
 		"displayName": player.display_name,
@@ -658,14 +1102,19 @@ func _build_local_profile_snapshot() -> Dictionary:
 
 
 func _refresh_avatar_selection() -> void:
-	if not is_instance_valid(_avatar_preview) or not is_instance_valid(_avatar_name_label):
-		return
-	_avatar_preview.texture = AssetResolver.resolve_profile_avatar(_selected_avatar_id)
-	_avatar_name_label.text = AssetResolver.get_profile_avatar_label(_selected_avatar_id)
+	if is_instance_valid(_avatar_preview):
+		_avatar_preview.texture = AssetResolver.resolve_profile_avatar(_selected_avatar_id)
+	if is_instance_valid(_avatar_name_label):
+		_avatar_name_label.text = AssetResolver.get_profile_avatar_label(_selected_avatar_id)
+
 	for avatar_id: String in _avatar_buttons.keys():
 		var refs: Dictionary = _avatar_buttons.get(avatar_id, {})
-		var panel: PanelContainer = refs.get("panel") as PanelContainer
-		var label: Label = refs.get("label") as Label
+		var panel_variant: Variant = refs.get("panel", null)
+		var label_variant: Variant = refs.get("label", null)
+		if not is_instance_valid(panel_variant) or not is_instance_valid(label_variant):
+			continue
+		var panel: PanelContainer = panel_variant as PanelContainer
+		var label: Label = label_variant as Label
 		if not is_instance_valid(panel) or not is_instance_valid(label):
 			continue
 		var is_selected: bool = avatar_id == _selected_avatar_id
@@ -694,25 +1143,37 @@ func _refresh_provider_cards(linked_providers_variant: Variant) -> void:
 			status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 
 
-func _refresh_profile_save_state() -> void:
-	if not is_instance_valid(_save_profile_button):
-		return
-	_save_profile_button.disabled = _profile_loading or _profile_saving or not _profile_dirty
-	if _profile_saving:
-		_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE_WORKING
-	elif _profile_loading:
-		_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE_LOADING
-	else:
-		_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE
+func _refresh_profile_counters() -> void:
+	if is_instance_valid(_player_name_counter_label) and is_instance_valid(_player_name_input):
+		_player_name_counter_label.text = "%d/%d" % [_player_name_input.text.length(), PROFILE_NAME_MAX_LENGTH]
+	if is_instance_valid(_bio_counter_label) and is_instance_valid(_bio_input):
+		_bio_counter_label.text = "%d/%d" % [_bio_input.text.length(), BIO_MAX_LENGTH]
 
-	if not is_instance_valid(_save_profile_hint_label):
+
+func _refresh_profile_save_state() -> void:
+	if is_instance_valid(_save_profile_button):
+		_save_profile_button.disabled = _profile_loading or _profile_saving or not _profile_dirty
+		if _profile_saving:
+			_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE_WORKING
+		elif _profile_loading:
+			_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE_LOADING
+		else:
+			_save_profile_button.text = UiText.SETTINGS_PROFILE_SAVE
+
+	if is_instance_valid(_save_profile_hint_label):
+		if _profile_saving:
+			_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_WORKING
+		elif _profile_dirty:
+			_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_DIRTY
+		else:
+			_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_CLEAN
+
+
+func _refresh_logout_button_state() -> void:
+	if not is_instance_valid(_account_logout_button):
 		return
-	if _profile_saving:
-		_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_WORKING
-	elif _profile_dirty:
-		_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_DIRTY
-	else:
-		_save_profile_hint_label.text = UiText.SETTINGS_PROFILE_HINT_CLEAN
+	_account_logout_button.disabled = _logout_in_flight
+	_account_logout_button.text = UiText.START_LOGOUT_BUTTON_WORKING if _logout_in_flight else UiText.START_LOGOUT_BUTTON
 
 
 func _refresh_audio_value_label(bus_key: String) -> void:
@@ -739,11 +1200,224 @@ func _get_selected_gender_value() -> String:
 	return str(GENDER_OPTIONS[index].get("value", "Unspecified"))
 
 
+func _set_region_value(value: String) -> void:
+	var target_value: String = value.strip_edges()
+	if target_value == "":
+		_selected_region_value = ""
+		if is_instance_valid(_region_input):
+			_region_input.text = ""
+		return
+
+	for country_name: String in COUNTRY_OPTIONS:
+		if country_name == target_value:
+			_selected_region_value = target_value
+			if is_instance_valid(_region_input):
+				_region_input.text = target_value
+			return
+
+	_selected_region_value = ""
+	if is_instance_valid(_region_input):
+		_region_input.text = ""
+
+
+func _get_selected_region_value() -> String:
+	return _selected_region_value
+
+
 func _mark_profile_dirty() -> void:
 	if _applying_profile_form:
 		return
 	_profile_dirty = true
 	_refresh_profile_save_state()
+
+
+func _on_avatar_selected(avatar_id: String) -> void:
+	if _profile_saving or _profile_loading:
+		return
+
+	var previous_avatar_id: String = _selected_avatar_id
+	_selected_avatar_id = avatar_id
+	_refresh_avatar_selection()
+	_avatar_dialog_close = _close_dialog(_avatar_dialog_close)
+	_avatar_buttons = {}
+
+	var payload: Dictionary = _build_profile_payload(true)
+	_profile_saving = true
+	_refresh_profile_save_state()
+	ApiClient.update_profile_me(payload, func(success: bool, data: Variant, error: Dictionary) -> void:
+		_profile_saving = false
+		if not success:
+			_selected_avatar_id = previous_avatar_id
+			_refresh_avatar_selection()
+			_refresh_profile_save_state()
+			ToastManager.error(UiText.SETTINGS_PROFILE_SAVE_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_PROFILE_SAVE_FAILED_DEFAULT)))
+			return
+
+		if data is Dictionary:
+			var profile: Dictionary = data as Dictionary
+			GameState.apply_profile_response(profile)
+			_apply_profile_data(profile)
+		ToastManager.success(UiText.SETTINGS_PROFILE_SAVE_SUCCESS)
+	)
+
+
+func _open_avatar_dialog() -> void:
+	if _avatar_dialog_close.is_valid():
+		return
+	var content: VBoxContainer = _build_avatar_dialog_content()
+	_refresh_avatar_selection()
+	_avatar_dialog_close = DialogManager.show_info_node(AVATAR_DIALOG_TITLE, content, Callable(self, "_on_avatar_dialog_closed"), "medium")
+
+
+func _open_birthday_dialog() -> void:
+	if _birthday_dialog_close.is_valid():
+		return
+	var content: VBoxContainer = _build_birthday_dialog_content()
+
+	var birthday_text: String = _birthday_input.text.strip_edges() if is_instance_valid(_birthday_input) else ""
+	var parsed: Dictionary = _parse_birthday_text(birthday_text)
+	if parsed.is_empty():
+		var now: Dictionary = Time.get_date_dict_from_system()
+		_birthday_year_spin.value = float(now.get("year", _get_current_year()))
+		_birthday_month_spin.value = float(now.get("month", 1))
+		_birthday_day_spin.value = float(now.get("day", 1))
+	else:
+		_birthday_year_spin.value = float(parsed.get("year", _get_current_year()))
+		_birthday_month_spin.value = float(parsed.get("month", 1))
+		_birthday_day_spin.value = float(parsed.get("day", 1))
+
+	_refresh_birthday_day_limit()
+	_birthday_dialog_close = DialogManager.show_info_node(BIRTHDAY_DIALOG_TITLE, content, Callable(self, "_on_birthday_dialog_closed"), "small")
+
+
+func _clear_birthday_value() -> void:
+	if not is_instance_valid(_birthday_input):
+		return
+	if _birthday_input.text == "":
+		return
+	_birthday_input.text = ""
+	_mark_profile_dirty()
+
+
+func _on_birthday_confirm_pressed() -> void:
+	if not is_instance_valid(_birthday_input):
+		return
+	var birthday_text: String = "%04d-%02d-%02d" % [
+		int(_birthday_year_spin.value),
+		int(_birthday_month_spin.value),
+		int(_birthday_day_spin.value),
+	]
+	if _is_future_date(int(_birthday_year_spin.value), int(_birthday_month_spin.value), int(_birthday_day_spin.value)):
+		ToastManager.error(UiText.SETTINGS_PROFILE_VALIDATION_TITLE, BIRTHDAY_FUTURE_ERROR)
+		return
+	_birthday_input.text = birthday_text
+	_mark_profile_dirty()
+	_birthday_dialog_close = _close_dialog(_birthday_dialog_close)
+	_birthday_year_spin = null
+	_birthday_month_spin = null
+	_birthday_day_spin = null
+
+
+func _on_birthday_clear_pressed() -> void:
+	_clear_birthday_value()
+	_birthday_dialog_close = _close_dialog(_birthday_dialog_close)
+	_birthday_year_spin = null
+	_birthday_month_spin = null
+	_birthday_day_spin = null
+
+
+func _refresh_birthday_day_limit() -> void:
+	if _birthday_day_spin == null:
+		return
+	var year: int = int(_birthday_year_spin.value)
+	var month: int = int(_birthday_month_spin.value)
+	var day_limit: int = _get_days_in_month(year, month)
+	_birthday_day_spin.max_value = float(day_limit)
+	if int(_birthday_day_spin.value) > day_limit:
+		_birthday_day_spin.value = float(day_limit)
+
+
+func _parse_birthday_text(text: String) -> Dictionary:
+	if text == "":
+		return {}
+	var parts: PackedStringArray = text.split("-")
+	if parts.size() != 3:
+		return {}
+	for part: String in parts:
+		if not part.is_valid_int():
+			return {}
+	return {
+		"year": int(parts[0]),
+		"month": int(parts[1]),
+		"day": int(parts[2]),
+	}
+
+
+func _get_days_in_month(year: int, month: int) -> int:
+	match month:
+		1, 3, 5, 7, 8, 10, 12:
+			return 31
+		4, 6, 9, 11:
+			return 30
+		2:
+			return 29 if _is_leap_year(year) else 28
+		_:
+			return 31
+
+
+func _is_leap_year(year: int) -> bool:
+	if year % 400 == 0:
+		return true
+	if year % 100 == 0:
+		return false
+	return year % 4 == 0
+
+
+func _get_current_year() -> int:
+	var now: Dictionary = Time.get_date_dict_from_system()
+	return int(now.get("year", 2026))
+
+
+func _on_bio_text_changed() -> void:
+	if not is_instance_valid(_bio_input):
+		return
+
+	if _clamping_bio_text:
+		return
+
+	if _bio_input.text.length() > BIO_MAX_LENGTH:
+		_clamping_bio_text = true
+		_bio_input.text = _bio_input.text.substr(0, BIO_MAX_LENGTH)
+		var last_line: int = maxi(_bio_input.get_line_count() - 1, 0)
+		_bio_input.set_caret_line(last_line)
+		_bio_input.set_caret_column(_bio_input.get_line(last_line).length())
+		_clamping_bio_text = false
+
+	_refresh_profile_counters()
+	_mark_profile_dirty()
+
+
+func _open_region_dialog() -> void:
+	if _region_dialog_close.is_valid():
+		return
+	var content: VBoxContainer = _build_region_dialog_content()
+	_region_dialog_close = DialogManager.show_info_node(REGION_DIALOG_TITLE, content, Callable(self, "_on_region_dialog_closed"), "medium")
+
+
+func _clear_region_value() -> void:
+	if _selected_region_value == "":
+		return
+	_set_region_value("")
+	_mark_profile_dirty()
+
+
+func _on_region_selected(region_value: String) -> void:
+	if _selected_region_value == region_value:
+		_region_dialog_close = _close_dialog(_region_dialog_close)
+		return
+	_set_region_value(region_value)
+	_mark_profile_dirty()
+	_region_dialog_close = _close_dialog(_region_dialog_close)
 
 
 func _on_save_profile_pressed() -> void:
@@ -755,18 +1429,7 @@ func _on_save_profile_pressed() -> void:
 		ToastManager.error(UiText.SETTINGS_PROFILE_VALIDATION_TITLE, validation_error)
 		return
 
-	var payload := {
-		"displayName": str(GameState.player_data.display_name).strip_edges(),
-		"playerName": _player_name_input.text.strip_edges(),
-		"avatarId": _selected_avatar_id,
-		"bio": _bio_input.text.strip_edges(),
-		"birthday": _birthday_input.text.strip_edges(),
-		"genderType": _get_selected_gender_value(),
-		"region": _region_input.text.strip_edges(),
-	}
-	if str(payload.get("birthday", "")) == "":
-		payload.erase("birthday")
-
+	var payload: Dictionary = _build_profile_payload(true)
 	_profile_saving = true
 	_refresh_profile_save_state()
 	ApiClient.update_profile_me(payload, func(success: bool, data: Variant, error: Dictionary) -> void:
@@ -783,6 +1446,61 @@ func _on_save_profile_pressed() -> void:
 			_apply_profile_data(profile)
 		ToastManager.success(UiText.SETTINGS_PROFILE_SAVE_SUCCESS)
 	)
+
+
+func _on_copy_uid_pressed() -> void:
+	if not is_instance_valid(_player_uid_value_label):
+		return
+	var player_uid: String = _player_uid_value_label.text.strip_edges()
+	if player_uid == "":
+		ToastManager.error(ACCOUNT_UID_COPY_EMPTY)
+		return
+	DisplayServer.clipboard_set(player_uid)
+	ToastManager.success(ACCOUNT_UID_COPY_SUCCESS, player_uid)
+
+
+func _on_logout_pressed() -> void:
+	if _logout_in_flight:
+		return
+	DialogManager.show_confirm(
+		UiText.START_LOGOUT_CONFIRM_TITLE,
+		UiText.START_LOGOUT_CONFIRM_BODY,
+		Callable(self, "_begin_logout"),
+		func() -> void:
+			pass
+	)
+
+
+func _begin_logout() -> void:
+	if _logout_in_flight:
+		return
+
+	var refresh_token: String = GameState.get_refresh_token()
+	if refresh_token == "":
+		_finalize_logout()
+		return
+
+	_logout_in_flight = true
+	_refresh_logout_button_state()
+	ApiClient.revoke_refresh_token(refresh_token, UiText.START_LOGOUT_REASON, func(success: bool, _data: Variant, error: Dictionary) -> void:
+		_logout_in_flight = false
+		_refresh_logout_button_state()
+		if success:
+			_finalize_logout()
+			return
+
+		var error_code: String = str(error.get("code", ""))
+		if error_code == "AUTH.REFRESH_TOKEN_NOT_FOUND" or error_code == "AUTH.SESSION_EXPIRED":
+			_finalize_logout()
+			return
+
+		ToastManager.error(UiText.START_LOGOUT_CONFIRM_TITLE, str(error.get("message", UiText.START_STATUS_LOGOUT_FAILED)))
+	)
+
+
+func _finalize_logout() -> void:
+	GameState.clear_auth_and_player_state()
+	get_tree().change_scene_to_file(START_SCENE_PATH)
 
 
 func _on_redeem_pressed() -> void:
@@ -848,7 +1566,7 @@ func _validate_profile_form() -> String:
 
 	if player_name == "":
 		return UiText.SETTINGS_VALIDATE_PLAYER_NAME
-	if bio.length() > 140:
+	if bio.length() > BIO_MAX_LENGTH:
 		return UiText.SETTINGS_VALIDATE_BIO_LENGTH
 	if birthday != "" and not _is_valid_birthday_text(birthday):
 		return UiText.SETTINGS_VALIDATE_BIRTHDAY
@@ -856,23 +1574,218 @@ func _validate_profile_form() -> String:
 
 
 func _is_valid_birthday_text(text: String) -> bool:
-	var parts: PackedStringArray = text.split("-")
-	if parts.size() != 3:
+	var parsed: Dictionary = _parse_birthday_text(text)
+	if parsed.is_empty():
 		return false
-	for part: String in parts:
-		if not part.is_valid_int():
-			return false
 
-	var year: int = int(parts[0])
-	var month: int = int(parts[1])
-	var day: int = int(parts[2])
-	if year < 1900 or year > 3000:
+	var year: int = int(parsed.get("year", 0))
+	var month: int = int(parsed.get("month", 0))
+	var day: int = int(parsed.get("day", 0))
+	if year < BIRTHDAY_MIN_YEAR or year > _get_current_year():
 		return false
 	if month < 1 or month > 12:
 		return false
-	if day < 1 or day > 31:
+	if day < 1 or day > _get_days_in_month(year, month):
 		return false
-	return true
+	return not _is_future_date(year, month, day)
+
+
+func _build_profile_payload(use_form_values: bool) -> Dictionary:
+	var player: PlayerData = GameState.player_data
+	var payload := {
+		"displayName": "" if player == null else str(player.display_name).strip_edges(),
+		"playerName": "",
+		"avatarId": _selected_avatar_id,
+		"bio": "",
+		"birthday": "",
+		"genderType": "Unspecified",
+		"region": "",
+	}
+
+	if use_form_values:
+		payload["playerName"] = _player_name_input.text.strip_edges()
+		payload["bio"] = _bio_input.text.strip_edges()
+		payload["birthday"] = _birthday_input.text.strip_edges()
+		payload["genderType"] = _get_selected_gender_value()
+		payload["region"] = _get_selected_region_value()
+	else:
+		payload["playerName"] = "" if player == null else str(player.player_name).strip_edges()
+		payload["bio"] = "" if player == null else str(player.bio)
+		payload["birthday"] = "" if player == null else str(player.birthday).strip_edges()
+		payload["genderType"] = "Unspecified" if player == null else str(player.gender_type).strip_edges()
+		payload["region"] = "" if player == null else str(player.region).strip_edges()
+
+	if str(payload.get("birthday", "")) == "":
+		payload.erase("birthday")
+	return payload
+
+
+func _build_avatar_dialog_content() -> VBoxContainer:
+	_avatar_buttons = {}
+
+	var column: VBoxContainer = VBoxContainer.new()
+	column.custom_minimum_size = Vector2(0.0, 420.0)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 12)
+
+	var hint: Label = Label.new()
+	hint.text = AVATAR_DIALOG_HINT
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	hint.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+	column.add_child(hint)
+
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0.0, 320.0)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	column.add_child(scroll)
+	InertialScroller.attach(scroll, "vertical")
+
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 2
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	scroll.add_child(grid)
+
+	for avatar_id: String in AssetResolver.get_profile_avatar_ids():
+		grid.add_child(_build_avatar_card(avatar_id))
+	return column
+
+
+func _build_birthday_dialog_content() -> VBoxContainer:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.custom_minimum_size = Vector2(0.0, 196.0)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 12)
+
+	var hint: Label = Label.new()
+	hint.text = BIRTHDAY_DIALOG_HINT
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	hint.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+	column.add_child(hint)
+
+	var picker_row: HBoxContainer = HBoxContainer.new()
+	picker_row.add_theme_constant_override("separation", 10)
+	column.add_child(picker_row)
+
+	picker_row.add_child(_build_birthday_spin_group(BIRTHDAY_YEAR_LABEL, "_birthday_year_spin", BIRTHDAY_MIN_YEAR, _get_current_year()))
+	picker_row.add_child(_build_birthday_spin_group(BIRTHDAY_MONTH_LABEL, "_birthday_month_spin", 1, 12))
+	picker_row.add_child(_build_birthday_spin_group(BIRTHDAY_DAY_LABEL, "_birthday_day_spin", 1, 31))
+
+	_birthday_year_spin.value_changed.connect(func(_value: float) -> void:
+		_refresh_birthday_day_limit()
+	)
+	_birthday_month_spin.value_changed.connect(func(_value: float) -> void:
+		_refresh_birthday_day_limit()
+	)
+
+	var actions: HBoxContainer = HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_END
+	actions.add_theme_constant_override("separation", 8)
+	column.add_child(actions)
+
+	var clear_button: Button = _make_action_button(BIRTHDAY_CLEAR_BUTTON_TEXT, "secondary", 96.0)
+	clear_button.pressed.connect(UiAudio.play_ui_click)
+	clear_button.pressed.connect(_on_birthday_clear_pressed)
+	actions.add_child(clear_button)
+
+	var confirm_button: Button = _make_action_button(UiText.COMMON_CONFIRM, "confirm", 112.0)
+	confirm_button.pressed.connect(UiAudio.play_ui_click)
+	confirm_button.pressed.connect(_on_birthday_confirm_pressed)
+	actions.add_child(confirm_button)
+	return column
+
+
+func _build_region_dialog_content() -> VBoxContainer:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.custom_minimum_size = Vector2(0.0, 560.0)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 12)
+
+	var hint: Label = Label.new()
+	hint.text = REGION_DIALOG_HINT
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	hint.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+	column.add_child(hint)
+
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0.0, 468.0)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	column.add_child(scroll)
+	InertialScroller.attach(scroll, "vertical")
+
+	var list: VBoxContainer = VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	scroll.add_child(list)
+
+	list.add_child(_build_region_dialog_button(EMPTY_SELECT_TEXT, ""))
+	for country_name: String in COUNTRY_OPTIONS:
+		list.add_child(_build_region_dialog_button(country_name, country_name))
+	return column
+
+
+func _build_region_dialog_button(label_text: String, region_value: String) -> Button:
+	var button: Button = Button.new()
+	button.text = label_text
+	button.custom_minimum_size = Vector2(0.0, 46.0)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var is_selected: bool = region_value == _selected_region_value
+	if is_selected:
+		UiPalette.apply_button_kind(button, "confirm")
+	else:
+		UiPalette.apply_button_kind(button, "secondary")
+	button.pressed.connect(UiAudio.play_ui_click)
+	button.pressed.connect(func() -> void:
+		_on_region_selected(region_value)
+	)
+	return button
+
+
+func _on_avatar_dialog_closed() -> void:
+	_avatar_dialog_close = Callable()
+	_avatar_buttons = {}
+
+
+func _on_birthday_dialog_closed() -> void:
+	_birthday_dialog_close = Callable()
+	_birthday_year_spin = null
+	_birthday_month_spin = null
+	_birthday_day_spin = null
+
+
+func _on_region_dialog_closed() -> void:
+	_region_dialog_close = Callable()
+
+
+func _close_dialog(close_dialog: Callable) -> Callable:
+	if close_dialog.is_valid():
+		close_dialog.call()
+	return Callable()
+
+
+func _is_future_date(year: int, month: int, day: int) -> bool:
+	var now: Dictionary = Time.get_date_dict_from_system()
+	var current_year: int = int(now.get("year", _get_current_year()))
+	var current_month: int = int(now.get("month", 1))
+	var current_day: int = int(now.get("day", 1))
+	if year != current_year:
+		return year > current_year
+	if month != current_month:
+		return month > current_month
+	return day > current_day
 
 
 func _on_back_pressed() -> void:

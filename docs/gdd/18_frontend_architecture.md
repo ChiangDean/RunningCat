@@ -469,6 +469,8 @@ Current notes:
 
 - `ConfigScene` is now the real settings center.
 - It owns profile editing, account / linked-provider display, redeem code UI, and local audio settings.
+- Profile editing now keeps avatar selection in a shared dialog, shows live player-name / bio character counts, uses a small shared picker dialog for optional birthday input, and constrains region selection to a shared country list dialog with inertial scroll drag.
+- Account details now expose `Player UID` with a copy action and provide a logout action from inside the settings center.
 - OAuth is currently status-only: `Google` and `Apple` cards are visible but disabled when unbound.
 
 ### 9.4 Team Lineup
