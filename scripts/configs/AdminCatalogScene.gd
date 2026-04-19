@@ -35,6 +35,9 @@ var _reload_button: Button
 var _discard_button: Button
 var _editor: TextEdit
 var _reference_label: RichTextLabel
+var _left_panel: VBoxContainer
+var _renderer_host: VBoxContainer
+var _active_renderer: Control
 
 
 func _ready() -> void:
@@ -125,11 +128,20 @@ func _build_ui() -> void:
 	content_split.split_offset = 760
 	right_column.add_child(content_split)
 
+	_left_panel = VBoxContainer.new()
+	_left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_split.add_child(_left_panel)
+
 	_editor = TextEdit.new()
 	_editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_editor.wrap_mode = TextEdit.LINE_WRAPPING_NONE
 	_editor.text_changed.connect(_on_editor_text_changed)
-	content_split.add_child(_editor)
+	_left_panel.add_child(_editor)
+
+	_renderer_host = VBoxContainer.new()
+	_renderer_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_renderer_host.visible = false
+	_left_panel.add_child(_renderer_host)
 
 	_reference_label = RichTextLabel.new()
 	_reference_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -227,9 +239,40 @@ func _load_section(section_key: String) -> void:
 
 
 func _set_editor_payload(payload: Dictionary) -> void:
-	_updating_editor = true
-	_editor.text = JSON.stringify(payload, "\t")
-	_updating_editor = false
+	if _active_renderer != null:
+		_renderer_host.remove_child(_active_renderer)
+		_active_renderer.queue_free()
+		_active_renderer = null
+
+	var renderer: Control = _create_renderer(_current_section_key)
+	if renderer != null:
+		_active_renderer = renderer
+		_active_renderer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_active_renderer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_active_renderer.changed.connect(func() -> void:
+			_dirty = true
+			_refresh_action_state()
+		)
+		_renderer_host.add_child(_active_renderer)
+		_active_renderer.setup(payload)
+		_editor.visible = false
+		_renderer_host.visible = true
+	else:
+		_editor.visible = true
+		_renderer_host.visible = false
+		_updating_editor = true
+		_editor.text = JSON.stringify(payload, "\t")
+		_updating_editor = false
+
+
+func _create_renderer(section_key: String) -> Control:
+	match section_key:
+		"core":
+			return AdminCatalogCoreRenderer.new()
+		"gacha":
+			return AdminCatalogGachaRenderer.new()
+		_:
+			return null
 
 
 func _refresh_section_visuals() -> void:
@@ -314,14 +357,18 @@ func _on_save_pressed() -> void:
 
 
 func _save_current_section() -> void:
-	var parser := JSON.new()
-	if parser.parse(_editor.text) != OK:
-		DialogManager.show_info("JSON 格式錯誤", "請先修正 JSON 內容後再儲存。")
-		return
-	var payload: Variant = parser.get_data()
-	if not (payload is Dictionary):
-		DialogManager.show_info("格式錯誤", "Section payload 必須是 JSON object。")
-		return
+	var payload: Variant
+	if _active_renderer != null:
+		payload = _active_renderer.get_data()
+	else:
+		var parser := JSON.new()
+		if parser.parse(_editor.text) != OK:
+			DialogManager.show_info("JSON 格式錯誤", "請先修正 JSON 內容後再儲存。")
+			return
+		payload = parser.get_data()
+		if not (payload is Dictionary):
+			DialogManager.show_info("格式錯誤", "Section payload 必須是 JSON object。")
+			return
 
 	_saving = true
 	_refresh_action_state()
@@ -359,7 +406,8 @@ func _on_discard_pressed() -> void:
 
 func _refresh_action_state() -> void:
 	var can_edit := not _loading_access and not _loading_section and _current_section_key != ""
-	_editor.editable = can_edit and not _saving
+	if _active_renderer == null:
+		_editor.editable = can_edit and not _saving
 	_save_button.disabled = not can_edit or not _dirty or _saving
 	_reload_button.disabled = not can_edit or _saving
 	_discard_button.disabled = not can_edit or not _dirty or _saving
