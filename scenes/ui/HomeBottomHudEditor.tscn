@@ -1,0 +1,468 @@
+[gd_scene format=3 uid="uid://cd7agdk0au2yw"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://b2n1esfjb8qhv" path="res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://3wbngnf81u4r" path="res://assets/sprites/ui/home/v2/slices/background/home_lower_mainmenu_background.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://m846eg1gj2se" path="res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_panel_long_default.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://hcxyjfljp2yk" path="res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_default.png" id="6"]
+[ext_resource type="PackedScene" uid="uid://cikgbyv5iye5t" path="res://scenes/ui/HomeScoopButtonTemplate.tscn" id="7"]
+
+[node name="HomeBottomHudEditor" type="Control" unique_id=184677552]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+theme = ExtResource("1")
+
+[node name="LowerMainmenuBackground" type="TextureRect" parent="." unique_id=1977670905]
+layout_mode = 0
+offset_top = 997.34375
+offset_right = 720.0
+offset_bottom = 1280.0
+texture = ExtResource("3")
+expand_mode = 1
+
+[node name="MainButtonPanel" type="TextureRect" parent="." unique_id=1683270353]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 1200.0
+offset_right = 679.0
+offset_bottom = 1270.0
+texture = ExtResource("4")
+expand_mode = 1
+
+[node name="LowerMenuBackground" type="TextureRect" parent="." unique_id=236000344]
+layout_mode = 0
+offset_top = 647.0
+offset_right = 721.1428
+offset_bottom = 1278.0
+texture = ExtResource("2")
+expand_mode = 1
+
+[node name="SkillPanel" type="Control" parent="." unique_id=1874900526]
+anchors_preset = 0
+offset_top = 790.0
+offset_right = 720.0
+offset_bottom = 1170.0
+
+[node name="SkillShadow" type="ColorRect" parent="SkillPanel" unique_id=2068036557]
+layout_mode = 0
+offset_top = 116.0
+offset_right = 720.0
+offset_bottom = 372.0
+color = Color(0.03, 0.02, 0.02, 0.12)
+
+[node name="SkillBody" type="ColorRect" parent="SkillPanel" unique_id=906055668]
+layout_mode = 0
+offset_right = 720.0
+offset_bottom = 380.0
+color = Color(0.13, 0.09, 0.07, 0.18)
+
+[node name="SkillInner" type="ColorRect" parent="SkillPanel" unique_id=1919934782]
+layout_mode = 0
+offset_left = 2.0
+offset_top = 3.0
+offset_right = 718.0
+offset_bottom = 379.0
+color = Color(0.2, 0.14, 0.1, 0.16)
+
+[node name="SkillTopGlow" type="ColorRect" parent="SkillPanel" unique_id=248081950]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 6.0
+offset_right = 712.0
+offset_bottom = 18.0
+color = Color(1, 0.92, 0.78, 0.28)
+
+[node name="SkillHeaderRule" type="ColorRect" parent="SkillPanel" unique_id=1092649605]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 34.0
+offset_right = 712.0
+offset_bottom = 36.0
+color = Color(0.84, 0.66, 0.34, 0.4)
+
+[node name="ScoopButton" type="Button" parent="SkillPanel" unique_id=68054259]
+layout_mode = 0
+offset_left = 185.0
+offset_top = 39.0
+offset_right = 290.0
+offset_bottom = 95.0
+text = "貓砂"
+
+[node name="SkillFilterButton" type="Button" parent="SkillPanel" unique_id=668337614]
+layout_mode = 0
+offset_left = 307.0
+offset_top = 38.0
+offset_right = 413.0
+offset_bottom = 97.0
+text = "衝撞"
+
+[node name="SandboxButton" type="Button" parent="SkillPanel" unique_id=693482694]
+layout_mode = 0
+offset_left = 255.0
+offset_top = -24.0
+offset_right = 479.0
+offset_bottom = 19.0
+text = "Sandbox"
+
+[node name="SpeedButton" type="Button" parent="SkillPanel" unique_id=149814929]
+layout_mode = 0
+offset_left = 492.0
+offset_top = -23.0
+offset_right = 620.0
+offset_bottom = 20.0
+text = "Speed"
+
+[node name="SkillBarAnchor" type="ColorRect" parent="SkillPanel" unique_id=1200124434]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 114.0
+offset_right = 714.0
+offset_bottom = 240.0
+color = Color(0.92, 0.82, 0.35, 0.1)
+
+[node name="HomeScoopPanel" parent="." unique_id=869017672 instance=ExtResource("7")]
+layout_mode = 0
+offset_left = 125.0
+offset_top = 931.0
+offset_right = 645.0
+offset_bottom = 1159.0
+
+[node name="MainNav" type="Control" parent="." unique_id=1813026973]
+anchors_preset = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+metadata/_edit_lock_ = true
+
+[node name="ScooperButton" type="TextureRect" parent="MainNav" unique_id=442827070]
+layout_mode = 0
+offset_left = 36.0
+offset_top = 1197.0
+offset_right = 166.76724
+offset_bottom = 1274.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="MainNav/ScooperButton" unique_id=997225134]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 9.0
+offset_right = 123.0
+offset_bottom = 68.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 20
+text = "鏟屎官"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EnhanceButton" type="TextureRect" parent="MainNav" unique_id=1542072907]
+layout_mode = 0
+offset_left = 168.0
+offset_top = 1198.0
+offset_right = 298.76724
+offset_bottom = 1275.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="MainNav/EnhanceButton" unique_id=2124260592]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 123.0
+offset_bottom = 68.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 20
+text = "主子"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ActivityButton" type="TextureRect" parent="MainNav" unique_id=904597082]
+layout_mode = 0
+offset_left = 300.0
+offset_top = 1197.0
+offset_right = 432.4655
+offset_bottom = 1275.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="MainNav/ActivityButton" unique_id=214389467]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 124.0
+offset_bottom = 69.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 20
+text = "活動"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ShopButton" type="TextureRect" parent="MainNav" unique_id=39794143]
+layout_mode = 0
+offset_left = 434.0
+offset_top = 1198.0
+offset_right = 561.3707
+offset_bottom = 1273.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="MainNav/ShopButton" unique_id=1666071615]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 119.0
+offset_bottom = 66.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 20
+text = "商店"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MoreButton" type="TextureRect" parent="MainNav" unique_id=715713076]
+layout_mode = 0
+offset_left = 564.0
+offset_top = 1197.0
+offset_right = 693.069
+offset_bottom = 1273.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="MainNav/MoreButton" unique_id=432387605]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 9.0
+offset_right = 120.0
+offset_bottom = 67.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 20
+text = "更多"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="QuickButtons" type="Control" parent="." unique_id=763409391]
+anchors_preset = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+metadata/_edit_lock_ = true
+
+[node name="MailButton" type="TextureRect" parent="QuickButtons" unique_id=410428944]
+layout_mode = 0
+offset_left = 565.0
+offset_top = 1121.0
+offset_right = 699.1638
+offset_bottom = 1200.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/MailButton" unique_id=1681241035]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 8.0
+offset_right = 125.0
+offset_bottom = 69.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "信件"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FriendButton" type="TextureRect" parent="QuickButtons" unique_id=1896004738]
+layout_mode = 0
+offset_left = 439.0
+offset_top = 1121.0
+offset_right = 566.37067
+offset_bottom = 1196.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/FriendButton" unique_id=2055472297]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 9.0
+offset_right = 119.0
+offset_bottom = 66.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "好友"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PartyButton" type="TextureRect" parent="QuickButtons" unique_id=156955127]
+layout_mode = 0
+offset_left = 565.0
+offset_top = 1042.0
+offset_right = 697.4655
+offset_bottom = 1120.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/PartyButton" unique_id=723428350]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 9.0
+offset_right = 124.0
+offset_bottom = 68.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "隊伍"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ChatButton" type="TextureRect" parent="QuickButtons" unique_id=973788353]
+layout_mode = 0
+offset_left = 303.0
+offset_top = 1117.0
+offset_right = 438.86206
+offset_bottom = 1197.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/ChatButton" unique_id=1565260545]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 9.0
+offset_right = 128.0
+offset_bottom = 71.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "聊天"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StatsButton" type="TextureRect" parent="QuickButtons" unique_id=34957942]
+layout_mode = 0
+offset_left = 169.0
+offset_top = 1119.0
+offset_right = 301.4655
+offset_bottom = 1197.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/StatsButton" unique_id=473134661]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 9.0
+offset_right = 124.0
+offset_bottom = 68.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "狀態"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineupButton" type="TextureRect" parent="QuickButtons" unique_id=1773397785]
+layout_mode = 0
+offset_left = 439.0
+offset_top = 1039.0
+offset_right = 571.4655
+offset_bottom = 1117.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/LineupButton" unique_id=1762848523]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 9.0
+offset_right = 124.0
+offset_bottom = 69.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "編隊"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BackpackButton" type="TextureRect" parent="QuickButtons" unique_id=1147824100]
+layout_mode = 0
+offset_left = 305.0
+offset_top = 1035.0
+offset_right = 439.16382
+offset_bottom = 1114.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/BackpackButton" unique_id=1473714526]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 9.0
+offset_right = 126.0
+offset_bottom = 70.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "背包"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EditorGuides" type="Control" parent="." unique_id=1506359553]
+visible = false
+anchors_preset = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+mouse_filter = 2
+
+[node name="MaxRightGuide" type="ColorRect" parent="EditorGuides" unique_id=1568613821]
+layout_mode = 0
+offset_left = 716.0
+offset_right = 720.0
+offset_bottom = 1280.0
+mouse_filter = 2
+color = Color(1, 0.28, 0.2, 0.95)
+
+[node name="MaxBottomGuide" type="ColorRect" parent="EditorGuides" unique_id=598187640]
+layout_mode = 0
+offset_top = 1276.0
+offset_right = 720.0
+offset_bottom = 1280.0
+mouse_filter = 2
+color = Color(1, 0.28, 0.2, 0.95)
+
+[node name="MaxRightLabel" type="Label" parent="EditorGuides" unique_id=874877729]
+layout_mode = 0
+offset_left = 470.0
+offset_top = 1222.0
+offset_right = 710.0
+offset_bottom = 1258.0
+theme_override_colors/font_color = Color(1, 0.95, 0.88, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.04, 0.02, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 20
+text = "MAX X = 720"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="MaxBottomLabel" type="Label" parent="EditorGuides" unique_id=2128221429]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 1238.0
+offset_right = 270.0
+offset_bottom = 1274.0
+theme_override_colors/font_color = Color(1, 0.95, 0.88, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.04, 0.02, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 20
+text = "MAX Y = 1280"
+vertical_alignment = 1
