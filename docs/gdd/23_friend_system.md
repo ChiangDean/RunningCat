@@ -1,5 +1,10 @@
 # Friend System — Frontend GDD (Godot)
 
+> Update 2026-04-19:
+> The home `FriendButton` now opens `FriendScene.tscn` through the shared overlay scene flow.
+> The friend surface uses the shared bottom submenu with `好友列表`, `等待審核邀請`, and `我的申請`.
+> Add-friend now uses player-name search with an `xlarge` result dialog and inertial scrolling candidate list.
+
 ## 1. Feature Summary
 
 好友系統由一個主面板（FriendPanel）組成，包含三個分頁：

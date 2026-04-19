@@ -1,5 +1,10 @@
 # Party System — Frontend GDD (Godot)
 
+> Update 2026-04-19:
+> The party surface now uses three shared bottom submenu sections: `overview`, `pending invites`, and `pending reviews`.
+> `pending invites` is role-aware: players without a party see invites they received, while players already in a party see outgoing invites that are still waiting for the target player's response.
+> `pending reviews` is also role-aware: players without a party see their own pending join applications, leaders can accept or reject join applications to the party, and regular members can only read that list.
+
 ## 1. Feature Summary
 
 隊伍系統由主面板（PartyPanel）組成，根據玩家是否有隊伍顯示不同內容：
@@ -77,9 +82,17 @@ PartyPanel (Control)
 │   └── ErrorLabel
 │
 ├── InvitePlayerDialog (PopupPanel)          隊長 / 隊員可用
-│   ├── PlayerUidInput (LineEdit)  "輸入玩家 UID"
-│   ├── ConfirmButton           "邀請"
-│   └── ErrorLabel
+│   ├── PlayerNameInput (LineEdit) "輸入對方遊戲名稱"
+│   ├── ConfirmButton            "確認"
+│   ├── SearchStatusLabel
+│   └── InviteCandidateList
+│       └── InviteCandidateEntry × N
+│           ├── Avatar
+│           ├── PlayerNameLabel
+│           ├── ScooperLevelLabel  "鏟屎官 Lv.X"
+│           ├── PlayerUidLabel     "UID player_xxx"
+│           ├── LastLoginLabel     "最後上線：5 分鐘前"
+│           └── InviteButton       "邀請"
 │
 └── UseCouponConfirmDialog (PopupPanel)
     ├── InfoLabel               "使用後可獲得當前一小時收益（約 X 金幣）"
@@ -101,7 +114,7 @@ PartyMemberEntry (HBoxContainer)
 │   └── RoleLabel                       "隊長" / "隊員"（顏色區分）
 ├── CheerStatusIcon                     若此人今天已對我加油打氣 → 顯示愛心 icon
 └── ActionHBox (HBoxContainer)
-    ├── InviteButton  [自己是隊長或隊員] → 開啟 InvitePlayerDialog（預填 uid 為空）
+    ├── InviteButton  [自己是隊長或隊員] → 開啟 InvitePlayerDialog（預填名稱為空）
     └── KickButton    [隊長限定]         → 確認 Dialog → POST kick
 ```
 
@@ -262,10 +275,15 @@ MyApplicationEntry (HBoxContainer)
 ```
 點擊 InviteButton（PartyMemberEntry 上方）或其他邀請入口
   → 開啟 InvitePlayerDialog
-  → 輸入 PlayerUID → 點擊 "邀請"
-      → POST /api/party/{partyId}/invite/{targetUserId}
-          成功 → Toast "邀請已送出"（若為隊員邀請：附加 "等待隊長確認"）
-          失敗：
+  → 輸入對方遊戲名稱 → 點擊 "確認"
+      → GET /api/party/{partyId}/invite-candidates?query={playerName}
+          顯示符合清單：
+              頭像 / 玩家名稱 / 鏟屎官等級 / UID / 最後上線
+          排序：最後上線時間越近越前面
+      → 點擊候選列上的 "邀請"
+          → POST /api/party/{partyId}/invite { targetPlayerUid }
+              成功 → Toast "邀請已送出" 並關閉 Dialog
+              失敗：
 
 | Error Code | 顯示文字 |
 |---|---|
@@ -429,7 +447,8 @@ UsurpButton 顯示條件：
 | 踢除隊員 | POST | `/api/party/{id}/kick/{uid}` |
 | 離隊 | DELETE | `/api/party/{id}/leave` |
 | 申請加入 | POST | `/api/party/apply` |
-| 邀請玩家 | POST | `/api/party/{id}/invite/{uid}` |
+| 搜尋邀請候選 | GET | `/api/party/{id}/invite-candidates?query={playerName}` |
+| 邀請玩家 | POST | `/api/party/{id}/invite` |
 | 取得待審核申請 | GET | `/api/party/{id}/applications` |
 | 接受申請 | POST | `/api/party/application/{id}/accept` |
 | 拒絕申請 | POST | `/api/party/application/{id}/reject` |

@@ -195,6 +195,10 @@ func claim_mail(mail_id: int, callback: Callable) -> void:
 func claim_all_mails(callback: Callable) -> void:
 	_api_post("mail/claim-all", {}, callback)
 
+
+func delete_read_mails(callback: Callable) -> void:
+	_api_delete("mail/read", callback)
+
 func get_chat_summary(callback: Callable) -> void:
 	_api_get("chat/summary", callback)
 
@@ -224,6 +228,10 @@ func get_friend_inbox(callback: Callable) -> void:
 
 func get_friend_outbox(callback: Callable) -> void:
 	_api_get("friend/request/outbox", callback)
+
+
+func search_friend_candidates(query: String, callback: Callable) -> void:
+	_api_get("friend/search-candidates?query=%s" % query.uri_encode(), callback)
 
 
 func send_friend_request(receiver_player_uid: String, callback: Callable) -> void:
@@ -298,6 +306,10 @@ func apply_to_party_by_name(party_name: String, callback: Callable) -> void:
 	_api_post("party/apply", {"partyName": party_name}, callback)
 
 
+func search_party_invite_candidates(party_id: int, query: String, callback: Callable) -> void:
+	_api_get("party/%d/invite-candidates?query=%s" % [party_id, query.uri_encode()], callback)
+
+
 func invite_player_to_party(party_id: int, target_player_uid: String, callback: Callable) -> void:
 	_api_post("party/%d/invite" % party_id, {"targetPlayerUid": target_player_uid}, callback)
 
@@ -308,6 +320,14 @@ func get_party_applications(party_id: int, callback: Callable) -> void:
 
 func get_my_party_applications(callback: Callable) -> void:
 	_api_get("party/applications/my", callback)
+
+
+func accept_party_invite(application_id: int, callback: Callable) -> void:
+	_api_post("party/invite/%d/accept" % application_id, {}, callback)
+
+
+func reject_party_invite(application_id: int, callback: Callable) -> void:
+	_api_post("party/invite/%d/reject" % application_id, {}, callback)
 
 
 func accept_party_application(application_id: int, callback: Callable) -> void:
@@ -743,17 +763,24 @@ func _build_loading_overlay() -> void:
 	var content := VBoxContainer.new()
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_theme_constant_override("separation", 14)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin.add_child(content)
+
+	var spinner_center: CenterContainer = CenterContainer.new()
+	spinner_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spinner_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(spinner_center)
 
 	_loading_spinner = Control.new()
 	_loading_spinner.custom_minimum_size = Vector2(84.0, 84.0)
 	_loading_spinner.pivot_offset = _loading_spinner.custom_minimum_size * 0.5
 	_loading_spinner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content.add_child(_loading_spinner)
+	spinner_center.add_child(_loading_spinner)
 	_build_spinner_dots()
 
 	_loading_message_label = Label.new()
 	_loading_message_label.text = DEFAULT_LOADING_MESSAGE
+	_loading_message_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_loading_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_loading_message_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	_loading_message_label.add_theme_color_override("font_color", Color("5f4c3f"))
