@@ -3,7 +3,7 @@ extends Node2D
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const DAMAGE_GRADIENT_SHADER := preload("res://scripts/ui/damage_number_gradient.gdshader")
-const DAMAGE_NUMBER_FONT := preload("res://assets/fonts/LuckiestGuy-Regular.ttf")
+const DAMAGE_NUMBER_FONT := preload("res://assets/fonts/Fredoka/Fredoka-Bold.ttf")
 
 signal died(node: CatNode)
 

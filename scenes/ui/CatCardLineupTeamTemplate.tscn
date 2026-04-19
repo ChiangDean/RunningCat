@@ -1,5 +1,22 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://culsrmsa8fmsp"]
 
-[ext_resource type="PackedScene" path="res://scenes/ui/CatCardSquareTemplate.tscn" id="1"]
+[ext_resource type="PackedScene" uid="uid://c4wm38uss2ii1" path="res://scenes/ui/CatCardSquareTemplate.tscn" id="1"]
 
-[node name="CatCardLineupTeamTemplate" instance=ExtResource("1")]
+[node name="CatCardLineupTeamTemplate" unique_id=831578431 instance=ExtResource("1")]
+
+[node name="RarityLabel" parent="." index="2"]
+offset_top = 76.0
+offset_bottom = 126.0
+
+[node name="LevelLabel" parent="." index="3"]
+offset_top = 412.0
+offset_bottom = 448.0
+
+[node name="NameLabel" parent="." index="5"]
+offset_top = 409.0
+offset_bottom = 452.0
+
+[node name="RankLabel" parent="." index="6"]
+offset_top = 382.0
+offset_bottom = 446.0
+theme_override_font_sizes/font_size = 40

@@ -152,7 +152,7 @@ func _build_title_block() -> PanelContainer:
 	var ribbon := Label.new()
 	ribbon.text = UiText.START_RIBBON
 	ribbon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ribbon.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	UiFonts.apply_fredoka_semibold(ribbon, UiPalette.FONT_SIZE_BODY_LG)
 	ribbon.add_theme_color_override("font_color", Color("f8f3ea"))
 	ribbon.add_theme_stylebox_override("normal", _make_ribbon_stylebox())
 	content.add_child(ribbon)
@@ -160,7 +160,7 @@ func _build_title_block() -> PanelContainer:
 	var title := Label.new()
 	title.text = TITLE_TEXT
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 46)
+	UiFonts.apply_noto(title, 46)
 	title.add_theme_color_override("font_color", Color("4f3d31"))
 	title.add_theme_color_override("font_shadow_color", Color("fffdf9"))
 	title.add_theme_constant_override("shadow_offset_x", 3)
@@ -170,7 +170,7 @@ func _build_title_block() -> PanelContainer:
 	var subtitle := Label.new()
 	subtitle.text = SUBTITLE_TEXT
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
+	UiFonts.apply_noto(subtitle, UiPalette.FONT_SIZE_TITLE)
 	subtitle.add_theme_color_override("font_color", Color("6a5547"))
 	content.add_child(subtitle)
 
@@ -201,7 +201,7 @@ func _build_auth_block() -> PanelContainer:
 
 	_form_title = Label.new()
 	_form_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_form_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
+	UiFonts.apply_noto(_form_title, UiPalette.FONT_SIZE_HEADING)
 	_form_title.add_theme_color_override("font_color", Color("4f3d31"))
 	content.add_child(_form_title)
 
@@ -224,6 +224,7 @@ func _build_auth_block() -> PanelContainer:
 	_primary_button = Button.new()
 	_primary_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_primary_button.custom_minimum_size = Vector2(0, 54)
+	UiFonts.apply_noto(_primary_button, UiPalette.FONT_SIZE_BODY_LG)
 	_primary_button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("9aae8b"), 10))
 	_primary_button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("a8bc98"), 10))
 	_primary_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("869a79"), 8))
@@ -233,6 +234,7 @@ func _build_auth_block() -> PanelContainer:
 	_secondary_button = Button.new()
 	_secondary_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_secondary_button.custom_minimum_size = Vector2(0, 54)
+	UiFonts.apply_noto(_secondary_button, UiPalette.FONT_SIZE_BODY_LG)
 	_secondary_button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("d4b593"), 10))
 	_secondary_button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("ddc19f"), 10))
 	_secondary_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("c59f78"), 8))
@@ -243,7 +245,7 @@ func _build_auth_block() -> PanelContainer:
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.custom_minimum_size = Vector2(0, 42)
-	_status_label.add_theme_font_size_override("font_size", 15)
+	UiFonts.apply_noto(_status_label, 15)
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f"))
 	content.add_child(_status_label)
 
@@ -279,7 +281,7 @@ func _build_loading_block() -> Control:
 	_loading_label = Label.new()
 	_loading_label.text = UiText.START_LOADING_GATHERING
 	_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_loading_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+	UiFonts.apply_noto(_loading_label, UiPalette.FONT_SIZE_SUBHEADING)
 	_loading_label.add_theme_color_override("font_color", Color("5f4c3f"))
 	content.add_child(_loading_label)
 
@@ -305,7 +307,7 @@ func _build_loading_block() -> Control:
 	_loading_percent_label = Label.new()
 	_loading_percent_label.text = UiText.START_LOADING_PERCENT_ZERO
 	_loading_percent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_loading_percent_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	UiFonts.apply_fredoka_medium(_loading_percent_label, UiPalette.FONT_SIZE_BODY_LG)
 	_loading_percent_label.add_theme_color_override("font_color", Color("715b4a"))
 	content.add_child(_loading_percent_label)
 
@@ -322,7 +324,7 @@ func _build_tap_hint() -> Label:
 	hint.position = Vector2(-190, 0)
 	hint.size = Vector2(380, 36)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
+	UiFonts.apply_noto(hint, UiPalette.FONT_SIZE_TITLE)
 	hint.add_theme_color_override("font_color", Color("f7f1e7"))
 	hint.add_theme_color_override("font_shadow_color", Color("5e4a3d"))
 	hint.add_theme_constant_override("shadow_offset_x", 2)
@@ -341,6 +343,7 @@ func _build_logout_button() -> Button:
 	button.custom_minimum_size = Vector2(112, 48)
 	button.visible = false
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	UiFonts.apply_noto(button, UiPalette.FONT_SIZE_BODY)
 	button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("d4b593"), 10))
 	button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("ddc19f"), 10))
 	button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("c59f78"), 8))
@@ -366,7 +369,7 @@ func _build_input(placeholder: String, secret: bool) -> LineEdit:
 	input.placeholder_text = placeholder
 	input.custom_minimum_size = Vector2(0, 46)
 	input.secret = secret
-	input.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	UiFonts.apply_noto(input, UiPalette.FONT_SIZE_BODY)
 	input.text_submitted.connect(_on_input_submitted)
 	return input
 
