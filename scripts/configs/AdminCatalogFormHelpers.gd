@@ -14,6 +14,45 @@ const ITEM_CATEGORY_OPTIONS := [
 	["Special", "特殊"],
 ]
 
+const STAT_TYPE_OPTIONS := [
+	["None", "未知"],
+	["Hp", "生命"],
+	["Atk", "攻擊"],
+	["Def", "防禦"],
+	["Speed", "速度"],
+	["HpPercent", "生命%"],
+	["AtkPercent", "攻擊%"],
+	["DefPercent", "防禦%"],
+	["CritRate", "暴擊率"],
+	["CritDamage", "暴擊傷害"],
+	["DamageReduction", "減傷"],
+	["CooldownReduction", "冷卻縮減"],
+	["IdlePoopPercent", "放置便便%"],
+]
+
+const VALUE_MODE_OPTIONS := [
+	["None", "未知"],
+	["Flat", "固定值"],
+	["Percent", "百分比"],
+]
+
+const TARGET_SCOPE_OPTIONS := [
+	["None", "未知"],
+	["Self", "自身"],
+	["AllySingle", "單體友方"],
+	["AllyAll", "全體友方"],
+	["EnemySingle", "單體敵方"],
+	["EnemyFront", "前排敵方"],
+	["EnemyLowestHp", "最低血量敵方"],
+	["EnemyAll", "全體敵方"],
+	["Team", "隊伍"],
+	["All", "全體"],
+	["Tank", "坦克"],
+	["Speed", "速度型"],
+	["Assassin", "刺客"],
+	["Defensive", "防禦型"],
+]
+
 const GACHA_RARITY_OPTIONS := [
 	["None", "未知"],
 	["Common", "普通"],
