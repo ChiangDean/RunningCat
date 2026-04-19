@@ -277,6 +277,20 @@ func _create_renderer(section_key: String) -> Control:
 			return AdminCatalogMemoriesRenderer.new()
 		"treasures":
 			return AdminCatalogTreasuresRenderer.new()
+		"dungeons":
+			return AdminCatalogDungeonsRenderer.new()
+		"achievements":
+			return AdminCatalogAchievementsRenderer.new()
+		"shop":
+			return AdminCatalogShopRenderer.new()
+		"stages":
+			return AdminCatalogStagesRenderer.new()
+		"scooper":
+			return AdminCatalogScooperRenderer.new()
+		"cats":
+			return AdminCatalogCatsRenderer.new()
+		"skills":
+			return AdminCatalogSkillsRenderer.new()
 		_:
 			return null
 

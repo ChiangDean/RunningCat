@@ -4,6 +4,57 @@ extends RefCounted
 const COL_TEXT_COLOR := Color(0.95, 0.93, 0.87, 1.0)
 const MUTED_COLOR := Color(0.72, 0.69, 0.63, 0.85)
 
+const REWARD_TYPE_OPTIONS := [
+	["None", "無"], ["Gold", "金幣"], ["Diamond", "鑽石"],
+	["TrapPoint", "捕獲點"], ["CatFood", "貓糧"], ["SpecialCatFood", "特製貓糧"],
+	["TrapCage", "誘捕籠"], ["PoopCount", "便便"], ["MemoryShard", "記憶碎片"],
+	["WhiskerShard", "鬍鬚碎片"], ["SpecialAbility", "特殊能力"], ["Treasure", "寶物"],
+	["Memory", "記憶"], ["Equipment", "裝備"], ["Cat", "貓咪"], ["Consumable", "消耗品"],
+]
+
+const ACHIEVEMENT_CATEGORY_OPTIONS := [
+	["None", "未知"], ["Small", "小成就"], ["Big", "大成就"],
+]
+
+const ACHIEVEMENT_CONDITION_OPTIONS := [
+	["None", "未知"], ["ScooperLevelReached", "鏟屎官等級"],
+	["AnyCatLevelReached", "貓咪等級"], ["AnyCatRankReached", "貓咪階級"],
+	["EquipmentOwnedCountReached", "裝備持有數"], ["StageReached", "關卡達成"],
+	["MemoryUnlockedCountReached", "記憶解鎖數"], ["OwnedCatCountReached", "貓咪持有數"],
+]
+
+const SKILL_TYPE_OPTIONS := [
+	["None", "未知"], ["Active", "主動技能"], ["Passive", "被動技能"],
+]
+
+const SKILL_EFFECT_TYPE_OPTIONS := [
+	["None", "未知"], ["Damage", "傷害"], ["Heal", "治療"], ["Shield", "護盾"],
+	["BuffStat", "增益"], ["DebuffStat", "減益"], ["StatBoost", "能力提升"],
+	["DamageReduction", "減傷"], ["CooldownReduction", "冷卻縮減"], ["Reflect", "反傷"],
+]
+
+const SPECIAL_ABILITY_EFFECT_OPTIONS := [
+	["None", "未知"], ["IdleRewardMultiplier", "放置獎勵倍率"],
+	["IdleMaxHoursBonus", "放置上限時數"], ["UnlockBattleSpeed", "解鎖戰鬥加速"],
+	["UnlockBattleSkip", "解鎖戰鬥跳過"], ["BossSpeedMultiplier", "首領速度倍率"],
+]
+
+const SHOP_CATEGORY_OPTIONS := [
+	["None", "未知"], ["ValuePack", "超值禮包"], ["GrowthPack", "成長禮包"],
+	["DailyPack", "每日禮包"], ["LimitedPack", "限時禮包"],
+]
+
+const SHOP_GROUP_OPTIONS := [
+	["None", "未知"], ["StarterPack", "新手禮包"], ["LaunchBoostPackI", "衝刺禮包I"],
+	["LaunchBoostPackII", "衝刺禮包II"], ["PermanentPack", "常設禮包"],
+	["DailyPack", "每日禮包"], ["FreePack", "免費禮包"],
+]
+
+const ZONE_TYPE_OPTIONS := [
+	["None", "未知"], ["Beginner", "新手區"], ["Forest", "森林區"],
+	["Town", "城鎮區"], ["Ruins", "遺跡區"], ["Castle", "城堡區"],
+]
+
 const ITEM_CATEGORY_OPTIONS := [
 	["None", "未知"],
 	["CurrencyLike", "貨幣型"],
