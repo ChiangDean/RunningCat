@@ -38,9 +38,11 @@ func _process(_delta: float) -> void:
 		if Time.get_ticks_msec() / 1000.0 - _last_ping_unix >= HEARTBEAT_INTERVAL_SECONDS:
 			_send_json({"action": "ping"})
 			_last_ping_unix = Time.get_ticks_msec() / 1000.0
-		while _socket.get_available_packet_count() > 0:
+		while _socket != null and _socket.get_available_packet_count() > 0:
 			var packet: String = _socket.get_packet().get_string_from_utf8()
 			_handle_payload(packet)
+			if _socket == null:
+				break
 	elif state == WebSocketPeer.STATE_CONNECTING:
 		GameState.set_chat_connection_state("connecting")
 	else:
@@ -56,7 +58,7 @@ func mark_read(channel_key: String, last_read_sequence: int) -> void:
 	if _socket != null and _socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		_send_json({"action": "mark_read", "channelKey": channel_key, "lastReadSequence": last_read_sequence})
 	else:
-		ApiClient.post_chat_read(channel_key, last_read_sequence, func(_success: bool, _data: Variant, _error: Dictionary) -> void:
+		ApiClient.post_chat_read_silent(channel_key, last_read_sequence, func(_success: bool, _data: Variant, _error: Dictionary) -> void:
 			pass
 		)
 
@@ -126,6 +128,44 @@ func _handle_payload(packet: String) -> void:
 				GameState.append_chat_message_envelope(channel_key, int(data.get("sequence", 0)), message_variant)
 		"chat.unread.sync":
 			GameState.set_chat_unread_count(_resolve_client_channel(str(data.get("channelKey", "")).to_lower()), int(data.get("unreadCount", 0)))
+		"social.friend.summary.sync":
+			var friend_summary_variant: Variant = data.get("summary", {})
+			if friend_summary_variant is Dictionary:
+				GameState.update_friend_red_dot_summary(friend_summary_variant)
+		"social.friend.sync":
+			var friend_list_variant: Variant = data.get("friendList", {})
+			var friend_inbox_variant: Variant = data.get("friendInbox", [])
+			var friend_outbox_variant: Variant = data.get("friendOutbox", [])
+			GameState.update_friend_social_data(
+				friend_list_variant if friend_list_variant is Dictionary else {},
+				friend_inbox_variant if friend_inbox_variant is Array else [],
+				friend_outbox_variant if friend_outbox_variant is Array else []
+			)
+		"social.party.summary.sync":
+			var party_summary_variant: Variant = data.get("summary", {})
+			if party_summary_variant is Dictionary:
+				GameState.update_party_red_dot_summary(party_summary_variant)
+		"social.party.sync":
+			var previous_party_channel_key: String = GameState.chat_party_channel_key
+			var party_detail_variant: Variant = data.get("partyDetail", {})
+			var party_cheer_status_variant: Variant = data.get("partyCheerStatus", {})
+			var party_applications_variant: Variant = data.get("partyApplications", [])
+			var party_my_applications_variant: Variant = data.get("partyMyApplications", [])
+			GameState.update_party_social_data(
+				party_detail_variant if party_detail_variant is Dictionary else {},
+				party_cheer_status_variant if party_cheer_status_variant is Dictionary else {},
+				party_applications_variant if party_applications_variant is Array else [],
+				party_my_applications_variant if party_my_applications_variant is Array else []
+			)
+			if previous_party_channel_key != GameState.chat_party_channel_key:
+				reconnect_now()
+		"mail.sync":
+			var mail_summary_variant: Variant = data.get("mailSummary", {})
+			var mail_inbox_variant: Variant = data.get("mailInbox", [])
+			GameState.update_mail_state(
+				mail_summary_variant if mail_summary_variant is Dictionary else {},
+				mail_inbox_variant if mail_inbox_variant is Array else []
+			)
 		"chat.pong":
 			pass
 		"chat.error":

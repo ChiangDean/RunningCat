@@ -5,6 +5,7 @@ const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const REROLL_COOLDOWN := 5.0
 const OPPONENT_SLOT_FILL := Color(0.19, 0.17, 0.15, 0.96)
@@ -47,6 +48,7 @@ var _reward_list: VBoxContainer
 
 func _ready() -> void:
 	_build_ui()
+	GameState.red_dot_state_changed.connect(_apply_red_dots)
 	if not GameState.arena_overview_data.is_empty():
 		_apply_overview(GameState.arena_overview_data)
 	_refresh_overview([])
@@ -289,6 +291,7 @@ func _apply_overview(overview: Dictionary) -> void:
 	_refresh_team_panel()
 	_render_opponents()
 	_render_rewards()
+	_apply_red_dots()
 
 
 func _render_opponents() -> void:
@@ -786,6 +789,11 @@ func _refresh_tab_state() -> void:
 		_arena_section.visible = _active_tab == "arena"
 	if _reward_section != null:
 		_reward_section.visible = _active_tab == "rewards"
+	_apply_red_dots()
+
+
+func _apply_red_dots() -> void:
+	RedDotService.refresh_dot(_tab_buttons.get("rewards") as Control, RedDotService.has_arena_red_dot())
 
 
 func _render_rewards() -> void:

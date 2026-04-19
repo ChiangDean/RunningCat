@@ -1,5 +1,7 @@
 extends RefCounted
 
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+
 
 func build(scene: Control) -> void:
 	var summary_row: HBoxContainer = HBoxContainer.new()
@@ -98,6 +100,7 @@ func _add_achievement_section(scene: Control, title_text: String, entries: Array
 		claim_all_btn.custom_minimum_size = Vector2(120.0, 40.0)
 		claim_all_btn.disabled = bool(scene._api_in_flight)
 		UiPalette.apply_button_kind(claim_all_btn, "confirm")
+		RedDotService.refresh_dot(claim_all_btn, not claim_all_btn.disabled)
 		claim_all_btn.pressed.connect(func() -> void:
 			_claim_all_achievements(scene)
 		)
@@ -205,6 +208,7 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 		action_btn.text = UiText.SCOOPER_ACHIEVEMENT_ACTION_CLAIM
 		action_btn.disabled = bool(scene._api_in_flight)
 		UiPalette.apply_button_kind(action_btn, "confirm")
+		RedDotService.refresh_dot(action_btn, not action_btn.disabled)
 		action_btn.pressed.connect(func() -> void:
 			_claim_achievement(scene, achievement_id)
 		)

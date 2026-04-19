@@ -64,8 +64,10 @@ var _catalog_section: Control
 func _ready() -> void:
 	_build_feedback_layers()
 	_build_ui()
+	GameState.red_dot_state_changed.connect(_refresh_red_dots)
 	if GameState.enhance_data.is_empty():
 		_request_enhance_overview()
+	_refresh_red_dots()
 
 
 func _build_feedback_layers() -> void:
@@ -299,6 +301,12 @@ func _refresh_special_buttons(player_cat: PlayerCatData) -> void:
 
 func _refresh_rank_labels(player_cat: PlayerCatData) -> void:
 	Refresh.refresh_rank_labels(self, player_cat)
+
+
+func _refresh_red_dots() -> void:
+	_populate_cat_buttons()
+	if _detail_panel != null and is_instance_valid(_detail_panel):
+		_refresh_all_labels()
 
 
 func _build_skill_section(cat_data: CatData, player_cat: PlayerCatData) -> void:

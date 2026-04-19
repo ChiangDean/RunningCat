@@ -2,6 +2,7 @@
 extends RefCounted
 
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 
 static func refresh_all_labels(scene) -> void:
@@ -198,6 +199,9 @@ static func refresh_rank_labels(scene, player_cat: PlayerCatData) -> void:
 		scene._rank_progress_bar.value = minf(float(held), float(cost))
 	scene._rank_upgrade_btn.text = UiText.ENHANCE_RANK_UPGRADE_BUTTON
 	scene._rank_upgrade_btn.disabled = scene._action_inflight or held < cost
+	RedDotService.refresh_dot(scene._rank_upgrade_btn, not scene._rank_upgrade_btn.disabled)
+	var rank_tab_btn: Control = scene._detail_tab_btns.get("rank", null)
+	RedDotService.refresh_dot(rank_tab_btn, not scene._rank_upgrade_btn.disabled)
 
 
 static func _format_stat_value(label: String, value: int, point_delta: int, bonus: float) -> String:

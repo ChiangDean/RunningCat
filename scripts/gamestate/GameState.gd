@@ -6,6 +6,7 @@ const FileUtils = preload("res://scripts/gamestate/GameStateFileUtils.gd")
 const CacheIO   = preload("res://scripts/gamestate/GameStateCacheIO.gd")
 const BossStage = preload("res://scripts/gamestate/GameStateBossStage.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const AUTH_SESSION_PATH := "user://auth_session.json"
 const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
@@ -17,9 +18,12 @@ signal achievements_changed
 signal chat_connection_state_changed(state: String)
 signal chat_messages_changed(channel_key: String)
 signal chat_unread_changed(channel_key: String, count: int)
+signal mail_state_changed
 signal party_cheer_coupon_count_changed(count: int)
 signal player_profile_changed
 signal player_wallet_changed
+signal social_state_changed(domain_key: String)
+signal red_dot_state_changed
 
 # Primary player state and runtime caches.
 var player_data: PlayerData
@@ -76,15 +80,113 @@ func clear_persisted_player_state() -> void:
 	arena_data = PlayerArenaData.new()
 	arena_opponent = {}
 	arena_overview_data = {}
+	enhance_data = []
+	scooper_profile_data = {}
+	scooper_equipment_data = []
+	scooper_ability_data = []
+	scooper_memory_data = []
+	scooper_treasure_data = []
+	scooper_achievement_data = []
 	gacha_data = {}
 	shop_data = {}
+	friend_list_data = {}
+	friend_inbox_data = []
+	friend_outbox_data = []
+	friend_red_dot_summary = {}
+	party_detail_data = {}
+	party_cheer_status_data = {}
+	party_applications_data = []
+	party_my_applications_data = []
+	party_red_dot_summary = {}
 	clear_chat_state()
 	set_party_cheer_coupon_count(0)
+	_emit_red_dot_state_changed()
 
 
 func clear_auth_and_player_state() -> void:
 	clear_auth_session()
 	clear_persisted_player_state()
+
+
+func _emit_red_dot_state_changed() -> void:
+	red_dot_state_changed.emit()
+
+
+func update_friend_red_dot_summary(data: Dictionary) -> void:
+	friend_red_dot_summary = data.duplicate(true)
+	_emit_red_dot_state_changed()
+
+
+func clear_friend_red_dot_summary() -> void:
+	if friend_red_dot_summary.is_empty():
+		return
+	friend_red_dot_summary = {}
+	_emit_red_dot_state_changed()
+
+
+func update_party_red_dot_summary(data: Dictionary) -> void:
+	party_red_dot_summary = data.duplicate(true)
+	_emit_red_dot_state_changed()
+
+
+func clear_party_red_dot_summary() -> void:
+	if party_red_dot_summary.is_empty():
+		return
+	party_red_dot_summary = {}
+	_emit_red_dot_state_changed()
+
+
+func update_friend_social_data(friend_list: Dictionary, friend_inbox: Array, friend_outbox: Array) -> void:
+	friend_list_data = _normalize_image_fields_variant(friend_list)
+	friend_inbox_data = _normalize_image_fields_variant(friend_inbox)
+	friend_outbox_data = _normalize_image_fields_variant(friend_outbox)
+	friend_red_dot_summary = RedDotService.build_friend_summary(friend_list_data, friend_inbox_data)
+	social_state_changed.emit("friend")
+	_emit_red_dot_state_changed()
+
+
+func clear_friend_social_data() -> void:
+	friend_list_data = {}
+	friend_inbox_data = []
+	friend_outbox_data = []
+	friend_red_dot_summary = {}
+	social_state_changed.emit("friend")
+	_emit_red_dot_state_changed()
+
+
+func update_party_social_data(party_detail: Dictionary, party_cheer_status: Dictionary, party_applications: Array, party_my_applications: Array) -> void:
+	party_detail_data = _normalize_image_fields_variant(party_detail)
+	party_cheer_status_data = _normalize_image_fields_variant(party_cheer_status)
+	party_applications_data = _normalize_image_fields_variant(party_applications)
+	party_my_applications_data = _normalize_image_fields_variant(party_my_applications)
+	chat_party_channel_key = str(party_detail_data.get("chatChannelKey", "")).strip_edges()
+	chat_party_available = chat_party_channel_key != ""
+	if not chat_party_available:
+		chat_party_messages = []
+		chat_unread_counts["party"] = 0
+		chat_last_received_seq_by_channel["party"] = 0
+		emit_signal("chat_messages_changed", "party")
+		emit_signal("chat_unread_changed", "party", 0)
+	party_red_dot_summary = RedDotService.build_party_summary(party_detail_data, party_cheer_status_data, party_applications_data)
+	social_state_changed.emit("party")
+	_emit_red_dot_state_changed()
+
+
+func clear_party_social_data() -> void:
+	party_detail_data = {}
+	party_cheer_status_data = {}
+	party_applications_data = []
+	party_my_applications_data = []
+	chat_party_channel_key = ""
+	chat_party_available = false
+	chat_party_messages = []
+	chat_unread_counts["party"] = 0
+	chat_last_received_seq_by_channel["party"] = 0
+	emit_signal("chat_messages_changed", "party")
+	emit_signal("chat_unread_changed", "party", 0)
+	party_red_dot_summary = {}
+	social_state_changed.emit("party")
+	_emit_red_dot_state_changed()
 
 
 func load_persisted_auth_session() -> bool:
@@ -194,11 +296,12 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	player_data.last_free_pull_date = data.get("lastFreePullDate") if data.get("lastFreePullDate") != null else player_data.last_free_pull_date
 	player_data.current_stage = int(data.get("currentStage", player_data.current_stage))
 	current_global_stage = player_data.current_stage
-	update_mail_summary(data.get("mailSummary", {}))
+	var mail_summary_variant: Variant = data.get("mailSummary", {})
 	var mail_inbox: Variant = data.get("mailInbox", [])
-	if mail_inbox is Array:
-		update_mail_list(mail_inbox)
-		update_selected_mail({})
+	update_mail_state(
+		mail_summary_variant if mail_summary_variant is Dictionary else {},
+		mail_inbox if mail_inbox is Array else []
+	)
 	player_data.save()
 	party_cheer_coupon_count_changed.emit(player_data.party_cheer_coupon_count)
 
@@ -298,8 +401,27 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	var chat_summary_variant: Variant = data.get("chatSummary", {})
 	if chat_summary_variant is Dictionary:
 		apply_chat_summary(chat_summary_variant)
+	var friend_list_variant: Variant = data.get("friendList", {})
+	var friend_inbox_variant: Variant = data.get("friendInbox", [])
+	var friend_outbox_variant: Variant = data.get("friendOutbox", [])
+	update_friend_social_data(
+		friend_list_variant if friend_list_variant is Dictionary else {},
+		friend_inbox_variant if friend_inbox_variant is Array else [],
+		friend_outbox_variant if friend_outbox_variant is Array else []
+	)
+	var party_detail_variant: Variant = data.get("partyDetail", {})
+	var party_cheer_status_variant: Variant = data.get("partyCheerStatus", {})
+	var party_applications_variant: Variant = data.get("partyApplications", [])
+	var party_my_applications_variant: Variant = data.get("partyMyApplications", [])
+	update_party_social_data(
+		party_detail_variant if party_detail_variant is Dictionary else {},
+		party_cheer_status_variant if party_cheer_status_variant is Dictionary else {},
+		party_applications_variant if party_applications_variant is Array else [],
+		party_my_applications_variant if party_my_applications_variant is Array else []
+	)
 	player_profile_changed.emit()
 	player_wallet_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func apply_profile_response(data: Dictionary) -> void:
@@ -332,6 +454,7 @@ func apply_profile_response(data: Dictionary) -> void:
 
 	player_data.save()
 	player_profile_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func get_profile_avatar_id() -> String:
@@ -469,6 +592,15 @@ var shop_data: Dictionary = {}
 var mail_summary_data: Dictionary = {}
 var mail_list_data: Array = []
 var selected_mail_data: Dictionary = {}
+var friend_list_data: Dictionary = {}
+var friend_inbox_data: Array = []
+var friend_outbox_data: Array = []
+var friend_red_dot_summary: Dictionary = {}
+var party_detail_data: Dictionary = {}
+var party_cheer_status_data: Dictionary = {}
+var party_applications_data: Array = []
+var party_my_applications_data: Array = []
+var party_red_dot_summary: Dictionary = {}
 
 
 func _ready() -> void:
@@ -689,6 +821,7 @@ func update_scooper_profile(data: Dictionary) -> void:
 	scooper_profile_data = data.duplicate(true)
 	CacheIO.save_scooper("profile", scooper_profile_data)
 	if player_data == null:
+		_emit_red_dot_state_changed()
 		return
 	player_data.scooper_level = int(scooper_profile_data.get("scooperLevel", player_data.scooper_level))
 	player_data.scooper_exp = int(scooper_profile_data.get("scooperExp", player_data.scooper_exp))
@@ -700,6 +833,7 @@ func update_scooper_profile(data: Dictionary) -> void:
 	player_data.save()
 	party_cheer_coupon_count_changed.emit(player_data.party_cheer_coupon_count)
 	player_wallet_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func get_party_cheer_coupon_count() -> int:
@@ -717,6 +851,7 @@ func set_party_cheer_coupon_count(count: int) -> void:
 	player_data.party_cheer_coupon_count = normalized_count
 	player_data.save()
 	party_cheer_coupon_count_changed.emit(normalized_count)
+	_emit_red_dot_state_changed()
 
 
 func adjust_party_cheer_coupon_count(delta: int) -> void:
@@ -726,6 +861,7 @@ func adjust_party_cheer_coupon_count(delta: int) -> void:
 func update_scooper_equipment(data: Array) -> void:
 	scooper_equipment_data = _normalize_image_fields_variant(data)
 	CacheIO.save_scooper("equipment", scooper_equipment_data)
+	_emit_red_dot_state_changed()
 
 ## 更新特殊能力快取（記憶體 + 本地檔案）
 func update_scooper_ability(data: Array) -> void:
@@ -736,6 +872,7 @@ func update_scooper_ability(data: Array) -> void:
 func update_scooper_memory(data: Array) -> void:
 	scooper_memory_data = _normalize_image_fields_variant(data)
 	CacheIO.save_scooper("memory", scooper_memory_data)
+	_emit_red_dot_state_changed()
 
 ## 更新寶藏快取（記憶體 + 本地檔案）
 func update_scooper_treasure(data: Array) -> void:
@@ -746,6 +883,7 @@ func update_scooper_treasure(data: Array) -> void:
 func update_scooper_achievement(data: Array) -> void:
 	scooper_achievement_data = data
 	CacheIO.save_scooper("achievement", data)
+	_emit_red_dot_state_changed()
 
 
 func update_arena(data: Dictionary) -> void:
@@ -762,6 +900,7 @@ func update_arena(data: Dictionary) -> void:
 	player_data.cat_food = int(arena_overview_data.get("catFood", player_data.cat_food))
 	player_data.special_cat_food = int(arena_overview_data.get("specialCatFood", player_data.special_cat_food))
 	player_data.save()
+	_emit_red_dot_state_changed()
 
 
 func update_mail_summary(data: Dictionary) -> void:
@@ -770,16 +909,35 @@ func update_mail_summary(data: Dictionary) -> void:
 		"claimableCount": int(data.get("claimableCount", 0)),
 		"totalCount": int(data.get("totalCount", 0)),
 	}
+	mail_state_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func update_mail_list(data: Array) -> void:
 	mail_list_data = _normalize_image_fields_variant(data)
+	_sync_selected_mail_from_list()
+	mail_state_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func update_selected_mail(data: Dictionary) -> void:
 	selected_mail_data = _normalize_image_fields_variant(data)
 	if not selected_mail_data.is_empty():
 		_merge_mail_into_list(selected_mail_data)
+	mail_state_changed.emit()
+	_emit_red_dot_state_changed()
+
+
+func update_mail_state(summary_data: Dictionary, inbox_data: Array) -> void:
+	mail_summary_data = {
+		"unreadCount": int(summary_data.get("unreadCount", 0)),
+		"claimableCount": int(summary_data.get("claimableCount", 0)),
+		"totalCount": int(summary_data.get("totalCount", 0)),
+	}
+	mail_list_data = _normalize_image_fields_variant(inbox_data)
+	_sync_selected_mail_from_list()
+	mail_state_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func apply_wallet_snapshot(data: Dictionary) -> void:
@@ -794,6 +952,7 @@ func apply_wallet_snapshot(data: Dictionary) -> void:
 	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
 	player_data.save()
 	player_wallet_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func apply_idle_claim_response(data: Dictionary) -> void:
@@ -816,38 +975,73 @@ func get_mail_badge_text() -> String:
 
 
 func mark_mail_read_local(mail_id: int) -> void:
+	var changed: bool = false
 	for item: Dictionary in mail_list_data:
 		if int(item.get("mailId", 0)) != mail_id:
 			continue
 		if not bool(item.get("isRead", false)):
 			item["isRead"] = true
-			update_mail_summary({
+			mail_summary_data = {
 				"unreadCount": maxi(0, int(mail_summary_data.get("unreadCount", 0)) - 1),
 				"claimableCount": int(mail_summary_data.get("claimableCount", 0)),
 				"totalCount": int(mail_summary_data.get("totalCount", 0)),
-			})
+			}
+			changed = true
 		break
 	if int(selected_mail_data.get("mailId", 0)) == mail_id:
 		selected_mail_data["isRead"] = true
+		changed = true
+	if changed:
+		mail_state_changed.emit()
+		_emit_red_dot_state_changed()
 
 
-func mark_mail_claimed_local(mail_id: int) -> void:
+func mark_mail_claimed_local(mail_id: int, emit_change: bool = true) -> void:
+	var changed: bool = false
 	for item: Dictionary in mail_list_data:
 		if int(item.get("mailId", 0)) != mail_id:
 			continue
 		item["isClaimed"] = true
 		item["status"] = "Claimed"
+		changed = true
 		break
 	if int(selected_mail_data.get("mailId", 0)) == mail_id:
 		selected_mail_data["isClaimed"] = true
 		selected_mail_data["status"] = "Claimed"
 		for attachment: Dictionary in selected_mail_data.get("attachments", []):
 			attachment["isClaimed"] = true
+		changed = true
+	if changed and emit_change:
+		mail_state_changed.emit()
+		_emit_red_dot_state_changed()
 
 
 func mark_mail_claimed_many_local(mail_ids: Array) -> void:
+	var changed: bool = false
 	for mail_id: Variant in mail_ids:
-		mark_mail_claimed_local(int(mail_id))
+		mark_mail_claimed_local(int(mail_id), false)
+		changed = true
+	if changed:
+		mail_state_changed.emit()
+		_emit_red_dot_state_changed()
+
+
+func remove_processed_mails_local() -> void:
+	var filtered: Array = []
+	for item_variant: Variant in mail_list_data:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		var is_read: bool = bool(item.get("isRead", false))
+		var is_claimed: bool = bool(item.get("isClaimed", false))
+		var has_attachment: bool = bool(item.get("hasAttachment", false))
+		if is_read and (is_claimed or not has_attachment):
+			continue
+		filtered.append(item)
+	mail_list_data = filtered
+	_sync_selected_mail_from_list()
+	mail_state_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func _merge_mail_into_list(mail_data: Dictionary) -> void:
@@ -865,6 +1059,21 @@ func _merge_mail_into_list(mail_data: Dictionary) -> void:
 		item["status"] = mail_data.get("status", item.get("status", ""))
 		mail_list_data[i] = item
 		return
+
+
+func _sync_selected_mail_from_list() -> void:
+	var selected_mail_id: int = int(selected_mail_data.get("mailId", 0))
+	if selected_mail_id <= 0:
+		selected_mail_data = {}
+		return
+	for item_variant: Variant in mail_list_data:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		if int(item.get("mailId", 0)) == selected_mail_id:
+			selected_mail_data = item.duplicate(true)
+			return
+	selected_mail_data = {}
 
 
 # ?? Config ???????? ConfigScene ??????????
@@ -932,6 +1141,7 @@ func update_gacha(data: Dictionary) -> void:
 	if gacha_data.get("lastFreePullDate") != null:
 		player_data.last_free_pull_date = str(gacha_data.get("lastFreePullDate", player_data.last_free_pull_date))
 	player_data.save()
+	_emit_red_dot_state_changed()
 
 
 func apply_gacha_pull_response(data: Dictionary) -> void:
@@ -973,6 +1183,7 @@ func update_shop(data: Dictionary) -> void:
 				purchase_counts[str(bundle.get("bundleId", ""))] = int(bundle.get("purchaseCount", 0))
 	player_data.bundle_purchase_counts = purchase_counts
 	player_data.save()
+	_emit_red_dot_state_changed()
 
 
 func update_enhance(data: Array) -> void:
@@ -1004,6 +1215,7 @@ func update_enhance(data: Array) -> void:
 				break
 	if not player_cats_data.is_empty():
 		CacheIO.save_config("player_cats", player_cats_data)
+	_emit_red_dot_state_changed()
 
 
 func apply_enhance_overview(data: Dictionary) -> void:
@@ -1020,6 +1232,7 @@ func apply_enhance_overview(data: Dictionary) -> void:
 func update_dungeon_overview(data: Array) -> void:
 	dungeon_overview_data = _normalize_image_fields_variant(data)
 	_save_dungeon_cache(dungeon_overview_data)
+	_emit_red_dot_state_changed()
 
 
 func apply_dungeon_overview(data: Dictionary) -> void:
@@ -1509,6 +1722,18 @@ func apply_chat_summary(summary: Dictionary) -> void:
 	chat_party_channel_key = str(summary.get("partyChatChannelKey", chat_party_channel_key))
 	chat_party_available = bool(summary.get("partyChatAvailable", chat_party_channel_key != ""))
 	chat_last_snapshot_at_unix = Time.get_unix_time_from_system()
+	var system_messages_variant: Variant = summary.get("systemMessages", [])
+	if system_messages_variant is Array:
+		replace_chat_history("system", system_messages_variant)
+	var world_messages_variant: Variant = summary.get("worldMessages", [])
+	if world_messages_variant is Array:
+		replace_chat_history("world", world_messages_variant)
+	var guild_messages_variant: Variant = summary.get("guildMessages", [])
+	if guild_messages_variant is Array:
+		replace_chat_history("guild", guild_messages_variant)
+	var party_messages_variant: Variant = summary.get("partyMessages", [])
+	if party_messages_variant is Array:
+		replace_chat_history("party", party_messages_variant)
 	if summary.has("unreadSystemCount"):
 		chat_unread_counts["system"] = int(summary.get("unreadSystemCount", 0))
 		emit_signal("chat_unread_changed", "system", int(chat_unread_counts["system"]))

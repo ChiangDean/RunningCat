@@ -21,10 +21,12 @@ var _scroll: ScrollContainer
 
 func _ready() -> void:
 	_build_ui()
+	GameState.red_dot_state_changed.connect(_apply_red_dots)
 	if GameState.dungeon_overview_data.is_empty():
 		_request_dungeon_overview()
 	else:
 		_rebuild_dungeon_panels()
+	_apply_red_dots()
 
 
 func _build_ui() -> void:
@@ -37,6 +39,10 @@ func _rebuild_dungeon_panels() -> void:
 
 func _refresh_panel(dungeon_id: int) -> void:
 	UI.refresh_panel(self, dungeon_id)
+
+
+func _apply_red_dots() -> void:
+	UI.refresh_red_dots(self)
 
 
 func _switch_dungeon_tab(dungeon_key: String) -> void:

@@ -9,6 +9,7 @@ const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/HomeTopHudEditor.tscn")
 const HOME_BOTTOM_HUD_SCENE := preload("res://scenes/ui/HomeBottomHudEditor.tscn")
 const BOSS_WARNING_OVERLAY_SCENE := preload("res://scenes/ui/BossWarningOverlayEditor.tscn")
 const HOME_SCOOP_TEMPLATE_SCENE := preload("res://scenes/ui/HomeScoopButtonTemplate.tscn")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v3.png")
 const HOME_LOWER_MENU_BG_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background.png")
 const HOME_LOWER_MENU_BG_SKILL_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background_skill.png")
@@ -276,7 +277,11 @@ func _ready() -> void:
 	GameState.player_wallet_changed.connect(func() -> void:
 		_refresh_ui()
 	)
+	GameState.red_dot_state_changed.connect(func() -> void:
+		_refresh_home_red_dots()
+	)
 	_build_scene()
+	_refresh_home_red_dots()
 	UiAudio.stop_bgm()
 	_start_battle()
 	# Update the idle button text every second.
@@ -316,6 +321,7 @@ func _process(_delta: float) -> void:
 		_last_overlay_scene_path = overlay_scene_path
 		_refresh_main_nav_state()
 		_refresh_overlay_fx_state()
+		_refresh_home_red_dots()
 
 
 # Scene construction
@@ -720,6 +726,7 @@ func _build_ui() -> void:
 	_chat_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	GameState.chat_unread_changed.connect(func(_channel_key: String, _count: int) -> void:
 		_refresh_chat_badge()
+		_refresh_home_red_dots()
 	)
 	GameState.party_cheer_coupon_count_changed.connect(func(_count: int) -> void:
 		_refresh_home_scoop_panel()
@@ -768,7 +775,7 @@ func _build_ui() -> void:
 	_skill_panel.add_child(_skill_header_rule)
 
 	_scoop_mode_btn = _make_button(
-		"貓砂",
+		UiText.HOME_SKILL_MODE_SCOOP,
 		_get_bottom_hud_position("SkillPanel/ScoopButton", Vector2(194.0, 48.0)),
 		_get_bottom_hud_size("SkillPanel/ScoopButton", Vector2(104.0, 43.0))
 	)
@@ -778,7 +785,7 @@ func _build_ui() -> void:
 	_scoop_mode_btn.pressed.connect(_show_scoop_mode)
 
 	_skill_filter_btn = _make_button(
-		"衝撞",
+		UiText.HOME_SKILL_MODE_DASH,
 		_get_bottom_hud_position("SkillPanel/SkillFilterButton", Vector2(306.0, 48.0)),
 		_get_bottom_hud_size("SkillPanel/SkillFilterButton", Vector2(104.0, 43.0))
 	)
@@ -793,7 +800,7 @@ func _build_ui() -> void:
 	_apply_skill_bar_layout()
 
 	_speed_1x = _make_button(
-		"加速",
+		UiText.HOME_SPEED_BOOST,
 		_get_bottom_hud_position("SkillPanel/SpeedButton", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD - 128.0, -16.0)),
 		_get_bottom_hud_size("SkillPanel/SpeedButton", Vector2(128.0, 26.0))
 	)
@@ -808,7 +815,7 @@ func _build_ui() -> void:
 	_refresh_skill_mode_buttons()
 
 	_sandbox_btn = _make_button(
-		"Idle 00:00:00",
+		UiText.HOME_IDLE_TIMER_PLACEHOLDER,
 		_get_bottom_hud_position("SkillPanel/SandboxButton", Vector2(0.0, -16.0)),
 		_get_bottom_hud_size("SkillPanel/SandboxButton", Vector2(224.0, 26.0))
 	)
@@ -846,7 +853,7 @@ func _build_ui() -> void:
 		_refresh_home_auto_scoop_toggle_button()
 	_set_home_scoop_frame(0)
 
-	_skip_btn = _make_button("Skip", Vector2(SW - 104.0, 76.0), Vector2(90.0, 34.0))
+	_skip_btn = _make_button(UiText.HOME_SKIP, Vector2(SW - 104.0, 76.0), Vector2(90.0, 34.0))
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
 	_skip_btn.visible = GameState.is_admin_session()
@@ -931,7 +938,7 @@ func _build_ui() -> void:
 
 	var more_rect: Rect2 = nav_layouts.get("MainNav/MoreButton", Rect2(Vector2(574.0, HOME_NAV_BUTTON_ROW_Y), HOME_NAV_BUTTON_SIZE))
 	_nav_more_button = _build_home_nav_button(
-		"更多",
+		UiText.NAV_MORE,
 		more_rect.position,
 		more_rect.size,
 		"MainNav/MoreButton/Label"
@@ -1737,11 +1744,21 @@ func _refresh_home_more_menu_visibility() -> void:
 	if _home_more_buttons_layer != null:
 		_home_more_buttons_layer.visible = _home_more_menu_expanded
 	_refresh_home_more_badge_positions()
-	if _mail_badge != null:
-		_mail_badge.visible = _home_more_menu_expanded and GameState.has_mail_red_dot()
 	if _chat_badge != null:
 		_chat_badge.visible = _home_more_menu_expanded and GameState.get_chat_total_unread() > 0
 	_apply_home_more_button_style(_home_more_menu_expanded)
+
+
+func _refresh_home_red_dots() -> void:
+	RedDotService.refresh_dot(_nav_buttons.get("res://scenes/ScooperScene.tscn") as Control, RedDotService.has_scooper_red_dot())
+	RedDotService.refresh_dot(_nav_buttons.get("res://scenes/EnhanceScene.tscn") as Control, RedDotService.has_enhance_red_dot())
+	RedDotService.refresh_dot(_nav_buttons.get("res://scenes/ActivityScene.tscn") as Control, RedDotService.has_activity_red_dot())
+	RedDotService.refresh_dot(_nav_buttons.get("res://scenes/ShopScene.tscn") as Control, RedDotService.has_shop_red_dot())
+	RedDotService.refresh_dot(_nav_more_button, RedDotService.has_more_menu_red_dot())
+	RedDotService.refresh_dot(_home_more_buttons.get("mail") as Control, RedDotService.has_mail_red_dot())
+	RedDotService.refresh_dot(_home_more_buttons.get("friend") as Control, RedDotService.has_friend_red_dot())
+	RedDotService.refresh_dot(_home_more_buttons.get("party") as Control, RedDotService.has_party_red_dot())
+	_refresh_mail_badge()
 
 
 func _toggle_home_more_menu() -> void:
@@ -2061,9 +2078,9 @@ func _refresh_ui() -> void:
 	_refresh_sandbox_btn()
 	_refresh_home_scoop_panel()
 	_apply_home_hud_fonts()
-	_refresh_mail_badge()
 	_refresh_chat_badge()
 	_refresh_home_more_menu_visibility()
+	_refresh_home_red_dots()
 
 
 func _refresh_sandbox_btn() -> void:
@@ -2183,12 +2200,7 @@ func _refresh_mail_badge() -> void:
 	if _mail_badge == null:
 		return
 	_refresh_home_more_badge_positions()
-	if not GameState.has_mail_red_dot():
-		_mail_badge.visible = false
-		return
-	_mail_badge.visible = _home_more_menu_expanded
-	_mail_badge.text = GameState.get_mail_badge_text()
-	_mail_badge.modulate = Color(1.0, 0.28, 0.28, 1.0)
+	_mail_badge.visible = false
 
 
 # Battle flow

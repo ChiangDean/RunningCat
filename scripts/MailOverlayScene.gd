@@ -4,8 +4,8 @@ extends Control
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const MAIL_SCENE := preload("res://scenes/MailScene.tscn")
-const TITLE_MAIL := "\u4fe1\u7bb1"
 
 var _mail_view: Control
 var _dock_buttons: Dictionary = {}
@@ -36,7 +36,7 @@ func _ready() -> void:
 		return
 
 	var title: Label = Label.new()
-	title.text = TITLE_MAIL
+	title.text = UiText.HOME_MAIL
 	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	content_box.add_child(title)
@@ -45,6 +45,7 @@ func _ready() -> void:
 	_mail_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 	_mail_view.connect("navigation_changed", Callable(self, "_sync_navigation"))
+	GameState.red_dot_state_changed.connect(_apply_red_dots)
 	content_box.add_child(_mail_view)
 	_sync_navigation(_mail_view.call("get_footer_items"), _mail_view.call("get_section"))
 
@@ -75,3 +76,8 @@ func _sync_navigation(items: Array, active_key: String) -> void:
 		"active_font_size": 22,
 		"inactive_font_size": 20,
 	})
+	_apply_red_dots()
+
+
+func _apply_red_dots() -> void:
+	RedDotService.refresh_dot(_dock_buttons.get("unread") as Control, RedDotService.has_mail_unread_red_dot())

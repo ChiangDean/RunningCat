@@ -5,6 +5,7 @@ const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const FriendStageFormatter = preload("res://scripts/gamestate/GameStateBossStage.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 signal party_navigation_changed(items: Array, active_key: String)
 signal friend_navigation_changed(items: Array, active_key: String)
@@ -22,6 +23,7 @@ var _party_section: String = "overview"
 var _party_overlay_mode: bool = false
 var _party_applications: Array = []
 var _party_my_applications: Array = []
+var _party_cache_recovery_in_flight: bool = false
 var _create_party_dialog_state: Dictionary = {}
 var _invite_party_dialog_state: Dictionary = {}
 var _rename_party_dialog_state: Dictionary = {}
@@ -73,6 +75,7 @@ func set_party_section(section_key: String) -> void:
 func _ready() -> void:
 	if not _uses_overlay_layout():
 		custom_minimum_size = Vector2(660.0, 960.0)
+	GameState.social_state_changed.connect(_on_social_state_changed)
 	_build_shell()
 	_refresh_current()
 
@@ -151,48 +154,104 @@ func _refresh_current() -> void:
 	_refresh_friend()
 
 
+func _sync_friend_red_dot_summary() -> void:
+	GameState.update_friend_red_dot_summary(
+		RedDotService.build_friend_summary(_friend_list, _friend_inbox)
+	)
+
+
+func _sync_party_red_dot_summary() -> void:
+	GameState.update_party_red_dot_summary(
+		RedDotService.build_party_summary(_party_detail, _party_cheer_status, _party_applications)
+	)
+
+
 func _refresh_friend() -> void:
-	var friends_callback := func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.HOME_FRIEND, _error_message(error))
-			return
-		_friend_list = data if data is Dictionary else {}
-		ApiClient.get_friend_inbox(func(inbox_success: bool, inbox_data: Variant, inbox_error: Dictionary) -> void:
-			if not inbox_success:
-				ToastManager.error(UiText.SOCIAL_FRIEND_INBOX, _error_message(inbox_error))
-				return
-			_friend_inbox = inbox_data if inbox_data is Array else []
-			ApiClient.get_friend_outbox(func(outbox_success: bool, outbox_data: Variant, outbox_error: Dictionary) -> void:
-				if not outbox_success:
-					ToastManager.error(UiText.SOCIAL_FRIEND_OUTBOX, _error_message(outbox_error))
-					return
-				_friend_outbox = outbox_data if outbox_data is Array else []
-				_render_friend()
-			)
-		)
-	ApiClient.get_friends(friends_callback)
+	_apply_friend_state_cache()
+	_render_friend()
 
 
 func _refresh_party() -> void:
-	var cheer_callback := func(success: bool, data: Variant, _error: Dictionary) -> void:
-		_party_cheer_status = data if success and data is Dictionary else {}
+	_apply_party_state_cache()
+	_maybe_recover_party_cache()
+	_reload_current_party_section()
+
+
+func _apply_friend_state_cache() -> void:
+	_friend_list = GameState.friend_list_data.duplicate(true)
+	_friend_inbox = GameState.friend_inbox_data.duplicate(true)
+	_friend_outbox = GameState.friend_outbox_data.duplicate(true)
+	_sync_friend_red_dot_summary()
+
+
+func _apply_party_state_cache() -> void:
+	_party_detail = GameState.party_detail_data.duplicate(true)
+	_party_cheer_status = GameState.party_cheer_status_data.duplicate(true)
+	_party_applications = GameState.party_applications_data.duplicate(true)
+	_party_my_applications = GameState.party_my_applications_data.duplicate(true)
+	_sync_party_red_dot_summary()
+
+
+func _maybe_recover_party_cache() -> void:
+	if _party_cache_recovery_in_flight:
+		return
+	if not _party_detail.is_empty():
+		return
+	_party_cache_recovery_in_flight = true
+	ApiClient.get_my_party_silent(func(success: bool, data: Variant, _error: Dictionary) -> void:
+		if not success or not (data is Dictionary):
+			ApiClient.get_my_party_applications_silent(func(my_success: bool, my_data: Variant, _my_error: Dictionary) -> void:
+				GameState.update_party_social_data({}, {}, [], my_data if my_success and my_data is Array else [])
+				_party_cache_recovery_in_flight = false
+			)
+			return
+		var party_detail: Dictionary = data
+		var party_id: int = int(party_detail.get("partyId", 0))
+		if party_id <= 0:
+			GameState.update_party_social_data(party_detail, {}, [], [])
+			_party_cache_recovery_in_flight = false
+			return
+		_recover_party_related_cache(party_detail, party_id)
+	)
+
+
+func _recover_party_related_cache(party_detail: Dictionary, party_id: int) -> void:
+	var recovered_cheer_status: Dictionary = {}
+	var recovered_applications: Array = []
+	var recovered_my_applications: Array = []
+	ApiClient.get_party_cheer_status_silent(party_id, func(cheer_success: bool, cheer_data: Variant, _cheer_error: Dictionary) -> void:
+		if cheer_success and cheer_data is Dictionary:
+			recovered_cheer_status = cheer_data
+		ApiClient.get_my_party_applications_silent(func(my_success: bool, my_data: Variant, _my_error: Dictionary) -> void:
+			if my_success and my_data is Array:
+				recovered_my_applications = my_data
+			var leader_name: String = str(party_detail.get("leaderDisplayName", "")).strip_edges()
+			var self_names: Array[String] = [
+				str(GameState.player_data.display_name).strip_edges(),
+				str(GameState.player_data.player_name).strip_edges(),
+			]
+			if leader_name in self_names:
+				ApiClient.get_party_applications_silent(party_id, func(app_success: bool, app_data: Variant, _app_error: Dictionary) -> void:
+					if app_success and app_data is Array:
+						recovered_applications = app_data
+					GameState.update_party_social_data(party_detail, recovered_cheer_status, recovered_applications, recovered_my_applications)
+					_party_cache_recovery_in_flight = false
+				)
+				return
+			GameState.update_party_social_data(party_detail, recovered_cheer_status, recovered_applications, recovered_my_applications)
+			_party_cache_recovery_in_flight = false
+		)
+	)
+
+
+func _on_social_state_changed(domain_key: String) -> void:
+	if domain_key == "friend" and _mode == "friend":
+		_apply_friend_state_cache()
+		_render_friend()
+		return
+	if domain_key == "party" and _mode == "party":
+		_apply_party_state_cache()
 		_reload_current_party_section()
-
-	var party_callback := func(success: bool, data: Variant, error: Dictionary) -> void:
-		if success:
-			_party_detail = data if data is Dictionary else {}
-			_party_my_applications = []
-			ApiClient.get_party_cheer_status(int(_party_detail.get("partyId", 0)), cheer_callback)
-			return
-		if str(error.get("code", "")) == "PARTY.NOT_IN_PARTY":
-			_party_detail = {}
-			_party_cheer_status = {}
-			_party_applications = []
-			_reload_current_party_section()
-			return
-		ToastManager.error(UiText.HOME_PARTY, _error_message(error))
-
-	ApiClient.get_my_party(party_callback)
 
 
 func _clear_content() -> void:
@@ -252,6 +311,7 @@ func _render_friend() -> void:
 	)
 	gift_button.custom_minimum_size = Vector2(164.0, 48.0)
 	gift_button.disabled = _friend_gift_in_flight or friend_rows.is_empty() or bool(_friend_list.get("hasSentGiftToday", false))
+	RedDotService.refresh_dot(gift_button, not gift_button.disabled and RedDotService.has_friend_send_all_gift_red_dot())
 	gift_button.pressed.connect(_on_friend_gift_pressed)
 	button_row.add_child(gift_button)
 
@@ -438,7 +498,7 @@ func _refresh_party_footer_buttons() -> void:
 
 func _get_party_footer_items() -> Array:
 	return [
-		{"key": "overview", "label": "\u968a\u4f0d\u8cc7\u8a0a"},
+		{"key": "overview", "label": UiText.SOCIAL_PARTY_OVERVIEW},
 		{"key": "invites", "label": UiText.SOCIAL_PARTY_PENDING_INVITES},
 		{"key": "reviews", "label": UiText.SOCIAL_PARTY_PENDING_REVIEW},
 	]
@@ -506,23 +566,13 @@ func _get_party_pending_invites() -> Array:
 
 
 func _load_party_applications() -> void:
-	ApiClient.get_party_applications(int(_party_detail.get("partyId", 0)), func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_PARTY_PENDING_INVITES if _party_section == "invites" else UiText.SOCIAL_PARTY_PENDING_REVIEW, _error_message(error))
-			return
-		_party_applications = data if data is Array else []
-		_render_party()
-	)
+	_apply_party_state_cache()
+	_render_party()
 
 
 func _load_my_party_applications() -> void:
-	ApiClient.get_my_party_applications(func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_PARTY_PENDING_INVITES if _party_section == "invites" else UiText.SOCIAL_PARTY_PENDING_REVIEW, _error_message(error))
-			return
-		_party_my_applications = data if data is Array else []
-		_render_party()
-	)
+	_apply_party_state_cache()
+	_render_party()
 
 
 func _render_party_overview(host: VBoxContainer) -> void:
@@ -801,6 +851,7 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 	var item: Dictionary = item_variant
 	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	RedDotService.refresh_dot(panel, not read_only)
 
 	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
 	panel.add_child(margin)
@@ -847,6 +898,7 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 
 	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
 	accept_button.custom_minimum_size = Vector2(96.0, 46.0)
+	RedDotService.refresh_dot(accept_button, true)
 	accept_button.pressed.connect(func() -> void:
 		_accept_party_application(int(item.get("applicationId", 0)), str(item.get("applicantDisplayName", "")))
 	)
@@ -1106,7 +1158,7 @@ func _build_friend_inbox_row(item_variant: Variant) -> PanelContainer:
 	row.add_theme_constant_override("separation", 12)
 	margin.add_child(row)
 
-	var avatar_id: String = str(item.get("senderAvatarId", "")).strip_edges()
+	var avatar_id: String = _friend_request_sender_avatar_id(item)
 	var avatar_rect: TextureRect = AssetResolver.create_icon_rect(
 		AssetResolver.resolve_profile_avatar(avatar_id),
 		Vector2(56.0, 56.0)
@@ -1118,20 +1170,23 @@ func _build_friend_inbox_row(item_variant: Variant) -> PanelContainer:
 	info_box.add_theme_constant_override("separation", 4)
 	row.add_child(info_box)
 
+	var sender_name: String = _friend_request_sender_name(item)
+	var sender_uid: String = _friend_request_sender_uid(item)
+
 	var name_label: Label = Label.new()
-	name_label.text = str(item.get("senderDisplayName", ""))
+	name_label.text = sender_name if sender_name != "" else sender_uid
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(name_label)
 
 	var uid_label: Label = Label.new()
-	uid_label.text = "UID %s" % str(item.get("senderPlayerUid", "")).strip_edges()
+	uid_label.text = "UID %s" % sender_uid
 	uid_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	uid_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	info_box.add_child(uid_label)
 
 	var time_label: Label = Label.new()
-	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(_friend_request_created_at(item))
 	time_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	time_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	info_box.add_child(time_label)
@@ -1139,7 +1194,7 @@ func _build_friend_inbox_row(item_variant: Variant) -> PanelContainer:
 	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
 	accept_button.custom_minimum_size = Vector2(96.0, 46.0)
 	accept_button.pressed.connect(func() -> void:
-		_accept_friend_request(int(item.get("requestId", 0)))
+		_accept_friend_request(_friend_request_id(item))
 	)
 	row.add_child(accept_button)
 
@@ -1147,8 +1202,8 @@ func _build_friend_inbox_row(item_variant: Variant) -> PanelContainer:
 	reject_button.custom_minimum_size = Vector2(96.0, 46.0)
 	reject_button.pressed.connect(func() -> void:
 		_confirm_reject_friend_request(
-			int(item.get("requestId", 0)),
-			str(item.get("senderDisplayName", ""))
+			_friend_request_id(item),
+			sender_name
 		)
 	)
 	row.add_child(reject_button)
@@ -1168,16 +1223,32 @@ func _build_friend_outbox_row(item_variant: Variant) -> PanelContainer:
 	row.add_theme_constant_override("separation", 12)
 	margin.add_child(row)
 
+	var avatar_id: String = _friend_request_receiver_avatar_id(item)
+	var avatar_rect: TextureRect = AssetResolver.create_icon_rect(
+		AssetResolver.resolve_profile_avatar(avatar_id),
+		Vector2(56.0, 56.0)
+	)
+	row.add_child(avatar_rect)
+
 	var info_box: VBoxContainer = VBoxContainer.new()
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info_box.add_theme_constant_override("separation", 4)
 	row.add_child(info_box)
 
+	var receiver_name: String = _friend_request_receiver_name(item)
+	var receiver_uid: String = _friend_request_receiver_uid(item)
+
 	var name_label: Label = Label.new()
-	name_label.text = str(item.get("receiverDisplayName", ""))
+	name_label.text = receiver_name if receiver_name != "" else receiver_uid
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(name_label)
+
+	var uid_label: Label = Label.new()
+	uid_label.text = "UID %s" % receiver_uid
+	uid_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	uid_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	info_box.add_child(uid_label)
 
 	var status_label: Label = Label.new()
 	status_label.text = _friend_request_status_text(int(item.get("status", 0)))
@@ -1186,7 +1257,7 @@ func _build_friend_outbox_row(item_variant: Variant) -> PanelContainer:
 	info_box.add_child(status_label)
 
 	var time_label: Label = Label.new()
-	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(_friend_request_created_at(item))
 	time_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	time_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	info_box.add_child(time_label)
@@ -1195,7 +1266,7 @@ func _build_friend_outbox_row(item_variant: Variant) -> PanelContainer:
 		var cancel_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_CANCEL, "secondary")
 		cancel_button.custom_minimum_size = Vector2(96.0, 46.0)
 		cancel_button.pressed.connect(func() -> void:
-			_cancel_friend_request(int(item.get("requestId", 0)))
+			_cancel_friend_request(_friend_request_id(item))
 		)
 		row.add_child(cancel_button)
 
@@ -2289,6 +2360,84 @@ func _error_message(error: Dictionary) -> String:
 	return str(error.get("message", UiText.SOCIAL_ACTION_FAILED))
 
 
+func _friend_request_id(item: Dictionary) -> int:
+	var raw_value: Variant = item.get("requestId", item.get("id", item.get("friendRequestId", 0)))
+	return int(raw_value)
+
+
+func _friend_request_created_at(item: Dictionary) -> Variant:
+	if item.has("createdAtUtc"):
+		return item.get("createdAtUtc")
+	if item.has("createdAt"):
+		return item.get("createdAt")
+	if item.has("requestedAtUtc"):
+		return item.get("requestedAtUtc")
+	return null
+
+
+func _friend_request_sender_name(item: Dictionary) -> String:
+	return _first_nonempty_string([
+		item.get("senderDisplayName", ""),
+		item.get("senderPlayerName", ""),
+		item.get("displayName", ""),
+		item.get("playerName", ""),
+		item.get("senderName", ""),
+		item.get("receiverDisplayName", ""),
+	])
+
+
+func _friend_request_sender_uid(item: Dictionary) -> String:
+	return _first_nonempty_string([
+		item.get("senderPlayerUid", ""),
+		item.get("playerUid", ""),
+		item.get("senderUid", ""),
+		item.get("receiverPlayerUid", ""),
+	])
+
+
+func _friend_request_sender_avatar_id(item: Dictionary) -> String:
+	return _first_nonempty_string([
+		item.get("senderAvatarId", ""),
+		item.get("avatarId", ""),
+		item.get("receiverAvatarId", ""),
+	])
+
+
+func _friend_request_receiver_name(item: Dictionary) -> String:
+	return _first_nonempty_string([
+		item.get("receiverDisplayName", ""),
+		item.get("receiverPlayerName", ""),
+		item.get("displayName", ""),
+		item.get("playerName", ""),
+		item.get("senderDisplayName", ""),
+	])
+
+
+func _friend_request_receiver_uid(item: Dictionary) -> String:
+	return _first_nonempty_string([
+		item.get("receiverPlayerUid", ""),
+		item.get("playerUid", ""),
+		item.get("receiverUid", ""),
+		item.get("senderPlayerUid", ""),
+	])
+
+
+func _friend_request_receiver_avatar_id(item: Dictionary) -> String:
+	return _first_nonempty_string([
+		item.get("receiverAvatarId", ""),
+		item.get("avatarId", ""),
+		item.get("senderAvatarId", ""),
+	])
+
+
+func _first_nonempty_string(candidates: Array) -> String:
+	for candidate_variant: Variant in candidates:
+		var candidate: String = str(candidate_variant).strip_edges()
+		if candidate != "":
+			return candidate
+	return ""
+
+
 func _is_party_leader() -> bool:
 	var self_names: Array[String] = [
 		str(GameState.player_data.display_name).strip_edges(),
@@ -2326,6 +2475,7 @@ func _build_party_cheer_button() -> Button:
 		button.disabled = true
 	button.custom_minimum_size = Vector2(220.0, 52.0)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	RedDotService.refresh_dot(button, RedDotService.has_party_free_cheer_red_dot())
 	return button
 
 

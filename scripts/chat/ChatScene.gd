@@ -33,9 +33,8 @@ func _ready() -> void:
 	_apply_requested_channel()
 	_refresh_tabs()
 	_refresh_active_channel_ui()
-	_load_history(_active_channel, 0)
 	_render_messages()
-	_refresh_chat_summary()
+	_mark_active_channel_read()
 	_emit_navigation_changed()
 
 
@@ -69,8 +68,6 @@ func set_section(section_key: String) -> void:
 	_status_override = ""
 	_refresh_tabs()
 	_refresh_active_channel_ui()
-	if _get_render_messages_for_channel(_active_channel).is_empty():
-		_load_history(_active_channel, 0)
 	_render_messages()
 	_mark_active_channel_read()
 	_emit_navigation_changed()
@@ -145,19 +142,6 @@ func _build_ui() -> void:
 	_refresh_active_channel_ui()
 
 
-func _refresh_chat_summary() -> void:
-	ApiClient.get_chat_summary(func(success: bool, data: Variant, _error: Dictionary) -> void:
-		if not success or not (data is Dictionary):
-			return
-		GameState.apply_chat_summary(data as Dictionary)
-		_refresh_tabs()
-		_refresh_active_channel_ui()
-		if _get_render_messages_for_channel(_active_channel).is_empty():
-			_load_history(_active_channel, 0)
-		_render_messages()
-	)
-
-
 func _rebuild_tabs() -> void:
 	if _header == null:
 		return
@@ -185,14 +169,6 @@ func _apply_requested_channel() -> void:
 
 func _on_tab_pressed(channel_key: String) -> void:
 	set_section(channel_key)
-
-
-func _load_history(channel_key: String, before_seq: int) -> void:
-	if channel_key == CHANNEL_WORLD:
-		_load_channel_history("system", before_seq)
-		_load_channel_history(CHANNEL_WORLD, before_seq)
-		return
-	_load_channel_history(channel_key, before_seq)
 
 
 func _load_channel_history(channel_key: String, before_seq: int) -> void:

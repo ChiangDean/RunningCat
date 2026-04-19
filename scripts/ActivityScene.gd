@@ -4,6 +4,7 @@ const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const DUNGEON_CARD_ART := "res://assets/sprites/ui/dungeon_background_v1.png"
 const ARENA_CARD_ART := "res://assets/sprites/ui/arena_background_v1.png"
@@ -11,12 +12,14 @@ const GACHA_CARD_ART := "res://assets/sprites/ui/gacha_background_v1.png"
 
 var _active_tab: String = "permanent"
 var _tab_buttons: Dictionary = {}
+var _entry_buttons: Dictionary = {}
 var _permanent_section: VBoxContainer
 var _limited_section: VBoxContainer
 
 
 func _ready() -> void:
 	_build_ui()
+	GameState.red_dot_state_changed.connect(_refresh_red_dots)
 
 
 func _build_ui() -> void:
@@ -63,6 +66,7 @@ func _build_ui() -> void:
 	scroll_box.add_child(_permanent_section)
 
 	_permanent_section.add_child(_make_entry_card(
+		"gacha",
 		UiText.GACHA_PAGE_TITLE,
 		UiText.ACTIVITY_GACHA_DESC,
 		GACHA_CARD_ART,
@@ -71,6 +75,7 @@ func _build_ui() -> void:
 	))
 
 	_permanent_section.add_child(_make_entry_card(
+		"dungeon",
 		UiText.DUNGEON_PAGE_TITLE,
 		UiText.ACTIVITY_DUNGEON_DESC,
 		DUNGEON_CARD_ART,
@@ -79,6 +84,7 @@ func _build_ui() -> void:
 	))
 
 	_permanent_section.add_child(_make_entry_card(
+		"arena",
 		UiText.ARENA_PAGE_TITLE,
 		UiText.ACTIVITY_ARENA_DESC,
 		ARENA_CARD_ART,
@@ -114,9 +120,11 @@ func _build_ui() -> void:
 	empty_box.add_child(empty_desc)
 
 	_refresh_tab_state()
+	_refresh_red_dots()
 
 
 func _make_entry_card(
+	entry_key: String,
 	title_text: String,
 	subtitle_text: String,
 	art_path: String,
@@ -192,6 +200,7 @@ func _make_entry_card(
 	action_button.pressed.connect(callback)
 	UiPalette.apply_button_kind(action_button, "primary")
 	body_row.add_child(action_button)
+	_entry_buttons[entry_key] = action_button
 
 	return card
 
@@ -212,6 +221,12 @@ func _refresh_tab_state() -> void:
 		_permanent_section.visible = _active_tab == "permanent"
 	if _limited_section != null:
 		_limited_section.visible = _active_tab == "limited"
+
+
+func _refresh_red_dots() -> void:
+	RedDotService.refresh_dot(_entry_buttons.get("gacha") as Control, RedDotService.has_gacha_red_dot())
+	RedDotService.refresh_dot(_entry_buttons.get("dungeon") as Control, RedDotService.has_dungeon_red_dot())
+	RedDotService.refresh_dot(_entry_buttons.get("arena") as Control, RedDotService.has_arena_red_dot())
 
 
 func _on_dungeon_pressed() -> void:
