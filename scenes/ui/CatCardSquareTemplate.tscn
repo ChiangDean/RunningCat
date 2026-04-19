@@ -1,42 +1,42 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c4wm38uss2ii1"]
 
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/cards/square/cat_card_square_common.png" id="1"]
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/character_refs/milk_cat/milk_cat_icon_v1.png" id="2"]
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/cards/type_icons/cat_type_tank_v1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://dxmidvy4xsddl" path="res://assets/sprites/ui/cards/square/cat_card_square_common.png" id="1"]
+[ext_resource type="Texture2D" uid="uid://b07pyvi25ndpc" path="res://assets/sprites/ui/character_refs/milk_cat/milk_cat_icon_v1.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://x10cog3l4qm" path="res://assets/sprites/ui/cards/type_icons/cat_type_tank_v1.png" id="3"]
 
-[node name="CatCardSquareTemplate" type="Control"]
+[node name="CatCardSquareTemplate" type="Control" unique_id=1073626234]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 520.0
 offset_bottom = 520.0
 mouse_filter = 2
 
-[node name="CardFrame" type="TextureRect" parent="."]
+[node name="CardFrame" type="TextureRect" parent="." unique_id=406829292]
 layout_mode = 0
 offset_right = 520.0
 offset_bottom = 520.0
+mouse_filter = 2
 texture = ExtResource("1")
 expand_mode = 1
 stretch_mode = 6
-mouse_filter = 2
 
-[node name="TypeIcon" type="TextureRect" parent="."]
+[node name="TypeIcon" type="TextureRect" parent="." unique_id=858657682]
 layout_mode = 0
 offset_left = 69.0
 offset_top = 65.0
 offset_right = 144.0
 offset_bottom = 140.0
+mouse_filter = 2
 texture = ExtResource("3")
 expand_mode = 1
 stretch_mode = 5
-mouse_filter = 2
 
-[node name="RarityLabel" type="Label" parent="."]
+[node name="RarityLabel" type="Label" parent="." unique_id=227261098]
 layout_mode = 0
 offset_left = 143.0
-offset_top = 80.0
+offset_top = 75.0
 offset_right = 379.0
-offset_bottom = 123.0
+offset_bottom = 125.0
 theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
 theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.8)
 theme_override_constants/outline_size = 2
@@ -44,14 +44,13 @@ theme_override_font_sizes/font_size = 34
 text = "FINE"
 horizontal_alignment = 1
 vertical_alignment = 1
-mouse_filter = 2
 
-[node name="LevelLabel" type="Label" parent="."]
+[node name="LevelLabel" type="Label" parent="." unique_id=960751155]
 layout_mode = 0
 offset_left = 114.0
-offset_top = 420.0
+offset_top = 412.0
 offset_right = 176.0
-offset_bottom = 456.0
+offset_bottom = 448.0
 theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
 theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.9)
 theme_override_constants/outline_size = 2
@@ -59,25 +58,24 @@ theme_override_font_sizes/font_size = 24
 text = "LV.5"
 horizontal_alignment = 1
 vertical_alignment = 1
-mouse_filter = 2
 
-[node name="Portrait" type="TextureRect" parent="."]
+[node name="Portrait" type="TextureRect" parent="." unique_id=108537395]
 layout_mode = 0
 offset_left = 108.0
 offset_top = 120.0
 offset_right = 414.0
 offset_bottom = 413.0
+mouse_filter = 2
 texture = ExtResource("2")
 expand_mode = 2
 stretch_mode = 5
-mouse_filter = 2
 
-[node name="NameLabel" type="Label" parent="."]
+[node name="NameLabel" type="Label" parent="." unique_id=865579714]
 layout_mode = 0
 offset_left = 148.0
-offset_top = 411.0
+offset_top = 408.0
 offset_right = 368.0
-offset_bottom = 454.0
+offset_bottom = 451.0
 theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
 theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.85)
 theme_override_constants/outline_size = 2
@@ -85,19 +83,17 @@ theme_override_font_sizes/font_size = 27
 text = "Milk Cat"
 horizontal_alignment = 1
 vertical_alignment = 1
-mouse_filter = 2
 
-[node name="RankLabel" type="Label" parent="."]
+[node name="RankLabel" type="Label" parent="." unique_id=582830414]
 layout_mode = 0
 offset_left = 369.0
-offset_top = 388.0
+offset_top = 383.0
 offset_right = 461.0
-offset_bottom = 452.0
+offset_bottom = 447.0
 theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
 theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.85)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 40
 text = "0"
 horizontal_alignment = 1
 vertical_alignment = 1
-mouse_filter = 2

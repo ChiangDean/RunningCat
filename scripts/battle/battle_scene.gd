@@ -397,6 +397,38 @@ func _apply_bottom_hud_font_size(control: Control, path: String, fallback: int) 
 	control.add_theme_font_size_override("font_size", _get_bottom_hud_font_size(path, fallback))
 
 
+func _get_control_font_size(control: Control, fallback: int) -> int:
+	if control == null:
+		return fallback
+	return control.get_theme_font_size("font_size") if control.has_theme_font_size_override("font_size") else fallback
+
+
+func _apply_fredoka_font(control: Control, fallback: int, weight: String = "medium") -> void:
+	if control == null:
+		return
+	var font_size: int = _get_control_font_size(control, fallback)
+	match weight:
+		"bold":
+			UiFonts.apply_fredoka_bold(control, font_size)
+		"semibold":
+			UiFonts.apply_fredoka_semibold(control, font_size)
+		"regular":
+			UiFonts.apply_fredoka_regular(control, font_size)
+		_:
+			UiFonts.apply_fredoka_medium(control, font_size)
+
+
+func _apply_home_hud_fonts() -> void:
+	_apply_fredoka_font(_profile_level_label, 28, "bold")
+	_apply_fredoka_font(_top_progress_value_label, 16, "medium")
+	_apply_fredoka_font(_timer_label, 18, "medium")
+	_apply_fredoka_font(_home_scoop_cd_label, _get_bottom_hud_font_size("HomeScoopPanel/ScoopButton/CooldownLabel", 20), "bold")
+	_apply_fredoka_font(_home_scoop_count_label, _get_bottom_hud_font_size("HomeScoopPanel/ScoopButton/CountLabel", 24), "bold")
+	for resource_label_variant: Variant in _resource_value_labels.values():
+		var resource_label: Label = resource_label_variant as Label
+		_apply_fredoka_font(resource_label, 18, "medium")
+
+
 func _get_bottom_hud_average_rect(paths: Array[String], fallback: Rect2) -> Rect2:
 	var match_count: int = 0
 	var total_pos: Vector2 = Vector2.ZERO
@@ -648,6 +680,7 @@ func _build_ui() -> void:
 	_resource_value_labels["diamonds"] = top_bar_root.get_node("DiamondsPanel/Value") as Label
 	_resource_value_labels["trap_points"] = top_bar_root.get_node("GoldPanel/Value") as Label
 	_resource_value_labels["power"] = top_bar_root.get_node("PowerPanel/Value") as Label
+	_apply_home_hud_fonts()
 	var stage_panel := _make_panel(
 		Vector2(188.0, 244.0),
 		Vector2(344.0, 104.0),
@@ -663,6 +696,7 @@ func _build_ui() -> void:
 	_timer_label = _make_label("60.0", Vector2(18.0, 50.0), Vector2(308.0, 20.0), 18)
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stage_panel.add_child(_timer_label)
+	_apply_fredoka_font(_timer_label, 18, "medium")
 
 	var countdown_bar_bg := ColorRect.new()
 	countdown_bar_bg.position = Vector2(28.0, 76.0)
@@ -802,6 +836,8 @@ func _build_ui() -> void:
 	_apply_bottom_hud_font_size(_home_scoop_result_label, "HomeScoopPanel/ResultLabel", 11)
 	_apply_bottom_hud_font_size(_home_scoop_cd_label, "HomeScoopPanel/ScoopButton/CooldownLabel", 20)
 	_apply_bottom_hud_font_size(_home_scoop_count_label, "HomeScoopPanel/ScoopButton/CountLabel", 24)
+	_apply_fredoka_font(_home_scoop_cd_label, _get_bottom_hud_font_size("HomeScoopPanel/ScoopButton/CooldownLabel", 20), "bold")
+	_apply_fredoka_font(_home_scoop_count_label, _get_bottom_hud_font_size("HomeScoopPanel/ScoopButton/CountLabel", 24), "bold")
 	_home_auto_scoop_toggle_button = _home_scoop_panel.get_node_or_null("AutoScoopToggleButton") as TextureButton
 	_home_scoop_button.modulate = Color(0.97, 0.93, 0.88, 1.0)
 	_home_scoop_button.pressed.connect(_on_home_scoop_pressed)
@@ -2024,6 +2060,7 @@ func _refresh_ui() -> void:
 	_refresh_resource_strip()
 	_refresh_sandbox_btn()
 	_refresh_home_scoop_panel()
+	_apply_home_hud_fonts()
 	_refresh_mail_badge()
 	_refresh_chat_badge()
 	_refresh_home_more_menu_visibility()

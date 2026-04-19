@@ -69,14 +69,14 @@ vertical_alignment = 1
 [node name="CountLabel" type="Label" parent="ScoopButton" unique_id=2119434736]
 layout_mode = 0
 offset_left = 63.0
-offset_top = 147.0
+offset_top = 143.0
 offset_right = 185.0
-offset_bottom = 182.0
+offset_bottom = 178.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.96)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 24
-text = "9999"
+text = "9,999"
 horizontal_alignment = 1
 vertical_alignment = 2
 
