@@ -1,341 +1,198 @@
-# 郵件系統
+# 17. Mail System
+
+> Update 2026-04-19:
+> Mail now opens as an overlay scene, not a dialog.
+> The shared bottom submenu only keeps `未讀郵件` and `已讀郵件`.
+> Expired mail is excluded from all client mail lists.
+
+## 1. Feature Summary
+
+Mail is the player inbox for system rewards, compensation, event rewards, purchases, and friend gifts.
+
+Current frontend behavior:
+- Entry opens `MailOverlayScene.tscn` from the home HUD.
+- The page uses the same overlay chrome and shared bottom submenu pattern as `鏟屎官`、`主子`、`活動`.
+- Sections are:
+  - `未讀郵件`
+  - `已讀郵件`
+- Expired mail is not shown.
+- The right content pane only shows:
+  - title
+  - content
+  - attachments
+  - remaining days before expiry
+
+## 2. Scene Structure
+
+Primary controller: `scripts/MailScene.gd`
+
+Wrapper scene:
+- `scenes/MailOverlayScene.tscn`
+- `scripts/MailOverlayScene.gd`
+
+Content scene:
+- `scripts/MailScene.gd`
+
+Layout:
+- top action row
+  - `一件領收`
+  - `刪除已讀郵件`
+- left column
+  - mail title list only
+- right column
+  - title
+  - content card
+  - expiry label at bottom-right
+  - attachment list
+  - `領取附件` button when applicable
+
+## 3. Bottom Submenu
+
+The bottom submenu uses the shared scene submenu component.
 
-## 17-1 目標
+Sections:
+- `未讀郵件`
+- `已讀郵件`
+
+Rules:
+- `未讀郵件` includes mail that is not fully processed yet.
+- `已讀郵件` includes mail that is already read and either:
+  - attachment already claimed
+  - or the mail never had an attachment
+
+## 4. Left Column Rules
 
-郵件系統第一版主要提供：
+The left column is a mail selector list.
+
+Display rules:
+- Only the title is shown.
+- Title is fixed to one line.
+- Overflow text is trimmed with `...`.
+- Font size follows the same smaller list presentation used by the store secondary menus.
+- Unread mail shows a small unread indicator dot.
+- Selecting a mail highlights the card.
 
-- 系統獎勵信箱
-- 人工補發信箱
-- 全服獎勵發放
-- 單封領取與全部領取
-- 主戰鬥頁郵件入口與紅點提示
+Empty state:
+- Show `目前沒有郵件`.
+- Do not create an extra nested empty-state frame.
+
+## 5. Right Column Rules
+
+The right pane displays the selected mail.
+
+Shown fields:
+- title
+- content
+- attachments
+- `剩餘X天過期`
+
+Removed fields:
+- mail type
+- status
+- raw expire timestamp
+
+Attachment button rules:
+- If the mail has no attachment, hide `領取附件`.
+- If the mail attachment is already claimed, hide `領取附件`.
+- If the mail can be claimed, show `領取附件`.
+
+## 6. Actions
+
+### 6.1 Read Mail
 
-本案產品決策：
+Flow:
+1. Load list.
+2. Select a mail.
+3. Request detail through `GET /api/mail/{mailId}`.
+4. If the mail was unread, client marks it locally first.
+5. Then client calls `POST /api/mail/{mailId}/read`.
 
-- 所有系統獎勵統一走郵件，玩家手動領取
-- 入口放主戰鬥頁
-- 入口需顯示紅點
-- 郵件支援資源型與精準實體型附件
+Result:
+- Mail moves from `未讀郵件` to `已讀郵件` when it becomes processed under the current rule set.
+- A mail without attachment enters `已讀郵件` immediately after being read.
 
----
+### 6.2 Claim Attachment
 
-## 17-2 現況分析
+Flow:
+1. Player presses `領取附件`.
+2. Client calls `POST /api/mail/{mailId}/claim`.
+3. Wallet snapshot and mail summary are refreshed.
+4. Attachment button disappears after success.
 
-### 現有前端結構
+### 6.3 一件領收
 
-- 登入後由 `StartScene` 呼叫 `/api/auth/bootstrap`
-- 共用 API 呼叫集中在 `scripts/ApiClient.gd`
-- 全域狀態集中在 `scripts/gamestate/GameState.gd`
-- 主戰鬥首頁為 `BattleScene`
-- 目前沒有郵件頁、郵件資料快取、郵件紅點邏輯
+Flow:
+1. Player presses `一件領收`.
+2. Client shows a confirm dialog.
+3. Confirm calls `POST /api/mail/claim-all`.
+4. All currently claimable attachments are claimed.
 
-### 導入原則
+Button enablement:
+- Enabled only when `claimableCount > 0`.
+- Otherwise disabled.
 
-郵件系統要沿用目前寫法：
+### 6.4 刪除已讀郵件
 
-- API 呼叫集中放在 `ApiClient.gd`
-- 全域郵件摘要與快取放在 `GameState.gd`
-- UI 仍用現有 Godot scene + script 模式，不額外導入新的 UI framework
+Flow:
+1. Player presses `刪除已讀郵件`.
+2. Client shows a confirm dialog.
+3. Confirm calls `DELETE /api/mail/read`.
+4. All mails that are already processed are removed from the visible inbox.
 
----
+Button style:
+- Uses the shared danger button style.
 
-## 17-3 入口與紅點
+Button enablement:
+- Enabled only when at least one processed mail exists.
 
-### 主入口
+## 7. Filtering Rules
 
-- 在主戰鬥頁新增常駐「郵件」按鈕
-- 按鈕位置需避開核心戰鬥操作與既有導覽
-- 按鈕按下後切到 `MailScene`
+### 7.1 Expired Mail
 
-### 紅點顯示規則
+Frontend excludes expired mail from:
+- unread list
+- read list
+- selected mail display fallback after reload
 
-顯示紅點當下列任一條件成立：
+If detail returns an expired item:
+- clear current selection
+- refresh list
 
-- 有未讀郵件
-- 有可領取附件的郵件
+### 7.2 Processed Mail
 
-### 紅點資料來源
+Processed mail means:
+- `isRead == true`
+- and `isClaimed == true` or `hasAttachment == false`
 
-優先順序：
+This rule is shared by:
+- read section display
+- delete read mail availability
 
-1. 使用 bootstrap 回傳的 `mailSummary`
-2. 場景切回首頁時呼叫 `GET /api/mail/summary`
-3. 領取成功後以 API 回傳摘要即時更新
+## 8. API Surface Used By Client
 
-避免每次切首頁都拉完整郵件列表。
+Current client uses:
+- `GET /api/mail/summary`
+- `GET /api/mail`
+- `GET /api/mail/{mailId}`
+- `POST /api/mail/{mailId}/read`
+- `POST /api/mail/{mailId}/claim`
+- `POST /api/mail/claim-all`
+- `DELETE /api/mail/read`
 
----
+## 9. GameState Data
 
-## 17-4 場景規劃
+Mail UI depends on:
+- `GameState.mail_summary_data`
+- `GameState.mail_list_data`
+- `GameState.selected_mail_data`
 
-### `MailScene`
+Client-side local update helpers are used after actions such as:
+- mark read
+- claim single
+- claim many
 
-用途：
+## 10. UX Notes
 
-- 顯示郵件列表
-- 顯示單封詳情
-- 執行單封領取
-- 執行全部領取
-
-### 建議畫面區塊
-
-#### 上方列
-
-- 返回按鈕
-- 標題 `郵件`
-- `全部領取` 按鈕
-
-#### 左側或上方列表區
-
-每封郵件卡片顯示：
-
-- 標題
-- 郵件類型標籤
-- 建立時間
-- 到期時間
-- 未讀標記
-- 可領取標記
-
-#### 詳情區
-
-顯示：
-
-- 標題
-- 內文
-- 附件列表
-- 單封領取按鈕
-
-### 手機優先
-
-若以手機比例為主，建議採：
-
-- 上半部郵件列表
-- 下半部郵件詳情
-
-或：
-
-- 先列表
-- 點入後切詳情頁
-
-第一版建議採「單頁列表 + 下方詳情」以減少切頁複雜度。
-
----
-
-## 17-5 郵件列表顯示規則
-
-### 排序
-
-1. 未領取
-2. 未讀
-3. 新到舊
-
-### 卡片狀態
-
-- 未讀：標題較亮、顯示藍點或角標
-- 已讀未領：顯示「可領取」
-- 已領：顯示「已領取」
-- 已過期：顯示「已過期」，領取按鈕 disabled
-
-### 清單分頁
-
-第一版支援 API 分頁，但 UI 可先做簡單頁次載入或「載入更多」。
-
----
-
-## 17-6 附件顯示規則
-
-### 資源型附件
-
-直接顯示：
-
-- 圖示
-- 名稱
-- 數量
-
-例如：
-
-- 金幣 x1000
-- 鑽石 x300
-- 貓糧 x50
-
-### 實體型附件
-
-需顯示具體名稱：
-
-- 貓咪名稱
-- 裝備名稱
-- 記憶名稱
-- 寶物名稱
-- 特殊能力名稱
-
-前端不自行推導附件業務規則，應由 API 回傳已整理好的顯示資料：
-
-- `displayName`
-- `iconKey` 或 `imagePath`
-- `quantity`
-- `rewardType`
-- `description`
-
----
-
-## 17-7 玩家操作流程
-
-### 進入郵件頁
-
-1. 點擊主戰鬥頁郵件按鈕
-2. 若本地沒有列表或快取過期，呼叫 `GET /api/mail`
-3. 預設選中第一封郵件
-4. 若該封未讀，背景送出 `POST /api/mail/{mailId}/read`
-5. UI 同步清掉未讀標記與首頁紅點
-
-### 單封領取
-
-1. 玩家點擊單封領取
-2. 呼叫 `POST /api/mail/{mailId}/claim`
-3. 成功後更新：
-   - 郵件狀態
-   - GameState 核心資源
-   - 紅點摘要
-4. 顯示獎勵彈窗
-
-### 全部領取
-
-1. 玩家點擊 `全部領取`
-2. 先跳 confirm dialog
-3. 呼叫 `POST /api/mail/claim-all`
-4. 成功後：
-   - 批次更新列表狀態
-   - 更新 GameState 核心資源
-   - 更新紅點
-   - 顯示彙總獎勵彈窗
-
----
-
-## 17-8 GameState 規劃
-
-第一版建議新增以下資料：
-
-- `mail_summary_data: Dictionary`
-- `mail_list_data: Array`
-- `selected_mail_data: Dictionary`
-
-### `mail_summary_data`
-
-至少包含：
-
-- `unreadCount`
-- `claimableCount`
-- `totalCount`
-
-### GameState 更新時機
-
-- bootstrap 成功後寫入 `mailSummary`
-- 查詢 summary 後更新
-- 查詢列表後更新 `mail_list_data`
-- 單封領取 / 全領成功後同步更新
-
----
-
-## 17-9 ApiClient 規劃
-
-第一版建議新增：
-
-- `get_mail_summary(callback)`
-- `get_mail_list(callback, page := 1, page_size := 20)`
-- `get_mail_detail(mail_id, callback)`
-- `mark_mail_read(mail_id, callback)`
-- `claim_mail(mail_id, callback)`
-- `claim_all_mails(callback)`
-
-所有郵件 API 仍沿用現有：
-
-- bearer token
-- 401 refresh retry
-- 統一 envelope parsing
-
----
-
-## 17-10 UI/UX 規則
-
-### 按鈕狀態
-
-- 已領取：disabled，顯示 `已領取`
-- 已過期：disabled，顯示 `已過期`
-- 無附件：不顯示領取按鈕
-
-### 彈窗
-
-沿用現有 `DialogManager`：
-
-- 全部領取前 confirm
-- 領取成功 info dialog
-- API 錯誤 info dialog
-
-### 首頁紅點刷新時機
-
-- 登入 bootstrap 後
-- 郵件頁返回首頁前
-- 領取成功後
-- 切回主戰鬥頁時可額外 refresh 一次 summary
-
----
-
-## 17-11 與現有資料同步
-
-由於目前 `GameState` 已持有核心資源：
-
-- gold
-- diamonds
-- trap points
-- cat food
-- special cat food
-- whisker shards
-- memory shards
-- poop count
-
-所以 mail claim 成功後，後端應直接回傳最新關鍵資源快照，前端不要自行根據附件內容推算最終數值，避免與後端規則不一致。
-
----
-
-## 17-12 第一版顯示建議
-
-### 郵件類型顏色
-
-- `System`：灰藍
-- `Reward`：綠色
-- `Compensation`：橘色
-- `Event`：紫紅或亮色活動標
-- `Purchase`：金色
-
-### 紅點樣式
-
-- 小紅圓點 + 白色數字
-- 數字超過 99 顯示 `99+`
-
-### 郵件按鈕文案
-
-- 首頁入口：`郵件`
-- 單封領取：`領取`
-- 全部領取：`全部領取`
-
----
-
-## 17-13 實作順序建議
-
-1. 後端先完成 `mailSummary` 與玩家端 mail API
-2. `ApiClient.gd` 補齊 mail 方法
-3. `GameState.gd` 補齊郵件摘要與列表快取
-4. `BattleScene` 加入口與紅點
-5. 新增 `MailScene`
-6. 補上單封領取與全部領取彈窗流程
-
----
-
-## 17-14 驗收重點
-
-- 首頁能看到郵件入口
-- 有未讀或未領郵件時會顯示紅點
-- 郵件列表可正確顯示未讀/未領/已領/過期
-- 單封領取後核心資源即時更新
-- 全部領取後列表與紅點即時更新
-- API 401 refresh 後郵件頁仍能正常操作
+- Mail no longer uses the old dialog-style mail surface.
+- Top-right actions are placed above the two-column body, not inside the right pane.
+- Attachment reward popup may still be shown after successful claim, but the main mail surface stays in overlay-scene flow.
