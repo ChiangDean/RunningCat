@@ -40,8 +40,10 @@ const REWARD_SFX_BY_KEY := {
 }
 
 const MAX_CATS_ON_FIELD: int = 5
-const CHAT_SCENE := preload("res://scenes/chat/ChatScene.tscn")
-const SOCIAL_SCENE := preload("res://scenes/social/SocialScene.tscn")
+const CHAT_SCENE_PATH := "res://scenes/ChatScene.tscn"
+const MAIL_SCENE_PATH := "res://scenes/MailOverlayScene.tscn"
+const FRIEND_SCENE_PATH := "res://scenes/FriendScene.tscn"
+const PARTY_SCENE_PATH := "res://scenes/PartyScene.tscn"
 
 const SW := 720.0
 const SH := 1280.0
@@ -2915,21 +2917,11 @@ func _on_nav_backpack() -> void:
 
 func _on_nav_mail() -> void:
 	_close_home_more_menu()
-	var mail_view: Control = load("res://scenes/MailScene.tscn").instantiate()
-	if mail_view.has_method("set_close_action"):
-		var close_dialog := [Callable()]
-		mail_view.set_close_action(func() -> void:
-			if close_dialog[0].is_valid():
-				close_dialog[0].call()
-		)
-		close_dialog[0] = DialogManager.show_info_node(UiText.HOME_MAIL_DIALOG_TITLE, mail_view, Callable(), "large")
-	else:
-		DialogManager.show_info_node(UiText.HOME_MAIL_DIALOG_TITLE, mail_view, Callable(), "large")
+	_toggle_overlay_scene(MAIL_SCENE_PATH)
 
 func _open_chat() -> void:
 	_close_home_more_menu()
-	var chat_view: Control = CHAT_SCENE.instantiate()
-	DialogManager.show_info_node(UiText.HOME_CHAT_DIALOG_TITLE, chat_view, Callable(), "large")
+	_toggle_overlay_scene(CHAT_SCENE_PATH)
 
 
 func _on_stats_btn_pressed() -> void:
@@ -2947,17 +2939,11 @@ func _on_stats_btn_pressed() -> void:
 
 
 func _open_friend() -> void:
-	_close_home_more_menu()
-	var social_view = SOCIAL_SCENE.instantiate()
-	social_view.set_mode("friend")
-	DialogManager.show_info_node(UiText.HOME_FRIEND_DIALOG_TITLE, social_view, Callable(), "large")
+	_toggle_overlay_scene(FRIEND_SCENE_PATH)
 
 
 func _open_party() -> void:
-	_close_home_more_menu()
-	var social_view = SOCIAL_SCENE.instantiate()
-	social_view.set_mode("party")
-	DialogManager.show_info_node(UiText.HOME_PARTY_DIALOG_TITLE, social_view, Callable(), "large")
+	_toggle_overlay_scene(PARTY_SCENE_PATH)
 
 
 func _refresh_chat_badge() -> void:

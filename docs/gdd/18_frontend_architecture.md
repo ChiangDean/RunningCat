@@ -78,7 +78,11 @@ Current important top-level scenes:
 - `ShopScene.tscn`
 - `ScooperScene.tscn`
 - `LevelScene.tscn`
+- `MailOverlayScene.tscn`
 - `StatsScene.tscn`
+- `ChatScene.tscn`
+- `FriendScene.tscn`
+- `PartyScene.tscn`
 
 ### 3.2 Frontend Scripts
 
@@ -102,6 +106,9 @@ Main subfolders:
 - `scripts/managers/`: registries for cats and skills
 - `scripts/systems/`: local systems such as idle, arena rank, gacha, special ability
 - `scripts/ui/`: reusable UI helpers
+- `scripts/MailOverlayScene.gd`: mailbox overlay wrapper that hosts the shared chrome and footer submenu
+- `scripts/MailScene.gd`: mailbox content view used inside the overlay wrapper
+- `scripts/chat/`: chat overlay scene, realtime socket client, channel tabs, and message row rendering
 
 ### 3.3 Static Assets
 

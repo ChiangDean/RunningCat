@@ -1246,9 +1246,6 @@ func refresh_achievements(show_notifications: bool = true) -> Array[String]:
 		player_data.save()
 		emit_signal("achievements_changed")
 
-	if show_notifications and not newly_completed.is_empty():
-		_queue_achievement_popup(newly_completed)
-
 	return newly_completed
 
 
