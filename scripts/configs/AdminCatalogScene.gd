@@ -271,6 +271,12 @@ func _create_renderer(section_key: String) -> Control:
 			return AdminCatalogCoreRenderer.new()
 		"gacha":
 			return AdminCatalogGachaRenderer.new()
+		"arena":
+			return AdminCatalogArenaRenderer.new()
+		"memories":
+			return AdminCatalogMemoriesRenderer.new()
+		"treasures":
+			return AdminCatalogTreasuresRenderer.new()
 		_:
 			return null
 
