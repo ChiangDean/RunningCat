@@ -254,7 +254,6 @@ var _home_more_button_order: Array[String] = []
 var _home_more_menu_expanded: bool = false
 var _last_overlay_scene_path: String = ""
 var _stats_btn: TextureButton
-var _stats_panel: StatsPanel
 var _bottom_hud_layout: Control
 var _skill_filter_mode: String = "scoop"
 var _current_speed_mult: float = 1.0
@@ -690,11 +689,6 @@ func _build_ui() -> void:
 		_refresh_home_scoop_panel()
 	)
 	_refresh_chat_badge()
-
-	_stats_panel = StatsPanel.new()
-	_stats_panel.visible = false
-	_stats_panel.z_index = 50
-	_ui_layer.add_child(_stats_panel)
 
 	_boss_btn = _make_button(UiText.HOME_BOSS, Vector2(252.0, 350.0), Vector2(216.0, 42.0))
 	_boss_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
@@ -2940,12 +2934,16 @@ func _open_chat() -> void:
 
 func _on_stats_btn_pressed() -> void:
 	_close_home_more_menu()
-	if _stats_panel == null:
-		return
-	_stats_panel.visible = not _stats_panel.visible
-	if _stats_panel.visible:
-		_stats_panel.move_to_front()
-		_stats_panel.refresh()
+	var stats_view: Control = load("res://scenes/StatsScene.tscn").instantiate()
+	if stats_view.has_method("set_close_action"):
+		var close_dialog := [Callable()]
+		stats_view.set_close_action(func() -> void:
+			if close_dialog[0].is_valid():
+				close_dialog[0].call()
+		)
+		close_dialog[0] = DialogManager.show_info_node(UiText.STATS_PANEL_TITLE, stats_view, Callable(), "xlarge")
+	else:
+		DialogManager.show_info_node(UiText.STATS_PANEL_TITLE, stats_view, Callable(), "xlarge")
 
 
 func _open_friend() -> void:

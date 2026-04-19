@@ -1,6 +1,6 @@
 # 18. Frontend Architecture
 
-> Last updated: 2026-04-17
+> Last updated: 2026-04-19
 > Audience: AI agents and engineers modifying `MeowPartyDashClient`
 
 This document describes the current frontend architecture of `MeowPartyDashClient` so an agent can quickly find the correct edit location, understand data flow, and avoid reintroducing the old `ConfigScene = team config` assumption.
@@ -78,6 +78,7 @@ Current important top-level scenes:
 - `ShopScene.tscn`
 - `ScooperScene.tscn`
 - `LevelScene.tscn`
+- `StatsScene.tscn`
 
 ### 3.2 Frontend Scripts
 
@@ -93,6 +94,7 @@ Main subfolders:
 - `scripts/gacha/`: gacha flow and result panel
 - `scripts/shop/`: shop menu and subviews
 - `scripts/scooper/`: scooper scene and per-tab logic
+- `scripts/StatsScene.gd`: dialog-style stats viewer opened from the battle home quick menu
 - `scripts/configs/`: settings center scene
 - `scripts/lineup/`: team setup scene and lineup constants
 - `scripts/data/`: frontend-side data models and adapters
