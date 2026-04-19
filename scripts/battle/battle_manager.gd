@@ -44,7 +44,7 @@ var _enemy_cats: Array = []
 var _player_skill_slots: Array = []
 var _enemy_skill_slots: Array = []
 var _skill_bar: Control = null
-var _skill_bar_filter: String = "player"
+var _skill_bar_filter: String = "scoop"
 
 
 func setup(events: Array, player_cats: Array, enemy_cats: Array,
@@ -373,11 +373,9 @@ func _refresh_skill_bar_display() -> void:
 
 
 func _get_display_skill_slots() -> Array:
-	if _skill_bar_filter == "enemy":
-		return _enemy_skill_slots.duplicate(false)
 	if _skill_bar_filter == "all":
 		return _player_skill_slots + _enemy_skill_slots
-	return _player_skill_slots.duplicate(false)
+	return []
 
 
 func _refresh_skill_slot_ui(i: int, slot: Dictionary) -> void:

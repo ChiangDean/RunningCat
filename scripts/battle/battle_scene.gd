@@ -4,13 +4,23 @@ extends Node2D
 ## Main home scene: battle view plus bottom navigation.
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+const OverlaySceneChromeRef = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/HomeTopHudEditor.tscn")
+const HOME_BOTTOM_HUD_SCENE := preload("res://scenes/ui/HomeBottomHudEditor.tscn")
 const BOSS_WARNING_OVERLAY_SCENE := preload("res://scenes/ui/BossWarningOverlayEditor.tscn")
 const HOME_SCOOP_TEMPLATE_SCENE := preload("res://scenes/ui/HomeScoopButtonTemplate.tscn")
 const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v3.png")
+const HOME_LOWER_MENU_BG_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background.png")
+const HOME_LOWER_MENU_BG_SKILL_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background_skill.png")
+const HOME_LOWER_MAINMENU_BG_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_mainmenu_background.png")
 const HOME_SCOOP_SHEET_TEXTURE := preload("res://assets/sprites/ui/home/scooper/clean_litter_button_sheet.png")
 const HOME_AUTO_SCOOP_TOGGLE_OFF_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_off.svg")
 const HOME_AUTO_SCOOP_TOGGLE_ON_TEXTURE := preload("res://assets/sprites/ui/home/scooper/auto_scoop_toggle_on.svg")
+const HOME_MAIN_BUTTON_PANEL_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_panel_long_default.png")
+const HOME_NAV_BUTTON_DEFAULT_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_default.png")
+const HOME_NAV_BUTTON_ACTIVE_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_active.png")
+const HOME_MORE_BUTTON_DEFAULT_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_default.png")
+const HOME_MORE_BUTTON_ACTIVE_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_active.png")
 const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
 const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
 const BOSS_WARNING_TEXTURE := preload("res://assets/sprites/ui/warning/boss_warning_compact_overlay_v1.png")
@@ -38,16 +48,45 @@ const SH := 1280.0
 const BATTLE_Y := 750.0
 const NAV_H := 110.0
 const NAV_Y := SH - NAV_H
+const HOME_LOWER_MENU_SUBMENU_RESERVE_H := OverlaySceneChromeRef.BOTTOM_DOCK_H
+const HOME_NAV_BUTTON_SIZE := Vector2(126.0, 102.0)
+const HOME_NAV_BUTTON_ROW_Y := 1162.0
+const HOME_NAV_BUTTON_LABEL_Y := 56.0
+const HOME_NAV_BUTTON_LABEL_H := 30.0
+const HOME_NAV_BUTTON_FONT_SIZE := 15
+const HOME_QUICK_BUTTON_SIZE := Vector2(92.0, 100.0)
+const HOME_QUICK_BUTTON_LABEL_Y := 59.0
+const HOME_QUICK_BUTTON_LABEL_H := 26.0
+const HOME_QUICK_BUTTON_FONT_SIZE := 13
+const HOME_MAIN_NAV_GAP_X := 10.0
+const HOME_MORE_BUTTON_GAP_X := 10.0
+const HOME_MORE_BUTTON_ROW_GAP_Y := 12.0
+const HOME_MAIN_NAV_OFFSET_Y := -10.0
+const HOME_MORE_MENU_OFFSET_Y := -30.0
 const HOME_NAV_BG := Color(0.14, 0.10, 0.07, 0.96)
 const HOME_NAV_BG_BORDER := Color(0.38, 0.27, 0.14, 0.96)
-const HOME_NAV_TAB_IDLE_BG := Color(0.27, 0.20, 0.13, 0.94)
-const HOME_NAV_TAB_IDLE_BORDER := Color(0.49, 0.35, 0.18, 0.94)
-const HOME_NAV_TAB_ACTIVE_BG := Color(0.80, 0.68, 0.34, 0.98)
-const HOME_NAV_TAB_ACTIVE_BORDER := Color(0.96, 0.84, 0.53, 0.98)
-const HOME_NAV_TAB_PRESSED_BG := Color(0.66, 0.54, 0.24, 0.98)
-const HOME_NAV_LABEL_IDLE := Color(0.92, 0.86, 0.76, 0.96)
-const HOME_NAV_LABEL_ACTIVE := Color(1.0, 0.95, 0.83, 1.0)
-const HOME_NAV_LABEL_OUTLINE := Color(0.17, 0.09, 0.04, 0.98)
+const HOME_NAV_LABEL_IDLE := Color(0.33, 0.20, 0.09, 1.0)
+const HOME_NAV_LABEL_ACTIVE := Color(0.24, 0.14, 0.05, 1.0)
+const HOME_NAV_LABEL_PRESSED := Color(0.56, 0.31, 0.10, 1.0)
+const HOME_NAV_LABEL_OUTLINE := Color(0.98, 0.93, 0.84, 0.98)
+const HOME_NAV_LABEL_MAIN_FONT_BOOST := 3
+const HOME_NAV_LABEL_MORE_FONT_BOOST := 2
+const HOME_NAV_LABEL_MAIN_OUTLINE_SIZE := 6
+const HOME_NAV_LABEL_MORE_OUTLINE_SIZE := 5
+const HOME_NAV_LABEL_MAIN_PAD_X := 6.0
+const HOME_NAV_LABEL_MORE_PAD_X := 4.0
+const HOME_NAV_LABEL_MAIN_PAD_Y := -2.0
+const HOME_NAV_LABEL_MORE_PAD_Y := -2.0
+const HOME_NAV_LABEL_MAIN_EXTRA_H := 6.0
+const HOME_NAV_LABEL_MORE_EXTRA_H := 4.0
+const HOME_NAV_LABEL_PRESSED_OFFSET_Y := 2.0
+const SKILL_MODE_LABEL_IDLE := Color(0.37, 0.24, 0.12, 1.0)
+const SKILL_MODE_LABEL_ACTIVE := Color(0.23, 0.14, 0.06, 1.0)
+const SKILL_MODE_LABEL_PRESSED := Color(0.61, 0.34, 0.11, 1.0)
+const SKILL_MODE_LABEL_OUTLINE := Color(0.98, 0.93, 0.84, 0.98)
+const SKILL_MODE_LABEL_OUTLINE_SIZE := 5
+const SKILL_MODE_LABEL_ACTIVE_OUTLINE_SIZE := 6
+const SKILL_MODE_LABEL_FONT_BOOST := 2
 
 # Skill bar baseline positioned just below BATTLE_Y.
 const SKILL_BAR_Y := BATTLE_Y + 10.0
@@ -129,6 +168,7 @@ var _battle_manager: BattleManager
 # UI nodes
 var _ui_layer: Control
 var _timer_label: Label
+var _scoop_mode_btn: Button
 var _skill_filter_btn: Button
 var _speed_1x: Button
 var _speed_2x: Button
@@ -149,15 +189,18 @@ var _skill_top_glow: ColorRect
 var _skill_header_rule: ColorRect
 var _skill_bar: Control      # Skill bar container
 var _sandbox_btn: Button     # Idle rewards action button
-var _mail_btn: Button
+var _mail_btn: TextureButton
 var _mail_badge: Label
 
-var _friend_btn: Button
-var _party_btn: Button
-var _chat_btn: Button
-var _backpack_btn: Button
-var _lineup_btn: Button
+var _friend_btn: TextureButton
+var _party_btn: TextureButton
+var _chat_btn: TextureButton
+var _backpack_btn: TextureButton
+var _lineup_btn: TextureButton
 var _chat_badge: Label
+var _home_lower_mainmenu_bg: TextureRect
+var _home_lower_menu_bg: TextureRect
+var _home_main_button_panel: TextureRect
 var _resource_value_labels: Dictionary = {}
 var _battle_countdown_fill: ColorRect
 var _profile_name_label: Label
@@ -204,10 +247,16 @@ var _home_scoop_previous_player_memory_shards: int = 0
 var _home_scoop_previous_player_whiskers: int = 0
 var _nav_buttons: Dictionary = {}
 var _nav_canvas: CanvasLayer
+var _nav_more_button: TextureButton
+var _home_more_buttons_layer: Control
+var _home_more_buttons: Dictionary = {}
+var _home_more_button_order: Array[String] = []
+var _home_more_menu_expanded: bool = false
 var _last_overlay_scene_path: String = ""
-var _stats_btn: Button
+var _stats_btn: TextureButton
 var _stats_panel: StatsPanel
-var _skill_filter_mode: String = "player"
+var _bottom_hud_layout: Control
+var _skill_filter_mode: String = "scoop"
 var _current_speed_mult: float = 1.0
 var _free_speed_boost_end_unix: int = 0
 var _free_speed_boost_mult: float = 1.0
@@ -271,7 +320,10 @@ func _process(_delta: float) -> void:
 # Scene construction
 
 func _build_scene() -> void:
+	_init_bottom_hud_layout()
 	_build_background()
+	_build_home_lower_mainmenu_underlay()
+	_build_home_lower_menu_underlay()
 	_build_battle_area()
 	_build_ui()
 
@@ -307,6 +359,239 @@ func _build_background() -> void:
 	wall_r.position = Vector2(SW, 200.0)
 	wall_r.size = Vector2(20.0, BATTLE_Y - 200.0)
 	add_child(wall_r)
+
+
+func _init_bottom_hud_layout() -> void:
+	_bottom_hud_layout = HOME_BOTTOM_HUD_SCENE.instantiate() as Control
+
+
+func _get_bottom_hud_control(path: String) -> Control:
+	if _bottom_hud_layout == null:
+		return null
+	return _bottom_hud_layout.get_node_or_null(path) as Control
+
+
+func _get_bottom_hud_position(path: String, fallback: Vector2) -> Vector2:
+	var control: Control = _get_bottom_hud_control(path)
+	return control.position if control != null else fallback
+
+
+func _get_bottom_hud_size(path: String, fallback: Vector2) -> Vector2:
+	var control: Control = _get_bottom_hud_control(path)
+	return control.size if control != null else fallback
+
+
+func _get_bottom_hud_font_size(path: String, fallback: int) -> int:
+	var control: Control = _get_bottom_hud_control(path)
+	if control == null:
+		return fallback
+	if control.has_theme_font_size_override("font_size"):
+		return control.get_theme_font_size("font_size")
+	return fallback
+
+
+func _apply_bottom_hud_font_size(control: Control, path: String, fallback: int) -> void:
+	if control == null:
+		return
+	control.add_theme_font_size_override("font_size", _get_bottom_hud_font_size(path, fallback))
+
+
+func _get_bottom_hud_average_rect(paths: Array[String], fallback: Rect2) -> Rect2:
+	var match_count: int = 0
+	var total_pos: Vector2 = Vector2.ZERO
+	var total_size: Vector2 = Vector2.ZERO
+	for path: String in paths:
+		var control: Control = _get_bottom_hud_control(path)
+		if control == null:
+			continue
+		match_count += 1
+		total_pos += control.position
+		total_size += control.size
+	if match_count <= 0:
+		return fallback
+	return Rect2(total_pos / float(match_count), total_size / float(match_count))
+
+
+func _get_bottom_hud_average_gap_x(paths: Array[String], fallback: float = 0.0) -> float:
+	var previous_rect: Rect2 = Rect2()
+	var has_previous: bool = false
+	var gap_sum: float = 0.0
+	var gap_count: int = 0
+	for path: String in paths:
+		var control: Control = _get_bottom_hud_control(path)
+		if control == null:
+			continue
+		var current_rect: Rect2 = Rect2(control.position, control.size)
+		if has_previous:
+			gap_sum += current_rect.position.x - (previous_rect.position.x + previous_rect.size.x)
+			gap_count += 1
+		previous_rect = current_rect
+		has_previous = true
+	if gap_count <= 0:
+		return fallback
+	return gap_sum / float(gap_count)
+
+
+func _get_bottom_hud_bounds_rect(paths: Array[String], fallback: Rect2) -> Rect2:
+	var min_x: float = INF
+	var min_y: float = INF
+	var max_x: float = -INF
+	var max_y: float = -INF
+	var match_count: int = 0
+	for path: String in paths:
+		var control: Control = _get_bottom_hud_control(path)
+		if control == null:
+			continue
+		match_count += 1
+		min_x = minf(min_x, control.position.x)
+		min_y = minf(min_y, control.position.y)
+		max_x = maxf(max_x, control.position.x + control.size.x)
+		max_y = maxf(max_y, control.position.y + control.size.y)
+	if match_count <= 0:
+		return fallback
+	return Rect2(min_x, min_y, max_x - min_x, max_y - min_y)
+
+
+func _build_uniform_horizontal_layout(paths: Array[String], fallback_bounds: Rect2, fallback_button_size: Vector2, gap_override: float = -1.0) -> Dictionary:
+	var layout: Dictionary = {}
+	if paths.is_empty():
+		return layout
+	var bounds: Rect2 = fallback_bounds
+	var average_rect: Rect2 = _get_bottom_hud_average_rect(paths, Rect2(Vector2.ZERO, fallback_button_size))
+	var button_size: Vector2 = average_rect.size
+	if bounds.size.y > 0.0:
+		button_size.y = minf(button_size.y, bounds.size.y)
+	var gap: float = gap_override if gap_override >= 0.0 else 0.0
+	if paths.size() > 1:
+		if gap_override < 0.0:
+			gap = (bounds.size.x - button_size.x * paths.size()) / float(paths.size() - 1)
+		if gap < 0.0:
+			button_size.x = bounds.size.x / float(paths.size())
+			gap = 0.0
+	var row_width: float = button_size.x * paths.size() + gap * float(maxi(paths.size() - 1, 0))
+	if row_width > bounds.size.x:
+		button_size.x = maxf(0.0, (bounds.size.x - gap * float(maxi(paths.size() - 1, 0))) / float(paths.size()))
+		row_width = button_size.x * paths.size() + gap * float(maxi(paths.size() - 1, 0))
+	var start_x: float = bounds.position.x + (bounds.size.x - row_width) * 0.5
+	var y: float = bounds.position.y + (bounds.size.y - button_size.y) * 0.5
+	for i in range(paths.size()):
+		var x: float = start_x + i * (button_size.x + gap)
+		layout[paths[i]] = Rect2(Vector2(x, y), button_size)
+	return layout
+
+
+func _build_wrapped_button_layout(item_count: int, bounds: Rect2, button_size: Vector2, max_columns: int, gap_x: float = 0.0, gap_y: float = 0.0, align_right: bool = false) -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	if item_count <= 0:
+		return rects
+	var clamped_columns: int = maxi(max_columns, 1)
+	var row_counts: Array[int] = []
+	var row_total: int = int(ceili(float(item_count) / float(clamped_columns)))
+	for row_index in range(row_total):
+		var items_before_row: int = row_index * clamped_columns
+		var row_count: int = mini(clamped_columns, item_count - items_before_row)
+		row_counts.append(row_count)
+	for row_index in range(row_counts.size()):
+		var row_count: int = row_counts[row_index]
+		var effective_gap_x: float = gap_x
+		var effective_button_width: float = button_size.x
+		var row_width: float = effective_button_width * row_count + effective_gap_x * float(maxi(row_count - 1, 0))
+		if row_width > bounds.size.x:
+			effective_button_width = maxf(0.0, (bounds.size.x - effective_gap_x * float(maxi(row_count - 1, 0))) / float(row_count))
+			row_width = effective_button_width * row_count + effective_gap_x * float(maxi(row_count - 1, 0))
+		var start_x: float = bounds.position.x + (bounds.size.x - row_width) * 0.5
+		if align_right:
+			start_x = bounds.position.x + bounds.size.x - row_width
+		var y: float = bounds.position.y + row_index * (button_size.y + gap_y)
+		for column_index in range(row_count):
+			var x: float = start_x + column_index * (effective_button_width + effective_gap_x)
+			rects.append(Rect2(Vector2(x, y), Vector2(effective_button_width, button_size.y)))
+	return rects
+
+
+func _apply_texture_button_label_rect(button: TextureButton, label_rect: Rect2) -> void:
+	if button == null:
+		return
+	var label: Label = button.get_meta("label_node", null) as Label
+	if label == null:
+		return
+	var is_main_nav: bool = bool(button.get_meta("is_main_nav", false))
+	var label_pad_x: float = HOME_NAV_LABEL_MAIN_PAD_X if is_main_nav else HOME_NAV_LABEL_MORE_PAD_X
+	var label_pad_y: float = HOME_NAV_LABEL_MAIN_PAD_Y if is_main_nav else HOME_NAV_LABEL_MORE_PAD_Y
+	var label_extra_h: float = HOME_NAV_LABEL_MAIN_EXTRA_H if is_main_nav else HOME_NAV_LABEL_MORE_EXTRA_H
+	var adjusted_rect: Rect2 = Rect2(
+		Vector2(label_rect.position.x + label_pad_x, label_rect.position.y + label_pad_y),
+		Vector2(maxf(0.0, label_rect.size.x - label_pad_x * 2.0), label_rect.size.y + label_extra_h)
+	)
+	button.set_meta("label_base_rect", adjusted_rect)
+	label.position = adjusted_rect.position
+	label.size = adjusted_rect.size
+	_refresh_home_quick_button_visual(button)
+
+
+func _build_home_lower_mainmenu_underlay() -> void:
+	_home_lower_mainmenu_bg = TextureRect.new()
+	_home_lower_mainmenu_bg.name = "HomeLowerMainmenuBackground"
+	_home_lower_mainmenu_bg.texture = HOME_LOWER_MAINMENU_BG_TEXTURE
+	_home_lower_mainmenu_bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_home_lower_mainmenu_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_home_lower_mainmenu_bg.stretch_mode = TextureRect.STRETCH_SCALE
+	_home_lower_mainmenu_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_layout_home_lower_mainmenu_underlay()
+	add_child(_home_lower_mainmenu_bg)
+
+
+func _layout_home_lower_mainmenu_underlay() -> void:
+	if _home_lower_mainmenu_bg == null:
+		return
+	var editor_size: Vector2 = _get_bottom_hud_size("LowerMainmenuBackground", Vector2.ZERO)
+	if editor_size != Vector2.ZERO:
+		_home_lower_mainmenu_bg.size = editor_size
+		_home_lower_mainmenu_bg.position = _get_bottom_hud_position("LowerMainmenuBackground", Vector2.ZERO)
+		return
+	var scaled_size: Vector2 = _get_width_fitted_texture_size(HOME_LOWER_MAINMENU_BG_TEXTURE)
+	if scaled_size.y <= 0.0:
+		_home_lower_mainmenu_bg.position = Vector2.ZERO
+		_home_lower_mainmenu_bg.size = Vector2(SW, 0.0)
+		return
+	_home_lower_mainmenu_bg.size = scaled_size
+	_home_lower_mainmenu_bg.position = Vector2(
+		(SW - scaled_size.x) * 0.5,
+		SH - scaled_size.y
+	)
+
+
+func _build_home_lower_menu_underlay() -> void:
+	_home_lower_menu_bg = TextureRect.new()
+	_home_lower_menu_bg.name = "HomeLowerMenuBackground"
+	_home_lower_menu_bg.texture = _get_home_lower_menu_background_texture()
+	_home_lower_menu_bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_home_lower_menu_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_home_lower_menu_bg.stretch_mode = TextureRect.STRETCH_SCALE
+	_home_lower_menu_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_layout_home_lower_menu_underlay()
+	add_child(_home_lower_menu_bg)
+
+
+func _layout_home_lower_menu_underlay() -> void:
+	if _home_lower_menu_bg == null:
+		return
+	_home_lower_menu_bg.texture = _get_home_lower_menu_background_texture()
+	var editor_size: Vector2 = _get_bottom_hud_size("LowerMenuBackground", Vector2.ZERO)
+	if editor_size != Vector2.ZERO:
+		_home_lower_menu_bg.size = editor_size
+		_home_lower_menu_bg.position = _get_bottom_hud_position("LowerMenuBackground", Vector2.ZERO)
+		return
+	var scaled_size: Vector2 = _get_width_fitted_texture_size(_get_home_lower_menu_background_texture())
+	if scaled_size.y <= 0.0:
+		_home_lower_menu_bg.position = Vector2.ZERO
+		_home_lower_menu_bg.size = Vector2(SW, 0.0)
+		return
+	_home_lower_menu_bg.size = scaled_size
+	_home_lower_menu_bg.position = Vector2(
+		(SW - scaled_size.x) * 0.5,
+		SH - HOME_LOWER_MENU_SUBMENU_RESERVE_H - scaled_size.y
+	)
 
 
 func _build_battle_area() -> void:
@@ -390,34 +675,14 @@ func _build_ui() -> void:
 	_battle_countdown_fill.color = Color(0.97, 0.78, 0.28, 0.96)
 	countdown_bar_bg.add_child(_battle_countdown_fill)
 
-	_mail_btn = _make_button(UiText.HOME_MAIL, Vector2(ACTION_STACK_X, ACTION_STACK_Y), Vector2(ACTION_STACK_W, ACTION_STACK_H))
-	_ui_layer.add_child(_mail_btn)
-	_mail_btn.pressed.connect(_on_nav_mail)
-
 	_mail_badge = Label.new()
-	_mail_badge.position = _mail_btn.position + Vector2(ACTION_STACK_W - 20.0, -6.0)
 	_mail_badge.size = Vector2(28.0, 28.0)
 	_mail_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mail_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_mail_badge.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	_mail_badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
-	_ui_layer.add_child(_mail_badge)
-
-	_friend_btn = _make_button(UiText.HOME_FRIEND, Vector2(ACTION_STACK_X, ACTION_STACK_Y + ACTION_STACK_H + 10.0), Vector2(ACTION_STACK_W, ACTION_STACK_H))
-	_friend_btn.pressed.connect(_open_friend)
-	_ui_layer.add_child(_friend_btn)
-
-	_party_btn = _make_button(UiText.HOME_PARTY, Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 2.0), Vector2(ACTION_STACK_W, ACTION_STACK_H))
-	_party_btn.pressed.connect(_open_party)
-	_ui_layer.add_child(_party_btn)
-
-	_chat_btn = _make_button(UiText.HOME_CHAT, Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 3.0), Vector2(ACTION_STACK_W, ACTION_STACK_H))
-	_chat_btn.pressed.connect(_open_chat)
-	_ui_layer.add_child(_chat_btn)
-
-	_chat_badge = _make_label("", _chat_btn.position + Vector2(ACTION_STACK_W - 22.0, -4.0), Vector2(22.0, 18.0), 12)
+	_chat_badge = _make_label("", Vector2.ZERO, Vector2(22.0, 18.0), 12)
 	_chat_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_ui_layer.add_child(_chat_badge)
 	GameState.chat_unread_changed.connect(func(_channel_key: String, _count: int) -> void:
 		_refresh_chat_badge()
 	)
@@ -425,24 +690,6 @@ func _build_ui() -> void:
 		_refresh_home_scoop_panel()
 	)
 	_refresh_chat_badge()
-
-	_stats_btn = _make_button(UiText.STATS_BTN_LABEL,
-			Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 4.0),
-			Vector2(ACTION_STACK_W, ACTION_STACK_H))
-	_stats_btn.pressed.connect(_on_stats_btn_pressed)
-	_ui_layer.add_child(_stats_btn)
-
-	_backpack_btn = _make_button(UiText.NAV_BACKPACK,
-			Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 5.0),
-			Vector2(ACTION_STACK_W, ACTION_STACK_H))
-	_backpack_btn.pressed.connect(_on_nav_backpack)
-	_ui_layer.add_child(_backpack_btn)
-
-	_lineup_btn = _make_button(UiText.NAV_CONFIG,
-			Vector2(ACTION_STACK_X, ACTION_STACK_Y + (ACTION_STACK_H + 10.0) * 6.0),
-			Vector2(ACTION_STACK_W, ACTION_STACK_H))
-	_lineup_btn.pressed.connect(_on_nav_config)
-	_ui_layer.add_child(_lineup_btn)
 
 	_stats_panel = StatsPanel.new()
 	_stats_panel.visible = false
@@ -456,50 +703,71 @@ func _build_ui() -> void:
 	_boss_btn.pressed.connect(_on_challenge_boss_pressed)
 
 	_skill_panel = Control.new()
-	_skill_panel.position = Vector2(SKILL_PANEL_X, SKILL_PANEL_Y)
-	_skill_panel.size = Vector2(SKILL_PANEL_W, SKILL_PANEL_H)
+	_skill_panel.position = _get_bottom_hud_position("SkillPanel", Vector2(SKILL_PANEL_X, SKILL_PANEL_Y))
+	_skill_panel.size = _get_bottom_hud_size("SkillPanel", Vector2(SKILL_PANEL_W, SKILL_PANEL_H))
 	_ui_layer.add_child(_skill_panel)
 
 	_skill_shadow = ColorRect.new()
-	_skill_shadow.position = Vector2(0.0, 6.0)
-	_skill_shadow.size = _skill_panel.size
-	_skill_shadow.color = Color(0.03, 0.02, 0.02, 0.28)
+	_skill_shadow.position = _get_bottom_hud_position("SkillPanel/SkillShadow", Vector2(0.0, 6.0))
+	_skill_shadow.size = _get_bottom_hud_size("SkillPanel/SkillShadow", _skill_panel.size)
+	_skill_shadow.color = Color(0.03, 0.02, 0.02, 0.0)
 	_skill_panel.add_child(_skill_shadow)
 
 	_skill_body = ColorRect.new()
-	_skill_body.position = Vector2.ZERO
-	_skill_body.size = _skill_panel.size
-	_skill_body.color = Color(0.13, 0.09, 0.07, 0.88)
+	_skill_body.position = _get_bottom_hud_position("SkillPanel/SkillBody", Vector2.ZERO)
+	_skill_body.size = _get_bottom_hud_size("SkillPanel/SkillBody", _skill_panel.size)
+	_skill_body.color = Color(0.13, 0.09, 0.07, 0.0)
 	_skill_panel.add_child(_skill_body)
 
 	_skill_inner = ColorRect.new()
-	_skill_inner.position = Vector2(2.0, 2.0)
-	_skill_inner.size = _skill_panel.size - Vector2(4.0, 4.0)
-	_skill_inner.color = Color(0.20, 0.14, 0.10, 0.82)
+	_skill_inner.position = _get_bottom_hud_position("SkillPanel/SkillInner", Vector2(2.0, 2.0))
+	_skill_inner.size = _get_bottom_hud_size("SkillPanel/SkillInner", _skill_panel.size - Vector2(4.0, 4.0))
+	_skill_inner.color = Color(0.20, 0.14, 0.10, 0.0)
 	_skill_panel.add_child(_skill_inner)
 
 	_skill_top_glow = ColorRect.new()
-	_skill_top_glow.position = Vector2(SKILL_PANEL_CONTENT_PAD, 6.0)
-	_skill_top_glow.size = Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, 12.0)
+	_skill_top_glow.position = _get_bottom_hud_position("SkillPanel/SkillTopGlow", Vector2(SKILL_PANEL_CONTENT_PAD, 6.0))
+	_skill_top_glow.size = _get_bottom_hud_size("SkillPanel/SkillTopGlow", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, 12.0))
 	_skill_top_glow.color = Color(1.0, 0.92, 0.78, 0.0)
 	_skill_panel.add_child(_skill_top_glow)
 
 	_skill_header_rule = ColorRect.new()
-	_skill_header_rule.position = Vector2(SKILL_PANEL_CONTENT_PAD, 34.0)
-	_skill_header_rule.size = Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, 2.0)
+	_skill_header_rule.position = _get_bottom_hud_position("SkillPanel/SkillHeaderRule", Vector2(SKILL_PANEL_CONTENT_PAD, 34.0))
+	_skill_header_rule.size = _get_bottom_hud_size("SkillPanel/SkillHeaderRule", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, 2.0))
 	_skill_header_rule.color = Color(0.84, 0.66, 0.34, 0.26)
 	_skill_panel.add_child(_skill_header_rule)
 
-	_skill_filter_btn = _make_button("切換(我方)", Vector2(SKILL_PANEL_CONTENT_PAD, -16.0), Vector2(104.0, 26.0))
+	_scoop_mode_btn = _make_button(
+		"貓砂",
+		_get_bottom_hud_position("SkillPanel/ScoopButton", Vector2(194.0, 48.0)),
+		_get_bottom_hud_size("SkillPanel/ScoopButton", Vector2(104.0, 43.0))
+	)
+	_apply_bottom_hud_font_size(_scoop_mode_btn, "SkillPanel/ScoopButton", UiPalette.FONT_SIZE_SUBHEADING)
+	_skill_panel.add_child(_scoop_mode_btn)
+	_setup_skill_mode_button_visual(_scoop_mode_btn, "SkillPanel/ScoopButton")
+	_scoop_mode_btn.pressed.connect(_show_scoop_mode)
+
+	_skill_filter_btn = _make_button(
+		"衝撞",
+		_get_bottom_hud_position("SkillPanel/SkillFilterButton", Vector2(306.0, 48.0)),
+		_get_bottom_hud_size("SkillPanel/SkillFilterButton", Vector2(104.0, 43.0))
+	)
+	_apply_bottom_hud_font_size(_skill_filter_btn, "SkillPanel/SkillFilterButton", UiPalette.FONT_SIZE_SUBHEADING)
 	_skill_panel.add_child(_skill_filter_btn)
+	_setup_skill_mode_button_visual(_skill_filter_btn, "SkillPanel/SkillFilterButton")
 	_apply_skill_filter_button_style(_skill_filter_btn, true)
-	_skill_filter_btn.pressed.connect(_cycle_skill_filter_mode)
+	_skill_filter_btn.pressed.connect(_show_dash_mode)
 
 	_skill_bar = _build_skill_bar()
 	_skill_panel.add_child(_skill_bar)
 	_apply_skill_bar_layout()
 
-	_speed_1x = _make_button("加速", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD - 128.0, -16.0), Vector2(128.0, 26.0))
+	_speed_1x = _make_button(
+		"加速",
+		_get_bottom_hud_position("SkillPanel/SpeedButton", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD - 128.0, -16.0)),
+		_get_bottom_hud_size("SkillPanel/SpeedButton", Vector2(128.0, 26.0))
+	)
+	_apply_bottom_hud_font_size(_speed_1x, "SkillPanel/SpeedButton", UiPalette.FONT_SIZE_SUBHEADING)
 	_skill_panel.add_child(_speed_1x)
 	_apply_skill_speed_button_style(_speed_1x, false)
 	_speed_2x = null
@@ -507,10 +775,14 @@ func _build_ui() -> void:
 	_speed_1x.pressed.connect(_cycle_speed)
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
-	_highlight_skill_filter_btn()
+	_refresh_skill_mode_buttons()
 
-	_sandbox_btn = _make_button("Idle 00:00:00", Vector2(0.0, -16.0), Vector2(224.0, 26.0))
-	_sandbox_btn.add_theme_font_size_override("font_size", 14)
+	_sandbox_btn = _make_button(
+		"Idle 00:00:00",
+		_get_bottom_hud_position("SkillPanel/SandboxButton", Vector2(0.0, -16.0)),
+		_get_bottom_hud_size("SkillPanel/SandboxButton", Vector2(224.0, 26.0))
+	)
+	_apply_bottom_hud_font_size(_sandbox_btn, "SkillPanel/SandboxButton", 14)
 	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
 	_skill_panel.add_child(_sandbox_btn)
 	_layout_sandbox_btn()
@@ -531,6 +803,9 @@ func _build_ui() -> void:
 	_home_scoop_count_label = _home_scoop_panel.get_node_or_null("ScoopButton/CountDebugFrame/CountLabel") as Label
 	if _home_scoop_count_label == null:
 		_home_scoop_count_label = _home_scoop_panel.get_node_or_null("ScoopButton/CountLabel") as Label
+	_apply_bottom_hud_font_size(_home_scoop_result_label, "HomeScoopPanel/ResultLabel", 11)
+	_apply_bottom_hud_font_size(_home_scoop_cd_label, "HomeScoopPanel/ScoopButton/CooldownLabel", 20)
+	_apply_bottom_hud_font_size(_home_scoop_count_label, "HomeScoopPanel/ScoopButton/CountLabel", 24)
 	_home_auto_scoop_toggle_button = _home_scoop_panel.get_node_or_null("AutoScoopToggleButton") as TextureButton
 	_home_scoop_button.modulate = Color(0.97, 0.93, 0.88, 1.0)
 	_home_scoop_button.pressed.connect(_on_home_scoop_pressed)
@@ -575,28 +850,72 @@ func _build_ui() -> void:
 	_nav_canvas.layer = 20
 	add_child(_nav_canvas)
 
-	var nav_bg: Control = _build_home_nav_background()
-	_nav_canvas.add_child(nav_bg)
+	_home_more_buttons_layer = Control.new()
+	_home_more_buttons_layer.name = "HomeMoreButtonsLayer"
+	_home_more_buttons_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_home_more_buttons_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_home_more_buttons_layer.visible = false
+	_nav_canvas.add_child(_home_more_buttons_layer)
+	_build_home_main_button_panel()
 
+	var nav_paths: Array[String] = _get_main_nav_button_paths()
+	var nav_bounds_raw: Rect2 = _get_bottom_hud_bounds_rect(nav_paths, Rect2(36.0, 1197.0, 657.0, 78.0))
+	var nav_bounds: Rect2 = Rect2(0.0, nav_bounds_raw.position.y + HOME_MAIN_NAV_OFFSET_Y, SW, nav_bounds_raw.size.y)
+	var nav_button_rect: Rect2 = _get_bottom_hud_average_rect(nav_paths, Rect2(Vector2.ZERO, HOME_NAV_BUTTON_SIZE))
+	var nav_gap: float = maxf(0.0, _get_bottom_hud_average_gap_x(nav_paths, 0.0) + HOME_MAIN_NAV_GAP_X)
+	var nav_row_width: float = nav_button_rect.size.x * float(nav_paths.size()) + nav_gap * float(maxi(nav_paths.size() - 1, 0))
+	var nav_start_x: float = nav_bounds_raw.position.x + (nav_bounds_raw.size.x - nav_row_width) * 0.5
+	var nav_y: float = nav_bounds.position.y + (nav_bounds.size.y - nav_button_rect.size.y) * 0.5
+	var nav_label_rect: Rect2 = _get_bottom_hud_average_rect(
+		_get_main_nav_label_paths(),
+		Rect2(Vector2(8.0, 8.0), Vector2(112.0, 60.0))
+	)
+	var nav_layouts: Dictionary = {}
+	for i in range(nav_paths.size()):
+		var nav_x: float = nav_start_x + float(i) * (nav_button_rect.size.x + nav_gap)
+		nav_layouts[nav_paths[i]] = Rect2(Vector2(nav_x, nav_y), nav_button_rect.size)
 	var nav_items: Array = [
-		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper],
-		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance],
-		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity],
-		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop],
+		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper, "MainNav/ScooperButton"],
+		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance, "MainNav/EnhanceButton"],
+		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity, "MainNav/ActivityButton"],
+		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop, "MainNav/ShopButton"],
 	]
-	var btn_w: float = SW / float(nav_items.size())
 	for i in range(nav_items.size()):
-		var nav_btn: Button = _build_home_nav_button(
-			nav_items[i][0],
-			Vector2(i * btn_w + 6.0, NAV_Y + 12.0),
-			Vector2(btn_w - 12.0, NAV_H - 22.0)
+		var nav_rect: Rect2 = nav_layouts.get(
+			str(nav_items[i][3]),
+			Rect2(Vector2(18.0 + i * 138.0, HOME_NAV_BUTTON_ROW_Y), HOME_NAV_BUTTON_SIZE)
 		)
+		var nav_btn: TextureButton = _build_home_nav_button(
+			nav_items[i][0],
+			nav_rect.position,
+			nav_rect.size,
+			"%s/Label" % str(nav_items[i][3])
+		)
+		_apply_texture_button_label_rect(nav_btn, nav_label_rect)
 		nav_btn.pressed.connect(nav_items[i][2])
 		_apply_home_nav_button_style(nav_btn, false)
 		_nav_canvas.add_child(nav_btn)
 		_nav_buttons[String(nav_items[i][1])] = nav_btn
 
+	var more_rect: Rect2 = nav_layouts.get("MainNav/MoreButton", Rect2(Vector2(574.0, HOME_NAV_BUTTON_ROW_Y), HOME_NAV_BUTTON_SIZE))
+	_nav_more_button = _build_home_nav_button(
+		"更多",
+		more_rect.position,
+		more_rect.size,
+		"MainNav/MoreButton/Label"
+	)
+	_apply_texture_button_label_rect(_nav_more_button, nav_label_rect)
+	_nav_more_button.pressed.connect(_toggle_home_more_menu)
+	_apply_home_more_button_style(false)
+	_nav_canvas.add_child(_nav_more_button)
+
+	_build_home_more_buttons()
+	_home_more_buttons_layer.add_child(_mail_badge)
+	_home_more_buttons_layer.add_child(_chat_badge)
+	_refresh_home_more_badge_positions()
+
 	_refresh_main_nav_state()
+	_refresh_home_more_menu_visibility()
 	_layout_home_scoop_panel()
 
 	_reward_fx_canvas = CanvasLayer.new()
@@ -614,8 +933,8 @@ func _build_ui() -> void:
 func _build_skill_bar() -> Control:
 	var bar := Control.new()
 	bar.name = "SkillBar"
-	bar.position = Vector2(SKILL_PANEL_CONTENT_PAD, 48.0)
-	bar.size = Vector2(SKILL_PANEL_W - SKILL_PANEL_CONTENT_PAD * 2.0, SKILL_BAR_H)
+	bar.position = _get_bottom_hud_position("SkillPanel/SkillBarAnchor", Vector2(SKILL_PANEL_CONTENT_PAD, 48.0))
+	bar.size = _get_bottom_hud_size("SkillPanel/SkillBarAnchor", Vector2(SKILL_PANEL_W - SKILL_PANEL_CONTENT_PAD * 2.0, SKILL_BAR_H))
 
 	for i in range(MAX_CATS_ON_FIELD * 2):
 		var slot := _make_skill_slot(i)
@@ -779,8 +1098,13 @@ func _make_skill_slot(idx: int) -> Control:
 func _apply_skill_bar_layout() -> void:
 	if _skill_bar == null or _skill_panel == null:
 		return
+	var skill_panel_base_size: Vector2 = _get_bottom_hud_size("SkillPanel", Vector2(SKILL_PANEL_W, SKILL_PANEL_H))
 	var is_all_mode: bool = _skill_filter_mode == "all"
-	_skill_panel.size.y = SKILL_PANEL_ALL_H if is_all_mode else SKILL_PANEL_H
+	var is_scoop_mode: bool = _skill_filter_mode == "scoop"
+	_skill_panel.size = Vector2(
+		skill_panel_base_size.x,
+		0.0 if is_scoop_mode else (SKILL_PANEL_ALL_H if is_all_mode else skill_panel_base_size.y)
+	)
 	if _skill_shadow != null:
 		_skill_shadow.size = _skill_panel.size
 	if _skill_body != null:
@@ -788,28 +1112,43 @@ func _apply_skill_bar_layout() -> void:
 	if _skill_inner != null:
 		_skill_inner.size = _skill_panel.size - Vector2(4.0, 4.0)
 	if _skill_top_glow != null:
-		_skill_top_glow.position.x = SKILL_PANEL_CONTENT_PAD
-		_skill_top_glow.size.x = _skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0
+		var skill_top_glow_pos: Vector2 = _get_bottom_hud_position("SkillPanel/SkillTopGlow", _skill_top_glow.position)
+		var skill_top_glow_size: Vector2 = _get_bottom_hud_size("SkillPanel/SkillTopGlow", _skill_top_glow.size)
+		_skill_top_glow.position = Vector2(skill_top_glow_pos.x, _skill_top_glow.position.y)
+		_skill_top_glow.size = Vector2(skill_top_glow_size.x, _skill_top_glow.size.y)
 	if _skill_header_rule != null:
-		_skill_header_rule.position.x = SKILL_PANEL_CONTENT_PAD
-		_skill_header_rule.size.x = _skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0
+		var skill_header_rule_pos: Vector2 = _get_bottom_hud_position("SkillPanel/SkillHeaderRule", _skill_header_rule.position)
+		var skill_header_rule_size: Vector2 = _get_bottom_hud_size("SkillPanel/SkillHeaderRule", _skill_header_rule.size)
+		_skill_header_rule.position = Vector2(skill_header_rule_pos.x, _skill_header_rule.position.y)
+		_skill_header_rule.size = Vector2(skill_header_rule_size.x, _skill_header_rule.size.y)
 	if _speed_1x != null:
-		_speed_1x.position.x = _skill_panel.size.x - SKILL_PANEL_CONTENT_PAD - _speed_1x.size.x
+		_speed_1x.position = _get_bottom_hud_position("SkillPanel/SpeedButton", _speed_1x.position)
 	_layout_sandbox_btn()
 	if _sandbox_btn != null:
 		_sandbox_btn.visible = true
 	if _home_scoop_panel != null:
-		_home_scoop_panel.visible = not is_all_mode
+		_home_scoop_panel.visible = is_scoop_mode
 	if _skip_btn != null:
 		_skip_btn.visible = GameState.is_admin_session()
-	_skill_bar.position.x = SKILL_PANEL_CONTENT_PAD
-	_skill_bar.size.x = _skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0
+	var skill_bar_anchor_pos: Vector2 = _get_bottom_hud_position("SkillPanel/SkillBarAnchor", Vector2(SKILL_PANEL_CONTENT_PAD, 48.0))
+	var skill_bar_anchor_size: Vector2 = _get_bottom_hud_size("SkillPanel/SkillBarAnchor", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, SKILL_BAR_H))
+	_skill_bar.position.x = skill_bar_anchor_pos.x
+	_skill_bar.size.x = skill_bar_anchor_size.x
+	if is_scoop_mode:
+		_skill_bar.position = skill_bar_anchor_pos
+		_skill_bar.size = Vector2(_skill_bar.size.x, 0.0)
+		for i in range(MAX_CATS_ON_FIELD * 2):
+			var scoop_slot: Control = _skill_bar.get_node_or_null("Slot%d" % i)
+			if scoop_slot == null:
+				continue
+			scoop_slot.visible = false
+		return
 	var row_gap: float = 24.0
 	var content_w: float = _skill_bar.size.x - SKILL_BAR_EDGE_PAD * 2.0
 	var horizontal_gap: float = (content_w - SKILL_SLOT_W * MAX_CATS_ON_FIELD) / float(MAX_CATS_ON_FIELD - 1)
 	var slot_count: int = MAX_CATS_ON_FIELD * 2
 	if is_all_mode:
-		_skill_bar.position = Vector2(SKILL_PANEL_CONTENT_PAD, 48.0)
+		_skill_bar.position = skill_bar_anchor_pos
 		_skill_bar.size = Vector2(_skill_bar.size.x, SKILL_SLOT_H * 2.0 + row_gap)
 		for i in range(slot_count):
 			var slot_node: Control = _skill_bar.get_node_or_null("Slot%d" % i)
@@ -821,8 +1160,8 @@ func _apply_skill_bar_layout() -> void:
 			slot_node.position = Vector2(SKILL_BAR_EDGE_PAD + col * (SKILL_SLOT_W + horizontal_gap), row * (SKILL_SLOT_H + row_gap))
 			slot_node.visible = true
 	else:
-		_skill_bar.position = Vector2(SKILL_PANEL_CONTENT_PAD, 48.0)
-		_skill_bar.size = Vector2(_skill_bar.size.x, SKILL_BAR_H)
+		_skill_bar.position = skill_bar_anchor_pos
+		_skill_bar.size = Vector2(_skill_bar.size.x, skill_bar_anchor_size.y)
 		for i in range(slot_count):
 			var slot_node_single: Control = _skill_bar.get_node_or_null("Slot%d" % i)
 			if slot_node_single == null:
@@ -835,15 +1174,68 @@ func _apply_skill_bar_layout() -> void:
 func _apply_skill_filter_button_style(button: Button, is_active: bool) -> void:
 	if button == null:
 		return
-	var bg_color: Color = ENHANCE_DETAIL_TAB_ACTIVE_FILL if is_active else ENHANCE_APPLY_DISABLED_BG
-	var fg_color: Color = ENHANCE_DETAIL_TAB_ACTIVE_FG if is_active else ENHANCE_APPLY_DISABLED_FG
-	UiPalette.apply_button_palette(button, bg_color, fg_color)
-	button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	button.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	button.flat = true
+	button.set_meta("skill_mode_active", is_active)
+	_refresh_skill_mode_button_visual(button)
+
+
+func _setup_skill_mode_button_visual(button: Button, path: String) -> void:
+	if button == null:
+		return
+	button.set_meta("skill_mode_base_font_size", _get_bottom_hud_font_size(path, UiPalette.FONT_SIZE_SUBHEADING))
+	button.set_meta("skill_mode_pressed", false)
+	button.set_meta("skill_mode_active", false)
+	button.button_down.connect(func() -> void:
+		_set_skill_mode_button_pressed(button, true)
+	)
+	button.button_up.connect(func() -> void:
+		_set_skill_mode_button_pressed(button, false)
+	)
+	button.mouse_exited.connect(func() -> void:
+		_set_skill_mode_button_pressed(button, false)
+	)
+	_refresh_skill_mode_button_visual(button)
+
+
+func _set_skill_mode_button_pressed(button: Button, is_pressed: bool) -> void:
+	if button == null:
+		return
+	button.set_meta("skill_mode_pressed", is_pressed)
+	_refresh_skill_mode_button_visual(button)
+
+
+func _refresh_skill_mode_button_visual(button: Button) -> void:
+	if button == null:
+		return
+	var base_font_size: int = int(button.get_meta("skill_mode_base_font_size", UiPalette.FONT_SIZE_SUBHEADING))
+	var is_active: bool = bool(button.get_meta("skill_mode_active", false))
+	var is_pressed: bool = bool(button.get_meta("skill_mode_pressed", false))
+	var label_color: Color = SKILL_MODE_LABEL_ACTIVE if is_active else SKILL_MODE_LABEL_IDLE
+	var outline_size: int = SKILL_MODE_LABEL_ACTIVE_OUTLINE_SIZE if is_active else SKILL_MODE_LABEL_OUTLINE_SIZE
+	var font_size: int = base_font_size + SKILL_MODE_LABEL_FONT_BOOST + (1 if is_active else 0)
+	if is_pressed:
+		label_color = SKILL_MODE_LABEL_PRESSED
+		outline_size += 1
+	button.add_theme_font_size_override("font_size", font_size)
+	button.add_theme_color_override("font_color", label_color)
+	button.add_theme_color_override("font_hover_color", label_color)
+	button.add_theme_color_override("font_pressed_color", SKILL_MODE_LABEL_PRESSED)
+	button.add_theme_color_override("font_hover_pressed_color", SKILL_MODE_LABEL_PRESSED)
+	button.add_theme_color_override("font_focus_color", label_color)
+	button.add_theme_color_override("font_outline_color", SKILL_MODE_LABEL_OUTLINE)
+	button.add_theme_constant_override("outline_size", outline_size)
+	button.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.0))
+	button.add_theme_constant_override("shadow_offset_x", 0)
+	button.add_theme_constant_override("shadow_offset_y", 0)
+	button.modulate = Color(0.98, 0.96, 0.93, 1.0) if is_pressed else Color(1.0, 1.0, 1.0, 1.0)
 
 
 func _layout_sandbox_btn() -> void:
 	if _sandbox_btn == null or _speed_1x == null:
+		return
+	var sandbox_control: Control = _get_bottom_hud_control("SkillPanel/SandboxButton")
+	if sandbox_control != null:
+		_sandbox_btn.position = sandbox_control.position
 		return
 	_sandbox_btn.position = Vector2(
 		_speed_1x.position.x - _sandbox_btn.size.x - 8.0,
@@ -851,38 +1243,40 @@ func _layout_sandbox_btn() -> void:
 	)
 
 
-func _highlight_skill_filter_btn() -> void:
-	if _skill_filter_btn == null:
-		return
-	_skill_filter_btn.text = _get_skill_filter_button_label()
-	_apply_skill_filter_button_style(_skill_filter_btn, true)
+func _refresh_skill_mode_buttons() -> void:
+	if _scoop_mode_btn != null:
+		_scoop_mode_btn.text = "貓砂"
+		_apply_skill_filter_button_style(_scoop_mode_btn, _skill_filter_mode == "scoop")
+	if _skill_filter_btn != null:
+		_skill_filter_btn.text = "衝撞"
+		_apply_skill_filter_button_style(_skill_filter_btn, _skill_filter_mode == "all")
 
 
 func _set_skill_filter_mode(mode: String) -> void:
-	_skill_filter_mode = mode
+	_skill_filter_mode = "all" if mode == "all" else "scoop"
+	_refresh_home_lower_menu_background()
 	_apply_skill_bar_layout()
-	_highlight_skill_filter_btn()
+	_refresh_skill_mode_buttons()
 	if _battle_manager != null:
-		_battle_manager.set_skill_bar_filter(mode)
+		_battle_manager.set_skill_bar_filter(_skill_filter_mode)
 
 
-func _cycle_skill_filter_mode() -> void:
-	var next_mode: String = "player"
-	if _skill_filter_mode == "player":
-		next_mode = "enemy"
-	elif _skill_filter_mode == "enemy":
-		next_mode = "all"
-	_set_skill_filter_mode(next_mode)
+func _show_scoop_mode() -> void:
+	_set_skill_filter_mode("scoop")
 
 
-func _get_skill_filter_button_label() -> String:
-	match _skill_filter_mode:
-		"enemy":
-			return "切換(敵方)"
-		"all":
-			return "切換(全部)"
-		_:
-			return "切換(我方)"
+func _show_dash_mode() -> void:
+	_set_skill_filter_mode("all")
+
+
+func _get_home_lower_menu_background_texture() -> Texture2D:
+	return HOME_LOWER_MENU_BG_SKILL_TEXTURE if _skill_filter_mode == "all" else HOME_LOWER_MENU_BG_TEXTURE
+
+
+func _refresh_home_lower_menu_background() -> void:
+	if _home_lower_menu_bg == null:
+		return
+	_layout_home_lower_menu_underlay()
 
 
 ## Refresh skill slot names from the active player team.
@@ -946,79 +1340,388 @@ func _build_home_nav_background() -> Control:
 	return background
 
 
-func _build_home_nav_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
-	var btn: Button = Button.new()
+func _build_home_main_button_panel() -> void:
+	_home_main_button_panel = TextureRect.new()
+	_home_main_button_panel.name = "HomeMainButtonPanel"
+	_home_main_button_panel.texture = HOME_MAIN_BUTTON_PANEL_TEXTURE
+	_home_main_button_panel.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_home_main_button_panel.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_home_main_button_panel.stretch_mode = TextureRect.STRETCH_SCALE
+	_home_main_button_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_layout_home_main_button_panel()
+	_nav_canvas.add_child(_home_main_button_panel)
+
+
+func _layout_home_main_button_panel() -> void:
+	if _home_main_button_panel == null:
+		return
+	var editor_size: Vector2 = _get_bottom_hud_size("MainButtonPanel", Vector2.ZERO)
+	if editor_size != Vector2.ZERO:
+		_home_main_button_panel.size = editor_size
+		_home_main_button_panel.position = _get_bottom_hud_position("MainButtonPanel", Vector2.ZERO)
+		return
+	var source_size: Vector2 = Vector2(HOME_MAIN_BUTTON_PANEL_TEXTURE.get_size())
+	if source_size.x <= 0.0 or source_size.y <= 0.0:
+		_home_main_button_panel.position = Vector2.ZERO
+		_home_main_button_panel.size = Vector2(SW, 0.0)
+		return
+	_home_main_button_panel.size = source_size
+	_home_main_button_panel.position = Vector2(
+		(SW - source_size.x) * 0.5,
+		SH - source_size.y
+	)
+
+
+func _get_width_fitted_texture_size(texture: Texture2D) -> Vector2:
+	if texture == null:
+		return Vector2(SW, 0.0)
+	var source_size: Vector2 = Vector2(texture.get_size())
+	if source_size.x <= 0.0 or source_size.y <= 0.0:
+		return Vector2(SW, 0.0)
+	var target_width: float = SW
+	var width_scale: float = target_width / source_size.x
+	return Vector2(target_width, source_size.y * width_scale)
+
+
+func _build_home_nav_button(txt: String, pos: Vector2, sz: Vector2, label_path: String = "") -> TextureButton:
+	return _build_home_quick_button(txt, pos, sz, true, label_path)
+
+
+func _build_home_quick_action_button(txt: String, pos: Vector2, callback: Callable, size: Vector2 = HOME_QUICK_BUTTON_SIZE, label_path: String = "") -> TextureButton:
+	var btn: TextureButton = _build_home_quick_button(txt, pos, size, false, label_path)
+	btn.pressed.connect(callback)
+	btn.visible = false
+	return btn
+
+
+func _build_home_quick_button(txt: String, pos: Vector2, sz: Vector2, is_main_nav: bool, label_path: String = "") -> TextureButton:
+	var btn: TextureButton = TextureButton.new()
 	btn.position = pos
 	btn.size = sz
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	btn.ignore_texture_size = true
+	btn.stretch_mode = 4
+	btn.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	btn.pressed.connect(UiAudio.play_ui_click)
 
 	var label: Label = Label.new()
 	label.name = "Label"
-	label.position = Vector2(10.0, (sz.y - 24.0) * 0.5)
-	label.size = Vector2(sz.x - 20.0, 24.0)
+	label.position = Vector2(
+		12.0,
+		HOME_NAV_BUTTON_LABEL_Y if is_main_nav else HOME_QUICK_BUTTON_LABEL_Y
+	)
+	label.size = Vector2(
+		sz.x - 24.0,
+		HOME_NAV_BUTTON_LABEL_H if is_main_nav else HOME_QUICK_BUTTON_LABEL_H
+	)
 	label.text = txt
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	label.add_theme_constant_override("outline_size", 3)
+	var base_font_size: int = _get_bottom_hud_font_size(
+		label_path,
+		HOME_NAV_BUTTON_FONT_SIZE if is_main_nav else HOME_QUICK_BUTTON_FONT_SIZE
+	)
+	label.add_theme_font_size_override("font_size", base_font_size)
+	label.add_theme_constant_override("outline_size", HOME_NAV_LABEL_MAIN_OUTLINE_SIZE if is_main_nav else HOME_NAV_LABEL_MORE_OUTLINE_SIZE)
 	label.add_theme_color_override("font_outline_color", HOME_NAV_LABEL_OUTLINE)
+	label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.0))
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 0)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(label)
 
 	btn.set_meta("label_node", label)
+	btn.set_meta("is_main_nav", is_main_nav)
+	btn.set_meta("label_base_font_size", base_font_size)
+	btn.set_meta("label_base_rect", Rect2(label.position, label.size))
+	btn.set_meta("home_button_active", false)
+	btn.set_meta("home_button_pressed", false)
+	btn.button_down.connect(func() -> void:
+		_set_home_quick_button_pressed(btn, true)
+	)
+	btn.button_up.connect(func() -> void:
+		_set_home_quick_button_pressed(btn, false)
+	)
+	btn.mouse_exited.connect(func() -> void:
+		_set_home_quick_button_pressed(btn, false)
+	)
+	if is_main_nav:
+		btn.texture_normal = HOME_NAV_BUTTON_DEFAULT_TEXTURE
+		btn.texture_hover = HOME_NAV_BUTTON_ACTIVE_TEXTURE
+		btn.texture_pressed = HOME_NAV_BUTTON_DEFAULT_TEXTURE
+	else:
+		btn.texture_normal = HOME_MORE_BUTTON_DEFAULT_TEXTURE
+		btn.texture_hover = HOME_MORE_BUTTON_ACTIVE_TEXTURE
+		btn.texture_pressed = HOME_MORE_BUTTON_DEFAULT_TEXTURE
+	btn.texture_disabled = btn.texture_normal
+	_refresh_home_quick_button_visual(btn)
 	return btn
 
 
-func _apply_home_nav_button_style(button: Button, is_active: bool) -> void:
+func _get_main_nav_button_paths() -> Array[String]:
+	return [
+		"MainNav/ScooperButton",
+		"MainNav/EnhanceButton",
+		"MainNav/ActivityButton",
+		"MainNav/ShopButton",
+		"MainNav/MoreButton",
+	]
+
+
+func _get_main_nav_label_paths() -> Array[String]:
+	return [
+		"MainNav/ScooperButton/Label",
+		"MainNav/EnhanceButton/Label",
+		"MainNav/ActivityButton/Label",
+		"MainNav/ShopButton/Label",
+		"MainNav/MoreButton/Label",
+	]
+
+
+func _get_home_more_button_defs() -> Array[Dictionary]:
+	return [
+		{
+			"key": "backpack",
+			"text": UiText.NAV_BACKPACK,
+			"callback": Callable(self, "_on_nav_backpack"),
+			"button_path": "QuickButtons/BackpackButton",
+			"label_path": "QuickButtons/BackpackButton/Label",
+		},
+		{
+			"key": "lineup",
+			"text": UiText.NAV_CONFIG,
+			"callback": Callable(self, "_on_nav_config"),
+			"button_path": "QuickButtons/LineupButton",
+			"label_path": "QuickButtons/LineupButton/Label",
+		},
+		{
+			"key": "party",
+			"text": UiText.HOME_PARTY,
+			"callback": Callable(self, "_open_party"),
+			"button_path": "QuickButtons/PartyButton",
+			"label_path": "QuickButtons/PartyButton/Label",
+		},
+		{
+			"key": "stats",
+			"text": UiText.STATS_BTN_LABEL,
+			"callback": Callable(self, "_on_stats_btn_pressed"),
+			"button_path": "QuickButtons/StatsButton",
+			"label_path": "QuickButtons/StatsButton/Label",
+		},
+		{
+			"key": "chat",
+			"text": UiText.HOME_CHAT,
+			"callback": Callable(self, "_open_chat"),
+			"button_path": "QuickButtons/ChatButton",
+			"label_path": "QuickButtons/ChatButton/Label",
+		},
+		{
+			"key": "friend",
+			"text": UiText.HOME_FRIEND,
+			"callback": Callable(self, "_open_friend"),
+			"button_path": "QuickButtons/FriendButton",
+			"label_path": "QuickButtons/FriendButton/Label",
+		},
+		{
+			"key": "mail",
+			"text": UiText.HOME_MAIL,
+			"callback": Callable(self, "_on_nav_mail"),
+			"button_path": "QuickButtons/MailButton",
+			"label_path": "QuickButtons/MailButton/Label",
+		},
+	]
+
+
+func _assign_home_more_button_reference(key: String, button: TextureButton) -> void:
+	match key:
+		"mail":
+			_mail_btn = button
+		"friend":
+			_friend_btn = button
+		"party":
+			_party_btn = button
+		"chat":
+			_chat_btn = button
+		"stats":
+			_stats_btn = button
+		"backpack":
+			_backpack_btn = button
+		"lineup":
+			_lineup_btn = button
+
+
+func _build_home_more_buttons() -> void:
+	if _home_more_buttons_layer == null:
+		return
+	for child: Node in _home_more_buttons_layer.get_children():
+		if child is TextureButton:
+			child.queue_free()
+	_home_more_buttons.clear()
+	_home_more_button_order.clear()
+	var button_paths: Array[String] = []
+	var label_paths: Array[String] = []
+	var defs: Array[Dictionary] = _get_home_more_button_defs()
+	for def: Dictionary in defs:
+		button_paths.append(str(def.get("button_path", "")))
+		label_paths.append(str(def.get("label_path", "")))
+	var bounds_raw: Rect2 = _get_bottom_hud_bounds_rect(button_paths, Rect2(169.0, 1035.0, 530.0, 165.0))
+	var more_button_right_x: float = bounds_raw.position.x + bounds_raw.size.x
+	if _nav_more_button != null:
+		more_button_right_x = _nav_more_button.position.x + _nav_more_button.size.x
+	var bounds: Rect2 = Rect2(0.0, bounds_raw.position.y + HOME_MORE_MENU_OFFSET_Y, more_button_right_x, bounds_raw.size.y)
+	var average_button_rect: Rect2 = _get_bottom_hud_average_rect(button_paths, Rect2(bounds.position, HOME_QUICK_BUTTON_SIZE))
+	var average_label_rect: Rect2 = _get_bottom_hud_average_rect(label_paths, Rect2(Vector2(8.0, 8.0), Vector2(116.0, 60.0)))
+	var button_gap_x: float = maxf(0.0, _get_bottom_hud_average_gap_x(_get_main_nav_button_paths(), 0.0) + HOME_MORE_BUTTON_GAP_X)
+	var button_rects: Array[Rect2] = _build_wrapped_button_layout(
+		defs.size(),
+		bounds,
+		average_button_rect.size,
+		4,
+		button_gap_x,
+		HOME_MORE_BUTTON_ROW_GAP_Y,
+		true
+	)
+	for i in range(defs.size()):
+		var def: Dictionary = defs[i]
+		var callback: Callable = def.get("callback", Callable())
+		var button: TextureButton = _build_home_quick_action_button(
+			str(def.get("text", "")),
+			button_rects[i].position,
+			callback,
+			button_rects[i].size,
+			str(def.get("label_path", ""))
+		)
+		_apply_texture_button_label_rect(button, average_label_rect)
+		button.visible = true
+		_home_more_buttons_layer.add_child(button)
+		var key: String = str(def.get("key", ""))
+		_home_more_buttons[key] = button
+		_home_more_button_order.append(key)
+		_assign_home_more_button_reference(key, button)
+	_refresh_home_more_badge_positions()
+
+
+func _refresh_home_more_badge_positions() -> void:
+	if _mail_badge != null and _mail_btn != null:
+		_mail_badge.position = _mail_btn.position + Vector2(_mail_btn.size.x - 18.0, 4.0)
+	if _chat_badge != null and _chat_btn != null:
+		_chat_badge.position = _chat_btn.position + Vector2(_chat_btn.size.x - 18.0, 6.0)
+
+
+func _set_home_quick_button_active(button: TextureButton, is_active: bool) -> void:
 	if button == null:
 		return
-	var normal: StyleBoxFlat = StyleBoxFlat.new()
+	button.set_meta("home_button_active", is_active)
+	_refresh_home_quick_button_visual(button)
+
+
+func _set_home_quick_button_pressed(button: TextureButton, is_pressed: bool) -> void:
+	if button == null:
+		return
+	button.set_meta("home_button_pressed", is_pressed)
+	_refresh_home_quick_button_visual(button)
+
+
+func _refresh_home_quick_button_visual(button: TextureButton) -> void:
+	if button == null:
+		return
+	var label: Label = button.get_meta("label_node", null) as Label
+	if label == null:
+		return
+	var is_main_nav: bool = bool(button.get_meta("is_main_nav", false))
+	var is_active: bool = bool(button.get_meta("home_button_active", false))
+	var is_pressed: bool = bool(button.get_meta("home_button_pressed", false))
+	var base_font_size: int = int(button.get_meta("label_base_font_size", HOME_NAV_BUTTON_FONT_SIZE if is_main_nav else HOME_QUICK_BUTTON_FONT_SIZE))
+	var font_boost: int = HOME_NAV_LABEL_MAIN_FONT_BOOST if is_main_nav else HOME_NAV_LABEL_MORE_FONT_BOOST
+	var outline_size: int = HOME_NAV_LABEL_MAIN_OUTLINE_SIZE if is_main_nav else HOME_NAV_LABEL_MORE_OUTLINE_SIZE
+	var label_color: Color = HOME_NAV_LABEL_IDLE
 	if is_active:
-		normal.bg_color = HOME_NAV_TAB_ACTIVE_BG
-		normal.border_color = HOME_NAV_TAB_ACTIVE_BORDER
-	else:
-		normal.bg_color = HOME_NAV_TAB_IDLE_BG
-		normal.border_color = HOME_NAV_TAB_IDLE_BORDER
-	normal.border_width_left = 2
-	normal.border_width_right = 2
-	normal.border_width_top = 2
-	normal.border_width_bottom = 2
-	normal.corner_radius_top_left = 18
-	normal.corner_radius_top_right = 18
-	normal.corner_radius_bottom_left = 18
-	normal.corner_radius_bottom_right = 18
+		label_color = HOME_NAV_LABEL_ACTIVE
+		outline_size += 1
+	if is_pressed:
+		label_color = HOME_NAV_LABEL_PRESSED
+		outline_size += 1
+	label.add_theme_font_size_override("font_size", base_font_size + font_boost + (1 if is_active else 0))
+	label.add_theme_color_override("font_color", label_color)
+	label.add_theme_color_override("font_outline_color", HOME_NAV_LABEL_OUTLINE)
+	label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.0))
+	label.add_theme_constant_override("outline_size", outline_size)
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 0)
+	var label_base_rect_variant: Variant = button.get_meta("label_base_rect", Rect2(label.position, label.size))
+	var label_base_rect: Rect2 = label_base_rect_variant if label_base_rect_variant is Rect2 else Rect2(label.position, label.size)
+	label.position = label_base_rect.position + Vector2(0.0, HOME_NAV_LABEL_PRESSED_OFFSET_Y if is_pressed else 0.0)
+	label.size = label_base_rect.size
+	label.rotation = 0.0
+	button.modulate = Color(0.98, 0.96, 0.93, 1.0) if is_pressed else Color(1.0, 1.0, 1.0, 1.0)
 
-	var hover: StyleBoxFlat = normal.duplicate()
-	hover.bg_color = normal.bg_color.lightened(0.05)
 
-	var pressed: StyleBoxFlat = normal.duplicate()
+func _apply_home_nav_button_style(button: BaseButton, is_active: bool) -> void:
+	if button == null:
+		return
+	var texture_button: TextureButton = button as TextureButton
+	if texture_button == null:
+		return
 	if is_active:
-		pressed.bg_color = HOME_NAV_TAB_PRESSED_BG
+		texture_button.texture_normal = HOME_NAV_BUTTON_ACTIVE_TEXTURE
+		texture_button.texture_hover = HOME_NAV_BUTTON_ACTIVE_TEXTURE
+		texture_button.texture_pressed = HOME_NAV_BUTTON_ACTIVE_TEXTURE
 	else:
-		pressed.bg_color = HOME_NAV_TAB_IDLE_BG.darkened(0.08)
+		texture_button.texture_normal = HOME_NAV_BUTTON_DEFAULT_TEXTURE
+		texture_button.texture_hover = HOME_NAV_BUTTON_ACTIVE_TEXTURE
+		texture_button.texture_pressed = HOME_NAV_BUTTON_DEFAULT_TEXTURE
+	texture_button.texture_disabled = texture_button.texture_normal
+	_set_home_quick_button_active(texture_button, is_active)
 
-	var disabled: StyleBoxFlat = normal.duplicate()
-	disabled.bg_color = HOME_NAV_TAB_IDLE_BG.darkened(0.14)
-	disabled.border_color = HOME_NAV_TAB_IDLE_BORDER.darkened(0.10)
 
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", pressed)
-	button.add_theme_stylebox_override("disabled", disabled)
+func _apply_home_more_button_style(is_active: bool) -> void:
+	if _nav_more_button == null:
+		return
+	if is_active:
+		_nav_more_button.texture_normal = HOME_NAV_BUTTON_ACTIVE_TEXTURE
+		_nav_more_button.texture_hover = HOME_NAV_BUTTON_ACTIVE_TEXTURE
+		_nav_more_button.texture_pressed = HOME_NAV_BUTTON_ACTIVE_TEXTURE
+	else:
+		_nav_more_button.texture_normal = HOME_NAV_BUTTON_DEFAULT_TEXTURE
+		_nav_more_button.texture_hover = HOME_NAV_BUTTON_ACTIVE_TEXTURE
+		_nav_more_button.texture_pressed = HOME_NAV_BUTTON_DEFAULT_TEXTURE
+	_nav_more_button.texture_disabled = _nav_more_button.texture_normal
+	_set_home_quick_button_active(_nav_more_button, is_active)
 
-	var label_variant: Variant = button.get_meta("label_node", null)
-	var label: Label = label_variant as Label
-	if label != null:
-		if is_active:
-			label.add_theme_font_size_override("font_size", 17)
-			label.add_theme_color_override("font_color", HOME_NAV_LABEL_ACTIVE)
-		else:
-			label.add_theme_font_size_override("font_size", 16)
-			label.add_theme_color_override("font_color", HOME_NAV_LABEL_IDLE)
+
+func _register_home_more_button(button: TextureButton) -> void:
+	if button == null or _home_more_buttons_layer == null:
+		return
+	if button.get_parent() != null:
+		button.get_parent().remove_child(button)
+	button.visible = true
+	_home_more_buttons_layer.add_child(button)
+
+
+func _refresh_home_more_menu_visibility() -> void:
+	if _home_more_buttons_layer != null:
+		_home_more_buttons_layer.visible = _home_more_menu_expanded
+	_refresh_home_more_badge_positions()
+	if _mail_badge != null:
+		_mail_badge.visible = _home_more_menu_expanded and GameState.has_mail_red_dot()
+	if _chat_badge != null:
+		_chat_badge.visible = _home_more_menu_expanded and GameState.get_chat_total_unread() > 0
+	_apply_home_more_button_style(_home_more_menu_expanded)
+
+
+func _toggle_home_more_menu() -> void:
+	_home_more_menu_expanded = not _home_more_menu_expanded
+	_refresh_home_more_menu_visibility()
+
+
+func _close_home_more_menu() -> void:
+	if not _home_more_menu_expanded:
+		return
+	_home_more_menu_expanded = false
+	_refresh_home_more_menu_visibility()
 
 
 func _apply_skill_speed_button_style(button: Button, is_active: bool) -> void:
@@ -1028,7 +1731,6 @@ func _apply_skill_speed_button_style(button: Button, is_active: bool) -> void:
 	var bg_color: Color = UiPalette.BUTTON_PRIMARY_BG if show_enabled_style else ENHANCE_APPLY_DISABLED_BG
 	var fg_color: Color = UiPalette.BUTTON_PRIMARY_FG if show_enabled_style else ENHANCE_APPLY_DISABLED_FG
 	UiPalette.apply_button_palette(button, bg_color, fg_color)
-	button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	button.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
@@ -1327,6 +2029,8 @@ func _refresh_ui() -> void:
 	_refresh_sandbox_btn()
 	_refresh_home_scoop_panel()
 	_refresh_mail_badge()
+	_refresh_chat_badge()
+	_refresh_home_more_menu_visibility()
 
 
 func _refresh_sandbox_btn() -> void:
@@ -1390,8 +2094,12 @@ func _refresh_home_scoop_panel() -> void:
 func _layout_home_scoop_panel() -> void:
 	if _home_scoop_panel == null or _home_scoop_button == null:
 		return
+	var editor_panel: Control = _get_bottom_hud_control("HomeScoopPanel")
+	if editor_panel != null:
+		_home_scoop_panel.position = editor_panel.position
+		return
 	var enhance_btn_variant: Variant = _nav_buttons.get("res://scenes/EnhanceScene.tscn")
-	var enhance_btn: Button = enhance_btn_variant as Button
+	var enhance_btn: TextureButton = enhance_btn_variant as TextureButton
 	if enhance_btn == null:
 		return
 	var target_center_x: float = enhance_btn.position.x + enhance_btn.size.x * 0.5
@@ -1406,11 +2114,12 @@ func _layout_home_scoop_panel() -> void:
 func _refresh_main_nav_state() -> void:
 	var active_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
 	for scene_path: String in _nav_buttons.keys():
-		var btn: Button = _nav_buttons[scene_path] as Button
+		var btn: TextureButton = _nav_buttons[scene_path] as TextureButton
 		if btn == null:
 			continue
 		var is_active: bool = scene_path == active_scene_path
 		_apply_home_nav_button_style(btn, is_active)
+	_apply_home_more_button_style(_home_more_menu_expanded)
 
 
 func get_damage_fx_host() -> Node2D:
@@ -1440,10 +2149,11 @@ func _clear_battle_transient_fx() -> void:
 func _refresh_mail_badge() -> void:
 	if _mail_badge == null:
 		return
+	_refresh_home_more_badge_positions()
 	if not GameState.has_mail_red_dot():
 		_mail_badge.visible = false
 		return
-	_mail_badge.visible = true
+	_mail_badge.visible = _home_more_menu_expanded
 	_mail_badge.text = GameState.get_mail_badge_text()
 	_mail_badge.modulate = Color(1.0, 0.28, 0.28, 1.0)
 
@@ -1710,6 +2420,9 @@ func _on_nav_scooper() -> void:
 
 
 func _toggle_overlay_scene(scene_path: String) -> void:
+	if scene_path != "":
+		_home_more_menu_expanded = false
+		_refresh_home_more_menu_visibility()
 	SceneNavigator.toggle_overlay_scene(scene_path)
 
 
@@ -2177,30 +2890,37 @@ func _show_sandbox_dialog() -> void:
 
 
 func _on_nav_config() -> void:
+	_close_home_more_menu()
 	_toggle_overlay_scene("res://scenes/LineupScene.tscn")
 
 
 func _open_settings_scene() -> void:
+	_close_home_more_menu()
 	call_deferred("_toggle_overlay_scene", "res://scenes/ConfigScene.tscn")
 
 
 func _on_nav_enhance() -> void:
+	_close_home_more_menu()
 	_toggle_overlay_scene("res://scenes/EnhanceScene.tscn")
 
 
 func _on_nav_activity() -> void:
+	_close_home_more_menu()
 	_toggle_overlay_scene("res://scenes/ActivityScene.tscn")
 
 
 func _on_nav_shop() -> void:
+	_close_home_more_menu()
 	_toggle_overlay_scene("res://scenes/ShopScene.tscn")
 
 
 func _on_nav_backpack() -> void:
+	_close_home_more_menu()
 	_toggle_overlay_scene("res://scenes/BackpackScene.tscn")
 
 
 func _on_nav_mail() -> void:
+	_close_home_more_menu()
 	var mail_view: Control = load("res://scenes/MailScene.tscn").instantiate()
 	if mail_view.has_method("set_close_action"):
 		var close_dialog := [Callable()]
@@ -2213,11 +2933,13 @@ func _on_nav_mail() -> void:
 		DialogManager.show_info_node(UiText.HOME_MAIL_DIALOG_TITLE, mail_view, Callable(), "large")
 
 func _open_chat() -> void:
+	_close_home_more_menu()
 	var chat_view: Control = CHAT_SCENE.instantiate()
 	DialogManager.show_info_node(UiText.HOME_CHAT_DIALOG_TITLE, chat_view, Callable(), "large")
 
 
 func _on_stats_btn_pressed() -> void:
+	_close_home_more_menu()
 	if _stats_panel == null:
 		return
 	_stats_panel.visible = not _stats_panel.visible
@@ -2227,12 +2949,14 @@ func _on_stats_btn_pressed() -> void:
 
 
 func _open_friend() -> void:
+	_close_home_more_menu()
 	var social_view = SOCIAL_SCENE.instantiate()
 	social_view.set_mode("friend")
 	DialogManager.show_info_node(UiText.HOME_FRIEND_DIALOG_TITLE, social_view, Callable(), "large")
 
 
 func _open_party() -> void:
+	_close_home_more_menu()
 	var social_view = SOCIAL_SCENE.instantiate()
 	social_view.set_mode("party")
 	DialogManager.show_info_node(UiText.HOME_PARTY_DIALOG_TITLE, social_view, Callable(), "large")
@@ -2241,6 +2965,7 @@ func _open_party() -> void:
 func _refresh_chat_badge() -> void:
 	if _chat_badge == null:
 		return
+	_refresh_home_more_badge_positions()
 	var unread := GameState.get_chat_total_unread()
-	_chat_badge.visible = unread > 0
+	_chat_badge.visible = _home_more_menu_expanded and unread > 0
 	_chat_badge.text = str(min(unread, 99))
