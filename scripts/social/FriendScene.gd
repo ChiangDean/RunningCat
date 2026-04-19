@@ -4,6 +4,7 @@ extends Control
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const SOCIAL_SCENE := preload("res://scenes/social/SocialScene.tscn")
 
 var _social_view
@@ -43,6 +44,7 @@ func _ready() -> void:
 		social_control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		social_control.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_social_view.friend_navigation_changed.connect(_sync_navigation)
+	GameState.red_dot_state_changed.connect(_apply_red_dots)
 	content_box.add_child(_social_view)
 	_sync_navigation(_social_view.get_friend_footer_items(), _social_view.get_friend_section())
 
@@ -73,3 +75,8 @@ func _sync_navigation(items: Array, active_key: String) -> void:
 		"active_font_size": 22,
 		"inactive_font_size": 20,
 	})
+	_apply_red_dots()
+
+
+func _apply_red_dots() -> void:
+	RedDotService.refresh_dot(_dock_buttons.get("inbox") as Control, RedDotService.has_friend_request_red_dot())

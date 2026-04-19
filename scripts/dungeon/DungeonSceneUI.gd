@@ -5,6 +5,7 @@ const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const PlayerDungeonData = preload("res://scripts/data/player_dungeon_data.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const DEFAULT_DUNGEON_ICON_BY_KEY := {
 	"cat_food": "res://assets/sprites/ui/dungeon/cat_food.png",
@@ -61,6 +62,7 @@ static func build_ui(scene) -> void:
 	scene._scroll.add_child(scene._dungeon_list)
 
 	_populate_dungeon_content(scene)
+	refresh_red_dots(scene)
 
 
 static func rebuild_dungeon_panels(scene) -> void:
@@ -238,8 +240,8 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 	status_row.add_theme_constant_override("separation", 10)
 	header_box.add_child(status_row)
 
-	status_row.add_child(_make_status_chip("\u5269\u9918\u9580\u7968\uff1a%d" % ticket_count))
-	status_row.add_child(_make_status_chip("\u5ee3\u544a\u9001\u9580\u7968\uff1a%d" % ad_count))
+	status_row.add_child(_make_status_chip(UiText.DUNGEON_TICKET_FORMAT % [str(dungeon.get("displayName", UiText.DUNGEON_PAGE_TITLE)), ticket_count]))
+	status_row.add_child(_make_status_chip(UiText.DUNGEON_AD_REMAIN_FORMAT % ad_count))
 
 	var reward_row: HBoxContainer = HBoxContainer.new()
 	reward_row.add_theme_constant_override("separation", 12)
@@ -253,10 +255,11 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 	if ticket_count <= 0 and ad_count > 0 and max_floor > 0:
 		sweep_button.text = AD_TICKET_BUTTON_TEXT
 	else:
-		sweep_button.text = "\u6383\u8569 %s %d" % [LAYER_LABEL, max_floor] if max_floor > 0 else UiText.DUNGEON_SWEEP_BUTTON
+		sweep_button.text = UiText.DUNGEON_SWEEP_BUTTON_LEVEL_FORMAT % max_floor if max_floor > 0 else UiText.DUNGEON_SWEEP_BUTTON
 	sweep_button.disabled = bool(scene._action_inflight) or max_floor <= 0 or (ticket_count <= 0 and ad_count <= 0)
+	RedDotService.refresh_dot(sweep_button, RedDotService.has_dungeon_action_red_dot(dungeon, "sweep") and not sweep_button.disabled)
 	reward_row.add_child(_build_action_panel(
-		"\u6383\u8569 %s %d \u734e\u52f5" % [LAYER_LABEL, display_level],
+		UiText.DUNGEON_REWARD_LEVEL_FORMAT % display_level,
 		sweep_rewards,
 		REWARD_EMPTY_TEXT,
 		sweep_button,
@@ -271,10 +274,11 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> PanelCont
 	if ticket_count <= 0 and ad_count > 0:
 		challenge_button.text = AD_TICKET_BUTTON_TEXT
 	else:
-		challenge_button.text = "\u6311\u6230 %s %d" % [LAYER_LABEL, next_floor]
+		challenge_button.text = UiText.DUNGEON_CHALLENGE_BUTTON_LEVEL_FORMAT % next_floor
 	challenge_button.disabled = bool(scene._action_inflight) or (ticket_count <= 0 and ad_count <= 0)
+	RedDotService.refresh_dot(challenge_button, RedDotService.has_dungeon_action_red_dot(dungeon, "challenge") and not challenge_button.disabled)
 	reward_row.add_child(_build_action_panel(
-		"\u6311\u6230 %s %d \u734e\u52f5" % [LAYER_LABEL, next_floor],
+		UiText.DUNGEON_REWARD_LEVEL_FORMAT % next_floor,
 		challenge_rewards,
 		REWARD_EMPTY_TEXT,
 		challenge_button,
@@ -369,6 +373,16 @@ static func _build_action_panel(
 	box.add_child(action_button)
 	UiPalette.apply_button_kind(action_button, button_kind)
 	return panel
+
+
+static func refresh_red_dots(scene) -> void:
+	for key_variant: Variant in scene._submenu_buttons.keys():
+		var key: String = str(key_variant)
+		var button: Control = scene._submenu_buttons.get(key, null)
+		if button == null:
+			continue
+		var dungeon: Dictionary = scene.GameState.get_dungeon_entry_by_key(key)
+		RedDotService.refresh_dot(button, RedDotService.has_dungeon_entry_red_dot(dungeon))
 
 
 static func _get_reward_label(reward_key: String) -> String:

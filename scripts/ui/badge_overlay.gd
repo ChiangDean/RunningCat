@@ -1,45 +1,25 @@
-## BadgeOverlay — 在任意 Control 節點右上角附加紅點或數字徽章。
-##
-## 使用方式：
-##   # 顯示紅點（無數字）
-##   BadgeOverlay.add_dot(button)
-##
-##   # 顯示數字（超過 99 自動顯示 99+）
-##   BadgeOverlay.add_count(button, 5)
-##
-##   # 移除徽章
-##   BadgeOverlay.remove(button)
-##
-## 注意：
-##   - 目標節點必須已加入場景樹。
-##   - 重複呼叫 add_dot / add_count 會自動更新（不會疊加）。
-##   - 徽章會隨目標節點一起被 queue_free() 清除。
-
 class_name BadgeOverlay
 extends RefCounted
 
 const _META_KEY := "_badge_node"
 
-const DOT_SIZE      := 14.0
-const BADGE_H       := 18.0
-const BADGE_MIN_W   := 18.0
-const BADGE_OFFSET  := Vector2(6.0, -6.0)   # 右上角偏移量（往右/往上各幾 px）
-
-const DOT_COLOR    := Color(0.92, 0.22, 0.22, 1.0)
-const DOT_BORDER   := Color(1.0, 0.55, 0.55, 0.90)
-const BADGE_COLOR  := Color(0.88, 0.20, 0.20, 1.0)
+const DOT_SIZE := 14.0
+const BADGE_H := 18.0
+const BADGE_MIN_W := 18.0
+const BADGE_OFFSET := Vector2(-12.0, 10.0)
+const DOT_COLOR := Color(0.92, 0.22, 0.22, 1.0)
+const DOT_BORDER := Color(1.0, 0.55, 0.55, 0.90)
+const BADGE_COLOR := Color(0.88, 0.20, 0.20, 1.0)
 const BADGE_BORDER := Color(1.0, 0.52, 0.52, 0.90)
-const TEXT_COLOR   := Color(1.0, 1.0, 1.0, 1.0)
+const TEXT_COLOR := Color(1.0, 1.0, 1.0, 1.0)
 
 
-## 在目標節點右上角顯示紅點（無數字）
 static func add_dot(target: Control) -> void:
 	_remove_existing(target)
 	var dot := _make_dot()
 	_attach(target, dot)
 
 
-## 在目標節點右上角顯示數字徽章，超過 max_display 顯示「max+」
 static func add_count(target: Control, count: int, max_display: int = 99) -> void:
 	if count <= 0:
 		remove(target)
@@ -50,12 +30,9 @@ static func add_count(target: Control, count: int, max_display: int = 99) -> voi
 	_attach(target, badge)
 
 
-## 移除目標節點上的徽章
 static func remove(target: Control) -> void:
 	_remove_existing(target)
 
-
-# ─── 內部實作 ───────────────────────────────────────────────────
 
 static func _remove_existing(target: Control) -> void:
 	if target.has_meta(_META_KEY):
@@ -68,15 +45,27 @@ static func _remove_existing(target: Control) -> void:
 static func _attach(target: Control, badge: Control) -> void:
 	target.set_meta(_META_KEY, badge)
 	target.add_child(badge)
+	_pin_to_top_right(badge)
 
-	# 等一幀確保 target.size 已計算完成
-	badge.set_deferred("position", _calc_position(target, badge))
+static func _pin_to_top_right(badge: Control) -> void:
+	badge.reset_size()
+	var badge_size: Vector2 = _get_badge_size(badge)
+	badge.anchor_left = 1.0
+	badge.anchor_right = 1.0
+	badge.anchor_top = 0.0
+	badge.anchor_bottom = 0.0
+	badge.offset_left = BADGE_OFFSET.x - badge_size.x * 0.5
+	badge.offset_right = BADGE_OFFSET.x + badge_size.x * 0.5
+	badge.offset_top = BADGE_OFFSET.y - badge_size.y * 0.5
+	badge.offset_bottom = BADGE_OFFSET.y + badge_size.y * 0.5
 
 
-static func _calc_position(target: Control, badge: Control) -> Vector2:
+static func _get_badge_size(badge: Control) -> Vector2:
+	var min_size: Vector2 = badge.get_combined_minimum_size()
+	var current_size: Vector2 = badge.size
 	return Vector2(
-		target.size.x - badge.size.x / 2.0 + BADGE_OFFSET.x,
-		-badge.size.y / 2.0 + BADGE_OFFSET.y
+		maxf(current_size.x, min_size.x),
+		maxf(current_size.y, min_size.y)
 	)
 
 

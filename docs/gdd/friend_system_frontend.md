@@ -12,6 +12,9 @@ Primary scene flow:
 Key points:
 - open as overlay scene, not dialog
 - use shared bottom submenu
+- initial friend list, inbox, and outbox come from authenticated bootstrap
+- websocket `social.friend.sync` keeps the three lists current after login
+- page entry should not show a visible loading step just to populate these lists
 - submenu is `好友列表` / `待回應的申請` / `我提出的申請`
 - add-friend uses player-name search with scrollable candidate list
 - friend rows show avatar, level, name, current stage, last login, gift status
@@ -63,3 +66,7 @@ Action:
 - `DELETE /api/friend/request/{id}`
 - `DELETE /api/friend/{friendUserId}`
 - `POST /api/friend/gift/send-all`
+
+Current page-entry rule:
+- The page reads `GameState` social caches first.
+- Search and mutation calls still use the APIs above.

@@ -187,12 +187,24 @@ func get_mail_list(callback: Callable, page: int = 1, page_size: int = 20) -> vo
 	_api_get("mail?page=%d&pageSize=%d" % [page, page_size], callback)
 
 
+func get_mail_list_silent(callback: Callable, page: int = 1, page_size: int = 20) -> void:
+	_api_get_tracked("mail?page=%d&pageSize=%d" % [page, page_size], callback, false)
+
+
 func get_mail_detail(mail_id: int, callback: Callable) -> void:
 	_api_get("mail/%d" % mail_id, callback)
 
 
+func get_mail_detail_silent(mail_id: int, callback: Callable) -> void:
+	_api_get_tracked("mail/%d" % mail_id, callback, false)
+
+
 func mark_mail_read(mail_id: int, callback: Callable) -> void:
 	_api_post("mail/%d/read" % mail_id, {}, callback)
+
+
+func mark_mail_read_silent(mail_id: int, callback: Callable) -> void:
+	_api_post_tracked("mail/%d/read" % mail_id, {}, callback, false)
 
 
 func claim_mail(mail_id: int, callback: Callable) -> void:
@@ -223,6 +235,10 @@ func post_chat_message(channel_key: String, content: String, callback: Callable)
 
 func post_chat_read(channel_key: String, last_read_sequence: int, callback: Callable) -> void:
 	_api_post("chat/read", {"channelKey": channel_key, "lastReadSequence": last_read_sequence}, callback)
+
+
+func post_chat_read_silent(channel_key: String, last_read_sequence: int, callback: Callable) -> void:
+	_api_post_tracked("chat/read", {"channelKey": channel_key, "lastReadSequence": last_read_sequence}, callback, false)
 
 
 func get_friends(callback: Callable) -> void:
@@ -277,6 +293,10 @@ func get_my_party(callback: Callable) -> void:
 	_api_get("party/my", callback)
 
 
+func get_my_party_silent(callback: Callable) -> void:
+	_api_get_tracked("party/my", callback, false)
+
+
 func get_party(party_id: int, callback: Callable) -> void:
 	_api_get("party/%d" % party_id, callback)
 
@@ -325,8 +345,16 @@ func get_party_applications(party_id: int, callback: Callable) -> void:
 	_api_get("party/%d/applications" % party_id, callback)
 
 
+func get_party_applications_silent(party_id: int, callback: Callable) -> void:
+	_api_get_tracked("party/%d/applications" % party_id, callback, false)
+
+
 func get_my_party_applications(callback: Callable) -> void:
 	_api_get("party/applications/my", callback)
+
+
+func get_my_party_applications_silent(callback: Callable) -> void:
+	_api_get_tracked("party/applications/my", callback, false)
 
 
 func accept_party_invite(application_id: int, callback: Callable) -> void:
@@ -355,6 +383,10 @@ func usurp_party_leadership(party_id: int, callback: Callable) -> void:
 
 func get_party_cheer_status(party_id: int, callback: Callable) -> void:
 	_api_get("party/%d/cheer" % party_id, callback)
+
+
+func get_party_cheer_status_silent(party_id: int, callback: Callable) -> void:
+	_api_get_tracked("party/%d/cheer" % party_id, callback, false)
 
 
 func cheer_party(party_id: int, is_ad_boost: bool, callback: Callable) -> void:

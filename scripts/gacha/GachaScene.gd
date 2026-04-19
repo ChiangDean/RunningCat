@@ -4,6 +4,7 @@ const GachaResultPanel = preload("res://scripts/gacha/GachaResultPanel.gd")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 var _active_tab: String = "pull"
 var _tab_buttons: Dictionary = {}
@@ -20,6 +21,7 @@ var _technique_list: VBoxContainer
 
 func _ready() -> void:
 	_build_ui()
+	GameState.red_dot_state_changed.connect(_apply_red_dots)
 	_refresh_view()
 
 
@@ -149,6 +151,7 @@ func _refresh_view() -> void:
 	_refresh_pull_options()
 	_refresh_technique_panel()
 	_refresh_panel_state()
+	_apply_red_dots()
 	SceneSubmenuBar.refresh(_tab_buttons, _active_tab, {
 		"active_color": Color(1.0, 0.95, 0.82, 1.0),
 		"inactive_color": Color(0.65, 0.65, 0.68, 1.0),
@@ -196,6 +199,11 @@ func _refresh_pull_options() -> void:
 	else:
 		_free_button.text = UiText.GACHA_FREE_PULL_FORMAT % maxi(free_pull_count, 1)
 		_free_button.disabled = false
+	_apply_red_dots()
+
+
+func _apply_red_dots() -> void:
+	RedDotService.refresh_dot(_free_button, _free_button != null and not _free_button.disabled and RedDotService.has_gacha_free_pull_red_dot())
 
 
 func _refresh_technique_panel() -> void:

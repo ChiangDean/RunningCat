@@ -172,6 +172,12 @@ Typical responsibilities:
 - read shared state from `GameState`
 - trigger API refresh if needed
 
+Important current rule:
+
+- `MailScene`, `ChatScene`, and `SocialScene` should open from bootstrap-backed `GameState` caches first.
+- Do not reintroduce mandatory summary/list/history fetches on page entry when the same state is already maintained by bootstrap + realtime sync.
+- If bootstrap says summary data should exist but the cached detail list is missing or inconsistent, prefer a silent self-heal fetch over restoring visible entry-time loading.
+
 ### 4.2 Feature Helper Layer
 
 Used when a screen is large enough to split responsibilities.
@@ -400,6 +406,19 @@ Bootstrap now includes the startup copy of settings-center fields:
 3. response updates `GameState.teams_data`
 4. cache writes back to `user://config/teams.json`
 5. saving the `Boss` lineup re-applies the home battle team immediately
+
+### 7.6 Bootstrap-Backed Social And Mail Flow
+
+1. `StartScene.gd` authenticates and requests bootstrap once.
+2. `GameState.apply_player_bootstrap(data)` stores startup snapshots for friend, party, mail, and chat-related UI.
+3. `ChatRealtimeClient` connects after login and applies websocket sync payloads such as:
+   - `social.friend.sync`
+   - `social.party.sync`
+   - `mail.sync`
+   - chat unread / replay events
+4. `MailScene`, `ChatScene`, and `SocialScene` render from `GameState` first instead of showing page-entry loading.
+5. If a cached detail list is unexpectedly empty while summary state says data should exist, the page may run a targeted silent self-heal API read.
+6. Realtime payloads that mirror bootstrap-owned DTOs must keep the same web JSON naming shape expected by the client.
 
 ---
 

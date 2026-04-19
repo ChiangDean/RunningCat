@@ -6,6 +6,7 @@ signal navigation_changed(items: Array, active_key: String)
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const SECTION_UNREAD := "unread"
 const SECTION_READ := "read"
@@ -64,6 +65,9 @@ var _status_label: Label
 var _empty_detail_label: Label
 var _api_in_flight: bool = false
 var _selected_mail_id: int = 0
+var _mail_state_refresh_in_progress: bool = false
+var _mail_cache_recovery_in_flight: bool = false
+var _mail_detail_recovery_ids: Array = []
 
 
 func _ready() -> void:
@@ -71,8 +75,9 @@ func _ready() -> void:
 	_build_ui()
 	_render_detail({})
 	_refresh_action_buttons()
-	_load_mail_summary()
-	_load_mail_list()
+	GameState.mail_state_changed.connect(_on_mail_state_changed)
+	GameState.red_dot_state_changed.connect(_refresh_action_buttons)
+	_apply_mail_cache()
 	_emit_navigation_changed()
 
 
@@ -254,30 +259,20 @@ func _build_ui() -> void:
 	root.add_child(_status_label)
 
 
-func _load_mail_list() -> void:
-	_set_status(LABEL_MAIL_LOADING, false)
-	ApiClient.get_mail_list(func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			_set_status(str(error.get("message", LABEL_MAIL_LOAD_FAILED)), true)
-			return
-
-		var payload: Dictionary = data if data is Dictionary else {}
-		var items_variant: Variant = payload.get("items", [])
-		var items: Array = items_variant if items_variant is Array else []
-		GameState.update_mail_list(items)
-		_rebuild_mail_buttons()
-		_set_status("", false)
-		_ensure_selected_mail_visible()
-		_refresh_action_buttons()
-	)
+func _apply_mail_cache() -> void:
+	if _mail_state_refresh_in_progress:
+		return
+	_mail_state_refresh_in_progress = true
+	_rebuild_mail_buttons()
+	_set_status("", false)
+	_ensure_selected_mail_visible()
+	_refresh_action_buttons()
+	_mail_state_refresh_in_progress = false
+	_maybe_recover_mail_cache()
 
 
-func _load_mail_summary() -> void:
-	ApiClient.get_mail_summary(func(success: bool, data: Variant, _error: Dictionary) -> void:
-		if success and data is Dictionary:
-			GameState.update_mail_summary(data)
-			_refresh_action_buttons()
-	)
+func _on_mail_state_changed() -> void:
+	_apply_mail_cache()
 
 
 func _rebuild_mail_buttons() -> void:
@@ -396,6 +391,10 @@ func _is_processed_mail(item: Dictionary) -> bool:
 	return is_read and (is_claimed or not has_attachment)
 
 
+func _mail_item_has_detail(item: Dictionary) -> bool:
+	return item.has("content") or item.has("attachments") or item.has("canClaim")
+
+
 func _select_mail(mail_id: int) -> void:
 	if mail_id <= 0:
 		return
@@ -414,34 +413,70 @@ func _refresh_mail_button_states() -> void:
 
 
 func _load_mail_detail(mail_id: int) -> void:
-	_set_status(LABEL_MAIL_CONTENT_LOADING, false)
-	ApiClient.get_mail_detail(mail_id, func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
+	var detail: Dictionary = _get_mail_detail_from_cache(mail_id)
+	if detail.is_empty():
+		_recover_mail_detail_silent(mail_id)
+		_set_status(LABEL_MAIL_CONTENT_LOADING, false)
+		return
+	if not _mail_item_has_detail(detail):
+		_recover_mail_detail_silent(mail_id)
+		_set_status(LABEL_MAIL_CONTENT_LOADING, false)
+		return
+	if _is_expired_mail(detail):
+		_set_status("", false)
+		if not GameState.selected_mail_data.is_empty():
+			GameState.update_selected_mail({})
+		_selected_mail_id = 0
+		_apply_mail_cache()
+		return
+
+	GameState.update_selected_mail(detail)
+	_render_detail(detail)
+	_set_status("", false)
+
+	if not bool(detail.get("isRead", false)):
+		GameState.mark_mail_read_local(mail_id)
+		ApiClient.mark_mail_read_silent(mail_id, func(mark_success: bool, mark_data: Variant, _mark_error: Dictionary) -> void:
+			if mark_success and mark_data is Dictionary:
+				GameState.update_mail_summary(mark_data)
+		)
+
+
+func _maybe_recover_mail_cache() -> void:
+	if _mail_cache_recovery_in_flight:
+		return
+	if not GameState.mail_list_data.is_empty():
+		return
+	if int(GameState.mail_summary_data.get("totalCount", 0)) <= 0:
+		return
+	_mail_cache_recovery_in_flight = true
+	var page_size: int = mini(maxi(int(GameState.mail_summary_data.get("totalCount", 0)), 1), 100)
+	ApiClient.get_mail_list_silent(func(success: bool, data: Variant, _error: Dictionary) -> void:
+		_mail_cache_recovery_in_flight = false
+		if not success or not (data is Dictionary):
+			return
+		var payload: Dictionary = data
+		var items_variant: Variant = payload.get("items", [])
+		if items_variant is Array:
+			GameState.update_mail_list(items_variant)
+	, 1, page_size)
+
+
+func _recover_mail_detail_silent(mail_id: int) -> void:
+	if mail_id <= 0:
+		return
+	if _mail_detail_recovery_ids.has(mail_id):
+		return
+	_mail_detail_recovery_ids.append(mail_id)
+	ApiClient.get_mail_detail_silent(mail_id, func(success: bool, data: Variant, error: Dictionary) -> void:
+		_mail_detail_recovery_ids.erase(mail_id)
+		if not success or not (data is Dictionary):
 			_set_status(str(error.get("message", LABEL_MAIL_CONTENT_FAILED)), true)
 			return
-
-		var detail: Dictionary = data if data is Dictionary else {}
-		if _is_expired_mail(detail):
-			_set_status("", false)
-			GameState.update_selected_mail({})
-			_selected_mail_id = 0
-			_load_mail_list()
-			return
-
-		GameState.update_selected_mail(detail)
-		_render_detail(detail)
+		GameState.update_selected_mail(data)
+		_render_detail(GameState.selected_mail_data)
+		_refresh_action_buttons()
 		_set_status("", false)
-
-		if not bool(detail.get("isRead", false)):
-			GameState.mark_mail_read_local(mail_id)
-			_rebuild_mail_buttons()
-			_ensure_selected_mail_visible()
-			_refresh_action_buttons()
-			ApiClient.mark_mail_read(mail_id, func(mark_success: bool, mark_data: Variant, _mark_error: Dictionary) -> void:
-				if mark_success and mark_data is Dictionary:
-					GameState.update_mail_summary(mark_data)
-					_refresh_action_buttons()
-			)
 	)
 
 
@@ -637,10 +672,10 @@ func _on_delete_read_pressed() -> void:
 
 			if data is Dictionary:
 				GameState.update_mail_summary(data)
+			GameState.remove_processed_mails_local()
 			GameState.update_selected_mail({})
 			_selected_mail_id = 0
-			_load_mail_list()
-			_refresh_action_buttons()
+			_apply_mail_cache()
 			_set_status(LABEL_DELETE_READ_SUCCESS, false)
 		)
 	)
@@ -683,6 +718,7 @@ func _set_status(message: String, is_error: bool) -> void:
 func _refresh_action_buttons() -> void:
 	if _claim_all_btn != null:
 		_claim_all_btn.disabled = _api_in_flight or int(GameState.mail_summary_data.get("claimableCount", 0)) <= 0
+		RedDotService.refresh_dot(_claim_all_btn, RedDotService.has_mail_claimable_red_dot())
 	if _delete_read_btn != null:
 		_delete_read_btn.disabled = _api_in_flight or _count_deletable_mails() <= 0
 	if _claim_btn != null:
@@ -691,13 +727,15 @@ func _refresh_action_buttons() -> void:
 		var can_claim: bool = bool(GameState.selected_mail_data.get("canClaim", false))
 		_claim_btn.visible = has_attachment and not is_claimed
 		_claim_btn.disabled = _api_in_flight or not can_claim
+		RedDotService.refresh_dot(_claim_btn, _claim_btn.visible and not _claim_btn.disabled)
 
 
 func _ensure_selected_mail_visible() -> void:
 	var visible_items: Array = _get_visible_mail_items()
 	if visible_items.is_empty():
 		_selected_mail_id = 0
-		GameState.update_selected_mail({})
+		if not GameState.selected_mail_data.is_empty():
+			GameState.update_selected_mail({})
 		_render_detail({})
 		return
 
@@ -719,6 +757,16 @@ func _normalize_section(section_key: String) -> String:
 	if normalized_key == SECTION_READ:
 		return SECTION_READ
 	return SECTION_UNREAD
+
+
+func _get_mail_detail_from_cache(mail_id: int) -> Dictionary:
+	for item_variant: Variant in GameState.mail_list_data:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		if int(item.get("mailId", 0)) == mail_id:
+			return item
+	return {}
 
 
 func _emit_navigation_changed() -> void:

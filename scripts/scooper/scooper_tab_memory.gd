@@ -1,6 +1,7 @@
 extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 
 func build(scene: Control) -> void:
@@ -154,6 +155,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 		action_btn.disabled = true
 	elif can_unlock and not api_locked:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCK_BUTTON % [current_shards, cost]
+		RedDotService.refresh_dot(action_btn, true)
 		action_btn.pressed.connect(func() -> void:
 			_confirm_unlock_memory(scene, memory_id, item)
 		)

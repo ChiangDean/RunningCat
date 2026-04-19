@@ -14,4 +14,6 @@
 - Preserve original file encoding when editing client files with Chinese text. Treat repo GDScript/docs as `UTF-8`, and avoid shell rewrite flows that can re-encode text into mojibake such as `é...`, `?��`, or corrupted `%` lines.
 - In GDScript, declare variables with explicit strong types; do not rely on inferred typing from `var name := ...` in project code changes.
 - Project typography rule: use `resources/default_theme.tres` so Latin letters and digits render with `Fredoka` while Traditional Chinese falls back to `Noto Sans TC`; only use direct `UiFonts.apply_noto(...)` when a control should remain fully Chinese-first.
+- `MailScene`, `ChatScene`, and similar home-overlay social pages that already have bootstrap + realtime cache coverage should open from `GameState` first; do not reintroduce mandatory entry-time loading fetches for data already maintained by bootstrap and websocket sync.
+- For bootstrap-backed social pages such as `MailScene` and `SocialScene`, if summary state says data should exist but the cached detail list is missing, prefer a silent self-heal fetch over restoring visible entry-time loading.
 - When new stable project-specific constraints are discovered during work, record them here so future changes stay consistent.

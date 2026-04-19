@@ -6,6 +6,7 @@ const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const DETAIL_TAB_FILL := Color(0.20, 0.16, 0.18, 0.92)
 const DETAIL_TAB_ACTIVE_FILL := Color(0.43, 0.31, 0.14, 0.98)
@@ -651,7 +652,7 @@ static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_
 	var cat_data: CatData = CatData.from_json_file(cat_id + ".json")
 	var select_button_bg: Color = Color(0.27, 0.29, 0.21, 0.96) if is_selected else UiPalette.BUTTON_PRIMARY_BG
 	var select_button_fg: Color = Color(0.88, 0.90, 0.74, 1.0) if is_selected else Color(0.16, 0.11, 0.05, 1.0)
-	return CatRosterCard.build({
+	var card: PanelContainer = CatRosterCard.build({
 		"is_selected": is_selected,
 		"template_key": "enhance_list",
 		"title_text": Refresh.get_display_name(cat_id),
@@ -670,6 +671,8 @@ static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_
 		"button_bg": select_button_bg,
 		"button_fg": select_button_fg,
 	})
+	RedDotService.refresh_dot(CatRosterCard.get_badge_target(card), RedDotService.can_rank_up_cat(player_cat))
+	return card
 
 
 static func _make_idle_preview(cat_id: String, preview_size: Vector2) -> Control:
@@ -714,6 +717,9 @@ static func refresh_detail_tab_state(scene) -> void:
 			DETAIL_TAB_ACTIVE_FILL if is_active else DETAIL_TAB_FILL,
 			SceneMenuTheme.ACTIVE_COLOR if is_active else SceneMenuTheme.INACTIVE_COLOR
 		)
+	var rank_tab_btn: Control = scene._detail_tab_btns.get("rank", null)
+	var player_cat: PlayerCatData = scene.GameState.get_player_cat(scene._selected_cat_id)
+	RedDotService.refresh_dot(rank_tab_btn, RedDotService.can_rank_up_cat(player_cat))
 
 	if scene._detail_upgrade_tab != null:
 		scene._detail_upgrade_tab.visible = scene._detail_tab == "upgrade"

@@ -1,6 +1,7 @@
 ﻿extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const ACTION_COOLDOWN: float = 0.5
 
 
@@ -252,7 +253,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		title_lbl.text = "%s %s" % [UiText.SCOOPER_EQUIPMENT_LOCKED_PREFIX, name_str]
 		title_lbl.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 1.0))
 		desc_lbl.text = _bonus_desc(item, 0)
-		exp_inline_lbl.text = "主子看起來很想要，需鏟屎官達%d級" % unlock_lv
+		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_UNLOCK_AT % unlock_lv
 		_set_chip_text(status_badge, UiText.SCOOPER_EQUIPMENT_BADGE_LOCKED)
 		_set_chip_colors(status_badge, Color(0.30, 0.30, 0.34, 0.96), Color(0.82, 0.82, 0.86, 1.0))
 		exp_bar.max_value = 1.0
@@ -279,6 +280,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		exp_label.text = "0/0"
 		action_btn.text = UiText.SCOOPER_EQUIPMENT_ACTION_UNOWNED_BUTTON if can_afford_purchase else UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON
 		action_btn.disabled = api_locked or not can_afford_purchase
+		RedDotService.refresh_dot(action_btn, can_afford_purchase and not api_locked)
 		if not can_afford_purchase:
 			action_btn.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
 		action_btn.pressed.connect(func() -> void:
@@ -553,7 +555,7 @@ func _add_locked_overlay(panel: PanelContainer, unlock_lv: int) -> void:
 	locked_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	locked_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
 	locked_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
-	locked_lbl.text = "鏟屎官等級%d解鎖" % unlock_lv
+	locked_lbl.text = UiText.SCOOPER_EQUIPMENT_LOCKED_LEVEL_FORMAT % unlock_lv
 	overlay.add_child(locked_lbl)
 
 

@@ -10,6 +10,10 @@
 Mail is the player inbox for system rewards, compensation, event rewards, purchases, and friend gifts.
 
 Current frontend behavior:
+- Mail summary and inbox snapshot are loaded during authenticated bootstrap.
+- Entering the mail page should reuse `GameState.mail_summary_data` and `GameState.mail_list_data` instead of re-requesting summary, list, or detail.
+- After login, mail changes should replace the cached summary + inbox snapshot through websocket `mail.sync`.
+- If summary says mail exists but cached inbox data is missing or stale, the page may run a silent self-heal fetch without showing the shared loading overlay.
 - Entry opens `MailOverlayScene.tscn` from the home HUD.
 - The page uses the same overlay chrome and shared bottom submenu pattern as `鏟屎官`、`主子`、`活動`.
 - Sections are:
@@ -101,9 +105,9 @@ Attachment button rules:
 ### 6.1 Read Mail
 
 Flow:
-1. Load list.
-2. Select a mail.
-3. Request detail through `GET /api/mail/{mailId}`.
+1. Render the left list from `GameState.mail_list_data`.
+2. Select a mail from the cached inbox snapshot first.
+3. If the selected row is missing detail fields unexpectedly, silently request detail through `GET /api/mail/{mailId}` without showing entry-time loading.
 4. If the mail was unread, client marks it locally first.
 5. Then client calls `POST /api/mail/{mailId}/read`.
 
@@ -178,6 +182,10 @@ Current client uses:
 - `POST /api/mail/{mailId}/claim`
 - `POST /api/mail/claim-all`
 - `DELETE /api/mail/read`
+
+Entry rule:
+- Auth bootstrap and websocket `mail.sync` are the primary source for inbox rendering.
+- Explicit `GET /api/mail` and `GET /api/mail/{mailId}` are now fallback / self-heal reads, not mandatory page-entry requests.
 
 ## 9. GameState Data
 

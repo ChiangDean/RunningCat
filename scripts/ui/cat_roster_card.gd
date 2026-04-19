@@ -13,6 +13,7 @@ const FRAME_MARGIN := 6.0
 const TITLE_COLOR := Color(0.42, 0.28, 0.15, 1.0)
 const TITLE_OUTLINE := Color(0.96, 0.92, 0.81, 0.86)
 const TEMPLATE_SIZE := Vector2(520.0, 520.0)
+const BADGE_TARGET_META_KEY := "_badge_target"
 
 
 static func build(options: Dictionary) -> PanelContainer:
@@ -91,6 +92,12 @@ static func build(options: Dictionary) -> PanelContainer:
 	_fit_template(fit_box, template)
 	fit_box.resized.connect(_fit_template.bind(fit_box, template))
 
+	var badge_anchor: Control = Control.new()
+	badge_anchor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	badge_anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(badge_anchor)
+	card.set_meta(BADGE_TARGET_META_KEY, badge_anchor)
+
 	var whole_card_pressed: Callable = options.get("whole_card_pressed", Callable())
 	var whole_card_gui_input: Callable = options.get("whole_card_gui_input", Callable())
 	if not whole_card_pressed.is_null() or not whole_card_gui_input.is_null():
@@ -105,6 +112,13 @@ static func build(options: Dictionary) -> PanelContainer:
 		card.add_child(overlay_button)
 
 	return card
+
+
+static func get_badge_target(card: Control) -> Control:
+	if card == null or not card.has_meta(BADGE_TARGET_META_KEY):
+		return card
+	var target: Variant = card.get_meta(BADGE_TARGET_META_KEY)
+	return target as Control
 
 
 static func _apply_template(template: Control, values: Dictionary) -> void:

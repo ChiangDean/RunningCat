@@ -18,6 +18,9 @@ The friend system covers:
 Current UI entry:
 - Home HUD opens `FriendScene.tscn`.
 - The page uses the same overlay style as `鏟屎官`、`主子`、`活動`.
+- Friend list, inbox, and outbox render from authenticated bootstrap data on first open.
+- After login, websocket `social.friend.sync` is the primary way to keep request and friend-list state current.
+- Entering the friend page should not show a visible loading step just to hydrate these three lists.
 
 ## 2. Bottom Submenu
 
@@ -140,6 +143,10 @@ Current client friend APIs:
 - `DELETE /api/friend/request/{id}`
 - `DELETE /api/friend/{friendUserId}`
 - `POST /api/friend/gift/send-all`
+
+Entry rule:
+- The three `GET` read endpoints above remain valid APIs, but the current frontend does not depend on them for initial page entry.
+- Search and action endpoints remain request-driven.
 
 ## 9. Notes
 

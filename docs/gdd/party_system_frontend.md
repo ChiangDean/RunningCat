@@ -10,6 +10,9 @@
 Current entry:
 - `battle_scene.gd` opens `res://scenes/PartyScene.tscn`
 - no longer uses dialog-style open flow
+- initial party detail, cheer status, pending applications, and my applications come from authenticated bootstrap
+- websocket `social.party.sync` keeps these datasets current after login and later party membership changes
+- entering the party page should not show a visible loading step just to hydrate overview / invite / review data
 
 Wrapper scene:
 - `scenes/PartyScene.tscn`
@@ -169,3 +172,7 @@ The frontend assumes backend is the source of truth for this cleanup.
 - `POST /api/party/invite/{id}/reject`
 - `POST /api/party/{id}/cheer`
 - `POST /api/party/cheer-coupon/use`
+
+Entry and recovery rule:
+- The current frontend reads party data from `GameState` first.
+- If bootstrap-backed party caches are unexpectedly missing while state says data should exist, the page may run targeted silent self-heal reads without restoring visible entry-time loading.

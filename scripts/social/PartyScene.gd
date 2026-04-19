@@ -4,6 +4,7 @@ extends Control
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const SOCIAL_SCENE := preload("res://scenes/social/SocialScene.tscn")
 
 var _social_view
@@ -39,7 +40,7 @@ func _ready() -> void:
 	content_box.add_child(title)
 
 	var desc := Label.new()
-	desc.text = "\u7ba1\u7406\u968a\u4f0d\u8cc7\u8a0a\u3001\u6210\u54e1\u9080\u8acb\u8207\u7533\u8acb\u5be9\u6838\u3002"
+	desc.text = UiText.SOCIAL_PARTY_OVERLAY_DESC
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -50,6 +51,7 @@ func _ready() -> void:
 		social_control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		social_control.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_social_view.party_navigation_changed.connect(_sync_navigation)
+	GameState.red_dot_state_changed.connect(_apply_red_dots)
 	content_box.add_child(_social_view)
 	_sync_navigation(_social_view.get_party_footer_items(), _social_view.get_party_section())
 
@@ -93,3 +95,8 @@ func _sync_navigation(items: Array, active_key: String) -> void:
 		"active_font_size": 22,
 		"inactive_font_size": 20,
 	})
+	_apply_red_dots()
+
+
+func _apply_red_dots() -> void:
+	RedDotService.refresh_dot(_dock_buttons.get("reviews") as Control, RedDotService.has_party_review_red_dot())

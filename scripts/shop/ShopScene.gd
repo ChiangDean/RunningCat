@@ -6,6 +6,7 @@ const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const SceneSecondarySubmenu = preload("res://scripts/ui/scene_secondary_submenu.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const TAB_VALUE := "value_bundle"
 const TAB_GROWTH := "growth_bundle"
@@ -60,6 +61,7 @@ var _pending_bundle_purchase: Dictionary = {}
 
 func _ready() -> void:
 	_build_ui()
+	GameState.red_dot_state_changed.connect(_refresh_red_dots)
 	_refresh_content()
 
 
@@ -135,6 +137,7 @@ func _refresh_content() -> void:
 		"active_color": SceneMenuTheme.ACTIVE_COLOR,
 		"inactive_color": SceneMenuTheme.INACTIVE_COLOR,
 	})
+	_refresh_red_dots()
 
 
 func _refresh_resource_label() -> void:
@@ -340,6 +343,7 @@ func _build_bundle_detail_card(bundle: Dictionary) -> Control:
 		action_button.pressed.connect(func() -> void:
 			_confirm_bundle_purchase(bundle)
 		)
+	RedDotService.refresh_dot(action_button, RedDotService.has_shop_bundle_red_dot(bundle) and not action_button.disabled)
 	action_row.add_child(action_button)
 
 	return panel
@@ -897,6 +901,52 @@ func _build_bundle_button_text(bundle: Dictionary) -> String:
 	if bool(bundle.get("isSoldOut", false)):
 		return UiText.SHOP_OUT_OF_STOCK
 	return UiText.SHOP_COLLISION_COIN_FORMAT % int(bundle.get("priceAmount", 0))
+
+
+func _refresh_red_dots() -> void:
+	for tab_key_variant: Variant in _tab_buttons.keys():
+		var tab_key: String = str(tab_key_variant)
+		var tab_button: Control = _tab_buttons.get(tab_key, null)
+		if tab_button == null:
+			continue
+		RedDotService.refresh_dot(tab_button, _has_shop_tab_red_dot(tab_key))
+
+	for secondary_key_variant: Variant in _secondary_buttons.keys():
+		var secondary_key: String = str(secondary_key_variant)
+		var secondary_button: Control = _secondary_buttons.get(secondary_key, null)
+		if secondary_button == null:
+			continue
+		RedDotService.refresh_dot(secondary_button, _has_shop_secondary_red_dot(_active_tab, secondary_key))
+
+
+func _has_shop_tab_red_dot(tab_key: String) -> bool:
+	for bundle_variant: Variant in _get_bundles_for_tab(tab_key):
+		if not (bundle_variant is Dictionary):
+			continue
+		var bundle: Dictionary = bundle_variant
+		if RedDotService.has_shop_bundle_red_dot(bundle):
+			return true
+	return false
+
+
+func _has_shop_secondary_red_dot(tab_key: String, item_key: String) -> bool:
+	match tab_key:
+		TAB_COLLISION_COIN, TAB_DIAMOND_STORE:
+			return false
+		_:
+			pass
+
+	var bundle_groups: Array = _get_bundle_groups_for_tab(tab_key)
+	if not bundle_groups.is_empty():
+		for bundle_variant: Variant in _get_bundles_for_group(tab_key, item_key):
+			if not (bundle_variant is Dictionary):
+				continue
+			var bundle: Dictionary = bundle_variant
+			if RedDotService.has_shop_bundle_red_dot(bundle):
+				return true
+		return false
+
+	return RedDotService.has_shop_bundle_red_dot(_get_bundle_by_id(item_key))
 
 
 func _build_reward_lines(bundle: Dictionary) -> Array[String]:

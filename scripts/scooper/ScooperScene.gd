@@ -5,6 +5,7 @@ const SW := 720.0
 const SH := 1280.0
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 var _current_tab: String = "equipment"
 var _tab_btns: Dictionary = {}
@@ -60,6 +61,7 @@ var _achievement_tab: RefCounted = preload("res://scripts/scooper/scooper_tab_ac
 
 func _ready() -> void:
 	_build_ui()
+	GameState.red_dot_state_changed.connect(_refresh_red_dots)
 	set_process(true)
 
 
@@ -159,6 +161,7 @@ func _switch_tab(tab_key: String) -> void:
 	_refresh_tab_button_labels()
 	_refresh_tab_header()
 	SceneSubmenuBar.refresh(_tab_btns, tab_key)
+	_refresh_red_dots()
 	_rebuild_tab_content()
 
 
@@ -213,6 +216,13 @@ func _refresh_tab_button_labels() -> void:
 		if btn == null:
 			continue
 		btn.text = str(_get_tab_meta(tab_key).get("label", tab_key))
+	_refresh_red_dots()
+
+
+func _refresh_red_dots() -> void:
+	RedDotService.refresh_dot(_tab_btns.get("equipment") as Control, RedDotService.has_scooper_equipment_red_dot())
+	RedDotService.refresh_dot(_tab_btns.get("memory") as Control, RedDotService.has_scooper_memory_red_dot())
+	RedDotService.refresh_dot(_tab_btns.get("achievement") as Control, RedDotService.has_scooper_achievement_red_dot())
 
 
 func _get_tab_meta(tab_key: String) -> Dictionary:
