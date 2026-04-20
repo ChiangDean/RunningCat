@@ -2,31 +2,50 @@
 
 | 項目 | 說明 |
 | --- | --- |
-| MVP 登入方式 | 帳號密碼登入 |
-| MVP 註冊方式 | 暱稱 + 帳號 + 密碼 + 二次驗證密碼 |
+| 帳密登入 | `account + password` |
+| 第三方登入 | `Google` / `Apple` / `LINE` |
 | 登入入口 | `StartScene` |
-| 角色資料入口 | 首頁左上角頭像 / 名稱區塊，開啟 `ConfigScene` 設定中心 |
-| OAuth 狀態展示 | 設定中心顯示 Google / Apple 綁定狀態，但本期不做真正授權流程 |
-| 登出入口 | 目前仍保留在 `StartScene` 的 session 按鈕 |
+| 設定中心入口 | 首頁左上角角色卡片，開啟 `ConfigScene` |
+| 帳號識別 | 以後端 `UserExternalLogin` 綁定為準，不依 email 自動合併帳號 |
+| OAuth 建號規則 | 首次第三方登入成功後，必須先輸入 `playerName` 才會建立帳號 |
+| 綁定管理 | 設定中心可顯示目前登入方式、已綁定方式、綁定 / 解除綁定 |
+| 登出入口 | `StartScene` 與 `ConfigScene` 都可安全登出 |
 
 ## StartScene 流程
 
-1. 預設顯示帳號與密碼欄位。
-2. 畫面提供 `登入` 與 `註冊` 兩個按鈕。
-3. 按下 `登入` 時，前端呼叫 `/api/auth/login` 驗證帳號密碼。
-4. 按下 `註冊` 後切換成註冊模式，補顯示暱稱與再次輸入密碼欄位。
-5. 註冊模式送出時，前端呼叫 `/api/auth/register` 建立帳號。
-6. 成功後先保存 token 與 API base URL，接著呼叫 `/api/auth/bootstrap` 取得玩家啟動快照。
-7. bootstrap 成功後，`GameState.apply_player_bootstrap(...)` 會把登入 session、玩家資料、隊伍快取、商店 / 扭蛋 / 鏟屎官資料與設定中心需要的角色資料寫進 `user://`。
-8. Client 重啟時若本地仍有 session，會先嘗試自動恢復登入；若 access token 過期，會用 refresh token 更新後再重新抓 bootstrap。
-9. 玩家若從 `StartScene` 登出，Client 會優先呼叫 `/api/auth/revoke` 撤銷目前 refresh token；若 access token 已過期，會先 refresh 再 revoke，最後清除本機登入狀態與玩家快取。
+1. 預設顯示帳號密碼登入表單。
+2. 畫面同時提供 `Google` / `Apple` / `LINE` 三個 OAuth 按鈕。
+3. 帳密登入會呼叫 `/api/auth/login`，註冊會呼叫 `/api/auth/register`。
+4. OAuth 登入會先呼叫 `POST /api/auth/oauth/{provider}/begin`，取得 `transactionId` 與 `authorizationUrl`。
+5. Client 開啟瀏覽器後，持續輪詢 `POST /api/auth/oauth/exchange`。
+6. 若狀態為 `authenticated`，直接保存 `authTokens` 並進入 bootstrap。
+7. 若狀態為 `needs_profile_name`，切換成首次命名模式，送出 `POST /api/auth/oauth/complete-profile`。
+8. 若狀態為 `conflict_existing_account_requires_bind`，提示玩家先登入既有帳號，再到設定中心進行綁定。
+9. 若狀態為 `cancelled` 或 `failed`，畫面保留原登入頁並顯示對應訊息。
+10. 任何登入成功後，都會呼叫 `/api/auth/bootstrap` 取得玩家啟動快照。
+
+## OAuth 狀態與 UX
+
+- `pending`
+  - 顯示等待授權中的提示。
+- `authenticated`
+  - 直接建立 session，進入 bootstrap。
+- `needs_profile_name`
+  - 玩家需輸入 `playerName` 才會建立新帳號。
+- `conflict_existing_account_requires_bind`
+  - 不自動合併帳號，提示改用既有帳號登入後再綁定。
+- `cancelled`
+  - 視為中性提示，不當成系統錯誤。
+- `failed`
+  - 顯示 provider 授權失敗訊息，玩家可重新嘗試。
 
 ## Bootstrap / Settings Contract
 
-`GET /api/auth/bootstrap` 目前除了既有核心資料外，也會帶回設定中心首頁所需欄位：
+`GET /api/auth/bootstrap` 與 `GET /api/profile/me` 都會回傳設定中心需要的帳號欄位：
 
 - `account`
 - `displayName`
+- `playerPublicId`
 - `playerName`
 - `avatarId`
 - `bio`
@@ -34,75 +53,61 @@
 - `genderType`
 - `region`
 - `linkedProviders`
-- `playerPublicId`
+- `passwordLoginEnabled`
 
-Client 行為：
+登入成功後，Client 會把資料寫入 `GameState.player_data`，設定中心先吃本地快照，再補抓 `GET /api/profile/me`。
 
-- 進入遊戲主流程後，首頁 HUD 直接使用 bootstrap 寫入的 `GameState.player_data`。
-- 開啟 `ConfigScene` 時，先用本地快取立即繪製，再額外呼叫 `GET /api/profile/me` 拉最新資料。
-- 玩家在設定中心按下儲存時，client 送 `PUT /api/profile/me`，成功後立即覆蓋 `GameState.player_data`，並刷新首頁左上角頭像與名稱。
+## 設定中心 OAuth 管理
 
-## 設定中心相關 API
+`ConfigScene` 的帳號區塊包含：
 
-### `GET /api/profile/me`
+- 帳號識別資訊
+- `Google` / `Apple` / `LINE` 三張 provider 卡片
+- 目前登入方式
+- 安全登出按鈕
 
-用途：
+provider 卡片規則：
 
-- 取得最新角色資料與帳號綁定狀態。
+- 若 provider 已存在於 `linkedProviders`，顯示 `已綁定`
+- 若 provider 不存在於 `linkedProviders`，顯示 `未綁定`
+- 綁定中的 provider 會顯示處理中提示
+- 若該 provider 是當前 session 的登入方式，顯示 `目前登入中`
+- 若帳號沒有密碼登入，且只剩最後一個 OAuth 綁定，不允許解除綁定
 
-重要欄位：
+設定中心 API：
 
-- `displayName`
-- `playerName`
-- `avatarId`
-- `bio`
-- `birthday`
-- `genderType`
-- `region`
-- `account`
-- `playerPublicId`
-- `linkedProviders`
+- `POST /api/profile/oauth/{provider}/begin-link`
+- `POST /api/profile/oauth/link/exchange`
+- `DELETE /api/profile/oauth/{provider}`
 
-### `PUT /api/profile/me`
+解除綁定規則：
 
-用途：
+- 若解除的是目前 session 使用的登入方式，後端會撤銷當前 refresh token
+- client 收到成功後會立即清除本地 session，並回到登入頁
+- 若解除的不是目前登入方式，只更新 `linkedProviders`
 
-- 更新設定中心的角色資料。
+## 多裝置登入行為
 
-目前 client 會送出的欄位：
+- refresh token 仍沿用既有策略
+- 同 `userId + deviceId` 新登入會覆蓋同裝置舊 refresh token
+- 不同裝置的登入 session 可以共存
+- `currentLoginMethod` 僅表示目前這個 session 的登入方式
 
-- `displayName`
-- `playerName`
-- `avatarId`
-- `bio`
-- `birthday`
-- `genderType`
-- `region`
+## 帳號恢復與營運可觀測性
 
-### `POST /api/redeem-codes/redeem`
+- 第三方帳號主體以 provider subject 為唯一識別，不依 email 合併
+- 若 provider 回傳 email，僅用於衝突檢查，不用來自動綁帳號
+- 後端會保存 `passwordLoginEnabled` 與 `linkedProviders`
+- OAuth 相關 begin / callback / exchange / complete-profile / link / unlink 都有 audit log
 
-用途：
+## 目前平台行為
 
-- 設定中心帳號區塊的兌換碼功能。
-
-成功後 client 會：
-
-- 套用 `walletSnapshot` 到 `GameState`
-- 清空輸入框
-- 顯示獎勵 Dialog
-- 額外顯示成功 Toast
-
-## OAuth 狀態展示規則
-
-- 設定中心只顯示 `Google` 與 `Apple` 兩張 provider 卡片。
-- 狀態來源是 `linkedProviders`，不是 client 端自行推測。
-- 若 provider 已存在於 `linkedProviders`，顯示 `已綁定`。
-- 若不存在，顯示 `即將開放`，按鈕保持 disabled。
-- 本期不做真正的 OAuth 授權、callback、token 換發與帳號綁定寫入。
+- Web：以瀏覽器授權頁 + transaction 輪詢完成登入
+- Android / iOS：目前同樣採瀏覽器授權頁 + transaction 輪詢，玩家完成授權後回到遊戲即可繼續流程
+- 本版尚未加入原生 deep link bridge，因此 mobile 屬於可用的 browser-based 流程，而非原生 URL callback 整合
 
 ## Runtime API 設定
 
-- 本機開發可用忽略版控的 `config/runtime_config.local.json` 覆蓋 API Base URL。
-- CI / GitHub Pages 部署會在 workflow 中根據 GitHub Environment 的 `API_BASE_URL` 自動產生 `config/runtime_config.json`。
-- 若 GitHub 變數未包含 `/api`，workflow 會自動補上。
-- Client 啟動時優先讀取 `config/runtime_config.local.json`，找不到才讀 `config/runtime_config.json`，最後才回退到內建 Local 預設值。
+- 本機開發可用忽略版控的 `config/runtime_config.local.json` 覆蓋 API Base URL
+- CI / GitHub Pages 會在 workflow 產生 `config/runtime_config.json`
+- Client 啟動時優先讀 `runtime_config.local.json`，其次讀 `runtime_config.json`

@@ -233,6 +233,22 @@ func get_refresh_token() -> String:
 	return str(auth_session.get("refreshToken", "")).strip_edges()
 
 
+func get_current_login_method() -> String:
+	return str(auth_session.get("currentLoginMethod", "")).strip_edges()
+
+
+func get_linked_providers() -> Array:
+	if player_data == null:
+		return []
+	return player_data.linked_providers.duplicate()
+
+
+func is_password_login_enabled() -> bool:
+	if player_data == null:
+		return true
+	return player_data.password_login_enabled
+
+
 func is_admin_session() -> bool:
 	var role_type: String = str(auth_session.get("roleType", "")).strip_edges().to_lower()
 	if role_type == "admin":
@@ -280,6 +296,8 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	if data.has("linkedProviders"):
 		var linked_providers_variant: Variant = data.get("linkedProviders", [])
 		player_data.linked_providers = (linked_providers_variant as Array).duplicate() if linked_providers_variant is Array else []
+	if data.has("passwordLoginEnabled"):
+		player_data.password_login_enabled = bool(data.get("passwordLoginEnabled", true))
 	player_data.cat_food = int(data.get("catFood", player_data.cat_food))
 	player_data.special_cat_food = int(data.get("specialCatFood", player_data.special_cat_food))
 	player_data.gold = int(data.get("gold", player_data.gold))
@@ -456,6 +474,8 @@ func apply_profile_response(data: Dictionary) -> void:
 	if data.has("linkedProviders"):
 		var linked_providers_variant: Variant = data.get("linkedProviders", [])
 		player_data.linked_providers = (linked_providers_variant as Array).duplicate() if linked_providers_variant is Array else []
+	if data.has("passwordLoginEnabled"):
+		player_data.password_login_enabled = bool(data.get("passwordLoginEnabled", true))
 
 	player_data.save()
 	player_profile_changed.emit()

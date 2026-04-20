@@ -168,6 +168,23 @@ func update_profile_me(payload: Dictionary, callback: Callable) -> void:
 	_api_put("profile/me", payload, callback)
 
 
+func begin_oauth_link(provider_key: String, payload: Dictionary, callback: Callable) -> void:
+	_api_post("profile/oauth/%s/begin-link" % provider_key.uri_encode(), payload, callback)
+
+
+func exchange_oauth_link(transaction_id: String, callback: Callable) -> void:
+	_api_post_tracked("profile/oauth/link/exchange", {"transactionId": transaction_id}, callback, false)
+
+
+func unlink_oauth_provider(provider_key: String, current_refresh_token: String, callback: Callable) -> void:
+	_enqueue_request(
+		"profile/oauth/%s" % provider_key.uri_encode(),
+		HTTPClient.METHOD_DELETE,
+		{"currentRefreshToken": current_refresh_token},
+		callback
+	)
+
+
 func revoke_refresh_token(refresh_token: String, reason: String, callback: Callable) -> void:
 	_api_post("auth/revoke", {
 		"refreshToken": refresh_token,
@@ -590,16 +607,18 @@ func _dispatch(slot: int, entry: Dictionary) -> void:
 
 	var url := "%s/%s" % [GameState.api_base_url, entry["path"]]
 	var method: int = entry["method"]
+	var request_body: Dictionary = entry["body"] if entry.get("body") is Dictionary else {}
 	var headers := _build_request_headers(GameState.get_access_token())
 
 	var has_body := method == HTTPClient.METHOD_POST \
 			or method == HTTPClient.METHOD_PUT \
-			or method == HTTPClient.METHOD_PATCH
+			or method == HTTPClient.METHOD_PATCH \
+			or not request_body.is_empty()
 
 	var error := OK
 	if has_body:
 		headers.append("Content-Type: application/json")
-		error = _pool[slot].request(url, headers, method, JSON.stringify(entry["body"]))
+		error = _pool[slot].request(url, headers, method, JSON.stringify(request_body))
 	else:
 		error = _pool[slot].request(url, headers, method)
 

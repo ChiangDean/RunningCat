@@ -20,6 +20,7 @@ var birthday: String = ""
 var gender_type: String = "Unspecified"
 var region: String = ""
 var linked_providers: Array = []
+var password_login_enabled: bool = true
 
 var total_pulls: int = 0
 var free_pull_count: int = 1
@@ -91,6 +92,7 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.gender_type = data.get("gender_type", "Unspecified")
 	p.region = data.get("region", "")
 	p.linked_providers = data.get("linked_providers", [])
+	p.password_login_enabled = bool(data.get("password_login_enabled", true))
 	p.cat_food = data.get("cat_food", 0)
 	p.special_cat_food = data.get("special_cat_food", 0)
 	p.gold = data.get("gold", 0)
@@ -148,6 +150,7 @@ func _to_dict() -> Dictionary:
 		"gender_type": gender_type,
 		"region": region,
 		"linked_providers": linked_providers,
+		"password_login_enabled": password_login_enabled,
 		"cat_food": cat_food,
 		"special_cat_food": special_cat_food,
 		"gold": gold,

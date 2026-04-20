@@ -20,11 +20,38 @@ const REQUEST_KIND_BOOTSTRAP := "bootstrap"
 const REQUEST_KIND_REFRESH := "refresh"
 const REQUEST_KIND_LOGOUT_REVOKE := "logout_revoke"
 const REQUEST_KIND_LOGOUT_REFRESH := "logout_refresh"
-
+const REQUEST_KIND_OAUTH_BEGIN := "oauth_begin"
+const REQUEST_KIND_OAUTH_EXCHANGE := "oauth_exchange"
+const REQUEST_KIND_OAUTH_COMPLETE_PROFILE := "oauth_complete_profile"
+const OAUTH_POLL_INTERVAL_SECONDS := 1.5
+const OAUTH_POLL_TIMEOUT_SECONDS := 90.0
+const OAUTH_PROVIDER_GOOGLE := "google"
+const OAUTH_PROVIDER_APPLE := "apple"
+const OAUTH_PROVIDER_LINE := "line"
+const OAUTH_PROVIDER_NAME_GOOGLE := "Google"
+const OAUTH_PROVIDER_NAME_APPLE := "Apple"
+const OAUTH_PROVIDER_NAME_LINE := "LINE"
+const OAUTH_DIVIDER_TEXT := "or continue with"
+const OAUTH_PROFILE_TITLE := "Set Your Player Name"
+const OAUTH_PROFILE_HINT := "Choose the name other players will see."
+const OAUTH_PROFILE_PRIMARY := "Start Adventure"
+const OAUTH_PROFILE_SECONDARY := "Back"
+const OAUTH_GOOGLE_BUTTON := "Google"
+const OAUTH_APPLE_BUTTON := "Apple"
+const OAUTH_LINE_BUTTON := "LINE"
+const OAUTH_OPENED_STATUS := "Browser opened. Finish authorization, then come back here."
+const OAUTH_PENDING_STATUS := "Waiting for authorization to finish..."
+const OAUTH_TIMEOUT_STATUS := "Authorization was not completed in time. Please try again."
+const OAUTH_CANCELLED_STATUS := "Authorization was cancelled."
+const OAUTH_CONFLICT_STATUS := "This provider already matches another account. Sign in to that account first, then link it from settings."
+const OAUTH_PLAYER_NAME_REQUIRED := "Please enter a player name."
+const OAUTH_BEGIN_FAILED_STATUS := "Unable to start external sign-in."
+const OAUTH_COMPLETE_PROFILE_STATUS := "Creating your player profile..."
 enum AuthMode
 {
 	LOGIN,
-	REGISTER
+	REGISTER,
+	OAUTH_PROFILE
 }
 
 var _api_base_url := DEFAULT_API_BASE_URL
@@ -54,6 +81,11 @@ var _confirm_password_input: LineEdit
 var _primary_button: Button
 var _secondary_button: Button
 var _status_label: Label
+var _oauth_intro_label: Label
+var _oauth_button_row: HBoxContainer
+var _oauth_google_button: Button
+var _oauth_apple_button: Button
+var _oauth_line_button: Button
 var _logout_revoke_retry := false
 var _logout_dialog_open := false
 var _loading_fill_tween: Tween
@@ -62,6 +94,11 @@ var _loading_animation_finished := false
 var _bootstrap_completed := false
 var _bootstrap_retry_count: int = 0
 var _bootstrap_retry_timer: Timer
+var _oauth_poll_timer: Timer
+var _oauth_transaction_id := ""
+var _oauth_provider_key := ""
+var _oauth_provider_name := ""
+var _oauth_poll_elapsed := 0.0
 
 
 func _ready() -> void:
@@ -184,7 +221,7 @@ func _build_auth_block() -> PanelContainer:
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.63
 	panel.position = Vector2(-220, 0)
-	panel.custom_minimum_size = Vector2(440, 240)
+	panel.custom_minimum_size = Vector2(440, 380)
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
 	var margin := MarginContainer.new()
@@ -248,6 +285,35 @@ func _build_auth_block() -> PanelContainer:
 	UiFonts.apply_noto(_status_label, 15)
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f"))
 	content.add_child(_status_label)
+
+	_oauth_intro_label = Label.new()
+	_oauth_intro_label.text = OAUTH_DIVIDER_TEXT
+	_oauth_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UiFonts.apply_noto(_oauth_intro_label, 14)
+	_oauth_intro_label.add_theme_color_override("font_color", Color("6a5547"))
+	content.add_child(_oauth_intro_label)
+
+	_oauth_button_row = HBoxContainer.new()
+	_oauth_button_row.add_theme_constant_override("separation", 8)
+	content.add_child(_oauth_button_row)
+
+	_oauth_google_button = _build_oauth_button(OAUTH_GOOGLE_BUTTON, Color("f5d59c"))
+	_oauth_google_button.pressed.connect(func() -> void:
+		_begin_oauth_sign_in(OAUTH_PROVIDER_GOOGLE, OAUTH_PROVIDER_NAME_GOOGLE)
+	)
+	_oauth_button_row.add_child(_oauth_google_button)
+
+	_oauth_apple_button = _build_oauth_button(OAUTH_APPLE_BUTTON, Color("d8ddd7"))
+	_oauth_apple_button.pressed.connect(func() -> void:
+		_begin_oauth_sign_in(OAUTH_PROVIDER_APPLE, OAUTH_PROVIDER_NAME_APPLE)
+	)
+	_oauth_button_row.add_child(_oauth_apple_button)
+
+	_oauth_line_button = _build_oauth_button(OAUTH_LINE_BUTTON, Color("9ed68c"))
+	_oauth_line_button.pressed.connect(func() -> void:
+		_begin_oauth_sign_in(OAUTH_PROVIDER_LINE, OAUTH_PROVIDER_NAME_LINE)
+	)
+	_oauth_button_row.add_child(_oauth_line_button)
 
 	return panel
 
@@ -374,6 +440,18 @@ func _build_input(placeholder: String, secret: bool) -> LineEdit:
 	return input
 
 
+func _build_oauth_button(label_text: String, fill_color: Color) -> Button:
+	var button := Button.new()
+	button.text = label_text
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.custom_minimum_size = Vector2(0, 46)
+	UiFonts.apply_noto(button, UiPalette.FONT_SIZE_BODY)
+	button.add_theme_stylebox_override("normal", _make_button_stylebox(fill_color, 8))
+	button.add_theme_stylebox_override("hover", _make_button_stylebox(fill_color.lightened(0.06), 8))
+	button.add_theme_stylebox_override("pressed", _make_button_stylebox(fill_color.darkened(0.08), 6))
+	return button
+
+
 func _attach_http_request() -> void:
 	_http_request = HTTPRequest.new()
 	_http_request.timeout = REQUEST_TIMEOUT_SECONDS
@@ -385,6 +463,12 @@ func _attach_http_request() -> void:
 	_bootstrap_retry_timer.wait_time = BOOTSTRAP_RETRY_DELAY_SECONDS
 	_bootstrap_retry_timer.timeout.connect(_on_bootstrap_retry_timeout)
 	add_child(_bootstrap_retry_timer)
+
+	_oauth_poll_timer = Timer.new()
+	_oauth_poll_timer.one_shot = true
+	_oauth_poll_timer.wait_time = OAUTH_POLL_INTERVAL_SECONDS
+	_oauth_poll_timer.timeout.connect(_on_oauth_poll_timeout)
+	add_child(_oauth_poll_timer)
 
 
 func _play_idle_animation() -> void:
@@ -412,11 +496,19 @@ func _play_idle_animation() -> void:
 
 func _apply_mode() -> void:
 	var is_register := _mode == AuthMode.REGISTER
-	_form_title.text = UiText.START_FORM_REGISTER if is_register else UiText.START_FORM_LOGIN
-	_display_name_input.visible = is_register
+	var is_oauth_profile := _mode == AuthMode.OAUTH_PROFILE
+	_form_title.text = OAUTH_PROFILE_TITLE if is_oauth_profile else (UiText.START_FORM_REGISTER if is_register else UiText.START_FORM_LOGIN)
+	_display_name_input.visible = is_register or is_oauth_profile
+	_display_name_input.placeholder_text = UiText.START_PLACEHOLDER_DISPLAY_NAME if not is_oauth_profile else OAUTH_PROFILE_HINT
+	_account_input.visible = not is_oauth_profile
+	_password_input.visible = not is_oauth_profile
 	_confirm_password_input.visible = is_register
-	_primary_button.text = UiText.START_BUTTON_REGISTER if is_register else UiText.START_BUTTON_LOGIN
-	_secondary_button.text = UiText.START_BUTTON_BACK_TO_LOGIN if is_register else UiText.START_BUTTON_REGISTER
+	_primary_button.text = OAUTH_PROFILE_PRIMARY if is_oauth_profile else (UiText.START_BUTTON_REGISTER if is_register else UiText.START_BUTTON_LOGIN)
+	_secondary_button.text = OAUTH_PROFILE_SECONDARY if is_oauth_profile else (UiText.START_BUTTON_BACK_TO_LOGIN if is_register else UiText.START_BUTTON_REGISTER)
+	if _oauth_intro_label != null:
+		_oauth_intro_label.visible = not is_oauth_profile
+	if _oauth_button_row != null:
+		_oauth_button_row.visible = not is_oauth_profile
 	_status_label.text = ""
 
 
@@ -427,11 +519,19 @@ func _set_auth_interactable(editable: bool) -> void:
 	_confirm_password_input.editable = editable
 	_primary_button.disabled = not editable
 	_secondary_button.disabled = not editable
+	if _oauth_google_button != null:
+		_oauth_google_button.disabled = not editable
+	if _oauth_apple_button != null:
+		_oauth_apple_button.disabled = not editable
+	if _oauth_line_button != null:
+		_oauth_line_button.disabled = not editable
 
 
 func _on_input_submitted(_text: String) -> void:
 	if _mode == AuthMode.LOGIN:
 		_submit_login()
+	elif _mode == AuthMode.OAUTH_PROFILE:
+		_submit_oauth_profile_name()
 	else:
 		_submit_register()
 
@@ -439,12 +539,19 @@ func _on_input_submitted(_text: String) -> void:
 func _on_primary_pressed() -> void:
 	if _mode == AuthMode.LOGIN:
 		_submit_login()
+	elif _mode == AuthMode.OAUTH_PROFILE:
+		_submit_oauth_profile_name()
 	else:
 		_submit_register()
 
 
 func _on_secondary_pressed() -> void:
 	if _request_in_flight:
+		return
+	if _mode == AuthMode.OAUTH_PROFILE:
+		_reset_oauth_state()
+		_mode = AuthMode.LOGIN
+		_apply_mode()
 		return
 	_mode = AuthMode.LOGIN if _mode == AuthMode.REGISTER else AuthMode.REGISTER
 	_apply_mode()
@@ -524,6 +631,196 @@ func _submit_register() -> void:
 		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
 
 
+func _begin_oauth_sign_in(provider_key: String, provider_name: String) -> void:
+	if _request_in_flight:
+		return
+
+	_mode = AuthMode.LOGIN
+	_apply_mode()
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_OAUTH_BEGIN
+	_oauth_provider_key = provider_key
+	_oauth_provider_name = provider_name
+	_set_auth_interactable(false)
+	_set_status(UiText.START_STATUS_CONNECTING_SERVER, false)
+	_retain_network_loading_overlay(UiText.START_STATUS_CONNECTING_SERVER)
+
+	var headers := _build_request_headers("", true)
+	var body := JSON.stringify({
+		"platformType": _get_oauth_platform_type(),
+		"deviceId": _device_id,
+		"deviceName": _build_device_name(),
+	})
+	var error := _http_request.request("%s/auth/oauth/%s/begin" % [_api_base_url, provider_key], headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_release_network_loading_overlay()
+		_set_status(OAUTH_BEGIN_FAILED_STATUS, true)
+
+
+func _submit_oauth_profile_name() -> void:
+	if _request_in_flight:
+		return
+
+	var player_name := _display_name_input.text.strip_edges()
+	if player_name == "":
+		_set_status(OAUTH_PLAYER_NAME_REQUIRED, true)
+		return
+	if _oauth_transaction_id == "":
+		_set_status(OAUTH_BEGIN_FAILED_STATUS, true)
+		return
+
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_OAUTH_COMPLETE_PROFILE
+	_set_auth_interactable(false)
+	_set_status(OAUTH_COMPLETE_PROFILE_STATUS, false)
+	_retain_network_loading_overlay(OAUTH_COMPLETE_PROFILE_STATUS)
+
+	var headers := _build_request_headers("", true)
+	var body := JSON.stringify({
+		"transactionId": _oauth_transaction_id,
+		"playerName": player_name,
+	})
+	var error := _http_request.request("%s/auth/oauth/complete-profile" % _api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_release_network_loading_overlay()
+		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
+
+
+func _begin_oauth_exchange_polling(transaction_id: String) -> void:
+	_oauth_transaction_id = transaction_id
+	_oauth_poll_elapsed = 0.0
+	if _oauth_poll_timer != null:
+		_oauth_poll_timer.stop()
+		_oauth_poll_timer.wait_time = OAUTH_POLL_INTERVAL_SECONDS
+		_oauth_poll_timer.start()
+
+
+func _stop_oauth_polling() -> void:
+	if _oauth_poll_timer != null:
+		_oauth_poll_timer.stop()
+
+
+func _request_oauth_exchange() -> void:
+	if _request_in_flight or _oauth_transaction_id == "":
+		return
+
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_OAUTH_EXCHANGE
+	_set_auth_interactable(false)
+	var headers := _build_request_headers("", true)
+	var body := JSON.stringify({
+		"transactionId": _oauth_transaction_id,
+	})
+	var error := _http_request.request("%s/auth/oauth/exchange" % _api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_release_network_loading_overlay()
+		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
+
+
+func _handle_oauth_begin_success(data: Dictionary) -> void:
+	_release_network_loading_overlay()
+	_oauth_transaction_id = str(data.get("transactionId", "")).strip_edges()
+	var authorization_url := str(data.get("authorizationUrl", "")).strip_edges()
+	if _oauth_transaction_id == "" or authorization_url == "":
+		_reset_oauth_state()
+		_set_status(OAUTH_BEGIN_FAILED_STATUS, true)
+		return
+
+	var open_error := OS.shell_open(authorization_url)
+	if open_error != OK:
+		_reset_oauth_state()
+		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % open_error, true)
+		return
+
+	_set_status(OAUTH_OPENED_STATUS, false)
+	_begin_oauth_exchange_polling(_oauth_transaction_id)
+
+
+func _handle_oauth_exchange_success(data: Dictionary) -> void:
+	var status := str(data.get("status", "")).strip_edges().to_lower()
+	match status:
+		"pending":
+			_set_status(OAUTH_PENDING_STATUS, false)
+			_schedule_next_oauth_poll()
+		"authenticated":
+			_stop_oauth_polling()
+			_reset_oauth_state(false)
+			GameState.set_auth_session(_api_base_url, data.get("authTokens", {}))
+			_api_base_url = GameState.api_base_url
+			_sync_logout_button_visibility()
+			_show_loading_state()
+			_begin_authenticated_bootstrap(UiText.START_STATUS_BOOTSTRAP_SYNC)
+		"needs_profile_name":
+			_stop_oauth_polling()
+			_mode = AuthMode.OAUTH_PROFILE
+			_apply_mode()
+			_display_name_input.text = str(data.get("suggestedPlayerName", "")).strip_edges()
+			_display_name_input.grab_focus()
+			_set_status("Finish %s sign-in by choosing your player name." % _oauth_provider_name, false)
+		"conflict_existing_account_requires_bind":
+			_stop_oauth_polling()
+			_reset_oauth_state()
+			_set_status(str(data.get("errorMessage", OAUTH_CONFLICT_STATUS)), true)
+		"cancelled":
+			_stop_oauth_polling()
+			_reset_oauth_state()
+			_set_status(str(data.get("errorMessage", OAUTH_CANCELLED_STATUS)), false)
+		"failed":
+			_stop_oauth_polling()
+			_reset_oauth_state()
+			_set_status(str(data.get("errorMessage", UiText.START_STATUS_LOGIN_FAILED)), true)
+		_:
+			_stop_oauth_polling()
+			_reset_oauth_state()
+			_set_status(UiText.START_STATUS_INVALID_RESPONSE, true)
+
+
+func _schedule_next_oauth_poll() -> void:
+	if _oauth_transaction_id == "":
+		return
+	_oauth_poll_elapsed += OAUTH_POLL_INTERVAL_SECONDS
+	if _oauth_poll_elapsed >= OAUTH_POLL_TIMEOUT_SECONDS:
+		_stop_oauth_polling()
+		_reset_oauth_state()
+		_set_status(OAUTH_TIMEOUT_STATUS, true)
+		return
+	if _oauth_poll_timer != null:
+		_oauth_poll_timer.stop()
+		_oauth_poll_timer.wait_time = OAUTH_POLL_INTERVAL_SECONDS
+		_oauth_poll_timer.start()
+
+
+func _reset_oauth_state(clear_provider: bool = true) -> void:
+	_stop_oauth_polling()
+	_oauth_transaction_id = ""
+	_oauth_poll_elapsed = 0.0
+	if clear_provider:
+		_oauth_provider_key = ""
+		_oauth_provider_name = ""
+
+
+func _get_oauth_platform_type() -> String:
+	var os_name := OS.get_name().to_lower()
+	if os_name.find("android") >= 0:
+		return "Android"
+	if os_name.find("ios") >= 0:
+		return "Ios"
+	return "Web" if OS.has_feature("web") else "Web"
+
+
+func _on_oauth_poll_timeout() -> void:
+	_request_oauth_exchange()
+
+
 func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_request_in_flight = false
 	var completed_request_kind := _request_kind
@@ -549,13 +846,22 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	var error_payload: Dictionary = error_variant if error_variant is Dictionary else {}
 
 	if response_code >= 200 and response_code < 300 and success:
-		if completed_request_kind == REQUEST_KIND_AUTH or completed_request_kind == REQUEST_KIND_REFRESH:
+		if completed_request_kind == REQUEST_KIND_AUTH or completed_request_kind == REQUEST_KIND_REFRESH or completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
 			GameState.set_auth_session(_api_base_url, data)
 			_api_base_url = GameState.api_base_url
 			_sync_logout_button_visibility()
 			if completed_request_kind == REQUEST_KIND_AUTH or _loading_block == null or not _loading_block.visible:
 				_show_loading_state()
+			if completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
+				_reset_oauth_state()
 			_begin_authenticated_bootstrap(UiText.START_STATUS_BOOTSTRAP_SYNC)
+			return
+		if completed_request_kind == REQUEST_KIND_OAUTH_BEGIN:
+			_handle_oauth_begin_success(data)
+			return
+		if completed_request_kind == REQUEST_KIND_OAUTH_EXCHANGE:
+			_release_network_loading_overlay()
+			_handle_oauth_exchange_success(data)
 			return
 		if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
 			_cancel_bootstrap_retry()
@@ -596,6 +902,30 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		_set_status(UiText.START_STATUS_LOGIN_EXPIRED, true)
 		return
 
+	if completed_request_kind == REQUEST_KIND_OAUTH_BEGIN:
+		_release_network_loading_overlay()
+		_reset_oauth_state()
+		var begin_message = error_payload.get("message") if error_payload.get("message") != null else OAUTH_BEGIN_FAILED_STATUS
+		_set_status(begin_message, true)
+		return
+
+	if completed_request_kind == REQUEST_KIND_OAUTH_EXCHANGE:
+		_release_network_loading_overlay()
+		_stop_oauth_polling()
+		var exchange_code := str(error_payload.get("code", ""))
+		var exchange_message = error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED
+		if exchange_code == "OAUTH.TRANSACTION_NOT_FOUND":
+			exchange_message = OAUTH_TIMEOUT_STATUS
+		_reset_oauth_state()
+		_set_status(exchange_message, true)
+		return
+
+	if completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
+		_release_network_loading_overlay()
+		var complete_message = error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED
+		_set_status(complete_message, true)
+		return
+
 	if completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE:
 		if response_code == 404:
 			_release_network_loading_overlay()
@@ -632,9 +962,17 @@ func _handle_request_transport_failure(completed_request_kind: String, result: i
 		if _bootstrap_retry_count < BOOTSTRAP_MAX_RETRY_COUNT:
 			_schedule_bootstrap_retry()
 			return
+	if completed_request_kind == REQUEST_KIND_OAUTH_EXCHANGE:
+		_schedule_next_oauth_poll()
+		return
 	var message := _describe_http_request_result(result)
 	if completed_request_kind == REQUEST_KIND_BOOTSTRAP or completed_request_kind == REQUEST_KIND_REFRESH:
 		_abort_loading_state()
+	elif completed_request_kind == REQUEST_KIND_OAUTH_BEGIN or completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
+		_reset_oauth_state()
+	elif completed_request_kind == REQUEST_KIND_OAUTH_EXCHANGE:
+		_schedule_next_oauth_poll()
+		return
 	elif completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE or completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 		_set_logout_button_state(true)
 	_logout_dialog_open = false if completed_request_kind.begins_with("logout") else _logout_dialog_open
@@ -645,6 +983,11 @@ func _handle_request_invalid_response(completed_request_kind: String) -> void:
 	_release_network_loading_overlay()
 	if completed_request_kind == REQUEST_KIND_BOOTSTRAP or completed_request_kind == REQUEST_KIND_REFRESH:
 		_abort_loading_state()
+	elif completed_request_kind == REQUEST_KIND_OAUTH_BEGIN or completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
+		_reset_oauth_state()
+	elif completed_request_kind == REQUEST_KIND_OAUTH_EXCHANGE:
+		_schedule_next_oauth_poll()
+		return
 	elif completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE or completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 		_set_logout_button_state(true)
 	_logout_dialog_open = false if completed_request_kind.begins_with("logout") else _logout_dialog_open

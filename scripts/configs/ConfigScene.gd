@@ -40,9 +40,28 @@ const ACCOUNT_UID_COPY_SUCCESS := "\u5df2\u8907\u88fd Player UID"
 const ACCOUNT_UID_COPY_EMPTY := "\u76ee\u524d\u6c92\u6709 Player UID"
 const ACCOUNT_UID_HINT := "\u597d\u53cb\u8207\u7d44\u968a\u641c\u5c0b\u6703\u4f7f\u7528\u9019\u7d44 Player UID\u3002"
 const ACCOUNT_LINKED_TITLE := "OAuth"
-const ACCOUNT_LINKED_DESC := "\u76ee\u524d\u50c5\u986f\u793a Google / Apple \u7d81\u5b9a\u72c0\u614b\uff0c\u5c1a\u672a\u958b\u653e\u5728\u9019\u500b\u756b\u9762\u76f4\u63a5\u64cd\u4f5c\u3002"
+const ACCOUNT_LINKED_DESC := "\u4f60\u53ef\u4ee5\u5728\u9019\u88e1\u7ba1\u7406 Google / Apple / LINE \u7684\u767b\u5165\u7d81\u5b9a\u8207\u89e3\u7d81\u3002"
 const ACCOUNT_SESSION_TITLE := "\u767b\u5165\u72c0\u614b"
 const ACCOUNT_SESSION_DESC := "\u9700\u8981\u91cd\u65b0\u767b\u5165\u6642\uff0c\u53ef\u4ee5\u5728\u9019\u88e1\u5b89\u5168\u767b\u51fa\u3002"
+const ACCOUNT_CURRENT_LOGIN_TITLE := "\u76ee\u524d\u767b\u5165\u65b9\u5f0f"
+const ACCOUNT_CURRENT_LOGIN_UNKNOWN := "\u5c1a\u672a\u8a18\u9304"
+const ACCOUNT_PROVIDER_LINK_ACTION := "\u7d81\u5b9a"
+const ACCOUNT_PROVIDER_UNLINK_ACTION := "\u89e3\u7d81"
+const ACCOUNT_PROVIDER_BUSY_ACTION := "\u8655\u7406\u4e2d..."
+const ACCOUNT_PROVIDER_CURRENT_HINT := "\u76ee\u524d\u767b\u5165\u4e2d"
+const ACCOUNT_PROVIDER_LAST_METHOD_HINT := "\u9019\u662f\u6700\u5f8c\u4e00\u500b\u53ef\u7528\u7684\u767b\u5165\u65b9\u5f0f"
+const ACCOUNT_PROVIDER_PASSWORD_FALLBACK_HINT := "\u53ef\u4ee5\u96a8\u6642\u89e3\u7d81\uff0c\u4ecd\u53ef\u4f7f\u7528\u5e33\u5bc6\u767b\u5165"
+const ACCOUNT_PROVIDER_OAUTH_OPENED := "\u5df2\u6253\u958b\u700f\u89bd\u5668\uff0c\u5b8c\u6210\u6388\u6b0a\u5f8c\u8acb\u56de\u5230\u904a\u6232\u3002"
+const ACCOUNT_PROVIDER_LINK_SUCCESS := "\u5df2\u5b8c\u6210 OAuth \u7d81\u5b9a"
+const ACCOUNT_PROVIDER_UNLINK_SUCCESS := "\u5df2\u89e3\u9664 OAuth \u7d81\u5b9a"
+const ACCOUNT_PROVIDER_UNLINK_CURRENT_SUCCESS := "\u5df2\u89e3\u7d81\u76ee\u524d\u767b\u5165\u65b9\u5f0f\uff0c\u8acb\u91cd\u65b0\u767b\u5165\u3002"
+const ACCOUNT_PROVIDER_CANCELLED := "\u6388\u6b0a\u5df2\u53d6\u6d88"
+const ACCOUNT_PROVIDER_TIMEOUT := "\u6388\u6b0a\u8d85\u6642\uff0c\u8acb\u91cd\u8a66"
+const ACCOUNT_PROVIDER_CONFLICT := "\u9019\u500b OAuth \u5e33\u865f\u5df2\u7d81\u5230\u5176\u4ed6\u5e33\u865f"
+const ACCOUNT_PROVIDER_PENDING := "\u7b49\u5f85\u6388\u6b0a\u5b8c\u6210..."
+const DEVICE_ID_PATH := "user://device_id.txt"
+const OAUTH_LINK_POLL_INTERVAL_SECONDS := 1.5
+const OAUTH_LINK_TIMEOUT_SECONDS := 90.0
 const PROFILE_SUMMARY_TITLE := "\u73a9\u5bb6\u5716\u50cf"
 const PROFILE_SUMMARY_DESC := "\u9ede\u64ca\u5716\u7247\u5373\u53ef\u6253\u958b\u982d\u50cf\u9078\u64c7\u8996\u7a97\u3002"
 
@@ -285,7 +304,8 @@ var _save_profile_hint_label: Label
 var _account_value_label: LineEdit
 var _player_uid_value_label: LineEdit
 var _account_logout_button: Button
-var _provider_status_labels: Dictionary = {}
+var _account_current_login_label: LineEdit
+var _provider_card_refs: Dictionary = {}
 var _redeem_input: LineEdit
 var _redeem_button: Button
 var _audio_value_labels: Dictionary = {}
@@ -295,10 +315,21 @@ var _active_section: String = "profile"
 var _submenu_buttons: Dictionary = {}
 var _section_content: VBoxContainer
 var _section_scroll: ScrollContainer
+var _oauth_link_poll_timer: Timer
+var _oauth_link_transaction_id: String = ""
+var _oauth_link_provider_name: String = ""
+var _oauth_link_provider_key: String = ""
+var _oauth_link_elapsed: float = 0.0
+var _account_oauth_busy: bool = false
 
 
 func _ready() -> void:
 	_build_ui()
+	_oauth_link_poll_timer = Timer.new()
+	_oauth_link_poll_timer.one_shot = true
+	_oauth_link_poll_timer.wait_time = OAUTH_LINK_POLL_INTERVAL_SECONDS
+	_oauth_link_poll_timer.timeout.connect(_on_oauth_link_poll_timeout)
+	add_child(_oauth_link_poll_timer)
 	_apply_profile_data(_build_local_profile_snapshot())
 	_apply_audio_settings()
 	_load_profile_from_api()
@@ -431,8 +462,9 @@ func _clear_section_control_refs() -> void:
 	_save_profile_hint_label = null
 	_account_value_label = null
 	_player_uid_value_label = null
+	_account_current_login_label = null
 	_account_logout_button = null
-	_provider_status_labels = {}
+	_provider_card_refs = {}
 	_redeem_input = null
 	_redeem_button = null
 	_audio_value_labels = {}
@@ -644,12 +676,16 @@ func _build_account_linked_card() -> Control:
 	var column: VBoxContainer = shell.get("column") as VBoxContainer
 	column.add_child(_make_section_header(ACCOUNT_LINKED_TITLE, ACCOUNT_LINKED_DESC))
 
-	var provider_row: HBoxContainer = HBoxContainer.new()
-	provider_row.add_theme_constant_override("separation", 10)
-	column.add_child(provider_row)
+	var provider_grid: GridContainer = GridContainer.new()
+	provider_grid.columns = 3
+	provider_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	provider_grid.add_theme_constant_override("h_separation", 10)
+	provider_grid.add_theme_constant_override("v_separation", 10)
+	column.add_child(provider_grid)
 
-	provider_row.add_child(_build_provider_card("Google"))
-	provider_row.add_child(_build_provider_card("Apple"))
+	provider_grid.add_child(_build_provider_card("Google", "google"))
+	provider_grid.add_child(_build_provider_card("Apple", "apple"))
+	provider_grid.add_child(_build_provider_card("LINE", "line"))
 	return panel
 
 
@@ -682,6 +718,9 @@ func _build_account_session_card() -> Control:
 	var panel: PanelContainer = shell.get("panel") as PanelContainer
 	var column: VBoxContainer = shell.get("column") as VBoxContainer
 	column.add_child(_make_section_header(ACCOUNT_SESSION_TITLE, ACCOUNT_SESSION_DESC))
+
+	_account_current_login_label = _make_readonly_value(ACCOUNT_CURRENT_LOGIN_UNKNOWN)
+	column.add_child(_build_field_row(ACCOUNT_CURRENT_LOGIN_TITLE, _account_current_login_label))
 
 	_account_logout_button = Button.new()
 	_account_logout_button.custom_minimum_size = Vector2(0.0, 50.0)
@@ -800,7 +839,7 @@ func _build_avatar_card(avatar_id: String) -> Control:
 	return panel
 
 
-func _build_provider_card(provider_name: String) -> Control:
+func _build_provider_card(provider_name: String, provider_key: String) -> Control:
 	var panel: PanelContainer = OverlaySceneChrome.make_card_panel(FIELD_BORDER, FIELD_BG, 12)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
@@ -821,14 +860,30 @@ func _build_provider_card(provider_name: String) -> Control:
 	status_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
 	column.add_child(status_label)
-	_provider_status_labels[provider_name] = status_label
+
+	var hint_label: Label = Label.new()
+	hint_label.text = ""
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	hint_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	column.add_child(hint_label)
 
 	var action_button: Button = Button.new()
-	action_button.text = UiText.SETTINGS_PROVIDER_ACTION_UNAVAILABLE
-	action_button.disabled = true
+	action_button.text = ACCOUNT_PROVIDER_LINK_ACTION
 	action_button.custom_minimum_size = Vector2(0.0, 42.0)
-	UiPalette.apply_button_palette(action_button, Color(0.24, 0.21, 0.18, 0.86), Color(0.72, 0.69, 0.64, 1.0))
+	UiPalette.apply_button_kind(action_button, "secondary")
+	action_button.pressed.connect(UiAudio.play_ui_click)
+	action_button.pressed.connect(func() -> void:
+		_on_provider_action_pressed(provider_name, provider_key)
+	)
 	column.add_child(action_button)
+
+	_provider_card_refs[provider_name] = {
+		"status": status_label,
+		"hint": hint_label,
+		"button": action_button,
+		"provider_key": provider_key,
+	}
 	return panel
 
 
@@ -1049,8 +1104,10 @@ func _apply_profile_data(data: Dictionary) -> void:
 		_account_value_label.text = "" if data.get("account") == null else str(data.get("account", ""))
 	if is_instance_valid(_player_uid_value_label):
 		_player_uid_value_label.text = "" if data.get("playerPublicId") == null else str(data.get("playerPublicId", ""))
+	if is_instance_valid(_account_current_login_label):
+		_account_current_login_label.text = _get_current_login_method_label()
 
-	_refresh_provider_cards(data.get("linkedProviders", []))
+	_refresh_provider_cards(data.get("linkedProviders", []), bool(data.get("passwordLoginEnabled", true)))
 	_applying_profile_form = false
 	_profile_dirty = false
 	_refresh_avatar_selection()
@@ -1085,6 +1142,7 @@ func _build_local_profile_snapshot() -> Dictionary:
 			"genderType": "Unspecified",
 			"region": "",
 			"linkedProviders": [],
+			"passwordLoginEnabled": true,
 		}
 
 	return {
@@ -1098,6 +1156,7 @@ func _build_local_profile_snapshot() -> Dictionary:
 		"genderType": player.gender_type,
 		"region": player.region,
 		"linkedProviders": player.linked_providers.duplicate(),
+		"passwordLoginEnabled": player.password_login_enabled,
 	}
 
 
@@ -1129,18 +1188,41 @@ func _refresh_avatar_selection() -> void:
 		label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.84, 1.0) if is_selected else MUTED_TEXT_COLOR)
 
 
-func _refresh_provider_cards(linked_providers_variant: Variant) -> void:
+func _refresh_provider_cards(linked_providers_variant: Variant, password_login_enabled: bool = true) -> void:
 	var linked: Array = linked_providers_variant if linked_providers_variant is Array else []
-	for provider_name: String in _provider_status_labels.keys():
-		var status_label: Label = _provider_status_labels.get(provider_name) as Label
-		if not is_instance_valid(status_label):
+	for provider_name: String in _provider_card_refs.keys():
+		var refs: Dictionary = _provider_card_refs.get(provider_name, {})
+		var status_label: Label = refs.get("status") as Label
+		var hint_label: Label = refs.get("hint") as Label
+		var action_button: Button = refs.get("button") as Button
+		if not is_instance_valid(status_label) or not is_instance_valid(hint_label) or not is_instance_valid(action_button):
 			continue
-		if linked.has(provider_name):
+		var is_linked: bool = linked.has(provider_name)
+		var is_current_login: bool = _is_current_login_provider(provider_name)
+		var can_unlink: bool = _can_unlink_provider(provider_name, linked, password_login_enabled)
+		if is_linked:
 			status_label.text = UiText.SETTINGS_PROVIDER_LINKED
 			status_label.add_theme_color_override("font_color", Color(0.72, 0.94, 0.72, 1.0))
+			action_button.text = ACCOUNT_PROVIDER_BUSY_ACTION if _account_oauth_busy and _oauth_link_provider_name == provider_name else ACCOUNT_PROVIDER_UNLINK_ACTION
+			action_button.disabled = _account_oauth_busy or not can_unlink
+			UiPalette.apply_button_kind(action_button, "danger" if can_unlink else "secondary")
 		else:
 			status_label.text = UiText.SETTINGS_PROVIDER_UNLINKED
 			status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+			action_button.text = ACCOUNT_PROVIDER_BUSY_ACTION if _account_oauth_busy and _oauth_link_provider_name == provider_name else ACCOUNT_PROVIDER_LINK_ACTION
+			action_button.disabled = _account_oauth_busy
+			UiPalette.apply_button_kind(action_button, "secondary")
+
+		if _account_oauth_busy and _oauth_link_provider_name == provider_name:
+			hint_label.text = ACCOUNT_PROVIDER_PENDING
+		elif is_current_login:
+			hint_label.text = ACCOUNT_PROVIDER_CURRENT_HINT
+		elif is_linked and not can_unlink:
+			hint_label.text = ACCOUNT_PROVIDER_LAST_METHOD_HINT
+		elif password_login_enabled and is_linked:
+			hint_label.text = ACCOUNT_PROVIDER_PASSWORD_FALLBACK_HINT
+		else:
+			hint_label.text = ""
 
 
 func _refresh_profile_counters() -> void:
@@ -1174,6 +1256,210 @@ func _refresh_logout_button_state() -> void:
 		return
 	_account_logout_button.disabled = _logout_in_flight
 	_account_logout_button.text = UiText.START_LOGOUT_BUTTON_WORKING if _logout_in_flight else UiText.START_LOGOUT_BUTTON
+	if is_instance_valid(_account_current_login_label):
+		_account_current_login_label.text = _get_current_login_method_label()
+
+
+func _get_current_login_method_label() -> String:
+	var method_key: String = GameState.get_current_login_method().strip_edges().to_lower()
+	match method_key:
+		"google":
+			return "Google"
+		"apple":
+			return "Apple"
+		"line":
+			return "LINE"
+		"password":
+			return "\u5e33\u865f\u5bc6\u78bc"
+		_:
+			return ACCOUNT_CURRENT_LOGIN_UNKNOWN
+
+
+func _is_current_login_provider(provider_name: String) -> bool:
+	return _get_current_login_method_label() == provider_name
+
+
+func _can_unlink_provider(provider_name: String, linked: Array, password_login_enabled: bool) -> bool:
+	if not linked.has(provider_name):
+		return false
+	if password_login_enabled:
+		return true
+	return linked.size() > 1
+
+
+func _on_provider_action_pressed(provider_name: String, provider_key: String) -> void:
+	if _account_oauth_busy:
+		return
+
+	var linked: Array = GameState.get_linked_providers()
+	if linked.has(provider_name):
+		var can_unlink: bool = _can_unlink_provider(provider_name, linked, GameState.is_password_login_enabled())
+		if not can_unlink:
+			ToastManager.hint(ACCOUNT_PROVIDER_LAST_METHOD_HINT)
+			return
+		DialogManager.show_confirm(
+			"%s %s" % [ACCOUNT_PROVIDER_UNLINK_ACTION, provider_name],
+			"\u78ba\u5b9a\u8981\u89e3\u9664 %s \u7d81\u5b9a\u55ce\uff1f" % provider_name,
+			func() -> void: _unlink_oauth_provider(provider_name, provider_key),
+			func() -> void: pass
+		)
+		return
+
+	_begin_oauth_link_flow(provider_name, provider_key)
+
+
+func _begin_oauth_link_flow(provider_name: String, provider_key: String) -> void:
+	_account_oauth_busy = true
+	_oauth_link_provider_name = provider_name
+	_oauth_link_provider_key = provider_key
+	_oauth_link_transaction_id = ""
+	_oauth_link_elapsed = 0.0
+	_refresh_provider_cards(GameState.get_linked_providers(), GameState.is_password_login_enabled())
+
+	ApiClient.begin_oauth_link(provider_key, {
+		"platformType": _get_oauth_platform_type(),
+		"deviceId": _load_or_create_device_id(),
+		"deviceName": _build_device_name(),
+	}, func(success: bool, data: Variant, error: Dictionary) -> void:
+		if not success:
+			_stop_oauth_link_flow(true)
+			ToastManager.error(provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
+			return
+
+		var payload: Dictionary = data if data is Dictionary else {}
+		_oauth_link_transaction_id = str(payload.get("transactionId", "")).strip_edges()
+		var authorization_url: String = str(payload.get("authorizationUrl", "")).strip_edges()
+		if _oauth_link_transaction_id == "" or authorization_url == "":
+			_stop_oauth_link_flow(true)
+			ToastManager.error(provider_name, ACCOUNT_PROVIDER_CONFLICT)
+			return
+
+		var open_error := OS.shell_open(authorization_url)
+		if open_error != OK:
+			_stop_oauth_link_flow(true)
+			ToastManager.error(provider_name, UiText.START_STATUS_REQUEST_ERROR_FORMAT % open_error)
+			return
+
+		ToastManager.hint(ACCOUNT_PROVIDER_OAUTH_OPENED)
+		_schedule_next_oauth_link_poll()
+	)
+
+
+func _schedule_next_oauth_link_poll() -> void:
+	if _oauth_link_transaction_id == "":
+		return
+	_oauth_link_elapsed += OAUTH_LINK_POLL_INTERVAL_SECONDS
+	if _oauth_link_elapsed >= OAUTH_LINK_TIMEOUT_SECONDS:
+		_stop_oauth_link_flow(true)
+		ToastManager.hint(ACCOUNT_PROVIDER_TIMEOUT)
+		return
+	if _oauth_link_poll_timer != null:
+		_oauth_link_poll_timer.stop()
+		_oauth_link_poll_timer.wait_time = OAUTH_LINK_POLL_INTERVAL_SECONDS
+		_oauth_link_poll_timer.start()
+
+
+func _on_oauth_link_poll_timeout() -> void:
+	if _oauth_link_transaction_id == "":
+		return
+	ApiClient.exchange_oauth_link(_oauth_link_transaction_id, func(success: bool, data: Variant, error: Dictionary) -> void:
+		if not success:
+			_stop_oauth_link_flow(true)
+			ToastManager.error(_oauth_link_provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
+			return
+
+		var payload: Dictionary = data if data is Dictionary else {}
+		var status: String = str(payload.get("status", "")).strip_edges().to_lower()
+		match status:
+			"pending":
+				_schedule_next_oauth_link_poll()
+			"linked":
+				var linked_provider_name := _oauth_link_provider_name
+				_stop_oauth_link_flow(true)
+				var profile: Dictionary = payload.get("profile", {}) if payload.get("profile") is Dictionary else {}
+				if not profile.is_empty():
+					GameState.apply_profile_response(profile)
+					_apply_profile_data(profile)
+				ToastManager.success(ACCOUNT_PROVIDER_LINK_SUCCESS, linked_provider_name)
+			"cancelled":
+				_stop_oauth_link_flow(true)
+				ToastManager.hint(ACCOUNT_PROVIDER_CANCELLED)
+			"failed":
+				_stop_oauth_link_flow(true)
+				var message: String = str(payload.get("errorMessage", ACCOUNT_PROVIDER_CONFLICT))
+				ToastManager.error(_oauth_link_provider_name, message)
+			_:
+				_schedule_next_oauth_link_poll()
+	)
+
+
+func _stop_oauth_link_flow(clear_provider: bool) -> void:
+	if _oauth_link_poll_timer != null:
+		_oauth_link_poll_timer.stop()
+	_account_oauth_busy = false
+	_oauth_link_transaction_id = ""
+	_oauth_link_elapsed = 0.0
+	if clear_provider:
+		_oauth_link_provider_name = ""
+		_oauth_link_provider_key = ""
+	_refresh_provider_cards(GameState.get_linked_providers(), GameState.is_password_login_enabled())
+
+
+func _unlink_oauth_provider(provider_name: String, provider_key: String) -> void:
+	_account_oauth_busy = true
+	_oauth_link_provider_name = provider_name
+	_oauth_link_provider_key = provider_key
+	_refresh_provider_cards(GameState.get_linked_providers(), GameState.is_password_login_enabled())
+
+	ApiClient.unlink_oauth_provider(provider_key, GameState.get_refresh_token(), func(success: bool, data: Variant, error: Dictionary) -> void:
+		_account_oauth_busy = false
+		_refresh_provider_cards(GameState.get_linked_providers(), GameState.is_password_login_enabled())
+		if not success:
+			ToastManager.error(provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
+			return
+
+		var profile: Dictionary = data if data is Dictionary else {}
+		if not profile.is_empty():
+			GameState.apply_profile_response(profile)
+			_apply_profile_data(profile)
+
+		if _is_current_login_provider(provider_name):
+			ToastManager.success(ACCOUNT_PROVIDER_UNLINK_CURRENT_SUCCESS)
+			_finalize_logout()
+			return
+
+		ToastManager.success(ACCOUNT_PROVIDER_UNLINK_SUCCESS, provider_name)
+	)
+
+
+func _get_oauth_platform_type() -> String:
+	var os_name: String = OS.get_name().to_lower()
+	if os_name.find("android") >= 0:
+		return "Android"
+	if os_name.find("ios") >= 0:
+		return "Ios"
+	return "Web" if OS.has_feature("web") else "Web"
+
+
+func _build_device_name() -> String:
+	return "%s-%s" % [OS.get_name(), Engine.get_architecture_name()]
+
+
+func _load_or_create_device_id() -> String:
+	if FileAccess.file_exists(DEVICE_ID_PATH):
+		var existing_file := FileAccess.open(DEVICE_ID_PATH, FileAccess.READ)
+		if existing_file != null:
+			var existing_id := existing_file.get_as_text().strip_edges()
+			existing_file.close()
+			if existing_id != "":
+				return existing_id
+
+	var generated_id := "%s-%s" % [Time.get_unix_time_from_system(), randi()]
+	var file := FileAccess.open(DEVICE_ID_PATH, FileAccess.WRITE)
+	if file != null:
+		file.store_string(generated_id)
+		file.close()
+	return generated_id
 
 
 func _refresh_audio_value_label(bus_key: String) -> void:
