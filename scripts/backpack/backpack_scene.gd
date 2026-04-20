@@ -244,6 +244,11 @@ func _get_ticket_items() -> Array:
 		"name": UiText.BACKPACK_ARENA_TICKET,
 		"qty": int(arena_overview.get("tickets", 0)),
 	})
+	items.append({
+		"path": "catalog/consumable/party_cheer_coupon",
+		"name": "收益券(1小時)",
+		"qty": int(GameState.get_party_cheer_coupon_count()),
+	})
 
 	var dungeon_list: Array = GameState.dungeon_overview_data if GameState.dungeon_overview_data is Array else []
 	for dungeon_variant: Variant in dungeon_list:

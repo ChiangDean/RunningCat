@@ -1001,6 +1001,7 @@ func update_mail_state(summary_data: Dictionary, inbox_data: Array) -> void:
 
 
 func apply_wallet_snapshot(data: Dictionary) -> void:
+	var previous_coupon_count: int = player_data.party_cheer_coupon_count
 	player_data.gold = int(data.get("gold", player_data.gold))
 	player_data.diamonds = int(data.get("diamonds", player_data.diamonds))
 	player_data.trap_points = int(data.get("trapPoints", player_data.trap_points))
@@ -1010,7 +1011,10 @@ func apply_wallet_snapshot(data: Dictionary) -> void:
 	player_data.poop_count = int(data.get("poopCount", player_data.poop_count))
 	player_data.memory_shards = int(data.get("memoryShards", player_data.memory_shards))
 	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
+	player_data.party_cheer_coupon_count = int(data.get("partyCheerCouponCount", player_data.party_cheer_coupon_count))
 	player_data.save()
+	if previous_coupon_count != player_data.party_cheer_coupon_count:
+		party_cheer_coupon_count_changed.emit(player_data.party_cheer_coupon_count)
 	player_wallet_changed.emit()
 	_emit_red_dot_state_changed()
 

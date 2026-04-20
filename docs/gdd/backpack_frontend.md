@@ -6,7 +6,7 @@
 分為三個區塊，依序顯示：
 
 - **貨幣**：Gold、鑽石、衝撞幣
-- **票券**：競技場券、各地下城門票（依地下城數量動態產生）
+- **票券**：競技場券、收益券(1小時)、各地下城門票（依地下城數量動態產生）
 - **道具**：所有消耗品（貓糧、特殊乾糧、誘捕籠、屎堆、回憶碎片、鬍鬚碎片）
 
 所有資料來自 Bootstrap，**不需額外 API 呼叫**。
@@ -83,7 +83,10 @@ ItemCard (PanelContainer)                  make_card_panel(accent)
 | 顯示名稱 | GameState 欄位 | 圖示路徑 |
 |---------|--------------|---------|
 | 競技場券 | `arena_overview_data.get("tickets", 0)` | `catalog/arena/bronze_1` |
+| 收益券(1小時) | `get_party_cheer_coupon_count()` | `catalog/consumable/party_cheer_coupon` |
 | 各地下城門票 | `dungeon_overview_data[i].remainingTicketCount` | `catalog/dungeon/{key}` |
+
+收益券(1小時) 為固定票券項目，圖示資產解析到 `assets/sprites/ui/rewards/party_cheer_coupon.svg`。
 
 地下城門票依 `dungeon_overview_data` 陣列動態產生，displayName 直接取自資料，key 對應圖示（cat_food / diamond / whisker）。
 
@@ -126,6 +129,7 @@ ItemCard (PanelContainer)                  make_card_panel(accent)
 |------|--------------|
 | 貨幣 | `gold`, `diamonds`, `trapPoints` |
 | 消耗品 | `catFood`, `specialCatFood`, `trapCages`, `poopCount`, `memoryShards`, `whiskerShards` |
+| 收益券資料 | `partyCheerCouponCount` |
 | 競技場資料 | `arenaData` → `arena_overview_data` |
 | 地下城資料 | `dungeons` → `dungeon_overview_data` |
 

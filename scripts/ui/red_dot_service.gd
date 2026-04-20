@@ -5,11 +5,11 @@ const BadgeOverlay = preload("res://scripts/ui/badge_overlay.gd")
 const PlayerCatDataRef = preload("res://scripts/data/cats/player_cat_data.gd")
 
 
-static func refresh_dot(target: Control, is_visible: bool) -> void:
+static func refresh_dot(target: Control, is_visible: bool, z_index: int = 10) -> void:
 	if target == null:
 		return
 	if is_visible:
-		BadgeOverlay.add_dot(target)
+		BadgeOverlay.add_dot(target, z_index)
 		return
 	BadgeOverlay.remove(target)
 

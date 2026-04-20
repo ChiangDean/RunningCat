@@ -176,3 +176,7 @@ The frontend assumes backend is the source of truth for this cleanup.
 Entry and recovery rule:
 - The current frontend reads party data from `GameState` first.
 - If bootstrap-backed party caches are unexpectedly missing while state says data should exist, the page may run targeted silent self-heal reads without restoring visible entry-time loading.
+> Update 2026-04-21:
+> Party cheer no longer adds the coupon directly to local inventory.
+> The coupon is now received from mailbox, can be consumed from the idle reward dialog, and backpack ticket data is sourced from `partyCheerCouponCount` snapshots returned by bootstrap / wallet APIs.
+> Coupon consumption feedback should reuse the same idle reward float presentation as normal idle reward claim, instead of summarizing rewards with a success toast.

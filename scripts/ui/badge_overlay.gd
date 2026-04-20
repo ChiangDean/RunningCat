@@ -14,9 +14,9 @@ const BADGE_BORDER := Color(1.0, 0.52, 0.52, 0.90)
 const TEXT_COLOR := Color(1.0, 1.0, 1.0, 1.0)
 
 
-static func add_dot(target: Control) -> void:
+static func add_dot(target: Control, z_index: int = 10) -> void:
 	_remove_existing(target)
-	var dot := _make_dot()
+	var dot := _make_dot(z_index)
 	_attach(target, dot)
 
 
@@ -69,12 +69,12 @@ static func _get_badge_size(badge: Control) -> Vector2:
 	)
 
 
-static func _make_dot() -> Control:
+static func _make_dot(z_index: int = 10) -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(DOT_SIZE, DOT_SIZE)
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_END
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.z_index = 10
+	panel.z_index = z_index
 
 	var style := StyleBoxFlat.new()
 	style.bg_color = DOT_COLOR
