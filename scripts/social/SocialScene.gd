@@ -2249,10 +2249,70 @@ func _confirm_kick_party_member(user_id: int, member_name: String) -> void:
 func _cheer_party(is_ad_boost: bool) -> void:
 	var title: String = UiText.SOCIAL_PARTY_AD_CHEER if is_ad_boost else UiText.SOCIAL_PARTY_FREE_CHEER
 	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if success:
-			GameState.adjust_party_cheer_coupon_count(1)
 		_after_party_action(success, error, title, UiText.SOCIAL_PARTY_CHEER_SUCCESS)
 	ApiClient.cheer_party(int(_party_detail.get("partyId", 0)), is_ad_boost, callback)
+
+
+func _build_idle_reward_float_entries(rewards: Dictionary) -> Array[Dictionary]:
+	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
+	if battle_scene != null and battle_scene.has_method("build_idle_reward_float_entries"):
+		return battle_scene.build_idle_reward_float_entries(rewards)
+
+	var reward_entries: Array[Dictionary] = []
+	var reward_defs: Array = [
+		[UiText.REWARD_GOLD, "gold"],
+		[UiText.REWARD_DIAMONDS, "diamonds"],
+		[UiText.REWARD_POOP, "poop"],
+		[UiText.REWARD_CAT_FOOD, "cat_food"],
+		[UiText.REWARD_EXP, "exp"],
+		[UiText.REWARD_MEMORY_SHARDS, "memory_shards"],
+		[UiText.REWARD_WHISKERS, "whiskers"],
+	]
+	for entry_variant: Variant in reward_defs:
+		if not (entry_variant is Array):
+			continue
+		var entry: Array = entry_variant
+		var reward_key: String = str(entry[1])
+		var amount: int = int(rewards.get(reward_key, 0))
+		if amount <= 0:
+			continue
+		reward_entries.append(_make_home_reward_float_entry(str(entry[0]), amount, reward_key))
+	return reward_entries
+
+
+func _make_home_reward_float_entry(label: String, amount: int, reward_key: String) -> Dictionary:
+	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
+	if battle_scene != null and battle_scene.has_method("make_reward_float_entry"):
+		return battle_scene.make_reward_float_entry(label, amount, reward_key)
+
+	var color: Color = Color(0.98, 0.92, 0.76, 1.0)
+	match reward_key:
+		"gold":
+			color = Color(1.0, 0.84, 0.25, 1.0)
+		"diamonds":
+			color = Color(0.35, 0.86, 1.0, 1.0)
+		"poop":
+			color = Color(0.80, 0.58, 0.35, 1.0)
+		"exp":
+			color = Color(0.63, 0.96, 0.54, 1.0)
+		"memory_shards":
+			color = Color(0.87, 0.72, 1.0, 1.0)
+		"whiskers":
+			color = Color(1.0, 0.66, 0.82, 1.0)
+		"cat_food":
+			color = Color(1.0, 0.73, 0.43, 1.0)
+	return {
+		"label": label,
+		"amount": amount,
+		"key": reward_key,
+		"color": color,
+	}
+
+
+func _queue_home_reward_floats(entries: Array[Dictionary]) -> void:
+	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
+	if battle_scene != null and battle_scene.has_method("queue_home_reward_floats"):
+		battle_scene.queue_home_reward_floats(entries)
 
 
 func _use_party_coupon() -> void:
@@ -2260,9 +2320,13 @@ func _use_party_coupon() -> void:
 		if not success:
 			ToastManager.error(UiText.SOCIAL_PARTY_USE_COUPON, _error_message(error))
 			return
-		GameState.adjust_party_cheer_coupon_count(-1)
 		var payload: Dictionary = data if data is Dictionary else {}
-		ToastManager.success(UiText.SOCIAL_PARTY_USE_COUPON, UiText.SOCIAL_PARTY_USE_COUPON_SUCCESS % int(payload.get("goldGranted", 0)))
+		var wallet_snapshot: Variant = payload.get("walletSnapshot", {})
+		if wallet_snapshot is Dictionary:
+			GameState.apply_wallet_snapshot(wallet_snapshot)
+		var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(payload.get("rewards", {}))
+		if not reward_entries.is_empty():
+			_queue_home_reward_floats(reward_entries)
 		_refresh_party()
 	ApiClient.use_party_cheer_coupon(callback)
 

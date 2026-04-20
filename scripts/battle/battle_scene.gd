@@ -139,7 +139,8 @@ const HOME_SCOOP_TEMPLATE_COUNT_LABEL_FONT_SIZE := 24
 const HOME_SCOOP_TEMPLATE_COUNT_LABEL_OUTLINE_SIZE := 4
 const HOME_SCOOP_TEMPLATE_RESULT_LABEL_OFFSET := Vector2(12.0, 196.0)
 const HOME_SCOOP_TEMPLATE_RESULT_LABEL_SIZE := Vector2(212.0, 24.0)
-const PARTY_COUPON_DISPLAY_CAP := 5
+const PARTY_CHEER_COUPON_REUSE_COOLDOWN_SECONDS := 2.0
+const IDLE_CLAIM_RED_DOT_THRESHOLD_SECONDS := 4 * 3600
 const RESULT_OVERLAY_OFFSET_Y := -200.0
 const RESULT_OVERLAY_START_SCALE := 0.56
 const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
@@ -248,6 +249,7 @@ var _home_scoop_previous_profile: Dictionary = {}
 var _home_scoop_previous_player_exp: int = 0
 var _home_scoop_previous_player_memory_shards: int = 0
 var _home_scoop_previous_player_whiskers: int = 0
+var _party_cheer_coupon_cooldown_buttons: Array[Button] = []
 var _nav_buttons: Dictionary = {}
 var _nav_canvas: CanvasLayer
 var _nav_more_button: TextureButton
@@ -311,6 +313,7 @@ func _process(_delta: float) -> void:
 	if _home_scoop_cooldown_remaining > 0.0:
 		_home_scoop_cooldown_remaining = maxf(0.0, _home_scoop_cooldown_remaining - _delta)
 		_refresh_home_scoop_panel()
+	_update_party_cheer_coupon_cooldowns(_delta)
 	if _home_scoop_animation_active:
 		_update_home_scoop_animation(_delta)
 	_update_home_auto_scoop()
@@ -323,6 +326,7 @@ func _process(_delta: float) -> void:
 		_refresh_main_nav_state()
 		_refresh_overlay_fx_state()
 		_refresh_home_red_dots()
+		_refresh_sandbox_btn()
 
 
 # Scene construction
@@ -731,6 +735,7 @@ func _build_ui() -> void:
 	)
 	GameState.party_cheer_coupon_count_changed.connect(func(_count: int) -> void:
 		_refresh_home_scoop_panel()
+		_refresh_sandbox_btn()
 	)
 	_refresh_chat_badge()
 
@@ -959,7 +964,7 @@ func _build_ui() -> void:
 	_layout_home_scoop_panel()
 
 	_reward_fx_canvas = CanvasLayer.new()
-	_reward_fx_canvas.layer = 99
+	_reward_fx_canvas.layer = 101
 	add_child(_reward_fx_canvas)
 
 	_reward_fx_layer = Control.new()
@@ -1853,6 +1858,16 @@ func _get_home_reward_defs() -> Array[Array]:
 	]
 
 
+func _build_idle_reward_float_entries(rewards: Dictionary) -> Array[Dictionary]:
+	var reward_entries: Array[Dictionary] = []
+	for entry: Array in _get_home_reward_defs():
+		var reward_key: String = str(entry[1])
+		var amount: int = int(rewards.get(reward_key, 0))
+		if amount > 0:
+			reward_entries.append(_make_reward_float_entry(str(entry[0]), amount, reward_key))
+	return reward_entries
+
+
 func _get_reward_float_color(reward_key: String, override_color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Color:
 	if override_color.a > 0.0:
 		return override_color
@@ -1882,6 +1897,14 @@ func _make_reward_float_entry(label: String, amount: int, reward_key: String, co
 		"key": reward_key,
 		"color": _get_reward_float_color(reward_key, color),
 	}
+
+
+func make_reward_float_entry(label: String, amount: int, reward_key: String, color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Dictionary:
+	return _make_reward_float_entry(label, amount, reward_key, color)
+
+
+func build_idle_reward_float_entries(rewards: Dictionary) -> Array[Dictionary]:
+	return _build_idle_reward_float_entries(rewards)
 
 
 func _queue_reward_floats(entries: Array[Dictionary]) -> void:
@@ -2097,6 +2120,7 @@ func _refresh_ui() -> void:
 func _refresh_sandbox_btn() -> void:
 	if _sandbox_btn == null:
 		return
+	var overlay_open: bool = not SceneNavigator.get_current_overlay_scene_path().is_empty()
 	var elapsed := GameState.get_idle_elapsed_seconds()
 	var claimable_minutes := elapsed / 60
 	if claimable_minutes < 1:
@@ -2110,6 +2134,8 @@ func _refresh_sandbox_btn() -> void:
 		var s := elapsed % 60
 		_sandbox_btn.text = "%s %02d:%02d:%02d" % [UiText.HOME_IDLE_READY, h, m, s]
 		UiPalette.apply_button_kind(_sandbox_btn, "primary")
+	var has_coupon_red_dot: bool = GameState.get_party_cheer_coupon_count() > 0
+	RedDotService.refresh_dot(_sandbox_btn, not overlay_open and (has_coupon_red_dot or _has_idle_claim_red_dot()), 1)
 
 
 func _refresh_home_scoop_panel() -> void:
@@ -2480,6 +2506,11 @@ func _toggle_overlay_scene(scene_path: String) -> void:
 		_home_more_menu_expanded = false
 		_refresh_home_more_menu_visibility()
 	SceneNavigator.toggle_overlay_scene(scene_path)
+	_last_overlay_scene_path = SceneNavigator.get_current_overlay_scene_path()
+	_refresh_main_nav_state()
+	_refresh_overlay_fx_state()
+	_refresh_home_red_dots()
+	_refresh_sandbox_btn()
 
 
 func _on_home_scoop_pressed() -> void:
@@ -2661,19 +2692,131 @@ func _on_home_coupon_pressed() -> void:
 			_refresh_home_scoop_panel()
 			return
 
-		GameState.adjust_party_cheer_coupon_count(-1)
 		var result: Dictionary = data if data is Dictionary else {}
+		var wallet_snapshot: Variant = result.get("walletSnapshot", {})
+		if wallet_snapshot is Dictionary:
+			GameState.apply_wallet_snapshot(wallet_snapshot)
+		var remaining_coupon_count: int = GameState.get_party_cheer_coupon_count()
+		if remaining_coupon_count > 0:
+			_start_party_cheer_coupon_cooldown(_home_coupon_button)
+		else:
+			_refresh_party_cheer_coupon_button(_home_coupon_button)
 		if _home_scoop_result_label != null:
 			_home_scoop_result_label.text = ""
 			_home_scoop_result_label.visible = false
-		var reward_entries: Array[Dictionary] = []
-		var gold_granted: int = int(result.get("goldGranted", 0))
-		if gold_granted > 0:
-			reward_entries.append(_make_reward_float_entry(UiText.REWARD_GOLD, gold_granted, "gold"))
+		var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(result.get("rewards", {}))
 		if not reward_entries.is_empty():
 			_queue_reward_floats(reward_entries)
+		_refresh_home_scoop_panel()
 		_refresh_ui()
 	)
+
+
+func _refresh_party_cheer_coupon_button(button: Button) -> void:
+	if button == null:
+		return
+	var coupon_count: int = GameState.get_party_cheer_coupon_count()
+	button.text = UiText.HOME_PARTY_COUPON_BUTTON_FORMAT % coupon_count
+	button.disabled = coupon_count <= 0 or _get_party_cheer_coupon_cooldown_remaining(button) > 0.0
+	if _get_party_cheer_coupon_cooldown_remaining(button) <= 0.0:
+		_set_party_cheer_coupon_cooldown_visual(button, 0.0)
+	RedDotService.refresh_dot(button, coupon_count > 0)
+
+
+func _start_party_cheer_coupon_cooldown(button: Button) -> void:
+	if button == null:
+		return
+	_refresh_party_cheer_coupon_button(button)
+	button.set_meta("party_cheer_coupon_cooldown_remaining", PARTY_CHEER_COUPON_REUSE_COOLDOWN_SECONDS)
+	button.disabled = true
+	_set_party_cheer_coupon_cooldown_visual(button, PARTY_CHEER_COUPON_REUSE_COOLDOWN_SECONDS)
+	if not _party_cheer_coupon_cooldown_buttons.has(button):
+		_party_cheer_coupon_cooldown_buttons.append(button)
+
+
+func _update_party_cheer_coupon_cooldowns(delta: float) -> void:
+	if _party_cheer_coupon_cooldown_buttons.is_empty():
+		return
+	for index: int in range(_party_cheer_coupon_cooldown_buttons.size() - 1, -1, -1):
+		var button: Button = _party_cheer_coupon_cooldown_buttons[index]
+		if not is_instance_valid(button):
+			_party_cheer_coupon_cooldown_buttons.remove_at(index)
+			continue
+		var remaining: float = maxf(0.0, _get_party_cheer_coupon_cooldown_remaining(button) - delta)
+		button.set_meta("party_cheer_coupon_cooldown_remaining", remaining)
+		_set_party_cheer_coupon_cooldown_visual(button, remaining)
+		if remaining > 0.0:
+			continue
+		button.remove_meta("party_cheer_coupon_cooldown_remaining")
+		_party_cheer_coupon_cooldown_buttons.remove_at(index)
+		_refresh_party_cheer_coupon_button(button)
+
+
+func _get_party_cheer_coupon_cooldown_remaining(button: Button) -> float:
+	if button == null or not button.has_meta("party_cheer_coupon_cooldown_remaining"):
+		return 0.0
+	return float(button.get_meta("party_cheer_coupon_cooldown_remaining"))
+
+
+func _set_party_cheer_coupon_cooldown_visual(button: Button, remaining_seconds: float) -> void:
+	if button == null:
+		return
+	var overlay: ColorRect = _ensure_party_cheer_coupon_cooldown_overlay(button)
+	var label: Label = _ensure_party_cheer_coupon_cooldown_label(button)
+	var button_size: Vector2 = button.size
+	if button_size.x <= 0.0 or button_size.y <= 0.0:
+		button_size = button.get_combined_minimum_size()
+	if remaining_seconds <= 0.0:
+		overlay.visible = false
+		label.visible = false
+		return
+	var progress: float = clampf(remaining_seconds / PARTY_CHEER_COUPON_REUSE_COOLDOWN_SECONDS, 0.0, 1.0)
+	overlay.visible = true
+	overlay.position = Vector2.ZERO
+	overlay.size = Vector2(button_size.x * progress, button_size.y)
+	label.visible = true
+	label.position = Vector2.ZERO
+	label.size = button_size
+	label.text = "%.1fs" % remaining_seconds
+
+
+func _ensure_party_cheer_coupon_cooldown_overlay(button: Button) -> ColorRect:
+	if button.has_meta("party_cheer_coupon_cooldown_overlay"):
+		var existing_overlay: ColorRect = button.get_meta("party_cheer_coupon_cooldown_overlay") as ColorRect
+		if is_instance_valid(existing_overlay):
+			return existing_overlay
+	var overlay: ColorRect = ColorRect.new()
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.color = Color(0.07, 0.11, 0.20, 0.36)
+	overlay.visible = false
+	overlay.z_index = 1
+	button.add_child(overlay)
+	button.set_meta("party_cheer_coupon_cooldown_overlay", overlay)
+	return overlay
+
+
+func _ensure_party_cheer_coupon_cooldown_label(button: Button) -> Label:
+	if button.has_meta("party_cheer_coupon_cooldown_label"):
+		var existing_label: Label = button.get_meta("party_cheer_coupon_cooldown_label") as Label
+		if is_instance_valid(existing_label):
+			return existing_label
+	var label: Label = Label.new()
+	label.visible = false
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.z_index = 2
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	label.add_theme_color_override("font_color", Color(1.0, 0.97, 0.90, 1.0))
+	label.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.05, 0.92))
+	label.add_theme_constant_override("outline_size", 4)
+	button.add_child(label)
+	button.set_meta("party_cheer_coupon_cooldown_label", label)
+	return label
+
+
+func _has_idle_claim_red_dot() -> bool:
+	return GameState.get_idle_elapsed_seconds() >= IDLE_CLAIM_RED_DOT_THRESHOLD_SECONDS
 
 
 func _build_scoop_reward_entries(
@@ -2882,31 +3025,30 @@ func _show_sandbox_dialog() -> void:
 	# Claim rewards action
 	var close_ref := [Callable()]
 	var coupon_btn: Button = Button.new()
-	coupon_btn.text = UiText.HOME_PARTY_COUPON_BUTTON_FORMAT % [
-		mini(GameState.get_party_cheer_coupon_count(), PARTY_COUPON_DISPLAY_CAP),
-		PARTY_COUPON_DISPLAY_CAP
-	]
 	coupon_btn.custom_minimum_size = Vector2(200.0, 46.0)
-	coupon_btn.disabled = GameState.get_party_cheer_coupon_count() <= 0
+	_refresh_party_cheer_coupon_button(coupon_btn)
 	coupon_btn.pressed.connect(func() -> void:
 		if coupon_btn.disabled:
 			return
 		coupon_btn.disabled = true
 		ApiClient.use_party_cheer_coupon(func(ok: bool, data: Variant, err: Dictionary) -> void:
 			if not ok:
-				coupon_btn.disabled = GameState.get_party_cheer_coupon_count() <= 0
+				_refresh_party_cheer_coupon_button(coupon_btn)
 				ToastManager.error(UiText.SOCIAL_PARTY_USE_COUPON, str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR)))
 				return
 
-			GameState.adjust_party_cheer_coupon_count(-1)
 			var result: Dictionary = data if data is Dictionary else {}
-			var coupon_count: int = GameState.get_party_cheer_coupon_count()
-			coupon_btn.text = UiText.HOME_PARTY_COUPON_BUTTON_FORMAT % [
-				mini(coupon_count, PARTY_COUPON_DISPLAY_CAP),
-				PARTY_COUPON_DISPLAY_CAP
-			]
-			coupon_btn.disabled = coupon_count <= 0
-			ToastManager.success(UiText.SOCIAL_PARTY_USE_COUPON, UiText.HOME_PARTY_COUPON_SUCCESS % int(result.get("goldGranted", 0)))
+			var wallet_snapshot: Variant = result.get("walletSnapshot", {})
+			if wallet_snapshot is Dictionary:
+				GameState.apply_wallet_snapshot(wallet_snapshot)
+			var remaining_coupon_count: int = GameState.get_party_cheer_coupon_count()
+			if remaining_coupon_count > 0:
+				_start_party_cheer_coupon_cooldown(coupon_btn)
+			else:
+				_refresh_party_cheer_coupon_button(coupon_btn)
+			var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(result.get("rewards", {}))
+			if not reward_entries.is_empty():
+				_queue_reward_floats(reward_entries)
 			_refresh_ui()
 		)
 	)
@@ -2916,6 +3058,7 @@ func _show_sandbox_dialog() -> void:
 		var claim_btn := Button.new()
 		claim_btn.text = UiText.HOME_CLAIM_REWARDS
 		claim_btn.custom_minimum_size = Vector2(200.0, 52.0)
+		RedDotService.refresh_dot(claim_btn, _has_idle_claim_red_dot())
 		claim_btn.pressed.connect(func() -> void:
 			claim_btn.disabled = true
 			ApiClient.claim_idle_rewards(func(ok: bool, data: Variant, err: Dictionary) -> void:

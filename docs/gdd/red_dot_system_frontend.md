@@ -135,6 +135,34 @@ Notes:
 - Free ad-cheer should not use the same red dot unless PM later decides that ad-based actions also count as urgent.
 - Outgoing invites are tracking data only and should not create a red dot.
 
+### 5.1A Scooper Idle Coupon
+
+Feature key:
+
+- `scooper_idle_coupon_red_dot`
+
+Action keys:
+
+- `scooper_idle_coupon_available`
+- `scooper_idle_claim_reward_available`
+
+Conditions:
+
+- `scooper_idle_coupon_available = partyCheerCouponCount > 0`
+- `scooper_idle_claim_reward_available = idleElapsedSeconds >= 14400`
+
+Feature aggregation:
+
+- `scooper_idle_coupon_red_dot = scooper_idle_coupon_available OR scooper_idle_claim_reward_available`
+
+Notes:
+
+- This red dot belongs to the home idle-reward shortcut, not the party page.
+- The same condition should be applied to both the outer `清理貓砂盆 HH:MM:SS` button and the inner `使用收益券(...)` CTA inside the idle dialog.
+- Consuming a coupon should clear the red dot immediately after `walletSnapshot` updates the local count to `0`.
+- When idle rewards have accumulated for `4` hours or longer, the outer `清理貓砂盆 HH:MM:SS` button should also light, even if the player has no coupon.
+- The idle dialog `領取獎勵` CTA should light only from the `idleElapsedSeconds >= 14400` rule.
+
 ### 5.2 Friend
 
 Feature key:
@@ -344,6 +372,9 @@ The table uses recommended node keys. Exact runtime control names may differ in 
 | Mail | `MailOverlayScene` or `MailScene` | Unread tab button | `mail_unread_tab_button` | `mail_has_unread` |
 | Mail | `MailScene` top action row | Claim-all button | `mail_claim_all_button` | `mail_has_claimable_attachment` |
 | Scooper | Home bottom nav | Scooper entry button | `home_entry_scooper_button` | `scooper_red_dot` |
+| Scooper | Home HUD idle shortcut | `清理貓砂盆 HH:MM:SS` button | `home_idle_claim_button` | `scooper_idle_coupon_red_dot` |
+| Scooper | Idle reward dialog | `使用收益券(...)` button | `home_idle_coupon_button` | `scooper_idle_coupon_available` |
+| Scooper | Idle reward dialog | `領取獎勵` button | `home_idle_claim_rewards_button` | `scooper_idle_claim_reward_available` |
 | Scooper | `ScooperScene` tab row | Achievement tab button | `scooper_tab_achievement_button` | `scooper_achievement_claimable` |
 | Scooper | `ScooperScene` tab row | Memory tab button | `scooper_tab_memory_button` | `scooper_memory_unlockable` |
 | Scooper | `ScooperScene` tab row | Equipment or treasure-related tab button | `scooper_tab_equipment_button` | `scooper_equipment_unlockable` |

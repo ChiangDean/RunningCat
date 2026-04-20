@@ -295,6 +295,8 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 			"currency", "consumable":
 				if key == "gold":
 					return UI_ROOT + "rewards/gold.png.png"
+				if key == "party_cheer_coupon":
+					return UI_ROOT + "rewards/party_cheer_coupon.svg"
 				return UI_ROOT + "rewards/%s.png" % key
 			"dungeon":
 				return UI_ROOT + "dungeon/%s.png" % key
