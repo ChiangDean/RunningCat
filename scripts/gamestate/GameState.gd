@@ -89,6 +89,8 @@ func clear_persisted_player_state() -> void:
 	scooper_achievement_data = []
 	gacha_data = {}
 	shop_data = {}
+	expedition_zones = []
+	expedition_data = []
 	friend_list_data = {}
 	friend_inbox_data = []
 	friend_outbox_data = []
@@ -337,6 +339,9 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	arena_config = arena_cfg if arena_cfg is Dictionary else {}
 	CacheIO.save_config("arena_static", arena_config)
 
+	var expedition_zones_variant: Variant = data.get("expeditionZones", [])
+	apply_expedition_bootstrap(expedition_zones_variant if expedition_zones_variant is Array else [])
+
 	_rebuild_cached_static_configs()
 
 	# ── 解析並快取 catalog 資料 ──
@@ -505,6 +510,39 @@ func get_owned_cats() -> Array:
 	return player_data.owned_cat_ids
 
 
+func apply_expedition_bootstrap(zones: Array) -> void:
+	expedition_zones = _normalize_image_fields_variant(zones)
+	_emit_red_dot_state_changed()
+
+
+func apply_expedition_data(data: Array) -> void:
+	expedition_data = _normalize_image_fields_variant(data)
+	_emit_red_dot_state_changed()
+
+
+func get_expedition_for_zone(zone_id: int) -> Dictionary:
+	for item_variant: Variant in expedition_data:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		if int(item.get("zoneId", 0)) == zone_id:
+			return item
+	return {}
+
+
+func is_cat_on_expedition(cat_id: String) -> bool:
+	var normalized_cat_id: String = cat_id.strip_edges()
+	if normalized_cat_id == "":
+		return false
+	for item_variant: Variant in expedition_data:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		if str(item.get("catId", "")).strip_edges() == normalized_cat_id:
+			return true
+	return false
+
+
 ## 新增擁有的貓咪並建立快取（扭蛋後呼叫）
 func add_owned_cat(cat_id: String) -> void:
 	var added := false
@@ -596,6 +634,8 @@ var friend_list_data: Dictionary = {}
 var friend_inbox_data: Array = []
 var friend_outbox_data: Array = []
 var friend_red_dot_summary: Dictionary = {}
+var expedition_zones: Array = []
+var expedition_data: Array = []
 var party_detail_data: Dictionary = {}
 var party_cheer_status_data: Dictionary = {}
 var party_applications_data: Array = []

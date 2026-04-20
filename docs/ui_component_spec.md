@@ -50,6 +50,15 @@ UiPalette.apply_button_kind(button, "primary")   # 顏色名稱（等同 confirm
 | 按鈕文字 | 種類 | 說明 |
 |---------|------|------|
 | 各活動行動（進入副本等） | `confirm` | 主要進入動作 |
+| 寵物探險入口 | `confirm` | 主要進入動作，若可領取則顯示紅點 |
+
+#### ExpeditionScene（寵物探險）
+| 按鈕文字 | 種類 | 說明 |
+|---------|------|------|
+| 派遣 | `cancel` / `secondary` | 可派遣區域的次主要操作，開啟選貓流程 |
+| 領取 | `confirm` / `primary` | 探險完成後的主要操作 |
+| 探險中 | `neutral` | 倒數期間顯示中性 disabled 狀態 |
+| 未解鎖 | `neutral` | 鎖定區域顯示 disabled 狀態 |
 
 #### ArenaScene（競技場）
 | 按鈕文字 | 種類 | 說明 |

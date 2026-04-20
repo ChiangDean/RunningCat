@@ -413,6 +413,18 @@ func get_dungeon_overview(callback: Callable) -> void:
 	_api_get("dungeon", callback)
 
 
+func get_expedition(callback: Callable) -> void:
+	_api_get("expedition", callback)
+
+
+func start_expedition(zone_id: int, cat_id: String, callback: Callable) -> void:
+	_api_post("expedition/%d/start" % zone_id, {"catId": cat_id}, callback)
+
+
+func claim_expedition(zone_id: int, callback: Callable) -> void:
+	_api_post("expedition/%d/claim" % zone_id, {}, callback)
+
+
 func get_gacha_overview(callback: Callable) -> void:
 	_api_get("gacha", callback)
 

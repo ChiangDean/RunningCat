@@ -9,6 +9,7 @@ const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const DUNGEON_CARD_ART := "res://assets/sprites/ui/dungeon_background_v1.png"
 const ARENA_CARD_ART := "res://assets/sprites/ui/arena_background_v1.png"
 const GACHA_CARD_ART := "res://assets/sprites/ui/gacha_background_v1.png"
+const EXPEDITION_CARD_ART := "res://assets/sprites/ui/activity_background_v1.png"
 
 var _active_tab: String = "permanent"
 var _tab_buttons: Dictionary = {}
@@ -90,6 +91,15 @@ func _build_ui() -> void:
 		ARENA_CARD_ART,
 		UiText.ACTIVITY_ARENA_BUTTON,
 		Callable(self, "_on_arena_pressed")
+	))
+
+	_permanent_section.add_child(_make_entry_card(
+		"expedition",
+		UiText.EXPEDITION_PAGE_TITLE,
+		UiText.ACTIVITY_EXPEDITION_DESC,
+		EXPEDITION_CARD_ART,
+		UiText.ACTIVITY_EXPEDITION_BUTTON,
+		Callable(self, "_on_expedition_pressed")
 	))
 
 	_limited_section = VBoxContainer.new()
@@ -227,6 +237,7 @@ func _refresh_red_dots() -> void:
 	RedDotService.refresh_dot(_entry_buttons.get("gacha") as Control, RedDotService.has_gacha_red_dot())
 	RedDotService.refresh_dot(_entry_buttons.get("dungeon") as Control, RedDotService.has_dungeon_red_dot())
 	RedDotService.refresh_dot(_entry_buttons.get("arena") as Control, RedDotService.has_arena_red_dot())
+	RedDotService.refresh_dot(_entry_buttons.get("expedition") as Control, RedDotService.has_expedition_red_dot())
 
 
 func _on_dungeon_pressed() -> void:
@@ -239,6 +250,10 @@ func _on_arena_pressed() -> void:
 
 func _on_gacha_pressed() -> void:
 	SceneNavigator.open_overlay_scene("res://scenes/GachaScene.tscn")
+
+
+func _on_expedition_pressed() -> void:
+	SceneNavigator.open_overlay_scene("res://scenes/ExpeditionScene.tscn")
 
 
 func _on_back_pressed() -> void:

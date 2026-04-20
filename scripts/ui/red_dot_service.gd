@@ -193,8 +193,24 @@ static func has_arena_red_dot() -> bool:
 	return false
 
 
+static func has_expedition_red_dot() -> bool:
+	var game_state: Node = _get_game_state()
+	if game_state == null:
+		return false
+	var now_unix: int = Time.get_unix_time_from_system()
+	for item_variant: Variant in game_state.expedition_data:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		if bool(item.get("isClaimable", false)):
+			return true
+		if int(item.get("completesAtUnixSeconds", 0)) > 0 and now_unix >= int(item.get("completesAtUnixSeconds", 0)):
+			return true
+	return false
+
+
 static func has_activity_red_dot() -> bool:
-	return has_dungeon_red_dot() or has_arena_red_dot()
+	return has_dungeon_red_dot() or has_arena_red_dot() or has_expedition_red_dot()
 
 
 static func has_gacha_red_dot() -> bool:

@@ -282,6 +282,7 @@ func _ready() -> void:
 	)
 	_build_scene()
 	_refresh_home_red_dots()
+	_refresh_expedition_red_dot_state()
 	UiAudio.stop_bgm()
 	_start_battle()
 	# Update the idle button text every second.
@@ -1759,6 +1760,16 @@ func _refresh_home_red_dots() -> void:
 	RedDotService.refresh_dot(_home_more_buttons.get("friend") as Control, RedDotService.has_friend_red_dot())
 	RedDotService.refresh_dot(_home_more_buttons.get("party") as Control, RedDotService.has_party_red_dot())
 	_refresh_mail_badge()
+
+
+func _refresh_expedition_red_dot_state() -> void:
+	ApiClient.get_expedition(func(success: bool, data: Variant, _error: Dictionary) -> void:
+		if not success or not (data is Dictionary):
+			return
+		var response: Dictionary = data
+		var expeditions_variant: Variant = response.get("activeExpeditions", [])
+		GameState.apply_expedition_data(expeditions_variant if expeditions_variant is Array else [])
+	)
 
 
 func _toggle_home_more_menu() -> void:
