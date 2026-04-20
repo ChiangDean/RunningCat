@@ -3,14 +3,22 @@ extends Control
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/ItemSlotTemplate.tscn")
 
 const TAB_ALL := "all"
 const TAB_CURRENCY := "currency"
 const TAB_TICKET := "ticket"
 const TAB_CONSUMABLE := "consumable"
 
-const ICON_SIZE := Vector2(52.0, 52.0)
-const GRID_COLS := 3
+const GRID_COLS := 5
+const SLOT_TEMPLATE_BASE_SIZE := Vector2(512.0, 512.0)
+const BACKPACK_SLOT_SCALE := 0.25
+const BACKPACK_SLOT_CELL_SIZE := Vector2(128.0, 128.0)
+const BACKPACK_GRID_H_SEPARATION := 2
+const BACKPACK_GRID_V_SEPARATION := 10
+const SLOT_DISABLED_MODULATE := Color(0.58, 0.58, 0.58, 0.82)
+const SLOT_DISABLED_TEXT := Color(0.70, 0.68, 0.63, 0.92)
+const SLOT_COUNT_TEXT := Color(1.0, 0.98, 0.92, 1.0)
 
 var _active_tab: String = TAB_ALL
 var _tab_buttons: Dictionary = {}
@@ -84,11 +92,7 @@ func _refresh_content() -> void:
 		TAB_CONSUMABLE:
 			_build_consumable_section(_content_box)
 		_:
-			_build_currency_section(_content_box)
-			_content_box.add_child(HSeparator.new())
-			_build_ticket_section(_content_box)
-			_content_box.add_child(HSeparator.new())
-			_build_consumable_section(_content_box)
+			_build_all_section(_content_box)
 
 	SceneSubmenuBar.refresh(_tab_buttons, _active_tab)
 
@@ -119,12 +123,20 @@ func _build_section_header(parent: VBoxContainer, label_text: String) -> void:
 
 
 func _build_item_grid(parent: VBoxContainer, items: Array) -> void:
+	var grid_width: float = (
+		(BACKPACK_SLOT_CELL_SIZE.x * float(GRID_COLS))
+		+ (BACKPACK_GRID_H_SEPARATION * float(max(GRID_COLS - 1, 0)))
+	)
+	var center: CenterContainer = CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(center)
+
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = GRID_COLS
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parent.add_child(grid)
+	grid.custom_minimum_size = Vector2(grid_width, 0.0)
+	grid.add_theme_constant_override("h_separation", BACKPACK_GRID_H_SEPARATION)
+	grid.add_theme_constant_override("v_separation", BACKPACK_GRID_V_SEPARATION)
+	center.add_child(grid)
 
 	for item_variant: Variant in items:
 		if item_variant is Dictionary:
@@ -134,78 +146,97 @@ func _build_item_grid(parent: VBoxContainer, items: Array) -> void:
 func _make_item_card(item: Dictionary) -> Control:
 	var qty: int = int(item.get("qty", 0))
 	var has_qty: bool = qty > 0
-	var accent: Color = OverlaySceneChrome.CARD_BORDER if has_qty else Color(0.35, 0.33, 0.28, 0.70)
-
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel(accent)
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(10)
-	panel.add_child(margin)
-
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
-	margin.add_child(vbox)
-
+	var slot: Control = ITEM_SLOT_TEMPLATE.instantiate() as Control
+	var frame: TextureRect = slot.get_node("Frame") as TextureRect
+	var icon: TextureRect = slot.get_node("ItemIcon") as TextureRect
+	var overlay_mask: TextureRect = slot.get_node("OverlayMask") as TextureRect
+	var name_lbl: Label = slot.get_node("ItemNameLabel") as Label
+	var qty_lbl: Label = slot.get_node("CountLabel") as Label
 	var tex: Texture2D = AssetResolver.load_texture(
 		AssetResolver.resolve_catalog_path(str(item.get("path", "")))
 	)
-	if tex != null:
-		var icon_row: CenterContainer = CenterContainer.new()
-		icon_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		vbox.add_child(icon_row)
-		var icon: TextureRect = AssetResolver.create_icon_rect(tex, ICON_SIZE)
-		if not has_qty:
-			icon.modulate = Color(0.55, 0.55, 0.55, 0.80)
-		icon_row.add_child(icon)
-
-	var name_lbl: Label = Label.new()
 	name_lbl.text = str(item.get("name", ""))
-	name_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if not has_qty:
-		name_lbl.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55, 0.90))
-	vbox.add_child(name_lbl)
-
-	var qty_lbl: Label = Label.new()
+	name_lbl.tooltip_text = name_lbl.text
 	qty_lbl.text = str(qty)
-	qty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	qty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	qty_lbl.add_theme_color_override(
-		"font_color",
-		accent if has_qty else Color(0.45, 0.45, 0.45, 0.90)
-	)
-	vbox.add_child(qty_lbl)
+	qty_lbl.tooltip_text = qty_lbl.text
 
-	return panel
+	if tex != null:
+		icon.texture = tex
+	else:
+		icon.visible = false
+
+	if has_qty:
+		frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		icon.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		overlay_mask.modulate = Color(1.0, 1.0, 1.0, 0.42)
+		name_lbl.add_theme_color_override("font_color", Color(1.0, 0.97, 0.92, 1.0))
+		qty_lbl.add_theme_color_override("font_color", SLOT_COUNT_TEXT)
+	else:
+		frame.modulate = SLOT_DISABLED_MODULATE
+		icon.modulate = SLOT_DISABLED_MODULATE
+		overlay_mask.modulate = Color(0.78, 0.78, 0.78, 0.22)
+		name_lbl.add_theme_color_override("font_color", SLOT_DISABLED_TEXT)
+		qty_lbl.add_theme_color_override("font_color", SLOT_DISABLED_TEXT)
+
+	slot.scale = Vector2(BACKPACK_SLOT_SCALE, BACKPACK_SLOT_SCALE)
+	var cell: Control = Control.new()
+	cell.custom_minimum_size = BACKPACK_SLOT_CELL_SIZE
+	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot.position = Vector2.ZERO
+	cell.add_child(slot)
+	return cell
+
+
+func _build_all_section(parent: VBoxContainer) -> void:
+	_build_item_grid(parent, _get_all_items())
+
+
+func _get_all_items() -> Array:
+	var items: Array = []
+	items.append_array(_get_currency_items())
+	items.append_array(_get_ticket_items())
+	items.append_array(_get_consumable_items())
+	return items
 
 
 func _build_currency_section(parent: VBoxContainer) -> void:
 	_build_section_header(parent, UiText.BACKPACK_SECTION_CURRENCY)
-	var pd = GameState.player_data
-	_build_item_grid(parent, [
-		{"path": "catalog/currency/gold", "name": UiText.REWARD_GOLD, "qty": pd.gold},
-		{"path": "catalog/currency/diamonds", "name": UiText.REWARD_DIAMONDS, "qty": pd.diamonds},
-		{"path": "catalog/currency/trap_points", "name": UiText.BACKPACK_TRAP_POINTS, "qty": pd.trap_points},
-	])
+	_build_item_grid(parent, _get_currency_items())
 
 
 func _build_consumable_section(parent: VBoxContainer) -> void:
 	_build_section_header(parent, UiText.BACKPACK_SECTION_CONSUMABLE)
+	_build_item_grid(parent, _get_consumable_items())
+
+
+func _build_ticket_section(parent: VBoxContainer) -> void:
+	_build_section_header(parent, UiText.BACKPACK_SECTION_TICKET)
+	_build_item_grid(parent, _get_ticket_items())
+
+
+func _get_currency_items() -> Array:
 	var pd = GameState.player_data
-	_build_item_grid(parent, [
+	return [
+		{"path": "catalog/currency/gold", "name": UiText.REWARD_GOLD, "qty": pd.gold},
+		{"path": "catalog/currency/diamonds", "name": UiText.REWARD_DIAMONDS, "qty": pd.diamonds},
+		{"path": "catalog/currency/trap_points", "name": UiText.BACKPACK_TRAP_POINTS, "qty": pd.trap_points},
+	]
+
+
+func _get_consumable_items() -> Array:
+	var pd = GameState.player_data
+	return [
 		{"path": "catalog/consumable/cat_food", "name": UiText.REWARD_CAT_FOOD, "qty": pd.cat_food},
 		{"path": "catalog/consumable/special_cat_food", "name": UiText.REWARD_SPECIAL_CAT_FOOD, "qty": pd.special_cat_food},
 		{"path": "catalog/consumable/trap_cages", "name": UiText.REWARD_TRAP_CAGE, "qty": pd.trap_cages},
 		{"path": "catalog/consumable/poop_count", "name": UiText.REWARD_POOP, "qty": pd.poop_count},
 		{"path": "catalog/consumable/memory_shards", "name": UiText.REWARD_MEMORY_SHARDS, "qty": pd.memory_shards},
 		{"path": "catalog/consumable/whisker_shards", "name": UiText.BACKPACK_WHISKER_SHARDS, "qty": pd.whisker_shards},
-	])
+	]
 
 
-func _build_ticket_section(parent: VBoxContainer) -> void:
-	_build_section_header(parent, UiText.BACKPACK_SECTION_TICKET)
-
+func _get_ticket_items() -> Array:
 	var items: Array = []
 	var arena_overview: Dictionary = GameState.arena_overview_data if GameState.arena_overview_data is Dictionary else {}
 	items.append({
@@ -226,4 +257,4 @@ func _build_ticket_section(parent: VBoxContainer) -> void:
 			"qty": int(dungeon.get("remainingTicketCount", 0)),
 		})
 
-	_build_item_grid(parent, items)
+	return items
