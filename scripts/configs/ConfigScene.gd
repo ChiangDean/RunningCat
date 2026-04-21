@@ -18,55 +18,57 @@ const PROFILE_NAME_MAX_LENGTH := 15
 const BIO_MAX_LENGTH := 140
 const BIRTHDAY_MIN_YEAR := 1900
 
-const OPTIONAL_TEXT := "\u9078\u586b"
-const EMPTY_SELECT_TEXT := "\u672a\u8a2d\u5b9a"
-const AVATAR_CHANGE_BUTTON_TEXT := "\u66f4\u63db\u982d\u50cf"
-const AVATAR_DIALOG_TITLE := "\u9078\u64c7\u982d\u50cf"
-const AVATAR_DIALOG_HINT := "\u9ede\u9078\u60f3\u4f7f\u7528\u7684\u73a9\u5bb6\u982d\u50cf\u3002"
-const BIRTHDAY_DIALOG_TITLE := "\u9078\u64c7\u751f\u65e5"
-const BIRTHDAY_DIALOG_HINT := "\u751f\u65e5\u70ba\u9078\u586b\uff0c\u53ef\u4ee5\u4fdd\u7559\u70ba\u7a7a\u767d\u3002"
-const BIRTHDAY_PICK_BUTTON_TEXT := "\u9078\u64c7\u65e5\u671f"
-const BIRTHDAY_CLEAR_BUTTON_TEXT := "\u6e05\u9664"
-const BIRTHDAY_YEAR_LABEL := "\u5e74"
-const BIRTHDAY_MONTH_LABEL := "\u6708"
-const BIRTHDAY_DAY_LABEL := "\u65e5"
-const BIRTHDAY_FUTURE_ERROR := "\u751f\u65e5\u4e0d\u80fd\u665a\u65bc\u4eca\u5929\u3002"
-const REGION_DIALOG_TITLE := "\u9078\u64c7\u5730\u5340"
-const REGION_DIALOG_HINT := "\u8acb\u5f9e\u570b\u5bb6\u6e05\u55ae\u4e2d\u9078\u64c7\uff0c\u4e5f\u53ef\u4ee5\u4fdd\u7559\u70ba\u7a7a\u767d\u3002"
-const REGION_PICK_BUTTON_TEXT := "\u9078\u64c7\u5730\u5340"
-const REGION_CLEAR_BUTTON_TEXT := "\u6e05\u9664"
-const ACCOUNT_UID_COPY_BUTTON_TEXT := "\u8907\u88fd"
-const ACCOUNT_UID_COPY_SUCCESS := "\u5df2\u8907\u88fd Player UID"
-const ACCOUNT_UID_COPY_EMPTY := "\u76ee\u524d\u6c92\u6709 Player UID"
-const ACCOUNT_UID_HINT := "\u597d\u53cb\u8207\u7d44\u968a\u641c\u5c0b\u6703\u4f7f\u7528\u9019\u7d44 Player UID\u3002"
+const OPTIONAL_TEXT := UiText.SETTINGS_OPTIONAL_TEXT
+const EMPTY_SELECT_TEXT := UiText.SETTINGS_EMPTY_SELECT_TEXT
+const AVATAR_CHANGE_BUTTON_TEXT := UiText.SETTINGS_AVATAR_CHANGE_BUTTON
+const AVATAR_DIALOG_TITLE := UiText.SETTINGS_AVATAR_DIALOG_TITLE
+const AVATAR_DIALOG_HINT := UiText.SETTINGS_AVATAR_DIALOG_HINT
+const BIRTHDAY_DIALOG_TITLE := UiText.SETTINGS_BIRTHDAY_DIALOG_TITLE
+const BIRTHDAY_DIALOG_HINT := UiText.SETTINGS_BIRTHDAY_DIALOG_HINT
+const BIRTHDAY_PICK_BUTTON_TEXT := UiText.SETTINGS_BIRTHDAY_PICK_BUTTON
+const BIRTHDAY_CLEAR_BUTTON_TEXT := UiText.SETTINGS_BIRTHDAY_CLEAR_BUTTON
+const BIRTHDAY_YEAR_LABEL := UiText.SETTINGS_BIRTHDAY_YEAR_LABEL
+const BIRTHDAY_MONTH_LABEL := UiText.SETTINGS_BIRTHDAY_MONTH_LABEL
+const BIRTHDAY_DAY_LABEL := UiText.SETTINGS_BIRTHDAY_DAY_LABEL
+const BIRTHDAY_FUTURE_ERROR := UiText.SETTINGS_BIRTHDAY_FUTURE_ERROR
+const REGION_DIALOG_TITLE := UiText.SETTINGS_REGION_DIALOG_TITLE
+const REGION_DIALOG_HINT := UiText.SETTINGS_REGION_DIALOG_HINT
+const REGION_PICK_BUTTON_TEXT := UiText.SETTINGS_REGION_PICK_BUTTON
+const REGION_CLEAR_BUTTON_TEXT := UiText.SETTINGS_REGION_CLEAR_BUTTON
+const ACCOUNT_UID_COPY_BUTTON_TEXT := UiText.SETTINGS_ACCOUNT_UID_COPY_BUTTON
+const ACCOUNT_UID_COPY_SUCCESS := UiText.SETTINGS_ACCOUNT_UID_COPY_SUCCESS
+const ACCOUNT_UID_COPY_EMPTY := UiText.SETTINGS_ACCOUNT_UID_COPY_EMPTY
+const ACCOUNT_UID_HINT := UiText.SETTINGS_ACCOUNT_UID_HINT
 const ACCOUNT_LINKED_TITLE := "OAuth"
-const ACCOUNT_LINKED_DESC := "\u4f60\u53ef\u4ee5\u5728\u9019\u88e1\u7ba1\u7406 Google / Apple / LINE \u7684\u767b\u5165\u7d81\u5b9a\u8207\u89e3\u7d81\u3002"
-const ACCOUNT_SESSION_TITLE := "\u767b\u5165\u72c0\u614b"
-const ACCOUNT_SESSION_DESC := "\u9700\u8981\u91cd\u65b0\u767b\u5165\u6642\uff0c\u53ef\u4ee5\u5728\u9019\u88e1\u5b89\u5168\u767b\u51fa\u3002"
-const ACCOUNT_CURRENT_LOGIN_TITLE := "\u76ee\u524d\u767b\u5165\u65b9\u5f0f"
-const ACCOUNT_CURRENT_LOGIN_UNKNOWN := "\u5c1a\u672a\u8a18\u9304"
-const ACCOUNT_PROVIDER_LINK_ACTION := "\u7d81\u5b9a"
-const ACCOUNT_PROVIDER_UNLINK_ACTION := "\u89e3\u7d81"
-const ACCOUNT_PROVIDER_BUSY_ACTION := "\u8655\u7406\u4e2d..."
-const ACCOUNT_PROVIDER_CURRENT_HINT := "\u76ee\u524d\u767b\u5165\u4e2d"
-const ACCOUNT_PROVIDER_LAST_METHOD_HINT := "\u9019\u662f\u6700\u5f8c\u4e00\u500b\u53ef\u7528\u7684\u767b\u5165\u65b9\u5f0f"
-const ACCOUNT_PROVIDER_PASSWORD_FALLBACK_HINT := "\u53ef\u4ee5\u96a8\u6642\u89e3\u7d81\uff0c\u4ecd\u53ef\u4f7f\u7528\u5e33\u5bc6\u767b\u5165"
-const ACCOUNT_PROVIDER_OAUTH_OPENED := "\u5df2\u6253\u958b\u700f\u89bd\u5668\uff0c\u5b8c\u6210\u6388\u6b0a\u5f8c\u8acb\u56de\u5230\u904a\u6232\u3002"
-const ACCOUNT_PROVIDER_LINK_SUCCESS := "\u5df2\u5b8c\u6210 OAuth \u7d81\u5b9a"
-const ACCOUNT_PROVIDER_UNLINK_SUCCESS := "\u5df2\u89e3\u9664 OAuth \u7d81\u5b9a"
-const ACCOUNT_PROVIDER_UNLINK_CURRENT_SUCCESS := "\u5df2\u89e3\u7d81\u76ee\u524d\u767b\u5165\u65b9\u5f0f\uff0c\u8acb\u91cd\u65b0\u767b\u5165\u3002"
-const ACCOUNT_PROVIDER_CANCELLED := "\u6388\u6b0a\u5df2\u53d6\u6d88"
-const ACCOUNT_PROVIDER_TIMEOUT := "\u6388\u6b0a\u8d85\u6642\uff0c\u8acb\u91cd\u8a66"
-const ACCOUNT_PROVIDER_CONFLICT := "\u9019\u500b OAuth \u5e33\u865f\u5df2\u7d81\u5230\u5176\u4ed6\u5e33\u865f"
-const ACCOUNT_PROVIDER_PENDING := "\u7b49\u5f85\u6388\u6b0a\u5b8c\u6210..."
+const ACCOUNT_LINKED_DESC := UiText.SETTINGS_ACCOUNT_LINKED_DESC
+const ACCOUNT_SESSION_TITLE := UiText.SETTINGS_ACCOUNT_SESSION_TITLE
+const ACCOUNT_SESSION_DESC := UiText.SETTINGS_ACCOUNT_SESSION_DESC
+const ACCOUNT_CURRENT_LOGIN_TITLE := UiText.SETTINGS_ACCOUNT_CURRENT_LOGIN_TITLE
+const ACCOUNT_CURRENT_LOGIN_UNKNOWN := UiText.SETTINGS_ACCOUNT_CURRENT_LOGIN_UNKNOWN
+const ACCOUNT_PROVIDER_LINK_ACTION := UiText.SETTINGS_ACCOUNT_PROVIDER_LINK_ACTION
+const ACCOUNT_PROVIDER_UNLINK_ACTION := UiText.SETTINGS_ACCOUNT_PROVIDER_UNLINK_ACTION
+const ACCOUNT_PROVIDER_BUSY_ACTION := UiText.SETTINGS_ACCOUNT_PROVIDER_BUSY_ACTION
+const ACCOUNT_PROVIDER_CURRENT_HINT := UiText.SETTINGS_ACCOUNT_PROVIDER_CURRENT_HINT
+const ACCOUNT_PROVIDER_LAST_METHOD_HINT := UiText.SETTINGS_ACCOUNT_PROVIDER_LAST_METHOD_HINT
+const ACCOUNT_PROVIDER_PASSWORD_FALLBACK_HINT := UiText.SETTINGS_ACCOUNT_PROVIDER_PASSWORD_FALLBACK_HINT
+const ACCOUNT_PROVIDER_OAUTH_OPENED := UiText.SETTINGS_ACCOUNT_PROVIDER_OAUTH_OPENED
+const ACCOUNT_PROVIDER_LINK_SUCCESS := UiText.SETTINGS_ACCOUNT_PROVIDER_LINK_SUCCESS
+const ACCOUNT_PROVIDER_UNLINK_SUCCESS := UiText.SETTINGS_ACCOUNT_PROVIDER_UNLINK_SUCCESS
+const ACCOUNT_PROVIDER_UNLINK_CURRENT_SUCCESS := UiText.SETTINGS_ACCOUNT_PROVIDER_UNLINK_CURRENT_SUCCESS
+const ACCOUNT_PROVIDER_CANCELLED := UiText.SETTINGS_ACCOUNT_PROVIDER_CANCELLED
+const ACCOUNT_PROVIDER_TIMEOUT := UiText.SETTINGS_ACCOUNT_PROVIDER_TIMEOUT
+const ACCOUNT_PROVIDER_CONFLICT := UiText.SETTINGS_ACCOUNT_PROVIDER_CONFLICT
+const ACCOUNT_PROVIDER_PENDING := UiText.SETTINGS_ACCOUNT_PROVIDER_PENDING
+const ACCOUNT_PROVIDER_DISABLED_HINT_FORMAT := UiText.SETTINGS_ACCOUNT_PROVIDER_DISABLED_HINT_FORMAT
 const OAUTH_BRAND_GOOGLE_TEXTURE := preload("res://assets/sprites/ui/oauth/google/google_signin_neutral_square_220.png")
 const OAUTH_BRAND_APPLE_TEXTURE := preload("res://assets/sprites/ui/oauth/apple/apple_signin_left_black_220x50.png")
 const OAUTH_BRAND_LINE_TEXTURE := preload("res://assets/sprites/ui/oauth/line/line_login_base_220.png")
+const DISABLED_OAUTH_PROVIDER_KEYS: Array[String] = ["apple"]
 const DEVICE_ID_PATH := "user://device_id.txt"
 const OAUTH_LINK_POLL_INTERVAL_SECONDS := 1.5
 const OAUTH_LINK_TIMEOUT_SECONDS := 90.0
-const PROFILE_SUMMARY_TITLE := "\u73a9\u5bb6\u5716\u50cf"
-const PROFILE_SUMMARY_DESC := "\u9ede\u64ca\u5716\u7247\u5373\u53ef\u6253\u958b\u982d\u50cf\u9078\u64c7\u8996\u7a97\u3002"
+const PROFILE_SUMMARY_TITLE := UiText.SETTINGS_PROFILE_SUMMARY_TITLE
+const PROFILE_SUMMARY_DESC := UiText.SETTINGS_PROFILE_SUMMARY_DESC
 
 const COUNTRY_OPTIONS: Array[String] = [
 	"Taiwan",
@@ -1227,25 +1229,39 @@ func _refresh_provider_cards(linked_providers_variant: Variant, password_login_e
 		var status_label: Label = refs.get("status") as Label
 		var hint_label: Label = refs.get("hint") as Label
 		var action_button: Button = refs.get("button") as Button
+		var provider_key: String = str(refs.get("provider_key", ""))
 		if not is_instance_valid(status_label) or not is_instance_valid(hint_label) or not is_instance_valid(action_button):
 			continue
 		var is_linked: bool = linked.has(provider_name)
 		var is_current_login: bool = _is_current_login_provider(provider_name)
 		var can_unlink: bool = _can_unlink_provider(provider_name, linked, password_login_enabled)
+		var is_provider_disabled: bool = _is_oauth_provider_disabled(provider_key)
 		if is_linked:
 			status_label.text = UiText.SETTINGS_PROVIDER_LINKED
 			status_label.add_theme_color_override("font_color", Color(0.72, 0.94, 0.72, 1.0))
-			action_button.text = ACCOUNT_PROVIDER_BUSY_ACTION if _account_oauth_busy and _oauth_link_provider_name == provider_name else ACCOUNT_PROVIDER_UNLINK_ACTION
-			action_button.disabled = _account_oauth_busy or not can_unlink
-			UiPalette.apply_button_kind(action_button, "danger" if can_unlink else "secondary")
+			if is_provider_disabled:
+				action_button.text = UiText.SETTINGS_PROVIDER_ACTION_UNAVAILABLE
+				action_button.disabled = true
+				UiPalette.apply_button_kind(action_button, "secondary")
+			else:
+				action_button.text = ACCOUNT_PROVIDER_BUSY_ACTION if _account_oauth_busy and _oauth_link_provider_name == provider_name else ACCOUNT_PROVIDER_UNLINK_ACTION
+				action_button.disabled = _account_oauth_busy or not can_unlink
+				UiPalette.apply_button_kind(action_button, "danger" if can_unlink else "secondary")
 		else:
 			status_label.text = UiText.SETTINGS_PROVIDER_UNLINKED
 			status_label.add_theme_color_override("font_color", SECTION_HINT_COLOR)
-			action_button.text = ACCOUNT_PROVIDER_BUSY_ACTION if _account_oauth_busy and _oauth_link_provider_name == provider_name else ACCOUNT_PROVIDER_LINK_ACTION
-			action_button.disabled = _account_oauth_busy
-			UiPalette.apply_button_kind(action_button, "secondary")
+			if is_provider_disabled:
+				action_button.text = UiText.SETTINGS_PROVIDER_ACTION_UNAVAILABLE
+				action_button.disabled = true
+				UiPalette.apply_button_kind(action_button, "secondary")
+			else:
+				action_button.text = ACCOUNT_PROVIDER_BUSY_ACTION if _account_oauth_busy and _oauth_link_provider_name == provider_name else ACCOUNT_PROVIDER_LINK_ACTION
+				action_button.disabled = _account_oauth_busy
+				UiPalette.apply_button_kind(action_button, "secondary")
 
-		if _account_oauth_busy and _oauth_link_provider_name == provider_name:
+		if is_provider_disabled:
+			hint_label.text = ACCOUNT_PROVIDER_DISABLED_HINT_FORMAT % provider_name
+		elif _account_oauth_busy and _oauth_link_provider_name == provider_name:
 			hint_label.text = ACCOUNT_PROVIDER_PENDING
 		elif is_current_login:
 			hint_label.text = ACCOUNT_PROVIDER_CURRENT_HINT
@@ -1302,7 +1318,7 @@ func _get_current_login_method_label() -> String:
 		"line":
 			return "LINE"
 		"password":
-			return "\u5e33\u865f\u5bc6\u78bc"
+			return UiText.SETTINGS_LOGIN_METHOD_PASSWORD
 		_:
 			return ACCOUNT_CURRENT_LOGIN_UNKNOWN
 
@@ -1322,6 +1338,9 @@ func _can_unlink_provider(provider_name: String, linked: Array, password_login_e
 func _on_provider_action_pressed(provider_name: String, provider_key: String) -> void:
 	if _account_oauth_busy:
 		return
+	if _is_oauth_provider_disabled(provider_key):
+		ToastManager.hint(ACCOUNT_PROVIDER_DISABLED_HINT_FORMAT % provider_name)
+		return
 
 	var linked: Array = GameState.get_linked_providers()
 	if linked.has(provider_name):
@@ -1331,13 +1350,17 @@ func _on_provider_action_pressed(provider_name: String, provider_key: String) ->
 			return
 		DialogManager.show_confirm(
 			"%s %s" % [ACCOUNT_PROVIDER_UNLINK_ACTION, provider_name],
-			"\u78ba\u5b9a\u8981\u89e3\u9664 %s \u7d81\u5b9a\u55ce\uff1f" % provider_name,
+			UiText.SETTINGS_ACCOUNT_PROVIDER_UNLINK_CONFIRM_BODY_FORMAT % provider_name,
 			func() -> void: _unlink_oauth_provider(provider_name, provider_key),
 			func() -> void: pass
 		)
 		return
 
 	_begin_oauth_link_flow(provider_name, provider_key)
+
+
+func _is_oauth_provider_disabled(provider_key: String) -> bool:
+	return DISABLED_OAUTH_PROVIDER_KEYS.has(provider_key)
 
 
 func _begin_oauth_link_flow(provider_name: String, provider_key: String) -> void:

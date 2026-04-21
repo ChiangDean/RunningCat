@@ -28,6 +28,7 @@ const OAUTH_POLL_TIMEOUT_SECONDS := 90.0
 const OAUTH_PROVIDER_GOOGLE := "google"
 const OAUTH_PROVIDER_APPLE := "apple"
 const OAUTH_PROVIDER_LINE := "line"
+const DISABLED_OAUTH_PROVIDER_KEYS: Array[String] = [OAUTH_PROVIDER_APPLE]
 const OAUTH_PROVIDER_NAME_GOOGLE := "Google"
 const OAUTH_PROVIDER_NAME_APPLE := "Apple"
 const OAUTH_PROVIDER_NAME_LINE := "LINE"
@@ -465,6 +466,18 @@ func _build_oauth_button(normal_texture: Texture2D, hover_texture: Texture2D = n
 	return button
 
 
+func _set_oauth_button_enabled(button: TextureButton, enabled: bool) -> void:
+	if button == null:
+		return
+	button.disabled = not enabled
+	button.modulate = Color(1.0, 1.0, 1.0, 1.0) if enabled else Color(1.0, 1.0, 1.0, 0.42)
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if enabled else Control.CURSOR_ARROW
+
+
+func _is_oauth_provider_enabled(provider_key: String) -> bool:
+	return not DISABLED_OAUTH_PROVIDER_KEYS.has(provider_key)
+
+
 func _attach_http_request() -> void:
 	_http_request = HTTPRequest.new()
 	_http_request.timeout = REQUEST_TIMEOUT_SECONDS
@@ -533,11 +546,11 @@ func _set_auth_interactable(editable: bool) -> void:
 	_primary_button.disabled = not editable
 	_secondary_button.disabled = not editable
 	if _oauth_google_button != null:
-		_oauth_google_button.disabled = not editable
+		_set_oauth_button_enabled(_oauth_google_button, editable and _is_oauth_provider_enabled(OAUTH_PROVIDER_GOOGLE))
 	if _oauth_apple_button != null:
-		_oauth_apple_button.disabled = not editable
+		_set_oauth_button_enabled(_oauth_apple_button, editable and _is_oauth_provider_enabled(OAUTH_PROVIDER_APPLE))
 	if _oauth_line_button != null:
-		_oauth_line_button.disabled = not editable
+		_set_oauth_button_enabled(_oauth_line_button, editable and _is_oauth_provider_enabled(OAUTH_PROVIDER_LINE))
 
 
 func _on_input_submitted(_text: String) -> void:
