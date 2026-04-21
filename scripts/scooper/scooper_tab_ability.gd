@@ -4,24 +4,26 @@ const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 
 func build(scene: Control) -> void:
-	var summary_row: HBoxContainer = HBoxContainer.new()
-	summary_row.add_theme_constant_override("separation", 10)
-	scene._tab_content.add_child(summary_row)
+	scene._exp_label = scene._tab_header_summary
+	if scene._exp_label == null:
+		var summary_row: HBoxContainer = HBoxContainer.new()
+		summary_row.add_theme_constant_override("separation", 10)
+		scene._tab_content.add_child(summary_row)
 
-	var section_label: Label = Label.new()
-	section_label.text = UiText.SCOOPER_TAB_ABILITY
-	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary_row.add_child(section_label)
+		var section_label: Label = Label.new()
+		section_label.text = UiText.SCOOPER_TAB_ABILITY
+		section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(section_label)
 
-	var summary: Label = Label.new()
-	summary.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary_row.add_child(summary)
-	scene._exp_label = summary
+		var summary: Label = Label.new()
+		summary.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(summary)
+		scene._exp_label = summary
 
-	scene._tab_content.add_child(scene._make_separator())
+		scene._tab_content.add_child(scene._make_separator())
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

@@ -1,29 +1,31 @@
-﻿extends RefCounted
+extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/ScooperEquipmentCardTemplate.tscn")
 const ACTION_COOLDOWN: float = 0.5
 
 
 func build(scene: Control) -> void:
-	var summary_row: HBoxContainer = HBoxContainer.new()
-	summary_row.add_theme_constant_override("separation", 10)
-	scene._tab_content.add_child(summary_row)
+	scene._level_label = scene._tab_header_summary
+	if scene._level_label == null:
+		var summary_row: HBoxContainer = HBoxContainer.new()
+		summary_row.add_theme_constant_override("separation", 10)
+		scene._tab_content.add_child(summary_row)
 
-	var section_label: Label = Label.new()
-	section_label.text = UiText.SCOOPER_TAB_EQUIPMENT
-	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary_row.add_child(section_label)
+		var section_label: Label = Label.new()
+		section_label.text = UiText.SCOOPER_TAB_EQUIPMENT
+		section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(section_label)
 
-	var summary: Label = Label.new()
-	summary.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary_row.add_child(summary)
-	scene._level_label = summary
-
-	scene._tab_content.add_child(scene._make_separator())
+		var summary: Label = Label.new()
+		summary.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		summary.add_theme_color_override("font_color", Color(0.97, 0.88, 0.68, 1.0))
+		summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(summary)
+		scene._level_label = summary
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -104,12 +106,8 @@ func _refresh_equipment_tab(scene: Control) -> void:
 		return int(a.get("equipmentId", 0)) < int(b.get("equipmentId", 0))
 	)
 
-	var first_item: bool = true
 	for item: Dictionary in sorted_items:
-		if not first_item:
-			scene._equip_list.add_child(scene._make_separator())
 		scene._equip_list.add_child(_make_equip_card(scene, item))
-		first_item = false
 
 
 func _make_equip_card(scene: Control, item: Dictionary) -> Control:
@@ -139,129 +137,50 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	elif owned:
 		accent = Color(0.52, 0.76, 0.95, 0.94)
 
-	var panel: PanelContainer = scene._make_card_panel(accent)
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	panel.add_child(margin)
-
-	var card: HBoxContainer = HBoxContainer.new()
-	card.add_theme_constant_override("separation", 10)
-	margin.add_child(card)
+	var panel: Control = CARD_TEMPLATE.instantiate() as Control
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
+	var panel_background: TextureRect = panel.get_node("Frame") as TextureRect
+	if panel_background != null:
+		panel_background.modulate = accent.lightened(0.18)
+	var icon_rect: TextureRect = panel.get_node("Icon") as TextureRect
+	var level_lbl: Label = panel.get_node("LevelLabel") as Label
+	var title_lbl: Label = panel.get_node("NameLabel") as Label
+	var desc_lbl: Label = panel.get_node("MetaLabel") as Label
+	var exp_inline_lbl: Label = panel.get_node("CostLabel") as Label
+	var status_badge: Panel = panel.get_node("Badge") as Panel
+	var status_badge_label: Label = panel.get_node("Badge/BadgeLabel") as Label
+	var progress_frame: Panel = panel.get_node("ProgressFrame") as Panel
+	var progress_fill: ColorRect = panel.get_node("ProgressFrame/ProgressFill") as ColorRect
+	var exp_label: Label = panel.get_node("ProgressFrame/ProgressLabel") as Label
+	var action_visual: Panel = panel.get_node("ActionButtonVisual") as Panel
+	var action_label: Label = panel.get_node("ActionButtonVisual/ActionLabel") as Label
+	var action_btn: Button = panel.get_node("ActionButton") as Button
+	_prepare_flat_button(action_btn)
+	_set_panel_fill(progress_frame, Color(0.19, 0.17, 0.15, 0.92))
 
 	var equipment_icon: Texture2D = AssetResolver.resolve_equipment_icon(item)
-	var icon_frame: PanelContainer = PanelContainer.new()
-	icon_frame.custom_minimum_size = Vector2(132.0, 132.0)
-	icon_frame.add_theme_stylebox_override("panel", _make_icon_frame_style())
-	card.add_child(icon_frame)
-
-	var icon_margin: MarginContainer = MarginContainer.new()
-	icon_margin.add_theme_constant_override("margin_left", 8)
-	icon_margin.add_theme_constant_override("margin_top", 8)
-	icon_margin.add_theme_constant_override("margin_right", 8)
-	icon_margin.add_theme_constant_override("margin_bottom", 8)
-	icon_frame.add_child(icon_margin)
-
-	var icon_center: CenterContainer = CenterContainer.new()
-	icon_margin.add_child(icon_center)
-
-	if equipment_icon != null:
-		icon_center.add_child(AssetResolver.create_icon_rect(equipment_icon, Vector2(104.0, 104.0)))
-	else:
-		var icon_placeholder: ColorRect = ColorRect.new()
-		icon_placeholder.color = Color(0.24, 0.24, 0.28, 0.95)
-		icon_placeholder.custom_minimum_size = Vector2(104.0, 104.0)
-		icon_center.add_child(icon_placeholder)
-
-	var content_block: VBoxContainer = VBoxContainer.new()
-	content_block.add_theme_constant_override("separation", 8)
-	content_block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_child(content_block)
-
-	var title_row: HBoxContainer = HBoxContainer.new()
-	title_row.add_theme_constant_override("separation", 8)
-	content_block.add_child(title_row)
-
-	var title_lbl: Label = Label.new()
-	title_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
-	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title_row.add_child(title_lbl)
-
-	var detail_row: HBoxContainer = HBoxContainer.new()
-	detail_row.add_theme_constant_override("separation", 10)
-	content_block.add_child(detail_row)
-
-	var desc_lbl: Label = Label.new()
-	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	desc_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc_lbl.add_theme_color_override("font_color", Color(0.84, 0.84, 0.82, 1.0))
-	detail_row.add_child(desc_lbl)
-
-	var exp_inline_lbl: Label = Label.new()
-	exp_inline_lbl.custom_minimum_size = Vector2(220.0, 0.0)
-	exp_inline_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	exp_inline_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	exp_inline_lbl.add_theme_font_size_override("font_size", 13)
-	exp_inline_lbl.add_theme_color_override("font_color", Color(0.78, 0.88, 0.98, 1.0))
-	detail_row.add_child(exp_inline_lbl)
-
-	var title_right: HBoxContainer = HBoxContainer.new()
-	title_right.add_theme_constant_override("separation", 8)
-	title_row.add_child(title_right)
-
-	var status_badge: Control = _make_info_chip("", Color(0.26, 0.32, 0.38, 0.96), Color(0.72, 0.82, 0.95, 0.95))
-	title_right.add_child(status_badge)
-
-	var exp_row: HBoxContainer = HBoxContainer.new()
-	exp_row.add_theme_constant_override("separation", 10)
-	exp_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	content_block.add_child(exp_row)
-
-	var exp_bar: ProgressBar = ProgressBar.new()
-	exp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	exp_bar.custom_minimum_size = Vector2(0.0, 22.0)
-	exp_bar.show_percentage = false
-	exp_bar.min_value = 0.0
-	exp_bar.max_value = maxf(1.0, float(exp_per_lv))
-	exp_bar.value = exp_bar.max_value if is_level_capped else clampf(float(exp_val), 0.0, exp_bar.max_value)
-	exp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	UiPalette.style_exp_progress_bar(exp_bar, "max" if is_level_capped else "normal")
-	exp_row.add_child(exp_bar)
-
-	var exp_overlay: CenterContainer = CenterContainer.new()
-	exp_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	exp_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	exp_bar.add_child(exp_overlay)
-
-	var exp_label: Label = Label.new()
-	exp_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	exp_label.add_theme_color_override("font_color", UiPalette.EXP_BAR_MAX_TEXT if is_level_capped else UiPalette.EXP_BAR_TEXT)
-	exp_label.text = UiText.SCOOPER_EQUIPMENT_EXP_MAX if is_level_capped else UiText.SCOOPER_EQUIPMENT_EXP_FORMAT % [exp_val, exp_per_lv]
-	exp_overlay.add_child(exp_label)
-
-	var action_row: HBoxContainer = HBoxContainer.new()
-	content_block.add_child(action_row)
-
-	var action_btn: Button = Button.new()
-	action_btn.custom_minimum_size = Vector2(0.0, 44.0)
-	action_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiPalette.apply_button_kind(action_btn, "confirm")
-	action_row.add_child(action_btn)
+	if icon_rect != null:
+		icon_rect.texture = equipment_icon
+		icon_rect.visible = equipment_icon != null
+	level_lbl.visible = owned
+	level_lbl.text = str(level)
+	title_lbl.text = name_str
+	desc_lbl.text = _bonus_desc(item, maxi(level, 1) if owned else 1)
+	exp_inline_lbl.text = ""
+	_set_badge(status_badge, status_badge_label, "", Color(0.26, 0.32, 0.38, 0.96), Color(0.72, 0.82, 0.95, 0.95))
 
 	if locked:
-		title_lbl.text = "%s %s" % [UiText.SCOOPER_EQUIPMENT_LOCKED_PREFIX, name_str]
+		level_lbl.visible = false
+		title_lbl.text = name_str
 		title_lbl.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 1.0))
 		desc_lbl.text = _bonus_desc(item, 0)
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_UNLOCK_AT % unlock_lv
-		_set_chip_text(status_badge, UiText.SCOOPER_EQUIPMENT_BADGE_LOCKED)
-		_set_chip_colors(status_badge, Color(0.30, 0.30, 0.34, 0.96), Color(0.82, 0.82, 0.86, 1.0))
-		exp_bar.max_value = 1.0
-		exp_bar.value = 0.0
-		UiPalette.style_exp_progress_bar(exp_bar, "normal")
-		exp_label.add_theme_color_override("font_color", UiPalette.EXP_BAR_TEXT)
+		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_LOCKED, Color(0.30, 0.30, 0.34, 0.96), Color(0.82, 0.82, 0.86, 1.0))
+		_set_progress_fill(progress_fill, 0.0, 440.0)
+		_set_panel_fill(progress_frame, Color(0.19, 0.17, 0.15, 0.92))
+		exp_label.add_theme_color_override("font_color", Color(0.97, 0.98, 0.94, 1.0))
 		exp_label.text = "0/0"
-		action_btn.text = UiText.SCOOPER_EQUIPMENT_ACTION_LOCKED_BUTTON
+		_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(0.82, 0.72, 0.54, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_LOCKED_BUTTON)
 		action_btn.disabled = true
 		_add_locked_overlay(panel, unlock_lv)
 		return panel
@@ -271,18 +190,17 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		title_lbl.text = name_str
 		desc_lbl.text = _bonus_desc(item, 1)
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_UNOWNED % purchase_cost if can_afford_purchase else UiText.SCOOPER_EQUIPMENT_COST_INSUFFICIENT % purchase_cost
-		_set_chip_text(status_badge, UiText.SCOOPER_EQUIPMENT_BADGE_UNOWNED)
-		_set_chip_colors(status_badge, Color(0.31, 0.26, 0.16, 0.96), Color(0.96, 0.87, 0.58, 1.0))
-		exp_bar.max_value = 1.0
-		exp_bar.value = 0.0
-		UiPalette.style_exp_progress_bar(exp_bar, "normal")
-		exp_label.add_theme_color_override("font_color", UiPalette.EXP_BAR_TEXT)
+		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_UNOWNED, Color(0.31, 0.26, 0.16, 0.96), Color(0.96, 0.87, 0.58, 1.0))
+		_set_progress_fill(progress_fill, 0.0, 440.0)
+		_set_panel_fill(progress_frame, Color(0.19, 0.17, 0.15, 0.92))
+		exp_label.add_theme_color_override("font_color", Color(0.97, 0.98, 0.94, 1.0))
 		exp_label.text = "0/0"
-		action_btn.text = UiText.SCOOPER_EQUIPMENT_ACTION_UNOWNED_BUTTON if can_afford_purchase else UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON
+		if can_afford_purchase:
+			_set_action_visual(action_visual, action_label, Color(0.80, 0.70, 0.42, 1.0), Color(0.36, 0.21, 0.08, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_UNOWNED_BUTTON)
+		else:
+			_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON)
 		action_btn.disabled = api_locked or not can_afford_purchase
 		RedDotService.refresh_dot(action_btn, can_afford_purchase and not api_locked)
-		if not can_afford_purchase:
-			action_btn.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
 		action_btn.pressed.connect(func() -> void:
 			if not _is_scene_alive(scene):
 				return
@@ -297,23 +215,25 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		)
 		return panel
 
-	title_lbl.text = "%s Lv.%d" % [name_str, level]
+	title_lbl.text = name_str
 	desc_lbl.text = _bonus_desc(item, maxi(level, 1))
 	exp_inline_lbl.text = ""
+	_set_progress_fill(progress_fill, exp_bar_ratio(exp_val, exp_per_lv, is_level_capped), 440.0)
+	exp_label.add_theme_color_override("font_color", Color(0.97, 0.98, 0.94, 1.0))
+	exp_label.text = UiText.SCOOPER_EQUIPMENT_EXP_MAX if is_level_capped else UiText.SCOOPER_EQUIPMENT_EXP_FORMAT % [exp_val, exp_per_lv]
 
 	if broken:
 		var repair_cost: int = int(item.get("repairCost", 0))
 		var can_afford_repair: bool = scene.GameState.player_data.gold >= repair_cost
-		_set_chip_text(status_badge, UiText.SCOOPER_EQUIPMENT_BADGE_BROKEN)
-		_set_chip_colors(status_badge, Color(0.37, 0.16, 0.16, 0.96), Color(1.0, 0.80, 0.76, 1.0))
-		title_lbl.text = "%s %s" % [UiText.SCOOPER_EQUIPMENT_BROKEN_PREFIX, title_lbl.text]
+		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_BROKEN, Color(0.37, 0.16, 0.16, 0.96), Color(1.0, 0.80, 0.76, 1.0))
 		title_lbl.add_theme_color_override("font_color", Color(1.0, 0.76, 0.72, 1.0))
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_REPAIR % repair_cost if can_afford_repair else UiText.SCOOPER_EQUIPMENT_COST_INSUFFICIENT % repair_cost
-		action_btn.text = UiText.SCOOPER_EQUIPMENT_ACTION_REPAIR_BUTTON if can_afford_repair else UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON
+		if can_afford_repair:
+			_set_action_visual(action_visual, action_label, Color(0.80, 0.70, 0.42, 1.0), Color(0.36, 0.21, 0.08, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_REPAIR_BUTTON)
+		else:
+			_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON)
 		_register_cooldown_button(scene, action_btn, equip_id, "repair")
 		action_btn.disabled = api_locked or _is_action_cooling(scene, equip_id, "repair") or not can_afford_repair
-		if not can_afford_repair:
-			action_btn.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
 		action_btn.pressed.connect(func() -> void:
 			_do_equipment_action(scene, "repair", equip_id)
 		)
@@ -322,33 +242,29 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	if treat_mode:
 		var treat_cost: int = int(item.get("treatCost", 0))
 		var can_afford_treat: bool = scene.GameState.player_data.gold >= treat_cost
-		_set_chip_text(status_badge, UiText.SCOOPER_EQUIPMENT_BADGE_SICK)
-		_set_chip_colors(status_badge, Color(0.36, 0.28, 0.12, 0.96), Color(1.0, 0.92, 0.72, 1.0))
-		title_lbl.text = "%s %s" % [UiText.SCOOPER_EQUIPMENT_SICK_PREFIX, title_lbl.text]
+		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_SICK, Color(0.36, 0.28, 0.12, 0.96), Color(1.0, 0.92, 0.72, 1.0))
 		title_lbl.add_theme_color_override("font_color", Color(1.0, 0.92, 0.70, 1.0))
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_TREAT % treat_cost if can_afford_treat else UiText.SCOOPER_EQUIPMENT_COST_INSUFFICIENT % treat_cost
-		action_btn.text = UiText.SCOOPER_EQUIPMENT_ACTION_TREAT_BUTTON if can_afford_treat else UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON
+		if can_afford_treat:
+			_set_action_visual(action_visual, action_label, Color(0.80, 0.70, 0.42, 1.0), Color(0.36, 0.21, 0.08, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_TREAT_BUTTON)
+		else:
+			_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON)
 		_register_cooldown_button(scene, action_btn, equip_id, "treat")
 		action_btn.disabled = api_locked or _is_action_cooling(scene, equip_id, "treat") or not can_afford_treat
-		if not can_afford_treat:
-			action_btn.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
 		action_btn.pressed.connect(func() -> void:
 			_do_equipment_action(scene, "treat", equip_id)
 		)
 		return panel
 
-	_set_chip_text(status_badge, UiText.SCOOPER_EQUIPMENT_BADGE_MAX if is_level_capped else UiText.SCOOPER_EQUIPMENT_BADGE_READY)
 	if is_level_capped:
-		_set_chip_colors(status_badge, Color(0.32, 0.20, 0.38, 0.96), Color(0.92, 0.82, 1.0, 1.0))
-		UiPalette.style_exp_progress_bar(exp_bar, "max")
-		exp_label.add_theme_color_override("font_color", UiPalette.EXP_BAR_MAX_TEXT)
+		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_MAX, Color(0.32, 0.20, 0.38, 0.96), Color(0.92, 0.82, 1.0, 1.0))
+		_set_progress_fill(progress_fill, 1.0, 440.0)
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_MAX
+		_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_LEVEL_MAX)
 	else:
-		_set_chip_colors(status_badge, Color(0.14, 0.33, 0.24, 0.96), Color(0.80, 1.0, 0.87, 1.0))
-		UiPalette.style_exp_progress_bar(exp_bar, "ready")
-		exp_label.add_theme_color_override("font_color", UiPalette.EXP_BAR_READY_TEXT)
+		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_READY, Color(0.14, 0.33, 0.24, 0.96), Color(0.80, 1.0, 0.87, 1.0))
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_UPGRADE % upgrade_cost
-	action_btn.text = UiText.SCOOPER_EQUIPMENT_ACTION_UPGRADE_BUTTON
+		_set_action_visual(action_visual, action_label, Color(0.80, 0.70, 0.42, 1.0), Color(0.36, 0.21, 0.08, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_UPGRADE_BUTTON)
 	var can_afford_upgrade: bool = scene.GameState.player_data.gold >= upgrade_cost
 	var cooldown_ready: bool = not _is_action_cooling(scene, equip_id, "upgrade")
 	var can_upgrade: bool = not is_level_capped and cooldown_ready
@@ -356,13 +272,9 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	_register_cooldown_button(scene, action_btn, equip_id, "upgrade")
 	if not can_afford_upgrade:
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_INSUFFICIENT % upgrade_cost
-		action_btn.text = UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON
-		action_btn.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
+		_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON)
 		action_btn.disabled = true
 	elif is_level_capped and not api_locked:
-		action_btn.disabled = false
-		action_btn.text = UiText.SCOOPER_EQUIPMENT_LEVEL_MAX
-		action_btn.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
 		action_btn.disabled = true
 
 	action_btn.pressed.connect(func() -> void:
@@ -507,7 +419,7 @@ func _bonus_desc(item: Dictionary, level: int) -> String:
 	return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, stat_str, per_lv * float(level) * 100.0]
 
 
-func _add_unlock_overlay(scene: Control, panel: PanelContainer, unlock_cost: int, equip_id: int, item_name: String) -> void:
+func _add_unlock_overlay(scene: Control, panel: Control, unlock_cost: int, equip_id: int, item_name: String) -> void:
 	var overlay: Control = Control.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -537,7 +449,7 @@ func _add_unlock_overlay(scene: Control, panel: PanelContainer, unlock_cost: int
 	overlay.add_child(unlock_btn)
 
 
-func _add_locked_overlay(panel: PanelContainer, unlock_lv: int) -> void:
+func _add_locked_overlay(panel: Control, unlock_lv: int) -> void:
 	var overlay: Control = Control.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -607,61 +519,54 @@ func _is_api_locked(scene: Control) -> bool:
 	return bool(scene._api_in_flight)
 
 
-func _make_info_chip(text: String, bg_color: Color, font_color: Color) -> Control:
-	var panel: PanelContainer = PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = bg_color
-	style.corner_radius_top_left = 10
-	style.corner_radius_top_right = 10
-	style.corner_radius_bottom_right = 10
-	style.corner_radius_bottom_left = 10
-	style.content_margin_left = 8
-	style.content_margin_right = 8
-	style.content_margin_top = 4
-	style.content_margin_bottom = 4
-	panel.add_theme_stylebox_override("panel", style)
-
-	var label: Label = Label.new()
+func _set_badge(panel: Panel, label: Label, text: String, bg_color: Color, font_color: Color) -> void:
+	if panel == null or label == null:
+		return
+	_set_panel_fill(panel, bg_color)
 	label.text = text
-	label.add_theme_font_size_override("font_size", 13)
 	label.add_theme_color_override("font_color", font_color)
-	panel.add_child(label)
-	return panel
 
 
-func _set_chip_text(chip: Control, text: String) -> void:
-	if chip == null or chip.get_child_count() == 0:
+func _set_panel_fill(panel: Panel, bg_color: Color) -> void:
+	if panel == null:
 		return
-	var label: Label = chip.get_child(0) as Label
-	if label != null:
-		label.text = text
-
-
-func _set_chip_colors(chip: Control, bg_color: Color, font_color: Color) -> void:
-	if chip == null:
+	var style: StyleBoxFlat = panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if style == null:
 		return
-	var style: StyleBoxFlat = chip.get_theme_stylebox("panel") as StyleBoxFlat
-	if style != null:
-		var style_copy: StyleBoxFlat = style.duplicate()
-		style_copy.bg_color = bg_color
-		chip.add_theme_stylebox_override("panel", style_copy)
-	if chip.get_child_count() == 0:
+	var style_copy: StyleBoxFlat = style.duplicate()
+	style_copy.bg_color = bg_color
+	panel.add_theme_stylebox_override("panel", style_copy)
+
+
+func _set_action_visual(panel: Panel, label: Label, bg_color: Color, font_color: Color, text: String) -> void:
+	_set_panel_fill(panel, bg_color)
+	if label == null:
 		return
-	var label: Label = chip.get_child(0) as Label
-	if label != null:
-		label.add_theme_color_override("font_color", font_color)
+	label.text = text
+	label.add_theme_color_override("font_color", font_color)
 
 
-func _make_icon_frame_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.18, 0.18, 0.22, 0.96)
-	style.border_color = Color(0.52, 0.76, 0.95, 0.40)
-	style.border_width_left = 1
-	style.border_width_top = 1
-	style.border_width_right = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 12
-	style.corner_radius_top_right = 12
-	style.corner_radius_bottom_right = 12
-	style.corner_radius_bottom_left = 12
-	return style
+func _set_progress_fill(fill: ColorRect, ratio: float, width: float) -> void:
+	if fill == null:
+		return
+	var clamped_ratio: float = clampf(ratio, 0.0, 1.0)
+	fill.offset_right = 4.0 + width * clamped_ratio
+
+
+func exp_bar_ratio(current_exp: int, max_exp: int, is_maxed: bool) -> float:
+	if is_maxed:
+		return 1.0
+	if max_exp <= 0:
+		return 0.0
+	return float(current_exp) / float(max_exp)
+
+
+func _prepare_flat_button(button: Button) -> void:
+	if button == null:
+		return
+	var empty_style: StyleBoxEmpty = StyleBoxEmpty.new()
+	button.add_theme_stylebox_override("normal", empty_style)
+	button.add_theme_stylebox_override("hover", empty_style)
+	button.add_theme_stylebox_override("pressed", empty_style)
+	button.add_theme_stylebox_override("focus", empty_style)
+	button.add_theme_stylebox_override("disabled", empty_style)

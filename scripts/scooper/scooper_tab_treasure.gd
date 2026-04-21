@@ -8,19 +8,25 @@ func build(scene: Control) -> void:
 	summary_row.add_theme_constant_override("separation", 10)
 	scene._tab_content.add_child(summary_row)
 
-	var section_label: Label = Label.new()
-	section_label.text = UiText.SCOOPER_TAB_TREASURE
-	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	summary_row.add_child(section_label)
+	scene._treasure_summary_label = scene._tab_header_summary
+	if scene._treasure_summary_label == null:
+		var section_label: Label = Label.new()
+		section_label.text = UiText.SCOOPER_TAB_TREASURE
+		section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		summary_row.add_child(section_label)
 
-	var section_line: HSeparator = HSeparator.new()
-	section_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary_row.add_child(section_line)
+		var section_line: HSeparator = HSeparator.new()
+		section_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(section_line)
 
-	scene._treasure_summary_label = Label.new()
-	scene._treasure_summary_label.text = ""
-	scene._treasure_summary_label.visible = false
-	summary_row.add_child(scene._treasure_summary_label)
+		scene._treasure_summary_label = Label.new()
+		scene._treasure_summary_label.text = ""
+		scene._treasure_summary_label.visible = false
+		summary_row.add_child(scene._treasure_summary_label)
+	else:
+		var spacer: Control = Control.new()
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(spacer)
 
 	var total_bonus_btn: Button = Button.new()
 	total_bonus_btn.text = UiText.SCOOPER_TREASURE_TOTAL_BONUS
@@ -48,6 +54,15 @@ func build(scene: Control) -> void:
 
 func _refresh_treasure_tab(scene: Control) -> void:
 	var items: Array = scene.GameState.scooper_treasure_data
+	if scene._treasure_summary_label != null:
+		var total_quantity: int = 0
+		for item_variant: Variant in items:
+			if not (item_variant is Dictionary):
+				continue
+			var item: Dictionary = item_variant
+			total_quantity += int(item.get("quantity", 0))
+		scene._treasure_summary_label.visible = true
+		scene._treasure_summary_label.text = UiText.SCOOPER_TREASURE_SUMMARY_FORMAT % [items.size(), total_quantity]
 	if scene._treasure_list == null:
 		return
 

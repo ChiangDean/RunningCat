@@ -1,0 +1,195 @@
+[gd_scene format=3 uid="uid://l33t46kv64b6"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://crbwcuyyjyfci" path="res://assets/sprites/ui/scooper_background_v1.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://dvgi7tsejs4jp" path="res://assets/sprites/ui/common/content_m_default_v1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://b3j1goddylwph" path="res://assets/sprites/ui/common/function_bar_m_v1.png" id="4_j5a1g"]
+[ext_resource type="Texture2D" uid="uid://cb3irvjtrsvjg" path="res://assets/sprites/ui/common/button_s_default_v1.png" id="5_j5a1g"]
+
+[node name="SubmenuShellEditor" type="Control" unique_id=1257101743]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+theme = ExtResource("1")
+
+[node name="Background" type="TextureRect" parent="." unique_id=719854414]
+layout_mode = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+texture = ExtResource("2")
+expand_mode = 1
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1159155586]
+layout_mode = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+color = Color(0.03, 0.02, 0.03, 0.56)
+
+[node name="TopMask" type="ColorRect" parent="." unique_id=1300187701]
+layout_mode = 0
+offset_right = 720.0
+offset_bottom = 186.0
+color = Color(0.03, 0.03, 0.04, 0.62)
+
+[node name="ContentRoot" type="Control" parent="." unique_id=1339249755]
+anchors_preset = 0
+offset_left = 15.0
+offset_top = 145.0
+offset_right = 705.0
+offset_bottom = 1015.0
+
+[node name="Frame" type="TextureRect" parent="ContentRoot" unique_id=603496664]
+layout_mode = 0
+offset_right = 690.0
+offset_bottom = 943.0
+texture = ExtResource("3")
+expand_mode = 1
+
+[node name="SubmenuTitle" type="Label" parent="ContentRoot" unique_id=333867358]
+layout_mode = 0
+offset_left = 54.0
+offset_top = 18.0
+offset_right = 633.0
+offset_bottom = 60.0
+theme_override_colors/font_color = Color(0.9529412, 0.85490197, 0.7176471, 1)
+theme_override_colors/font_outline_color = Color(0.23, 0.11, 0.05, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 28
+text = "裝備"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SubmenuDescription" type="Label" parent="ContentRoot" unique_id=1879630578]
+layout_mode = 0
+offset_left = 52.0
+offset_top = 92.0
+offset_right = 647.0
+offset_bottom = 133.0
+theme_override_colors/font_color = Color(0.94, 0.88, 0.79, 0.98)
+theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.04, 0.85)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 15
+text = "查看裝備等級、功能與升級狀態，強化鏟屎官的日常效率。"
+
+[node name="SummaryLeft" type="Label" parent="ContentRoot" unique_id=1735114359]
+layout_mode = 0
+offset_left = 55.0
+offset_top = 134.0
+offset_right = 435.0
+offset_bottom = 161.0
+theme_override_colors/font_color = Color(0.97, 0.86, 0.62, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.04, 0.85)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+text = "金幣：137165    貓砂：594    回憶碎片：12"
+
+[node name="SummaryRight" type="Label" parent="ContentRoot" unique_id=299784635]
+layout_mode = 0
+offset_left = 528.0
+offset_top = 133.0
+offset_right = 647.0
+offset_bottom = 159.0
+theme_override_colors/font_color = Color(0.97, 0.88, 0.68, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.04, 0.85)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+text = "已解鎖 2/8"
+horizontal_alignment = 2
+
+[node name="SubmenuBarRoot" type="Control" parent="." unique_id=1377157554]
+anchors_preset = 0
+offset_left = 9.0
+offset_top = 1060.0
+offset_right = 712.0
+offset_bottom = 1167.0
+
+[node name="SubmenuFrame" type="TextureRect" parent="SubmenuBarRoot" unique_id=1821202326]
+layout_mode = 0
+offset_left = 117.0
+offset_top = 39.0
+offset_right = 694.62164
+offset_bottom = 117.0
+texture = ExtResource("4_j5a1g")
+expand_mode = 1
+
+[node name="BackButton" type="TextureRect" parent="SubmenuBarRoot" unique_id=2066773530]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 39.0
+offset_right = 111.59459
+offset_bottom = 117.0
+texture = ExtResource("5_j5a1g")
+expand_mode = 1
+
+[node name="BackLabel" type="Label" parent="SubmenuBarRoot" unique_id=2008116169]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 49.0
+offset_right = 98.0
+offset_bottom = 105.0
+theme_override_colors/font_color = Color(0.9529412, 0.85490197, 0.7176471, 1)
+theme_override_font_sizes/font_size = 18
+text = "返回"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TabEquipLabel" type="Label" parent="SubmenuBarRoot" unique_id=1085547413]
+layout_mode = 0
+offset_left = 141.52432
+offset_top = 49.0
+offset_right = 240.0
+offset_bottom = 105.0
+theme_override_colors/font_color = Color(0.9529412, 0.85490197, 0.7176471, 1)
+theme_override_font_sizes/font_size = 18
+text = "裝備"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TabAbilityLabel" type="Label" parent="SubmenuBarRoot" unique_id=1524122871]
+layout_mode = 0
+offset_left = 249.57297
+offset_top = 49.0
+offset_right = 347.0
+offset_bottom = 105.0
+theme_override_colors/font_color = Color(0.9529412, 0.85490197, 0.7176471, 1)
+theme_override_font_sizes/font_size = 18
+text = "特殊能力"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TabMemoryLabel" type="Label" parent="SubmenuBarRoot" unique_id=469131192]
+layout_mode = 0
+offset_left = 356.6216
+offset_top = 49.0
+offset_right = 455.0
+offset_bottom = 105.0
+theme_override_colors/font_color = Color(0.9529412, 0.85490197, 0.7176471, 1)
+theme_override_font_sizes/font_size = 18
+text = "回憶"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TabTreasureLabel" type="Label" parent="SubmenuBarRoot" unique_id=840966377]
+layout_mode = 0
+offset_left = 464.67026
+offset_top = 49.0
+offset_right = 562.0
+offset_bottom = 105.0
+theme_override_colors/font_color = Color(0.9529412, 0.85490197, 0.7176471, 1)
+theme_override_font_sizes/font_size = 18
+text = "寶藏"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TabAchievementLabel" type="Label" parent="SubmenuBarRoot" unique_id=2067370230]
+layout_mode = 0
+offset_left = 571.71893
+offset_top = 49.0
+offset_right = 670.0
+offset_bottom = 105.0
+theme_override_colors/font_color = Color(0.9529412, 0.85490197, 0.7176471, 1)
+theme_override_font_sizes/font_size = 18
+text = "成就"
+horizontal_alignment = 1
+vertical_alignment = 1

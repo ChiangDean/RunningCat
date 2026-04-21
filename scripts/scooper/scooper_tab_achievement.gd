@@ -4,23 +4,25 @@ const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 
 func build(scene: Control) -> void:
-	var summary_row: HBoxContainer = HBoxContainer.new()
-	summary_row.add_theme_constant_override("separation", 10)
-	scene._tab_content.add_child(summary_row)
+	scene._achievement_summary_label = scene._tab_header_summary
+	if scene._achievement_summary_label == null:
+		var summary_row: HBoxContainer = HBoxContainer.new()
+		summary_row.add_theme_constant_override("separation", 10)
+		scene._tab_content.add_child(summary_row)
 
-	var section_label: Label = Label.new()
-	section_label.text = UiText.SCOOPER_TAB_ACHIEVEMENT
-	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	summary_row.add_child(section_label)
+		var section_label: Label = Label.new()
+		section_label.text = UiText.SCOOPER_TAB_ACHIEVEMENT
+		section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		summary_row.add_child(section_label)
 
-	var section_line: HSeparator = HSeparator.new()
-	section_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary_row.add_child(section_line)
+		var section_line: HSeparator = HSeparator.new()
+		section_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(section_line)
 
-	scene._achievement_summary_label = Label.new()
-	scene._achievement_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	scene._achievement_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	summary_row.add_child(scene._achievement_summary_label)
+		scene._achievement_summary_label = Label.new()
+		scene._achievement_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		scene._achievement_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		summary_row.add_child(scene._achievement_summary_label)
 
 	scene._achievement_feedback_label = Label.new()
 	scene._achievement_feedback_label.text = ""

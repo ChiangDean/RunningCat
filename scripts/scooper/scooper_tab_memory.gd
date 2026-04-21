@@ -5,23 +5,25 @@ const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 
 func build(scene: Control) -> void:
-	var summary_row: HBoxContainer = HBoxContainer.new()
-	summary_row.add_theme_constant_override("separation", 10)
-	scene._tab_content.add_child(summary_row)
+	scene._memory_summary_label = scene._tab_header_summary
+	if scene._memory_summary_label == null:
+		var summary_row: HBoxContainer = HBoxContainer.new()
+		summary_row.add_theme_constant_override("separation", 10)
+		scene._tab_content.add_child(summary_row)
 
-	var section_label: Label = Label.new()
-	section_label.text = UiText.SCOOPER_TAB_MEMORY
-	section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary_row.add_child(section_label)
+		var section_label: Label = Label.new()
+		section_label.text = UiText.SCOOPER_TAB_MEMORY
+		section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		section_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(section_label)
 
-	scene._memory_summary_label = Label.new()
-	scene._memory_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	scene._memory_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	scene._memory_summary_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary_row.add_child(scene._memory_summary_label)
+		scene._memory_summary_label = Label.new()
+		scene._memory_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		scene._memory_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		scene._memory_summary_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		summary_row.add_child(scene._memory_summary_label)
 
-	scene._tab_content.add_child(scene._make_separator())
+		scene._tab_content.add_child(scene._make_separator())
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

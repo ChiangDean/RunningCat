@@ -3,14 +3,40 @@ extends Control
 
 const SW := 720.0
 const SH := 1280.0
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+const SHELL_SCENE: PackedScene = preload("res://scenes/ui/SubmenuShellEditor.tscn")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+
+const TAB_CONTENT_LEFT := 28.0
+const TAB_CONTENT_TOP := 184.0
+const TAB_CONTENT_RIGHT := -26.0
+const TAB_CONTENT_BOTTOM := -24.0
+const TAB_CONTENT_TO_SUBMENU_GAP := 18.0
+
+const SUBMENU_TAB_DEFAULT_COLOR := Color(0.9529412, 0.85490197, 0.7176471, 1.0)
+const SUBMENU_TAB_ACTIVE_COLOR := Color(0.98, 0.97, 0.92, 1.0)
+const SUBMENU_TAB_FONT_SIZE := 18
+
+const SUBMENU_BACK_BUTTON_RECT := Rect2(9.0, 39.0, 102.59459, 78.0)
+const SUBMENU_TAB_BUTTON_RECTS := {
+	"equipment": Rect2(137.0, 39.0, 107.52432, 78.0),
+	"ability": Rect2(244.52432, 39.0, 107.52433, 78.0),
+	"memory": Rect2(352.04865, 39.0, 107.52432, 78.0),
+	"treasure": Rect2(459.57297, 39.0, 107.52433, 78.0),
+	"achievement": Rect2(567.0973, 39.0, 107.52434, 78.0),
+}
+const SUBMENU_TAB_LABEL_PATHS := {
+	"equipment": "TabEquipLabel",
+	"ability": "TabAbilityLabel",
+	"memory": "TabMemoryLabel",
+	"treasure": "TabTreasureLabel",
+	"achievement": "TabAchievementLabel",
+}
 
 var _current_tab: String = "equipment"
 var _tab_btns: Dictionary = {}
 var _tab_header_title: Label
 var _tab_header_desc: Label
+var _tab_header_summary: Label
 var _tab_content: VBoxContainer
 var _resource_label: Label
 
@@ -66,78 +92,50 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var bg := AssetResolver.make_fullscreen_background("scooper")
-	add_child(bg)
+	var shell_root: Control = SHELL_SCENE.instantiate() as Control
+	add_child(shell_root)
 
-	var dim := ColorRect.new()
-	dim.color = Color(0.04, 0.03, 0.05, 0.34)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
-
-	var content_panel := PanelContainer.new()
-	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content_panel.offset_left = 20.0
-	content_panel.offset_top = OverlaySceneChrome.CONTENT_TOP_GAP
-	content_panel.offset_right = -20.0
-	content_panel.offset_bottom = -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H + 12.0)
-	content_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.PANEL_FILL, OverlaySceneChrome.PANEL_BORDER, 18))
-	add_child(content_panel)
-
-	var content_margin := MarginContainer.new()
-	content_margin.add_theme_constant_override("margin_left", 18)
-	content_margin.add_theme_constant_override("margin_top", 18)
-	content_margin.add_theme_constant_override("margin_right", 18)
-	content_margin.add_theme_constant_override("margin_bottom", 18)
-	content_panel.add_child(content_margin)
-
-	var content_vbox := VBoxContainer.new()
-	content_vbox.add_theme_constant_override("separation", 12)
-	content_margin.add_child(content_vbox)
-
-	_tab_header_title = Label.new()
-	_tab_header_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	content_vbox.add_child(_tab_header_title)
-
-	_tab_header_desc = Label.new()
-	_tab_header_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_tab_header_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	_tab_header_desc.add_theme_color_override("font_color", Color(0.90, 0.88, 0.82, 0.92))
-	content_vbox.add_child(_tab_header_desc)
-
-	_resource_label = Label.new()
-	_resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	_resource_label.add_theme_color_override("font_color", Color(0.92, 0.86, 0.72, 1.0))
-	content_vbox.add_child(_resource_label)
+	var content_root: Control = shell_root.get_node("ContentRoot") as Control
+	var content_frame: TextureRect = shell_root.get_node("ContentRoot/Frame") as TextureRect
+	_tab_header_title = shell_root.get_node("ContentRoot/SubmenuTitle") as Label
+	_tab_header_desc = shell_root.get_node("ContentRoot/SubmenuDescription") as Label
+	_resource_label = shell_root.get_node("ContentRoot/SummaryLeft") as Label
+	_tab_header_summary = shell_root.get_node("ContentRoot/SummaryRight") as Label
 	_refresh_resource_label()
 
-	content_vbox.add_child(_make_separator())
+	var tab_host: MarginContainer = MarginContainer.new()
+	tab_host.name = "TabContentHost"
+	tab_host.anchor_right = 1.0
+	tab_host.anchor_bottom = 1.0
+	tab_host.offset_left = TAB_CONTENT_LEFT
+	tab_host.offset_top = TAB_CONTENT_TOP
+	tab_host.offset_right = TAB_CONTENT_RIGHT
+	tab_host.offset_bottom = _resolve_tab_content_bottom_offset(shell_root, content_root, content_frame)
+	content_root.add_child(tab_host)
 
 	_tab_content = VBoxContainer.new()
+	_tab_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_tab_content.add_theme_constant_override("separation", 12)
-	_tab_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_vbox.add_child(_tab_content)
+	tab_host.add_child(_tab_content)
 
-	var submenu_items: Array = []
-	for tab_key: String in TAB_KEYS:
-		submenu_items.append({
-			"key": tab_key,
-			"label": str(_get_tab_meta(tab_key).get("label", tab_key)),
-		})
-	var submenu: Dictionary = SceneSubmenuBar.build(self, {
-		"items": submenu_items,
-		"active_key": _current_tab,
-		"back_label": UiText.SCOOPER_BACK,
-		"back_pressed": Callable(self, "_on_back_pressed"),
-		"button_pressed": Callable(self, "_switch_tab"),
-		"panel_fill": OverlaySceneChrome.PANEL_FILL,
-		"panel_border": OverlaySceneChrome.PANEL_BORDER,
-		"top": -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H),
-		"bottom": -OverlaySceneChrome.HOME_MAIN_NAV_H,
-	})
-	_tab_btns = submenu.get("buttons", {})
+	var submenu_root: Control = shell_root.get_node("SubmenuBarRoot") as Control
+	_build_shell_submenu(submenu_root)
 
 	_refresh_tab_button_labels()
 	_switch_tab(_current_tab)
+
+
+func _resolve_tab_content_bottom_offset(shell_root: Control, content_root: Control, content_frame: TextureRect) -> float:
+	var target_bottom: float = content_root.size.y + TAB_CONTENT_BOTTOM
+	if content_frame != null:
+		target_bottom = maxf(target_bottom, content_frame.offset_bottom - TAB_CONTENT_TO_SUBMENU_GAP)
+
+	var submenu_root: Control = shell_root.get_node_or_null("SubmenuBarRoot") as Control
+	if submenu_root != null:
+		var submenu_limit: float = submenu_root.offset_top - content_root.offset_top - TAB_CONTENT_TO_SUBMENU_GAP
+		target_bottom = minf(target_bottom, submenu_limit)
+
+	return target_bottom - content_root.size.y
 
 
 func _process(delta: float) -> void:
@@ -158,9 +156,11 @@ func _switch_tab(tab_key: String) -> void:
 	if not TAB_KEYS.has(tab_key):
 		return
 	_current_tab = tab_key
+	if _tab_header_summary != null:
+		_tab_header_summary.text = ""
 	_refresh_tab_button_labels()
 	_refresh_tab_header()
-	SceneSubmenuBar.refresh(_tab_btns, tab_key)
+	_refresh_shell_submenu(tab_key)
 	_refresh_red_dots()
 	_rebuild_tab_content()
 
@@ -215,7 +215,8 @@ func _refresh_tab_button_labels() -> void:
 		var btn: Button = _tab_btns[tab_key]
 		if btn == null:
 			continue
-		btn.text = str(_get_tab_meta(tab_key).get("label", tab_key))
+		_set_shell_button_label(btn, str(_get_tab_meta(tab_key).get("label", tab_key)))
+	_refresh_shell_submenu(_current_tab)
 	_refresh_red_dots()
 
 
@@ -348,3 +349,68 @@ func make_reward_float_entry(label: String, amount: int, reward_key: String, col
 
 func _on_back_pressed() -> void:
 	SceneNavigator.return_to_battle()
+
+
+func _build_shell_submenu(submenu_root: Control) -> void:
+	var back_label: Label = submenu_root.get_node("BackLabel") as Label
+	if back_label != null:
+		back_label.text = UiText.SCOOPER_BACK
+	var back_button: Button = _make_shell_hit_button(SUBMENU_BACK_BUTTON_RECT)
+	back_button.pressed.connect(_on_back_pressed)
+	submenu_root.add_child(back_button)
+
+	_tab_btns.clear()
+	for tab_key: String in TAB_KEYS:
+		var label_path: String = str(SUBMENU_TAB_LABEL_PATHS.get(tab_key, ""))
+		var label: Label = submenu_root.get_node_or_null(label_path) as Label
+		if label == null:
+			continue
+		var button_rect: Rect2 = SUBMENU_TAB_BUTTON_RECTS.get(tab_key, Rect2())
+		var tab_button: Button = _make_shell_hit_button(button_rect)
+		tab_button.set_meta("submenu_label", label)
+		tab_button.pressed.connect(_switch_tab.bind(tab_key))
+		submenu_root.add_child(tab_button)
+		_tab_btns[tab_key] = tab_button
+
+
+func _make_shell_hit_button(button_rect: Rect2) -> Button:
+	var button: Button = Button.new()
+	button.focus_mode = Control.FOCUS_NONE
+	button.flat = true
+	button.text = ""
+	button.anchor_left = 0.0
+	button.anchor_top = 0.0
+	button.anchor_right = 0.0
+	button.anchor_bottom = 0.0
+	button.offset_left = button_rect.position.x
+	button.offset_top = button_rect.position.y
+	button.offset_right = button_rect.position.x + button_rect.size.x
+	button.offset_bottom = button_rect.position.y + button_rect.size.y
+	var empty_style: StyleBoxEmpty = StyleBoxEmpty.new()
+	button.add_theme_stylebox_override("normal", empty_style)
+	button.add_theme_stylebox_override("hover", empty_style)
+	button.add_theme_stylebox_override("pressed", empty_style)
+	button.add_theme_stylebox_override("focus", empty_style)
+	button.add_theme_stylebox_override("disabled", empty_style)
+	return button
+
+
+func _set_shell_button_label(button: Button, text: String) -> void:
+	if button == null:
+		return
+	var label: Label = button.get_meta("submenu_label", null) as Label
+	if label != null:
+		label.text = text
+
+
+func _refresh_shell_submenu(active_key: String) -> void:
+	for tab_key: String in _tab_btns.keys():
+		var button: Button = _tab_btns.get(tab_key) as Button
+		if button == null:
+			continue
+		var label: Label = button.get_meta("submenu_label", null) as Label
+		if label == null:
+			continue
+		var is_active: bool = tab_key == active_key
+		label.add_theme_color_override("font_color", SUBMENU_TAB_ACTIVE_COLOR if is_active else SUBMENU_TAB_DEFAULT_COLOR)
+		label.add_theme_font_size_override("font_size", SUBMENU_TAB_FONT_SIZE)
