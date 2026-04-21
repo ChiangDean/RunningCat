@@ -1,0 +1,192 @@
+[gd_scene format=3 uid="uid://bhmd16qsp3ha8"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://bgfob8og7uoum" path="res://assets/sprites/ui/common/content_s_default_v1.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://313it5185y0g" path="res://assets/sprites/ui/scooper_equipment/food_bowl.png" id="4"]
+
+[sub_resource type="StyleBoxFlat" id="1"]
+bg_color = Color(0.19, 0.35, 0.23, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="2"]
+bg_color = Color(0.19, 0.17, 0.15, 0.92)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="3"]
+bg_color = Color(0.8, 0.7, 0.42, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="ScooperEquipmentCardTemplate" type="Control"]
+custom_minimum_size = Vector2(640, 229)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 640.0
+offset_bottom = 229.0
+size_flags_horizontal = 3
+theme = ExtResource("1")
+
+[node name="Frame" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 634.01794
+offset_bottom = 229.0
+texture = ExtResource("2")
+expand_mode = 1
+
+[node name="SlotFrame" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 3.0
+offset_top = 45.0
+offset_right = 177.0
+offset_bottom = 219.0
+texture = ExtResource("3")
+expand_mode = 1
+
+[node name="Icon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 32.0
+offset_top = 73.0
+offset_right = 149.0
+offset_bottom = 190.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="LevelLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 49.0
+offset_top = 151.0
+offset_right = 135.0
+offset_bottom = 187.0
+theme_override_colors/font_color = Color(0.96, 0.93, 0.88, 1)
+theme_override_colors/font_outline_color = Color(0.16, 0.07, 0.03, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 19
+text = "2"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="NameLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 207.0
+offset_top = 9.0
+offset_right = 431.0
+offset_bottom = 39.0
+theme_override_colors/font_color = Color(0.96, 0.93, 0.88, 1)
+theme_override_colors/font_outline_color = Color(0.16, 0.07, 0.03, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 18
+text = "Bowl"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MetaLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 173.0
+offset_top = 65.0
+offset_right = 417.0
+offset_bottom = 128.0
+theme_override_colors/font_color = Color(0.9, 0.84, 0.76, 1)
+theme_override_colors/font_outline_color = Color(0.14, 0.06, 0.02, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+text = "Team ATK +4.0%"
+vertical_alignment = 2
+
+[node name="CostLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 378.0
+offset_top = 100.0
+offset_right = 609.0
+offset_bottom = 130.0
+theme_override_colors/font_color = Color(0.82, 0.87, 0.95, 1)
+theme_override_colors/font_outline_color = Color(0.14, 0.06, 0.02, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+text = "Gold 2000"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Badge" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 530.0
+offset_top = 53.0
+offset_right = 610.0
+offset_bottom = 83.0
+theme_override_styles/panel = SubResource("1")
+
+[node name="BadgeLabel" type="Label" parent="Badge"]
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 30.0
+theme_override_colors/font_color = Color(0.9, 1, 0.9, 1)
+theme_override_font_sizes/font_size = 13
+text = "Ready"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ProgressFrame" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 130.0
+offset_right = 614.0
+offset_bottom = 156.0
+theme_override_styles/panel = SubResource("2")
+
+[node name="ProgressFill" type="ColorRect" parent="ProgressFrame"]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 252.0
+offset_bottom = 22.0
+color = Color(0.69, 0.88, 0.62, 1)
+
+[node name="ProgressLabel" type="Label" parent="ProgressFrame"]
+layout_mode = 0
+offset_right = 444.0
+offset_bottom = 26.0
+theme_override_colors/font_color = Color(0.97, 0.98, 0.94, 1)
+theme_override_colors/font_outline_color = Color(0.14, 0.06, 0.02, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 13
+text = "EXP 3/10"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ActionButtonVisual" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 161.0
+offset_right = 614.0
+offset_bottom = 203.0
+theme_override_styles/panel = SubResource("3")
+
+[node name="ActionLabel" type="Label" parent="ActionButtonVisual"]
+layout_mode = 0
+offset_left = 10.0
+offset_right = 438.0
+offset_bottom = 42.0
+theme_override_colors/font_color = Color(0.36, 0.21, 0.08, 1)
+theme_override_font_sizes/font_size = 18
+text = "Start"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ActionButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 161.0
+offset_right = 614.0
+offset_bottom = 203.0
+focus_mode = 0
+flat = true
+text = ""
