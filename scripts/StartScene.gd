@@ -31,6 +31,11 @@ const OAUTH_PROVIDER_LINE := "line"
 const OAUTH_PROVIDER_NAME_GOOGLE := "Google"
 const OAUTH_PROVIDER_NAME_APPLE := "Apple"
 const OAUTH_PROVIDER_NAME_LINE := "LINE"
+const OAUTH_GOOGLE_BUTTON_TEXTURE := preload("res://assets/sprites/ui/oauth/google/google_signin_neutral_square_220.png")
+const OAUTH_APPLE_BUTTON_TEXTURE := preload("res://assets/sprites/ui/oauth/apple/apple_signin_left_black_220x50.png")
+const OAUTH_LINE_BUTTON_TEXTURE := preload("res://assets/sprites/ui/oauth/line/line_login_base_220.png")
+const OAUTH_LINE_BUTTON_HOVER_TEXTURE := preload("res://assets/sprites/ui/oauth/line/line_login_hover_220.png")
+const OAUTH_LINE_BUTTON_PRESS_TEXTURE := preload("res://assets/sprites/ui/oauth/line/line_login_press_220.png")
 const OAUTH_DIVIDER_TEXT := "or continue with"
 const OAUTH_PROFILE_TITLE := "Set Your Player Name"
 const OAUTH_PROFILE_HINT := "Choose the name other players will see."
@@ -82,10 +87,10 @@ var _primary_button: Button
 var _secondary_button: Button
 var _status_label: Label
 var _oauth_intro_label: Label
-var _oauth_button_row: HBoxContainer
-var _oauth_google_button: Button
-var _oauth_apple_button: Button
-var _oauth_line_button: Button
+var _oauth_button_row: VBoxContainer
+var _oauth_google_button: TextureButton
+var _oauth_apple_button: TextureButton
+var _oauth_line_button: TextureButton
 var _logout_revoke_retry := false
 var _logout_dialog_open := false
 var _loading_fill_tween: Tween
@@ -221,7 +226,7 @@ func _build_auth_block() -> PanelContainer:
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.63
 	panel.position = Vector2(-220, 0)
-	panel.custom_minimum_size = Vector2(440, 380)
+	panel.custom_minimum_size = Vector2(440, 520)
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
 	var margin := MarginContainer.new()
@@ -293,23 +298,28 @@ func _build_auth_block() -> PanelContainer:
 	_oauth_intro_label.add_theme_color_override("font_color", Color("6a5547"))
 	content.add_child(_oauth_intro_label)
 
-	_oauth_button_row = HBoxContainer.new()
-	_oauth_button_row.add_theme_constant_override("separation", 8)
+	_oauth_button_row = VBoxContainer.new()
+	_oauth_button_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_oauth_button_row.add_theme_constant_override("separation", 10)
 	content.add_child(_oauth_button_row)
 
-	_oauth_google_button = _build_oauth_button(OAUTH_GOOGLE_BUTTON, Color("f5d59c"))
+	_oauth_google_button = _build_oauth_button(OAUTH_GOOGLE_BUTTON_TEXTURE)
 	_oauth_google_button.pressed.connect(func() -> void:
 		_begin_oauth_sign_in(OAUTH_PROVIDER_GOOGLE, OAUTH_PROVIDER_NAME_GOOGLE)
 	)
 	_oauth_button_row.add_child(_oauth_google_button)
 
-	_oauth_apple_button = _build_oauth_button(OAUTH_APPLE_BUTTON, Color("d8ddd7"))
+	_oauth_apple_button = _build_oauth_button(OAUTH_APPLE_BUTTON_TEXTURE)
 	_oauth_apple_button.pressed.connect(func() -> void:
 		_begin_oauth_sign_in(OAUTH_PROVIDER_APPLE, OAUTH_PROVIDER_NAME_APPLE)
 	)
 	_oauth_button_row.add_child(_oauth_apple_button)
 
-	_oauth_line_button = _build_oauth_button(OAUTH_LINE_BUTTON, Color("9ed68c"))
+	_oauth_line_button = _build_oauth_button(
+		OAUTH_LINE_BUTTON_TEXTURE,
+		OAUTH_LINE_BUTTON_HOVER_TEXTURE,
+		OAUTH_LINE_BUTTON_PRESS_TEXTURE
+	)
 	_oauth_line_button.pressed.connect(func() -> void:
 		_begin_oauth_sign_in(OAUTH_PROVIDER_LINE, OAUTH_PROVIDER_NAME_LINE)
 	)
@@ -440,15 +450,18 @@ func _build_input(placeholder: String, secret: bool) -> LineEdit:
 	return input
 
 
-func _build_oauth_button(label_text: String, fill_color: Color) -> Button:
-	var button := Button.new()
-	button.text = label_text
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.custom_minimum_size = Vector2(0, 46)
-	UiFonts.apply_noto(button, UiPalette.FONT_SIZE_BODY)
-	button.add_theme_stylebox_override("normal", _make_button_stylebox(fill_color, 8))
-	button.add_theme_stylebox_override("hover", _make_button_stylebox(fill_color.lightened(0.06), 8))
-	button.add_theme_stylebox_override("pressed", _make_button_stylebox(fill_color.darkened(0.08), 6))
+func _build_oauth_button(normal_texture: Texture2D, hover_texture: Texture2D = null, pressed_texture: Texture2D = null) -> TextureButton:
+	var button := TextureButton.new()
+	button.texture_normal = normal_texture
+	button.texture_hover = hover_texture if hover_texture != null else normal_texture
+	button.texture_pressed = pressed_texture if pressed_texture != null else button.texture_hover
+	button.texture_disabled = normal_texture
+	button.ignore_texture_size = false
+	button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	button.custom_minimum_size = normal_texture.get_size()
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	button.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	return button
 
 

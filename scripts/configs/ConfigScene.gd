@@ -59,6 +59,9 @@ const ACCOUNT_PROVIDER_CANCELLED := "\u6388\u6b0a\u5df2\u53d6\u6d88"
 const ACCOUNT_PROVIDER_TIMEOUT := "\u6388\u6b0a\u8d85\u6642\uff0c\u8acb\u91cd\u8a66"
 const ACCOUNT_PROVIDER_CONFLICT := "\u9019\u500b OAuth \u5e33\u865f\u5df2\u7d81\u5230\u5176\u4ed6\u5e33\u865f"
 const ACCOUNT_PROVIDER_PENDING := "\u7b49\u5f85\u6388\u6b0a\u5b8c\u6210..."
+const OAUTH_BRAND_GOOGLE_TEXTURE := preload("res://assets/sprites/ui/oauth/google/google_signin_neutral_square_220.png")
+const OAUTH_BRAND_APPLE_TEXTURE := preload("res://assets/sprites/ui/oauth/apple/apple_signin_left_black_220x50.png")
+const OAUTH_BRAND_LINE_TEXTURE := preload("res://assets/sprites/ui/oauth/line/line_login_base_220.png")
 const DEVICE_ID_PATH := "user://device_id.txt"
 const OAUTH_LINK_POLL_INTERVAL_SECONDS := 1.5
 const OAUTH_LINK_TIMEOUT_SECONDS := 90.0
@@ -676,16 +679,14 @@ func _build_account_linked_card() -> Control:
 	var column: VBoxContainer = shell.get("column") as VBoxContainer
 	column.add_child(_make_section_header(ACCOUNT_LINKED_TITLE, ACCOUNT_LINKED_DESC))
 
-	var provider_grid: GridContainer = GridContainer.new()
-	provider_grid.columns = 3
-	provider_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	provider_grid.add_theme_constant_override("h_separation", 10)
-	provider_grid.add_theme_constant_override("v_separation", 10)
-	column.add_child(provider_grid)
+	var provider_list: VBoxContainer = VBoxContainer.new()
+	provider_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	provider_list.add_theme_constant_override("separation", 10)
+	column.add_child(provider_list)
 
-	provider_grid.add_child(_build_provider_card("Google", "google"))
-	provider_grid.add_child(_build_provider_card("Apple", "apple"))
-	provider_grid.add_child(_build_provider_card("LINE", "line"))
+	provider_list.add_child(_build_provider_card("Google", "google"))
+	provider_list.add_child(_build_provider_card("Apple", "apple"))
+	provider_list.add_child(_build_provider_card("LINE", "line"))
 	return panel
 
 
@@ -846,9 +847,28 @@ func _build_provider_card(provider_name: String, provider_key: String) -> Contro
 	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
 	panel.add_child(margin)
 
+	var row: HBoxContainer = HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 14)
+	margin.add_child(row)
+
+	var brand_preview_box: CenterContainer = CenterContainer.new()
+	brand_preview_box.custom_minimum_size = _get_provider_brand_texture(provider_key).get_size()
+	row.add_child(brand_preview_box)
+
+	var brand_preview: TextureRect = TextureRect.new()
+	brand_preview.texture = _get_provider_brand_texture(provider_key)
+	brand_preview.custom_minimum_size = _get_provider_brand_texture(provider_key).get_size()
+	brand_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	brand_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	brand_preview.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	brand_preview_box.add_child(brand_preview)
+
 	var column: VBoxContainer = VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", 8)
-	margin.add_child(column)
+	row.add_child(column)
 
 	var title: Label = Label.new()
 	title.text = provider_name
@@ -870,7 +890,7 @@ func _build_provider_card(provider_name: String, provider_key: String) -> Contro
 
 	var action_button: Button = Button.new()
 	action_button.text = ACCOUNT_PROVIDER_LINK_ACTION
-	action_button.custom_minimum_size = Vector2(0.0, 42.0)
+	action_button.custom_minimum_size = Vector2(148.0, 42.0)
 	UiPalette.apply_button_kind(action_button, "secondary")
 	action_button.pressed.connect(UiAudio.play_ui_click)
 	action_button.pressed.connect(func() -> void:
@@ -885,6 +905,18 @@ func _build_provider_card(provider_name: String, provider_key: String) -> Contro
 		"provider_key": provider_key,
 	}
 	return panel
+
+
+func _get_provider_brand_texture(provider_key: String) -> Texture2D:
+	match provider_key:
+		"google":
+			return OAUTH_BRAND_GOOGLE_TEXTURE
+		"apple":
+			return OAUTH_BRAND_APPLE_TEXTURE
+		"line":
+			return OAUTH_BRAND_LINE_TEXTURE
+		_:
+			return OAUTH_BRAND_GOOGLE_TEXTURE
 
 
 func _build_audio_row(bus_key: String, label_text: String) -> Control:
