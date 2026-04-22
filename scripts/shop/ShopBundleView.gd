@@ -146,7 +146,7 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 	card.add_child(action_row)
 
 	var cost_label := Label.new()
-	cost_label.text = "\u947d\u77f3 %d" % int(bundle.get("priceAmount", 0))
+	cost_label.text = "\u947d\u77f3 %s" % GameState.format_number(int(bundle.get("priceAmount", 0)))
 	cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	action_row.add_child(cost_label)
 
@@ -171,7 +171,7 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 
 
 func _confirm_purchase(bundle_id: int, bundle_name: String, price_amount: int) -> void:
-	var message := "\u662f\u5426\u82b1\u8cbb %d \u947d\u77f3\u8cfc\u8cb7\u300c%s\u300d\uff1f" % [price_amount, bundle_name]
+	var message := "\u662f\u5426\u82b1\u8cbb %s \u947d\u77f3\u8cfc\u8cb7\u300c%s\u300d\uff1f" % [GameState.format_number(price_amount), bundle_name]
 	DialogManager.show_confirm("\u8cfc\u8cb7\u79ae\u5305", message, func() -> void:
 		_api_client.purchase_shop_bundle(bundle_id, _on_purchase_completed)
 	)
@@ -199,9 +199,9 @@ func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> 
 		for reward_variant: Variant in rewards_variant:
 			if reward_variant is Dictionary:
 				var reward: Dictionary = reward_variant
-				reward_lines.append("%s x%d" % [
+				reward_lines.append("%s x%s" % [
 					str(reward.get("rewardDisplayName", reward.get("rewardType", "\u734e\u52f5"))),
-					int(reward.get("quantity", 0)),
+					GameState.format_number(int(reward.get("quantity", 0))),
 				])
 	if reward_lines.is_empty():
 		reward_lines.append("\u734e\u52f5\u5df2\u767c\u9001\u5b8c\u6210\u3002")
@@ -214,8 +214,8 @@ func _build_limit_text(bundle: Dictionary) -> String:
 	if bool(bundle.get("isSoldOut", false)):
 		return "\u5df2\u552e\u5b8c"
 	if purchase_limit < 0:
-		return "\u5df2\u8cfc\u8cb7 %d \u6b21" % purchase_count
-	return "\u5df2\u8cfc\u8cb7 %d / %d" % [purchase_count, purchase_limit]
+		return "\u5df2\u8cfc\u8cb7 %s \u6b21" % GameState.format_number(purchase_count)
+	return "\u5df2\u8cfc\u8cb7 %s / %s" % [GameState.format_number(purchase_count), GameState.format_number(purchase_limit)]
 
 
 func _build_reward_lines(bundle: Dictionary) -> Array[String]:
@@ -225,9 +225,9 @@ func _build_reward_lines(bundle: Dictionary) -> Array[String]:
 		for reward_variant: Variant in rewards_variant:
 			if reward_variant is Dictionary:
 				var reward: Dictionary = reward_variant
-				result.append("%s x%d" % [
+				result.append("%s x%s" % [
 					str(reward.get("rewardDisplayName", reward.get("rewardType", "\u734e\u52f5"))),
-					int(reward.get("quantity", 0)),
+					GameState.format_number(int(reward.get("quantity", 0))),
 				])
 	return result
 

@@ -64,7 +64,7 @@ func _build_offer_card(offer: Dictionary) -> Control:
 	var cost := int(offer.get("diamondCost", 0))
 
 	var title := Label.new()
-	title.text = "\u8a98\u6355\u7c60 x%d" % count
+	title.text = "\u8a98\u6355\u7c60 x%s" % GameState.format_number(count)
 	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	info.add_child(title)
 
@@ -75,7 +75,7 @@ func _build_offer_card(offer: Dictionary) -> Control:
 	info.add_child(desc)
 
 	var cost_label := Label.new()
-	cost_label.text = "\u947d\u77f3 %d" % cost
+	cost_label.text = "\u947d\u77f3 %s" % GameState.format_number(cost)
 	cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	row.add_child(cost_label)
 
@@ -90,7 +90,7 @@ func _build_offer_card(offer: Dictionary) -> Control:
 
 
 func _confirm_purchase(count: int, cost: int) -> void:
-	var message := "\u662f\u5426\u82b1\u8cbb %d \u947d\u77f3\u8cfc\u8cb7\u8a98\u6355\u7c60 x%d\uff1f" % [cost, count]
+	var message := "\u662f\u5426\u82b1\u8cbb %s \u947d\u77f3\u8cfc\u8cb7\u8a98\u6355\u7c60 x%s\uff1f" % [GameState.format_number(cost), GameState.format_number(count)]
 	DialogManager.show_confirm("\u8cfc\u8cb7\u8a98\u6355\u7c60", message, func() -> void:
 		_api_client.purchase_trap_cages(count, _on_purchase_completed)
 	)

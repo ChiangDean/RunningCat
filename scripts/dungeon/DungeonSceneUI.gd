@@ -336,7 +336,7 @@ static func _build_reward_panel(title_text: String, rewards: Dictionary, empty_t
 			continue
 		has_reward = true
 		var reward_label: Label = Label.new()
-		reward_label.text = "%s \u00d7%d" % [_get_reward_label(reward_key), amount]
+		reward_label.text = "%s \u00d7%s" % [_get_reward_label(reward_key), GameState.format_number(amount)]
 		reward_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		list_box.add_child(reward_label)
 

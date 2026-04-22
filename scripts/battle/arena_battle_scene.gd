@@ -449,7 +449,7 @@ func _show_result_popup(response: Dictionary) -> void:
 	vbox.add_child(delta_lbl)
 
 	var score_lbl := Label.new()
-	score_lbl.text = "目前積分：%d" % new_score
+	score_lbl.text = "目前積分：%s" % GameState.format_number(new_score)
 	score_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	score_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(score_lbl)

@@ -854,7 +854,7 @@ static func _build_catalog_detail_panel(scene, cat_data: CatData, preview_cat: P
 		row_card.add_child(row_margin)
 
 		var row_label := Label.new()
-		row_label.text = "%s: %d" % [str(stat_item.get("label", "")), int(stat_item.get("value", 0))]
+		row_label.text = "%s: %s" % [str(stat_item.get("label", "")), GameState.format_number(int(stat_item.get("value", 0)))]
 		row_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 		row_margin.add_child(row_label)
 

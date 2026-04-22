@@ -83,7 +83,7 @@ func _make_treasure_card(scene: Control, item: Dictionary) -> Control:
 	icon_rect.texture = treasure_texture
 	icon_rect.visible = treasure_texture != null
 	title_lbl.text = str(item.get("displayName", ""))
-	qty.text = "x%d" % int(item.get("quantity", 0))
+	qty.text = "x%s" % GameState.format_number(int(item.get("quantity", 0)))
 	qty.add_theme_color_override("font_color", accent)
 	desc.text = str(item.get("description", ""))
 	bonus.text = _treasure_bonus_desc(item)

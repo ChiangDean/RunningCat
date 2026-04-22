@@ -2238,6 +2238,21 @@ func get_equipment_bonuses() -> Array:
 	return fallback_result
 
 
+# ── 公用工具 ──────────────────────────────────
+
+
+static func format_number(value: int) -> String:
+	var negative := value < 0
+	var digits := str(abs(value))
+	var parts: Array[String] = []
+	while digits.length() > 3:
+		parts.push_front(digits.substr(digits.length() - 3, 3))
+		digits = digits.substr(0, digits.length() - 3)
+	parts.push_front(digits)
+	var joined := ",".join(parts)
+	return "-" + joined if negative else joined
+
+
 # ── 私有輔助 ──────────────────────────────────
 
 

@@ -431,7 +431,7 @@ func _refresh_skill_slot_ui(i: int, slot: Dictionary) -> void:
 
 	var hp_value_label: Label = slot_node.get_node_or_null("HpValueLabel")
 	if hp_value_label:
-		hp_value_label.text = "%d/%d" % [max(0, current_hp), max(max_hp, 0)]
+		hp_value_label.text = "%s/%s" % [GameState.format_number(max(0, current_hp)), GameState.format_number(max(max_hp, 0))]
 
 	var cooldown_bar_fill: ColorRect = slot_node.get_node_or_null("CooldownBarBg/CooldownBarFill")
 	if cooldown_bar_fill:

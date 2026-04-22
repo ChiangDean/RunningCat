@@ -167,7 +167,7 @@ static func refresh_special_point_labels(scene, player_cat: PlayerCatData) -> vo
 	for stat_key: String in ["hp", "atk", "def"]:
 		if not scene._special_point_labels.has(stat_key):
 			continue
-		scene._special_point_labels[stat_key].text = "%d" % int(effective_points.get(stat_key, 0))
+		scene._special_point_labels[stat_key].text = GameState.format_number(int(effective_points.get(stat_key, 0)))
 
 
 static func refresh_special_buttons(scene, player_cat: PlayerCatData) -> void:
@@ -206,7 +206,7 @@ static func refresh_rank_labels(scene, player_cat: PlayerCatData) -> void:
 	scene._rank_stars_label.text = UiText.ENHANCE_CAT_RANK_FORMAT % [rank]
 	var held: int = player_cat.cat_shards
 	if scene._rank_progress_label != null:
-		scene._rank_progress_label.text = "%d/%d" % [held, cost]
+		scene._rank_progress_label.text = "%s/%s" % [GameState.format_number(held), GameState.format_number(cost)]
 	if scene._rank_progress_bar != null:
 		scene._rank_progress_bar.min_value = 0
 		scene._rank_progress_bar.max_value = maxf(float(cost), 1.0)
@@ -219,7 +219,7 @@ static func refresh_rank_labels(scene, player_cat: PlayerCatData) -> void:
 
 
 static func _format_stat_value(label: String, value: int, point_delta: int, bonus: float) -> String:
-	return "%s：%d +%d (%s)" % [label, value, point_delta, _format_bonus_value(bonus)]
+	return "%s：%s +%s (%s)" % [label, GameState.format_number(value), GameState.format_number(point_delta), _format_bonus_value(bonus)]
 
 
 static func _format_bonus_value(value: float) -> String:

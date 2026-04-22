@@ -152,7 +152,7 @@ func _make_item_card(item: Dictionary) -> Control:
 
 	name_label.text = str(item.get("name", ""))
 	name_label.tooltip_text = name_label.text
-	qty_label.text = str(qty)
+	qty_label.text = GameState.format_number(qty)
 	qty_label.tooltip_text = qty_label.text
 
 	if texture != null:

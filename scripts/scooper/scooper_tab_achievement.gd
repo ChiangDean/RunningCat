@@ -175,7 +175,7 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 	reward_icon.visible = reward_icon.texture != null
 	var reward_amount: int = int(reward_info.get("amount", 0))
 	reward_count_lbl.visible = reward_amount > 0
-	reward_count_lbl.text = "x%d" % reward_amount
+	reward_count_lbl.text = "x%s" % GameState.format_number(reward_amount)
 
 	var achievement_id: int = int(entry.get("achievementId", 0))
 	if is_completed and not is_claimed:

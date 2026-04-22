@@ -1813,15 +1813,7 @@ func _make_panel(pos: Vector2, size: Vector2, fill: Color, border: Color) -> Con
 
 
 func _format_resource_count(value: int) -> String:
-	var negative := value < 0
-	var digits := str(abs(value))
-	var parts: Array[String] = []
-	while digits.length() > 3:
-		parts.push_front(digits.substr(digits.length() - 3, 3))
-		digits = digits.substr(0, digits.length() - 3)
-	parts.push_front(digits)
-	var joined := ",".join(parts)
-	return "-" + joined if negative else joined
+	return GameState.format_number(value)
 
 
 func _refresh_resource_strip() -> void:
@@ -2093,7 +2085,7 @@ func _refresh_ui() -> void:
 			top_threshold = max((top_level + 1) * int(GameState.idle_config.get("scooper_exp_per_level", 10)), 1)
 		_top_exp_bar.max_value = top_threshold
 		_top_exp_bar.value = top_exp
-		_top_progress_value_label.text = "EXP %d/%d" % [top_exp, top_threshold]
+		_top_progress_value_label.text = "EXP %s/%s" % [GameState.format_number(top_exp), GameState.format_number(top_threshold)]
 	_boss_btn.visible = GameState.boss_available and not GameState.is_current_boss()
 	_refresh_resource_strip()
 	_refresh_sandbox_btn()
@@ -2147,7 +2139,7 @@ func _refresh_home_scoop_panel() -> void:
 		_home_exp_bar.max_value = threshold
 		_home_exp_bar.value = exp
 	if _home_exp_label != null:
-		_home_exp_label.text = "Lv.%d  EXP %d / %d" % [level, exp, threshold]
+		_home_exp_label.text = "Lv.%d  EXP %s / %s" % [level, GameState.format_number(exp), GameState.format_number(threshold)]
 
 	var poop_count := GameState.player_data.poop_count
 	_home_scoop_button.disabled = poop_count <= 0 or _home_scoop_request_in_flight or _home_scoop_animation_active
