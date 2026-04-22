@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://c8j7py7bbqxrw"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://b2ehsjhrymm5a" path="res://assets/sprites/ui/common/content_l_default_v1.png" id="2_3xpcd"]
+
+[node name="LineupBottomSectionEditor" type="Control" unique_id=1150485730]
+clip_contents = true
+layout_mode = 3
+anchors_preset = 0
+offset_right = 650.0
+offset_bottom = 540.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme = ExtResource("1")
+
+[node name="Frame" type="TextureRect" parent="." unique_id=2104707130]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_3xpcd")
+expand_mode = 1
+
+[node name="TitleLabel" type="Label" parent="." unique_id=1600682173]
+layout_mode = 0
+offset_left = 37.0
+offset_top = 36.0
+offset_right = 419.0
+offset_bottom = 72.0
+theme_override_colors/font_color = Color(0.96, 0.9, 0.78, 1)
+theme_override_colors/font_outline_color = Color(0.2, 0.1, 0.05, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 22
+text = ""
+vertical_alignment = 1
+
+[node name="SortHost" type="Control" parent="." unique_id=2005992078]
+clip_contents = true
+custom_minimum_size = Vector2(170, 36)
+anchors_preset = 0
+offset_left = 444.0
+offset_top = 36.0
+offset_right = 614.0
+offset_bottom = 72.0
+
+[node name="CatsListHost" type="Control" parent="." unique_id=1135697293]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 77.0
+offset_right = -18.0
+offset_bottom = -26.0
+grow_horizontal = 2
+grow_vertical = 2

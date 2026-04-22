@@ -3,7 +3,7 @@ extends Control
 
 const SW := 720.0
 const SH := 1280.0
-const SHELL_SCENE: PackedScene = preload("res://scenes/ui/SubmenuShellEditor.tscn")
+const SHELL_SCENE: PackedScene = preload("res://scenes/ui/overlay/SubmenuShellEditor.tscn")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 

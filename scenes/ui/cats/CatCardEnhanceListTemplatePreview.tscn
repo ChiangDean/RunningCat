@@ -1,8 +1,11 @@
-[gd_scene format=3 uid="uid://umfnk4s3v7hh"]
+[gd_scene format=3 uid="uid://i3ngwtv1fmdf"]
 
-[ext_resource type="PackedScene" uid="uid://c4wm38uss2ii1" path="res://scenes/ui/CatCardSquareTemplate.tscn" id="1"]
+[ext_resource type="PackedScene" uid="uid://c4wm38uss2ii1" path="res://scenes/ui/cats/CatCardSquareTemplate.tscn" id="1"]
 [ext_resource type="FontFile" uid="uid://vr1jgsnc66ig" path="res://assets/fonts/NotoSansTC/NotoSansTC-Bold.ttf" id="2"]
 [ext_resource type="FontFile" uid="uid://b62fb1oug0bfa" path="res://assets/fonts/Fredoka/Fredoka-Bold.ttf" id="3"]
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_a3w5j"]
+load_path = "res://.godot/imported/milk_cat_icon_v1.png-335a95f5c59a5c26a5db9cababeb4b87.ctex"
 
 [sub_resource type="FontVariation" id="FontVariation_enhance_name_bold"]
 fallbacks = Array[Font]([ExtResource("2")])
@@ -39,6 +42,7 @@ offset_left = 74.0
 offset_top = 177.0
 offset_right = 628.0
 offset_bottom = 686.0
+texture = SubResource("CompressedTexture2D_a3w5j")
 expand_mode = 0
 
 [node name="NameLabel" parent="." index="5" unique_id=865579714]
@@ -49,6 +53,7 @@ offset_bottom = 763.0
 theme_override_constants/outline_size = 10
 theme_override_fonts/font = SubResource("FontVariation_enhance_name_bold")
 theme_override_font_sizes/font_size = 50
+text = "三花貓"
 
 [node name="RankLabel" parent="." index="6" unique_id=582830414]
 offset_left = 566.0

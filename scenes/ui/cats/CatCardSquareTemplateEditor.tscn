@@ -2,8 +2,14 @@
 
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
 [ext_resource type="Texture2D" uid="uid://dxmidvy4xsddl" path="res://assets/sprites/ui/cards/square/cat_card_square_common.png" id="2"]
+[ext_resource type="FontFile" uid="uid://vr1jgsnc66ig" path="res://assets/fonts/NotoSansTC/NotoSansTC-Bold.ttf" id="3"]
+[ext_resource type="FontFile" uid="uid://b62fb1oug0bfa" path="res://assets/fonts/Fredoka/Fredoka-Bold.ttf" id="4"]
 [ext_resource type="Texture2D" uid="uid://b07pyvi25ndpc" path="res://assets/sprites/ui/character_refs/milk_cat/milk_cat_icon_v1.png" id="5"]
 [ext_resource type="Texture2D" uid="uid://x10cog3l4qm" path="res://assets/sprites/ui/cards/type_icons/cat_type_tank_v1.png" id="6"]
+
+[sub_resource type="FontVariation" id="FontVariation_card_name_bold"]
+fallbacks = Array[Font]([ExtResource("3")])
+base_font = ExtResource("4")
 
 [node name="CatCardSquareTemplateEditor" type="Control" unique_id=946444046]
 layout_mode = 3
@@ -30,77 +36,77 @@ stretch_mode = 6
 
 [node name="TypeIcon" type="TextureRect" parent="." unique_id=606194796]
 layout_mode = 0
-offset_left = 89.0
-offset_top = 85.0
-offset_right = 164.0
-offset_bottom = 160.0
+offset_left = 1.0
+offset_top = 18.0
+offset_right = 142.0
+offset_bottom = 140.0
 texture = ExtResource("6")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="RarityLabel" type="Label" parent="." unique_id=418787166]
 layout_mode = 0
-offset_left = 163.0
-offset_top = 93.0
-offset_right = 399.0
-offset_bottom = 143.0
+offset_left = 124.0
+offset_top = 56.0
+offset_right = 433.0
+offset_bottom = 99.0
 theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
 theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.8)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 34
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 27
 text = "FINE"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="LevelLabel" type="Label" parent="." unique_id=1614593167]
 layout_mode = 0
-offset_left = 134.0
-offset_top = 431.0
-offset_right = 196.0
-offset_bottom = 467.0
+offset_left = 97.0
+offset_top = 493.0
+offset_right = 171.0
+offset_bottom = 533.0
 theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
 theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.9)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 27
 text = "LV.5"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Portrait" type="TextureRect" parent="." unique_id=1533466550]
 layout_mode = 0
-offset_left = 128.0
-offset_top = 140.0
-offset_right = 434.0
-offset_bottom = 433.0
+offset_left = 74.0
+offset_top = 133.0
+offset_right = 480.0
+offset_bottom = 457.0
 texture = ExtResource("5")
-expand_mode = 2
 stretch_mode = 5
 
 [node name="NameLabel" type="Label" parent="." unique_id=785276717]
 layout_mode = 0
-offset_left = 168.0
-offset_top = 428.0
-offset_right = 388.0
-offset_bottom = 471.0
+offset_left = 95.0
+offset_top = 488.0
+offset_right = 444.0
+offset_bottom = 536.0
 theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
 theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.85)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 27
-text = "牛奶貓"
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = SubResource("FontVariation_card_name_bold")
+theme_override_font_sizes/font_size = 32
+text = "Milk Cat"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="RankLabel" type="Label" parent="." unique_id=1408047271]
 layout_mode = 0
-offset_left = 389.0
-offset_top = 402.0
-offset_right = 481.0
-offset_bottom = 469.0
+offset_left = 435.0
+offset_top = 453.0
+offset_right = 530.0
+offset_bottom = 533.0
 theme_override_colors/font_color = Color(0.423529, 0.278431, 0.145098, 1)
 theme_override_colors/font_outline_color = Color(0.956863, 0.917647, 0.807843, 0.85)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 40
-text = "0"
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 32
+text = "R0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -112,6 +118,6 @@ offset_right = 540.0
 offset_bottom = 608.0
 theme_override_colors/font_color = Color(0.980392, 0.94902, 0.886275, 0.86)
 theme_override_font_sizes/font_size = 16
-text = "拖曳各節點即可調整 template，切換 Texture 可預覽不同 rarity 與 type icon。"
+text = "Square base now follows the enhance-card layout. Adjust this file only when the shared cat card geometry changes."
 horizontal_alignment = 1
 vertical_alignment = 1

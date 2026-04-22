@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://bm7rse0uy6glc"]
+[gd_scene format=3 uid="uid://d07cptl7ybj0t"]
 
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
 [ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="2"]

@@ -2,7 +2,7 @@ class_name DungeonSceneUI
 extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const DUNGEON_CONTENT_EDITOR_SCENE = preload("res://scenes/ui/dungeon/DungeonContentEditor.tscn")
+const DUNGEON_CONTENT_EDITOR_SCENE = preload("res://scenes/ui/activity/dungeon/DungeonContentEditor.tscn")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const PlayerDungeonData = preload("res://scripts/data/player_dungeon_data.gd")

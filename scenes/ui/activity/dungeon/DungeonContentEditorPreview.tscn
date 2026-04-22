@@ -1,0 +1,588 @@
+[gd_scene format=3 uid="uid://c2on27u3yjmbp"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://b2ehsjhrymm5a" path="res://assets/sprites/ui/common/content_l_default_v1.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://d3t6ulbaubpos" path="res://assets/sprites/ui/common/content_m2_default_v1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://c4xrlbul504g4" path="res://assets/sprites/ui/common/button_m_default_v1.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://b3j1goddylwph" path="res://assets/sprites/ui/common/function_bar_m_v1.png" id="4_vb5tr"]
+[ext_resource type="Texture2D" uid="uid://c3nd53fjl233k" path="res://assets/sprites/ui/dungeon/cat_food.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="6"]
+[ext_resource type="Texture2D" uid="uid://bgnlujru3nkkk" path="res://assets/sprites/ui/rewards/item_slot_overlay_mask.png" id="7"]
+[ext_resource type="Texture2D" uid="uid://c3js2wqott8ic" path="res://assets/sprites/ui/rewards/cat_food.png" id="8"]
+[ext_resource type="Texture2D" uid="uid://cf1k0vs51rj6g" path="res://assets/sprites/ui/rewards/special_cat_food.png" id="9"]
+[ext_resource type="Texture2D" uid="uid://bakdwyhnhd6rl" path="res://assets/sprites/ui/rewards/diamonds.png" id="10"]
+[ext_resource type="Texture2D" uid="uid://xhh112x8cax4" path="res://assets/sprites/ui/rewards/trap_cages.png" id="11"]
+
+[node name="DungeonContentEditor" type="Control" unique_id=701516299]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+theme = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=55722976]
+layout_mode = 0
+offset_right = 720.0
+offset_bottom = 1280.0
+color = Color(0.09, 0.06, 0.05, 1)
+
+[node name="Workbench" type="ColorRect" parent="." unique_id=1918577129]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 86.0
+offset_right = 702.0
+offset_bottom = 1246.0
+color = Color(0.18, 0.13, 0.1, 0.88)
+
+[node name="TitleLabel" type="Label" parent="." unique_id=1604751502]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 24.0
+offset_right = 700.0
+offset_bottom = 58.0
+theme_override_colors/font_color = Color(1, 0.95, 0.87, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.03, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 22
+text = "Dungeon Content Editor"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HintLabel" type="Label" parent="." unique_id=1786130273]
+layout_mode = 0
+offset_left = 38.0
+offset_top = 58.0
+offset_right = 682.0
+offset_bottom = 82.0
+theme_override_colors/font_color = Color(0.98, 0.92, 0.82, 0.96)
+theme_override_colors/font_outline_color = Color(0.16, 0.07, 0.03, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 14
+text = "Move or resize any TextureRect / Label / slot group here to tune the dungeon layout manually."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ContentRoot" type="Control" parent="." unique_id=139328139]
+anchors_preset = 0
+offset_left = 40.0
+offset_top = 110.0
+offset_right = 680.0
+offset_bottom = 1220.0
+
+[node name="SectionLabel" type="Label" parent="ContentRoot" unique_id=419937996]
+visible = false
+layout_mode = 0
+offset_left = 8.0
+offset_top = 4.0
+offset_right = 236.0
+offset_bottom = 32.0
+theme_override_colors/font_color = Color(0.98, 0.92, 0.82, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.03, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 18
+text = "乾糧地下城"
+
+[node name="SummaryLabel" type="Label" parent="ContentRoot" unique_id=474648406]
+visible = false
+layout_mode = 0
+offset_left = 364.0
+offset_top = 4.0
+offset_right = 632.0
+offset_bottom = 32.0
+theme_override_colors/font_color = Color(0.97, 0.88, 0.68, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.03, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 18
+text = "層數 12 / 門票 3"
+horizontal_alignment = 2
+
+[node name="MainCard" type="Control" parent="ContentRoot" unique_id=946596132]
+anchors_preset = 0
+offset_top = 5.0
+offset_right = 640.0
+offset_bottom = 357.0
+
+[node name="Frame" type="TextureRect" parent="ContentRoot/MainCard" unique_id=1469758104]
+layout_mode = 0
+offset_top = 10.0
+offset_right = 639.23676
+offset_bottom = 314.0
+texture = ExtResource("2")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="PreviewIcon" type="TextureRect" parent="ContentRoot/MainCard" unique_id=1158403914]
+layout_mode = 0
+offset_left = 32.0
+offset_top = 55.0
+offset_right = 280.0
+offset_bottom = 303.0
+texture = ExtResource("5")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="DungeonNameLabel" type="Label" parent="ContentRoot/MainCard" unique_id=1281514027]
+layout_mode = 0
+offset_left = 306.0
+offset_top = 81.0
+offset_right = 600.0
+offset_bottom = 123.0
+theme_override_colors/font_color = Color(0.98, 0.95, 0.9, 1)
+theme_override_colors/font_outline_color = Color(0.16, 0.07, 0.03, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 28
+text = "乾糧地下城 層數 12"
+
+[node name="DungeonDescLabel" type="Label" parent="ContentRoot/MainCard" unique_id=315138596]
+visible = false
+layout_mode = 0
+offset_left = 306.0
+offset_top = 102.0
+offset_right = 598.0
+offset_bottom = 164.0
+theme_override_colors/font_color = Color(0.9, 0.84, 0.76, 1)
+theme_override_colors/font_outline_color = Color(0.14, 0.06, 0.02, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 16
+text = "挑戰地下城獲得大量乾糧與特級貓糧。"
+autowrap_mode = 3
+
+[node name="TicketBar" type="TextureRect" parent="ContentRoot/MainCard" unique_id=839791244]
+layout_mode = 0
+offset_left = 304.0
+offset_top = 156.0
+offset_right = 570.5946
+offset_bottom = 192.0
+texture = ExtResource("4_vb5tr")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TicketLabel" type="Label" parent="ContentRoot/MainCard" unique_id=297751274]
+layout_mode = 0
+offset_left = 305.0
+offset_top = 156.0
+offset_right = 570.0
+offset_bottom = 191.0
+theme_override_colors/font_color = Color(0.9019608, 0.8392157, 0.7607843, 1)
+theme_override_colors/font_outline_color = Color(0.98, 0.91, 0.72, 0.24)
+theme_override_constants/outline_size = 1
+theme_override_font_sizes/font_size = 16
+text = "乾糧地下城 門票 3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="AdBar" type="TextureRect" parent="ContentRoot/MainCard" unique_id=440921893]
+layout_mode = 0
+offset_left = 304.0
+offset_top = 209.0
+offset_right = 570.5946
+offset_bottom = 245.0
+texture = ExtResource("4_vb5tr")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="AdLabel" type="Label" parent="ContentRoot/MainCard" unique_id=1817419837]
+layout_mode = 0
+offset_left = 305.0
+offset_top = 209.0
+offset_right = 569.0
+offset_bottom = 243.0
+theme_override_colors/font_color = Color(0.9019608, 0.8392157, 0.7607843, 1)
+theme_override_colors/font_outline_color = Color(0.98, 0.91, 0.72, 0.24)
+theme_override_constants/outline_size = 1
+theme_override_font_sizes/font_size = 16
+text = "廣告補票次數 2"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SweepCard" type="Control" parent="ContentRoot" unique_id=67779408]
+anchors_preset = 0
+offset_top = 357.0
+offset_right = 314.0
+offset_bottom = 699.0
+
+[node name="Frame" type="TextureRect" parent="ContentRoot/SweepCard" unique_id=335860038]
+layout_mode = 0
+offset_right = 313.0
+offset_bottom = 315.08203
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TitleBar" type="TextureRect" parent="ContentRoot/SweepCard" unique_id=37165226]
+visible = false
+layout_mode = 0
+offset_left = 22.0
+offset_top = 22.0
+offset_right = 292.0
+offset_bottom = 74.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TitleLabel" type="Label" parent="ContentRoot/SweepCard" unique_id=1830815607]
+layout_mode = 0
+offset_left = 35.0
+offset_top = 15.0
+offset_right = 273.0
+offset_bottom = 51.0
+theme_override_colors/font_color = Color(0.9019608, 0.8392157, 0.7607843, 1)
+theme_override_font_sizes/font_size = 18
+text = "Lv.12 獲得獎勵"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RewardSlotA" type="Control" parent="ContentRoot/SweepCard" unique_id=1099033537]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 76.0
+offset_right = 152.0
+offset_bottom = 204.0
+scale = Vector2(0.25, 0.25)
+
+[node name="Frame" type="TextureRect" parent="ContentRoot/SweepCard/RewardSlotA" unique_id=287102651]
+layout_mode = 0
+offset_right = 512.0
+offset_bottom = 512.0
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemIcon" type="TextureRect" parent="ContentRoot/SweepCard/RewardSlotA" unique_id=1554001892]
+layout_mode = 0
+offset_left = 116.0
+offset_top = 116.0
+offset_right = 396.0
+offset_bottom = 396.0
+texture = ExtResource("8")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OverlayMask" type="TextureRect" parent="ContentRoot/SweepCard/RewardSlotA" unique_id=338643966]
+modulate = Color(1, 1, 1, 0.42)
+layout_mode = 0
+offset_left = 84.0
+offset_top = 84.0
+offset_right = 428.0
+offset_bottom = 428.0
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemNameLabel" type="Label" parent="ContentRoot/SweepCard/RewardSlotA" unique_id=1624597846]
+layout_mode = 0
+offset_left = 76.0
+offset_top = 428.0
+offset_right = 432.0
+offset_bottom = 482.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 11
+theme_override_font_sizes/font_size = 37
+text = "乾糧"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="CountLabel" type="Label" parent="ContentRoot/SweepCard/RewardSlotA" unique_id=185780512]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 332.0
+offset_right = 388.0
+offset_bottom = 417.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 58
+text = "60"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="RewardSlotB" type="Control" parent="ContentRoot/SweepCard" unique_id=1093302295]
+anchors_preset = 0
+offset_left = 160.0
+offset_top = 76.0
+offset_right = 288.0
+offset_bottom = 204.0
+scale = Vector2(0.25, 0.25)
+
+[node name="Frame" type="TextureRect" parent="ContentRoot/SweepCard/RewardSlotB" unique_id=1537339447]
+layout_mode = 0
+offset_right = 512.0
+offset_bottom = 512.0
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemIcon" type="TextureRect" parent="ContentRoot/SweepCard/RewardSlotB" unique_id=149545708]
+layout_mode = 0
+offset_left = 116.0
+offset_top = 116.0
+offset_right = 396.0
+offset_bottom = 396.0
+texture = ExtResource("9")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OverlayMask" type="TextureRect" parent="ContentRoot/SweepCard/RewardSlotB" unique_id=1307116787]
+modulate = Color(1, 1, 1, 0.42)
+layout_mode = 0
+offset_left = 84.0
+offset_top = 84.0
+offset_right = 428.0
+offset_bottom = 428.0
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemNameLabel" type="Label" parent="ContentRoot/SweepCard/RewardSlotB" unique_id=1617577164]
+layout_mode = 0
+offset_left = 76.0
+offset_top = 428.0
+offset_right = 432.0
+offset_bottom = 482.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 11
+theme_override_font_sizes/font_size = 37
+text = "特級貓糧"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="CountLabel" type="Label" parent="ContentRoot/SweepCard/RewardSlotB" unique_id=773465818]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 332.0
+offset_right = 388.0
+offset_bottom = 417.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 58
+text = "12"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="ActionButton" type="TextureRect" parent="ContentRoot/SweepCard" unique_id=1352129586]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 227.0
+offset_right = 290.0
+offset_bottom = 281.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ActionLabel" type="Label" parent="ContentRoot/SweepCard" unique_id=1656322164]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 237.0
+offset_right = 272.0
+offset_bottom = 269.0
+theme_override_colors/font_color = Color(0.23, 0.17, 0.1, 1)
+theme_override_font_sizes/font_size = 18
+text = "掃蕩 Lv.12"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ChallengeCard" type="Control" parent="ContentRoot" unique_id=1878974373]
+anchors_preset = 0
+offset_left = 326.0
+offset_top = 357.0
+offset_right = 640.0
+offset_bottom = 699.0
+
+[node name="Frame" type="TextureRect" parent="ContentRoot/ChallengeCard" unique_id=1503647241]
+layout_mode = 0
+offset_right = 315.0
+offset_bottom = 317.09534
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TitleBar" type="TextureRect" parent="ContentRoot/ChallengeCard" unique_id=1396906371]
+visible = false
+layout_mode = 0
+offset_left = 22.0
+offset_top = 22.0
+offset_right = 292.0
+offset_bottom = 74.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TitleLabel" type="Label" parent="ContentRoot/ChallengeCard" unique_id=1127936860]
+layout_mode = 0
+offset_left = 39.0
+offset_top = 15.0
+offset_right = 277.0
+offset_bottom = 51.0
+theme_override_colors/font_color = Color(0.9019608, 0.8392157, 0.7607843, 1)
+theme_override_font_sizes/font_size = 18
+text = "Lv.13 獲得獎勵"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RewardSlotA" type="Control" parent="ContentRoot/ChallengeCard" unique_id=891866251]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 76.0
+offset_right = 152.0
+offset_bottom = 204.0
+scale = Vector2(0.25, 0.25)
+
+[node name="Frame" type="TextureRect" parent="ContentRoot/ChallengeCard/RewardSlotA" unique_id=1118605975]
+layout_mode = 0
+offset_right = 512.0
+offset_bottom = 512.0
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemIcon" type="TextureRect" parent="ContentRoot/ChallengeCard/RewardSlotA" unique_id=827979801]
+layout_mode = 0
+offset_left = 116.0
+offset_top = 116.0
+offset_right = 396.0
+offset_bottom = 396.0
+texture = ExtResource("10")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OverlayMask" type="TextureRect" parent="ContentRoot/ChallengeCard/RewardSlotA" unique_id=1478303485]
+modulate = Color(1, 1, 1, 0.42)
+layout_mode = 0
+offset_left = 84.0
+offset_top = 84.0
+offset_right = 428.0
+offset_bottom = 428.0
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemNameLabel" type="Label" parent="ContentRoot/ChallengeCard/RewardSlotA" unique_id=833050396]
+layout_mode = 0
+offset_left = 76.0
+offset_top = 428.0
+offset_right = 432.0
+offset_bottom = 482.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 11
+theme_override_font_sizes/font_size = 37
+text = "鑽石"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="CountLabel" type="Label" parent="ContentRoot/ChallengeCard/RewardSlotA" unique_id=1799452859]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 332.0
+offset_right = 388.0
+offset_bottom = 417.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 58
+text = "26"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="RewardSlotB" type="Control" parent="ContentRoot/ChallengeCard" unique_id=76094786]
+anchors_preset = 0
+offset_left = 160.0
+offset_top = 76.0
+offset_right = 288.0
+offset_bottom = 204.0
+scale = Vector2(0.25, 0.25)
+
+[node name="Frame" type="TextureRect" parent="ContentRoot/ChallengeCard/RewardSlotB" unique_id=595685130]
+layout_mode = 0
+offset_right = 512.0
+offset_bottom = 512.0
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemIcon" type="TextureRect" parent="ContentRoot/ChallengeCard/RewardSlotB" unique_id=2044080631]
+layout_mode = 0
+offset_left = 116.0
+offset_top = 116.0
+offset_right = 396.0
+offset_bottom = 396.0
+texture = ExtResource("11")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OverlayMask" type="TextureRect" parent="ContentRoot/ChallengeCard/RewardSlotB" unique_id=1788113497]
+modulate = Color(1, 1, 1, 0.42)
+layout_mode = 0
+offset_left = 84.0
+offset_top = 84.0
+offset_right = 428.0
+offset_bottom = 428.0
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemNameLabel" type="Label" parent="ContentRoot/ChallengeCard/RewardSlotB" unique_id=1132779428]
+layout_mode = 0
+offset_left = 76.0
+offset_top = 428.0
+offset_right = 432.0
+offset_bottom = 482.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 11
+theme_override_font_sizes/font_size = 37
+text = "誘捕籠"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="CountLabel" type="Label" parent="ContentRoot/ChallengeCard/RewardSlotB" unique_id=1162444100]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 332.0
+offset_right = 388.0
+offset_bottom = 417.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 58
+text = "3"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="ActionButton" type="TextureRect" parent="ContentRoot/ChallengeCard" unique_id=1113215600]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 227.0
+offset_right = 290.0
+offset_bottom = 281.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ActionLabel" type="Label" parent="ContentRoot/ChallengeCard" unique_id=11228443]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 237.0
+offset_right = 272.0
+offset_bottom = 269.0
+theme_override_colors/font_color = Color(0.23, 0.17, 0.1, 1)
+theme_override_font_sizes/font_size = 18
+text = "挑戰 Lv.13"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NoteLabel" type="Label" parent="ContentRoot" unique_id=696308961]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 782.0
+offset_right = 624.0
+offset_bottom = 844.0
+theme_override_colors/font_color = Color(0.98, 0.92, 0.82, 0.96)
+theme_override_colors/font_outline_color = Color(0.16, 0.07, 0.03, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 15
+text = "This editor scene is only for manual layout tuning. You can drag each image, label, or slot group independently."
+autowrap_mode = 3
