@@ -500,4 +500,4 @@ func _format_remaining_time(seconds_left: int) -> String:
 func _on_back_pressed() -> void:
 	if not _cat_picker_close.is_null():
 		_cat_picker_close.call()
-	SceneNavigator.return_to_battle()
+	SceneNavigator.open_overlay_scene("res://scenes/ActivityScene.tscn")
