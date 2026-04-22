@@ -98,7 +98,7 @@ static func build_ui(scene) -> void:
 			{
 				"key": "catalog",
 				"label": UiText.ENHANCE_SUBMENU_CATALOG,
-				"shell_description": UiText.ENHANCE_CATALOG_TODO_BODY,
+				"shell_description": "\u700f\u89bd\u6240\u6709\u8c93\u54aa\u7684\u5716\u9451\u8cc7\u6599\u8207\u57fa\u790e\u80fd\u529b\u3002",
 				"shell_summary_left": func() -> String:
 					return _build_shell_summary_left(scene),
 				"shell_summary_right": func() -> String:
@@ -122,65 +122,42 @@ static func build_ui(scene) -> void:
 	scene._main_section.add_theme_constant_override("separation", 12)
 	content_vbox.add_child(scene._main_section)
 
-	var cats_panel := _make_card_panel()
-	cats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cats_panel.size_flags_stretch_ratio = 1.0
-	scene._main_section.add_child(cats_panel)
-
-	var cats_margin := _make_content_margin(14)
-	cats_panel.add_child(cats_margin)
-
-	var cats_vbox := VBoxContainer.new()
-	cats_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cats_vbox.add_theme_constant_override("separation", 10)
-	cats_margin.add_child(cats_vbox)
-
-	var cats_title := Label.new()
-	cats_title.text = UiText.ENHANCE_CAT_LIST_TITLE
-	cats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
-	cats_vbox.add_child(cats_title)
-
 	scene._cat_hscroll = ScrollContainer.new()
 	scene._cat_hscroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scene._cat_hscroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scene._cat_hscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	cats_vbox.add_child(scene._cat_hscroll)
+	scene._main_section.add_child(scene._cat_hscroll)
+	scene._cat_hscroll.resized.connect(Callable(scene, "_refresh_cat_card_sizes"))
 
 	scene._cats_container = GridContainer.new()
-	scene._cats_container.columns = 3
+	scene._cats_container.columns = 4
 	scene._cats_container.add_theme_constant_override("separation", 12)
 	scene._cats_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scene._cat_hscroll.add_child(scene._cats_container)
 	scene._cat_scroller = InertialScroller.attach(scene._cat_hscroll, "vertical")
 
-	scene._catalog_section = _make_card_panel()
+	scene._catalog_section = VBoxContainer.new()
 	scene._catalog_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scene._catalog_section.add_theme_constant_override("separation", 12)
 	content_vbox.add_child(scene._catalog_section)
 
-	var catalog_margin := _make_content_margin(20)
-	scene._catalog_section.add_child(catalog_margin)
+	scene._catalog_hscroll = ScrollContainer.new()
+	scene._catalog_hscroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scene._catalog_hscroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scene._catalog_hscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scene._catalog_section.add_child(scene._catalog_hscroll)
+	scene._catalog_hscroll.resized.connect(Callable(scene, "_refresh_catalog_card_sizes"))
 
-	var catalog_box := VBoxContainer.new()
-	catalog_box.alignment = BoxContainer.ALIGNMENT_CENTER
-	catalog_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	catalog_box.add_theme_constant_override("separation", 12)
-	catalog_margin.add_child(catalog_box)
-
-	var catalog_title := Label.new()
-	catalog_title.text = UiText.ENHANCE_CATALOG_TITLE
-	catalog_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	catalog_title.add_theme_font_size_override("font_size", 30)
-	catalog_box.add_child(catalog_title)
-
-	var catalog_desc := Label.new()
-	catalog_desc.text = UiText.ENHANCE_CATALOG_TODO_BODY
-	catalog_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	catalog_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	catalog_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	catalog_desc.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
-	catalog_box.add_child(catalog_desc)
+	scene._catalog_container = GridContainer.new()
+	scene._catalog_container.columns = 4
+	scene._catalog_container.add_theme_constant_override("separation", 12)
+	scene._catalog_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scene._catalog_hscroll.add_child(scene._catalog_container)
+	scene._catalog_scroller = InertialScroller.attach(scene._catalog_hscroll, "vertical")
 
 	refresh_submenu_state(scene)
 	populate_cat_buttons(scene)
+	populate_catalog_buttons(scene)
 
 
 static func refresh_submenu_state(scene) -> void:
@@ -203,10 +180,11 @@ static func populate_cat_buttons(scene) -> void:
 		child.queue_free()
 
 	var owned: Array = scene.GameState.get_owned_cats()
-	if scene._selected_cat_id == "" and owned.size() > 0:
-		scene._selected_cat_id = owned[0]
-	if scene._selected_cat_id != "" and not owned.has(scene._selected_cat_id):
-		scene._selected_cat_id = owned[0] if owned.size() > 0 else ""
+	if scene._active_submenu != "catalog":
+		if scene._selected_cat_id == "" and owned.size() > 0:
+			scene._selected_cat_id = owned[0]
+		if scene._selected_cat_id != "" and not owned.has(scene._selected_cat_id):
+			scene._selected_cat_id = owned[0] if owned.size() > 0 else ""
 
 	if owned.is_empty():
 		var empty_label := Label.new()
@@ -220,6 +198,39 @@ static func populate_cat_buttons(scene) -> void:
 	for cat_id: String in owned:
 		var player_cat: PlayerCatData = scene.GameState.get_player_cat(cat_id)
 		scene._cats_container.add_child(_make_cat_card(scene, cat_id, player_cat, cat_id == scene._selected_cat_id))
+
+	refresh_cat_card_sizes(scene)
+
+
+static func populate_catalog_buttons(scene) -> void:
+	if scene._catalog_container == null:
+		return
+
+	for child in scene._catalog_container.get_children():
+		child.queue_free()
+
+	var cat_ids: Array[String] = _get_catalog_cat_ids(scene)
+	if scene._selected_cat_id == "" and cat_ids.size() > 0:
+		scene._selected_cat_id = cat_ids[0]
+	if scene._selected_cat_id != "" and not cat_ids.has(scene._selected_cat_id):
+		scene._selected_cat_id = cat_ids[0]
+
+	if cat_ids.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "\u5c1a\u7121\u5716\u9451\u8cc7\u6599\u3002"
+		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+		empty_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+		scene._catalog_container.add_child(empty_label)
+		return
+
+	for cat_id: String in cat_ids:
+		var cat_data := CatData.from_json_file(cat_id + ".json")
+		if cat_data == null:
+			continue
+		scene._catalog_container.add_child(_make_catalog_cat_card(scene, cat_id, cat_data))
+
+	refresh_catalog_card_sizes(scene)
 
 
 static func rebuild_detail_panel(scene) -> void:
@@ -259,10 +270,15 @@ static func rebuild_detail_panel(scene) -> void:
 		scene._detail_panel.add_child(empty_label)
 		return
 
-	var player_cat: PlayerCatData = scene.GameState.get_player_cat(scene._selected_cat_id)
 	var cat_data := CatData.from_json_file(scene._selected_cat_id + ".json")
 	if cat_data == null:
 		return
+	if scene._is_catalog_detail_mode():
+		var preview_cat: PlayerCatData = scene._build_catalog_preview_cat(scene._selected_cat_id)
+		_build_catalog_detail_panel(scene, cat_data, preview_cat)
+		return
+
+	var player_cat: PlayerCatData = scene.GameState.get_player_cat(scene._selected_cat_id)
 
 	var summary_panel := _make_card_panel(OverlaySceneChrome.PANEL_BORDER)
 	summary_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -561,6 +577,7 @@ static func rebuild_detail_panel(scene) -> void:
 
 static func open_selected_cat_dialog(scene) -> void:
 	close_selected_cat_dialog(scene)
+	scene._detail_context_submenu = scene._active_submenu
 
 	var detail_scroll: ScrollContainer = ScrollContainer.new()
 	detail_scroll.custom_minimum_size = Vector2(DETAIL_DIALOG_CONTENT_W, 780.0)
@@ -603,6 +620,7 @@ static func on_detail_dialog_closed(scene) -> void:
 	scene._detail_dialog_close = Callable()
 	scene._detail_dialog_scroll = null
 	scene._detail_dialog_scroller = null
+	scene._detail_context_submenu = ""
 	scene._detail_panel = null
 	scene._stat_labels.clear()
 	scene._special_point_labels.clear()
@@ -632,8 +650,6 @@ static func on_detail_dialog_closed(scene) -> void:
 static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_selected: bool) -> PanelContainer:
 	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_id)
 	var cat_data: CatData = CatData.from_json_file(cat_id + ".json")
-	var select_button_bg: Color = Color(0.27, 0.29, 0.21, 0.96) if is_selected else UiPalette.BUTTON_PRIMARY_BG
-	var select_button_fg: Color = Color(0.88, 0.90, 0.74, 1.0) if is_selected else Color(0.16, 0.11, 0.05, 1.0)
 	var card: PanelContainer = CatRosterCard.build({
 		"is_selected": is_selected,
 		"template_key": "enhance_list",
@@ -647,14 +663,200 @@ static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_
 		"whole_card_pressed": Callable(scene, "_on_cat_button_pressed").bind(cat_id),
 		"card_height": 232.0,
 		"icon_size": Vector2(110.0, 110.0),
-		"card_border": OverlaySceneChrome.CARD_BORDER,
-		"selected_card_border": OverlaySceneChrome.PANEL_BORDER,
+		"frame_margin": 0,
+		"card_border": Color(0.0, 0.0, 0.0, 0.0),
+		"selected_card_border": Color(0.0, 0.0, 0.0, 0.0),
 		"title_color": Color(0.42, 0.28, 0.15, 1.0),
-		"button_bg": select_button_bg,
-		"button_fg": select_button_fg,
 	})
 	RedDotService.refresh_dot(CatRosterCard.get_badge_target(card), RedDotService.can_rank_up_cat(player_cat))
 	return card
+
+
+static func _make_catalog_cat_card(scene, cat_id: String, cat_data: CatData) -> PanelContainer:
+	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_id)
+	return CatRosterCard.build({
+		"is_selected": false,
+		"template_key": "enhance_list",
+		"title_text": cat_data.display_name,
+		"icon_texture": cat_icon,
+		"fallback_text": cat_data.display_name.substr(0, 1),
+		"level_value": 1,
+		"rank_value": 0,
+		"cat_type": cat_data.cat_type,
+		"rarity_key": cat_data.rarity,
+		"whole_card_pressed": Callable(scene, "_on_cat_button_pressed").bind(cat_id),
+		"card_height": 232.0,
+		"icon_size": Vector2(110.0, 110.0),
+		"frame_margin": 0,
+		"card_border": Color(0.0, 0.0, 0.0, 0.0),
+		"selected_card_border": Color(0.0, 0.0, 0.0, 0.0),
+		"title_color": Color(0.42, 0.28, 0.15, 1.0),
+	})
+
+
+static func refresh_cat_card_sizes(scene) -> void:
+	_refresh_grid_card_sizes(scene._cat_hscroll, scene._cats_container)
+
+
+static func refresh_catalog_card_sizes(scene) -> void:
+	_refresh_grid_card_sizes(scene._catalog_hscroll, scene._catalog_container)
+
+
+static func _refresh_grid_card_sizes(scroll: ScrollContainer, grid: GridContainer) -> void:
+	if scroll == null or grid == null:
+		return
+	var columns: int = maxi(1, grid.columns)
+	var spacing: float = float(grid.get_theme_constant("separation"))
+	var viewport_width: float = scroll.size.x
+	var scrollbar: VScrollBar = scroll.get_v_scroll_bar()
+	if scrollbar != null and scrollbar.visible:
+		viewport_width -= scrollbar.size.x
+	if viewport_width <= 0.0:
+		return
+	var card_side: float = floor((viewport_width - spacing * float(columns - 1)) / float(columns))
+	card_side = maxf(120.0, card_side)
+	grid.custom_minimum_size = Vector2(
+		card_side * float(columns) + spacing * float(columns - 1),
+		0.0
+	)
+	for child: Node in grid.get_children():
+		var card := child as Control
+		if card == null:
+			continue
+		card.custom_minimum_size = Vector2(card_side, card_side)
+		card.update_minimum_size()
+	grid.queue_sort()
+	grid.update_minimum_size()
+
+
+static func _get_catalog_cat_ids(scene) -> Array[String]:
+	var result: Array[String] = []
+	var rows: Array[Dictionary] = []
+	for item: Variant in scene.GameState.cat_catalog:
+		if item is Dictionary:
+			rows.append(item as Dictionary)
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("catalog_id", a.get("catalogId", 0))) < int(b.get("catalog_id", b.get("catalogId", 0))))
+	for row: Dictionary in rows:
+		var cat_id: String = str(row.get("id", "")).strip_edges()
+		if cat_id != "":
+			result.append(cat_id)
+	return result
+
+
+static func _build_catalog_detail_panel(scene, cat_data: CatData, preview_cat: PlayerCatData) -> void:
+	var summary_panel := _make_card_panel(OverlaySceneChrome.PANEL_BORDER)
+	summary_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scene._detail_panel.add_child(summary_panel)
+
+	var summary_margin := _make_content_margin(16)
+	summary_panel.add_child(summary_margin)
+
+	var summary_stack := VBoxContainer.new()
+	summary_stack.add_theme_constant_override("separation", 12)
+	summary_margin.add_child(summary_stack)
+
+	var catalog_hint := Label.new()
+	catalog_hint.text = "\u5716\u9451\u9810\u89bd\uff1a\u986f\u793a\u7b49\u7d1a 1\u3001\u54c1\u968e 0 \u7684\u6280\u80fd\u8207\u57fa\u790e\u5c6c\u6027\u3002"
+	catalog_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	catalog_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	catalog_hint.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
+	summary_stack.add_child(catalog_hint)
+
+	var summary_row := HBoxContainer.new()
+	summary_row.add_theme_constant_override("separation", 14)
+	summary_stack.add_child(summary_row)
+
+	var left_column := VBoxContainer.new()
+	left_column.custom_minimum_size = Vector2(152.0, 0.0)
+	left_column.add_theme_constant_override("separation", 8)
+	summary_row.add_child(left_column)
+
+	var icon_shell := PanelContainer.new()
+	icon_shell.custom_minimum_size = Vector2(152.0, 152.0)
+	icon_shell.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(ART_FILL, ART_BORDER, 14))
+	left_column.add_child(icon_shell)
+
+	var icon_center := CenterContainer.new()
+	icon_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	icon_shell.add_child(icon_center)
+	icon_center.add_child(_make_idle_preview(scene._selected_cat_id, Vector2(120.0, 120.0)))
+
+	var left_meta_row := HBoxContainer.new()
+	left_meta_row.add_theme_constant_override("separation", 8)
+	left_meta_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	left_column.add_child(left_meta_row)
+
+	var level_label := Label.new()
+	level_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	level_label.add_theme_color_override("font_color", SLOT_NAME_COLOR)
+	level_label.text = UiText.ENHANCE_CAT_LEVEL_FORMAT % [preview_cat.cat_food_level]
+	left_meta_row.add_child(_make_info_chip(level_label, Color(0.20, 0.16, 0.18, 0.92), OverlaySceneChrome.CARD_BORDER))
+
+	var rank_label := Label.new()
+	rank_label.add_theme_font_size_override("font_size", 17)
+	rank_label.add_theme_color_override("font_color", SLOT_NAME_COLOR)
+	rank_label.text = UiText.ENHANCE_CAT_RANK_FORMAT % [preview_cat.rank]
+	left_meta_row.add_child(_make_info_chip(rank_label, Color(0.20, 0.16, 0.18, 0.92), OverlaySceneChrome.CARD_BORDER))
+
+	var right_column := VBoxContainer.new()
+	right_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_column.add_theme_constant_override("separation", 12)
+	summary_row.add_child(right_column)
+
+	var skill_panel := _make_card_panel(OverlaySceneChrome.CARD_BORDER)
+	skill_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_column.add_child(skill_panel)
+
+	var skill_margin := _make_content_margin(12)
+	skill_panel.add_child(skill_margin)
+
+	var skill_box := VBoxContainer.new()
+	skill_box.add_theme_constant_override("separation", 10)
+	skill_margin.add_child(skill_box)
+
+	var skill_title := Label.new()
+	skill_title.text = UiText.ENHANCE_SKILL_TITLE
+	skill_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+	skill_box.add_child(skill_title)
+
+	var skill_root: VBoxContainer = scene._detail_panel
+	scene._detail_panel = skill_box
+	Refresh.build_skill_section(scene, cat_data, preview_cat)
+	scene._detail_panel = skill_root
+
+	var stats_panel := _make_card_panel(ART_BORDER)
+	stats_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scene._detail_panel.add_child(stats_panel)
+
+	var stats_margin := _make_content_margin(12)
+	stats_panel.add_child(stats_margin)
+
+	var stats_box := VBoxContainer.new()
+	stats_box.add_theme_constant_override("separation", 10)
+	stats_margin.add_child(stats_box)
+
+	var stats_title := Label.new()
+	stats_title.text = UiText.ENHANCE_STATS_TITLE
+	stats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+	stats_box.add_child(stats_title)
+
+	for stat_item: Dictionary in [
+		{"label": UiText.ENHANCE_STAT_HP, "value": cat_data.max_hp},
+		{"label": UiText.ENHANCE_STAT_ATK, "value": cat_data.atk},
+		{"label": UiText.ENHANCE_STAT_DEF, "value": cat_data.defense},
+	]:
+		var row_card := PanelContainer.new()
+		row_card.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(Color(0.13, 0.12, 0.14, 0.94), OverlaySceneChrome.CARD_BORDER, 12))
+		stats_box.add_child(row_card)
+
+		var row_margin := _make_content_margin(10)
+		row_card.add_child(row_margin)
+
+		var row_label := Label.new()
+		row_label.text = "%s: %d" % [str(stat_item.get("label", "")), int(stat_item.get("value", 0))]
+		row_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+		row_margin.add_child(row_label)
 
 
 static func _make_idle_preview(cat_id: String, preview_size: Vector2) -> Control:
@@ -751,5 +953,5 @@ static func _build_shell_summary_left(scene) -> String:
 static func _build_shell_summary_right(scene, submenu_key: String) -> String:
 	var owned_count: int = scene.GameState.get_owned_cats().size()
 	if submenu_key == "catalog":
-		return "\u5716\u9451 %d" % owned_count
+		return "\u5716\u9451 %d \u7a2e" % _get_catalog_cat_ids(scene).size()
 	return "\u5df2\u64c1\u6709 %d \u96bb" % owned_count

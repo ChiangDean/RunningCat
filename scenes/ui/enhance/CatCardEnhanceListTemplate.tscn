@@ -1,0 +1,59 @@
+[gd_scene format=3 uid="uid://umfnk4s3v7hh"]
+
+[ext_resource type="PackedScene" uid="uid://c4wm38uss2ii1" path="res://scenes/ui/CatCardSquareTemplate.tscn" id="1"]
+[ext_resource type="FontFile" uid="uid://vr1jgsnc66ig" path="res://assets/fonts/NotoSansTC/NotoSansTC-Bold.ttf" id="2"]
+[ext_resource type="FontFile" uid="uid://b62fb1oug0bfa" path="res://assets/fonts/Fredoka/Fredoka-Bold.ttf" id="3"]
+
+[sub_resource type="FontVariation" id="FontVariation_enhance_name_bold"]
+fallbacks = Array[Font]([ExtResource("2")])
+base_font = ExtResource("3")
+
+[node name="CatCardEnhanceListTemplate" unique_id=816321270 instance=ExtResource("1")]
+
+[node name="CardFrame" parent="." index="0" unique_id=406829292]
+offset_right = 710.0
+offset_bottom = 816.91113
+
+[node name="TypeIcon" parent="." index="1" unique_id=858657682]
+offset_left = -19.0
+offset_top = 39.0
+offset_right = 173.0
+offset_bottom = 231.0
+
+[node name="RarityLabel" parent="." index="2" unique_id=227261098]
+offset_left = 141.0
+offset_top = 94.0
+offset_right = 563.0
+offset_bottom = 162.0
+theme_override_font_sizes/font_size = 42
+
+[node name="LevelLabel" parent="." index="3" unique_id=960751155]
+offset_left = 102.0
+offset_top = 702.0
+offset_right = 203.0
+offset_bottom = 759.0
+theme_override_font_sizes/font_size = 42
+
+[node name="Portrait" parent="." index="4" unique_id=108537395]
+offset_left = 74.0
+offset_top = 177.0
+offset_right = 628.0
+offset_bottom = 686.0
+expand_mode = 0
+
+[node name="NameLabel" parent="." index="5" unique_id=865579714]
+offset_left = 98.0
+offset_top = 690.0
+offset_right = 575.0
+offset_bottom = 763.0
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = SubResource("FontVariation_enhance_name_bold")
+theme_override_font_sizes/font_size = 50
+
+[node name="RankLabel" parent="." index="6" unique_id=582830414]
+offset_left = 566.0
+offset_top = 636.0
+offset_right = 696.0
+offset_bottom = 761.0
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 50

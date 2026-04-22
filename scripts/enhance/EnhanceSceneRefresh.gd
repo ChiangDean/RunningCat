@@ -9,6 +9,8 @@ const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
 
 static func refresh_all_labels(scene) -> void:
 	refresh_resource_label(scene)
+	if scene._is_catalog_detail_mode():
+		return
 	if scene._selected_cat_id == "":
 		return
 
