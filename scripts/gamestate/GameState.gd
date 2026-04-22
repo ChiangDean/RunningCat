@@ -359,6 +359,8 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 
 	var expedition_zones_variant: Variant = data.get("expeditionZones", [])
 	apply_expedition_bootstrap(expedition_zones_variant if expedition_zones_variant is Array else [])
+	var active_expeditions_variant: Variant = data.get("activeExpeditions", [])
+	apply_expedition_data(active_expeditions_variant if active_expeditions_variant is Array else [])
 
 	_rebuild_cached_static_configs()
 

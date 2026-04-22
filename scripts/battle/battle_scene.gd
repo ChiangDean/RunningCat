@@ -279,7 +279,6 @@ func _ready() -> void:
 	GameState.red_dot_state_changed.connect(_on_red_dot_state_changed)
 	_build_scene()
 	_refresh_home_red_dots()
-	_refresh_expedition_red_dot_state()
 	UiAudio.stop_bgm()
 	_start_battle()
 	# Update the idle button text every second.
@@ -1760,10 +1759,6 @@ func _refresh_home_red_dots() -> void:
 	_refresh_mail_badge()
 
 
-func _refresh_expedition_red_dot_state() -> void:
-	ApiClient.get_expedition(Callable(self, "_on_expedition_red_dot_state_refreshed"))
-
-
 func _toggle_home_more_menu() -> void:
 	_home_more_menu_expanded = not _home_more_menu_expanded
 	_refresh_home_more_menu_visibility()
@@ -3001,14 +2996,6 @@ func _on_pending_scooper_profile_fetched(profile_ok: bool, profile_data: Variant
 	if profile_ok and profile_data is Dictionary:
 		_home_scoop_pending_profile = (profile_data as Dictionary).duplicate(true)
 	_try_finalize_home_scoop_resolution()
-
-
-func _on_expedition_red_dot_state_refreshed(success: bool, data: Variant, _error: Dictionary) -> void:
-	if not success or not (data is Dictionary):
-		return
-	var response: Dictionary = data
-	var expeditions_variant: Variant = response.get("activeExpeditions", [])
-	GameState.apply_expedition_data(expeditions_variant if expeditions_variant is Array else [])
 
 
 func _on_home_scoop_silent_completed(ok: bool, data: Variant, err: Dictionary) -> void:

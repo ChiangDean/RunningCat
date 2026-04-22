@@ -2,6 +2,7 @@ class_name ArenaSceneHelpers
 extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const ArenaRankSystem = preload("res://scripts/systems/arena_rank_system.gd")
 
 
 static func get_team_member_player_cat_ids(team_type: String, fallback_team_type: String = "") -> Array:
@@ -53,6 +54,13 @@ static func format_opponent_team(opponent: Dictionary) -> String:
 
 static func format_rewards(rewards: Array) -> String:
 	var parts: Array[String] = []
+	for reward_entry: Dictionary in get_reward_entries(rewards):
+		parts.append("%s x%d" % [str(reward_entry.get("name", "")), int(reward_entry.get("qty", 0))])
+	return " / ".join(parts) if not parts.is_empty() else UiText.COMMON_NO_REWARD
+
+
+static func get_reward_entries(rewards: Array) -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
 	for reward_variant: Variant in rewards:
 		if not (reward_variant is Dictionary):
 			continue
@@ -60,9 +68,13 @@ static func format_rewards(rewards: Array) -> String:
 		var quantity: int = int(reward.get("quantity", 0))
 		if quantity <= 0:
 			continue
-		var label: String = _get_reward_type_label(str(reward.get("rewardType", "")))
-		parts.append("%s ×%d" % [label, quantity])
-	return "、".join(parts) if not parts.is_empty() else UiText.COMMON_NO_REWARD
+		var reward_type: String = str(reward.get("rewardType", ""))
+		entries.append({
+			"name": _get_reward_type_label(reward_type),
+			"qty": quantity,
+			"path": _get_reward_catalog_path(reward_type),
+		})
+	return entries
 
 
 static func build_error_message(error: Dictionary) -> String:
@@ -71,7 +83,34 @@ static func build_error_message(error: Dictionary) -> String:
 
 
 static func get_current_rank(overview: Dictionary) -> String:
-	return str(overview.get("rankName", UiText.ARENA_DEFAULT_RANK))
+	return get_rank_display_name(
+		str(overview.get("rankKey", "")),
+		str(overview.get("rankName", UiText.ARENA_DEFAULT_RANK))
+	)
+
+
+static func get_rank_display_name(rank_key: String, fallback_name: String = "") -> String:
+	var normalized_rank_key: String = rank_key.strip_edges().to_lower()
+	if normalized_rank_key != "" and ArenaRankSystem.RANK_NAMES.has(normalized_rank_key):
+		return str(ArenaRankSystem.RANK_NAMES.get(normalized_rank_key, fallback_name))
+
+	var trimmed_name: String = fallback_name.strip_edges()
+	if trimmed_name == "":
+		return UiText.ARENA_REWARD_UNKNOWN_RANK
+
+	var replacements: Dictionary = {
+		"Bronze": "銅牌",
+		"Silver": "銀牌",
+		"Gold": "金牌",
+		"Platinum": "白金",
+		"Diamond": "鑽石",
+		"Master": "大師",
+		"Elite": "菁英",
+	}
+	for english_name: String in replacements.keys():
+		if trimmed_name.begins_with(english_name):
+			return trimmed_name.replace(english_name, str(replacements.get(english_name, english_name)))
+	return trimmed_name
 
 
 static func get_current_score(overview: Dictionary) -> int:
@@ -120,7 +159,7 @@ static func _format_member_names(members: Array) -> String:
 		if cat_id == "":
 			continue
 		names.append(CatRegistry.get_cat_display_name_with_lv(cat_id, level))
-	return "、".join(names) if not names.is_empty() else UiText.ARENA_UNSET_TEAM
+	return " / ".join(names) if not names.is_empty() else UiText.ARENA_UNSET_TEAM
 
 
 static func _get_reward_type_label(reward_type: String) -> String:
@@ -133,5 +172,23 @@ static func _get_reward_type_label(reward_type: String) -> String:
 			return UiText.REWARD_CAT_FOOD
 		"SpecialCatFood":
 			return UiText.REWARD_SPECIAL_CAT_FOOD
+		"Gold":
+			return UiText.REWARD_GOLD
 		_:
 			return reward_type if reward_type != "" else UiText.COMMON_NO_REWARD
+
+
+static func _get_reward_catalog_path(reward_type: String) -> String:
+	match reward_type:
+		"Gold":
+			return "catalog/currency/gold"
+		"Diamond":
+			return "catalog/currency/diamonds"
+		"TrapCage":
+			return "catalog/consumable/trap_cages"
+		"CatFood":
+			return "catalog/consumable/cat_food"
+		"SpecialCatFood":
+			return "catalog/consumable/special_cat_food"
+		_:
+			return ""
