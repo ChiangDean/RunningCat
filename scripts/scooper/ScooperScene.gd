@@ -4,13 +4,14 @@ extends Control
 const SW := 720.0
 const SH := 1280.0
 const SHELL_SCENE: PackedScene = preload("res://scenes/ui/SubmenuShellEditor.tscn")
+const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
-const TAB_CONTENT_LEFT := 28.0
-const TAB_CONTENT_TOP := 184.0
-const TAB_CONTENT_RIGHT := -26.0
+const TAB_CONTENT_LEFT := OverlaySceneChrome.SUBMENU_SHELL_CONTENT_LEFT
+const TAB_CONTENT_TOP := OverlaySceneChrome.SUBMENU_SHELL_HEADER_CONTENT_TOP
+const TAB_CONTENT_RIGHT := OverlaySceneChrome.SUBMENU_SHELL_CONTENT_RIGHT
 const TAB_CONTENT_BOTTOM := -24.0
-const TAB_CONTENT_TO_SUBMENU_GAP := 18.0
+const TAB_CONTENT_TO_SUBMENU_GAP := OverlaySceneChrome.SUBMENU_SHELL_CONTENT_TO_SUBMENU_GAP
 
 const SUBMENU_TAB_DEFAULT_COLOR := Color(0.9529412, 0.85490197, 0.7176471, 1.0)
 const SUBMENU_TAB_ACTIVE_COLOR := Color(0.98, 0.97, 0.92, 1.0)
@@ -97,45 +98,54 @@ func _build_ui() -> void:
 
 	var content_root: Control = shell_root.get_node("ContentRoot") as Control
 	var content_frame: TextureRect = shell_root.get_node("ContentRoot/Frame") as TextureRect
+	var submenu_root: Control = shell_root.get_node("SubmenuBarRoot") as Control
+	var tab_host: MarginContainer = shell_root.get_node("ContentRoot/ShellContentHost") as MarginContainer
+	var default_viewport_scroll: ScrollContainer = shell_root.get_node("ContentRoot/ShellContentHost/ShellViewportScroll") as ScrollContainer
 	_tab_header_title = shell_root.get_node("ContentRoot/SubmenuTitle") as Label
 	_tab_header_desc = shell_root.get_node("ContentRoot/SubmenuDescription") as Label
 	_resource_label = shell_root.get_node("ContentRoot/SummaryLeft") as Label
 	_tab_header_summary = shell_root.get_node("ContentRoot/SummaryRight") as Label
 	_refresh_resource_label()
 
-	var tab_host: MarginContainer = MarginContainer.new()
-	tab_host.name = "TabContentHost"
-	tab_host.anchor_right = 1.0
-	tab_host.anchor_bottom = 1.0
-	tab_host.offset_left = TAB_CONTENT_LEFT
-	tab_host.offset_top = TAB_CONTENT_TOP
-	tab_host.offset_right = TAB_CONTENT_RIGHT
-	tab_host.offset_bottom = _resolve_tab_content_bottom_offset(shell_root, content_root, content_frame)
-	content_root.add_child(tab_host)
+	tab_host.clip_contents = true
+	var default_content_bottom_offset: float = tab_host.offset_bottom
+	tab_host.offset_bottom = _resolve_tab_content_bottom_offset(shell_root, content_root, content_frame, default_content_bottom_offset)
+	var sync_frame_height: Callable = _sync_content_frame_height.bind(content_root, content_frame, submenu_root)
+	sync_frame_height.call_deferred()
+	content_root.resized.connect(sync_frame_height)
+	content_frame.resized.connect(sync_frame_height)
+	submenu_root.resized.connect(sync_frame_height)
+	if default_viewport_scroll != null:
+		default_viewport_scroll.queue_free()
 
 	_tab_content = VBoxContainer.new()
+	_tab_content.clip_contents = true
 	_tab_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_tab_content.add_theme_constant_override("separation", 12)
 	tab_host.add_child(_tab_content)
 
-	var submenu_root: Control = shell_root.get_node("SubmenuBarRoot") as Control
 	_build_shell_submenu(submenu_root)
 
 	_refresh_tab_button_labels()
 	_switch_tab(_current_tab)
 
 
-func _resolve_tab_content_bottom_offset(shell_root: Control, content_root: Control, content_frame: TextureRect) -> float:
-	var target_bottom: float = content_root.size.y + TAB_CONTENT_BOTTOM
-	if content_frame != null:
-		target_bottom = maxf(target_bottom, content_frame.offset_bottom - TAB_CONTENT_TO_SUBMENU_GAP)
+func _resolve_tab_content_bottom_offset(
+	shell_root: Control,
+	content_root: Control,
+	content_frame: TextureRect,
+	default_content_bottom_offset: float
+) -> float:
+	var target_bottom: float = default_content_bottom_offset
+	return target_bottom
 
-	var submenu_root: Control = shell_root.get_node_or_null("SubmenuBarRoot") as Control
-	if submenu_root != null:
-		var submenu_limit: float = submenu_root.offset_top - content_root.offset_top - TAB_CONTENT_TO_SUBMENU_GAP
-		target_bottom = minf(target_bottom, submenu_limit)
 
-	return target_bottom - content_root.size.y
+func _sync_content_frame_height(content_root: Control, content_frame: TextureRect, submenu_root: Control) -> void:
+	if content_root == null or content_frame == null or submenu_root == null:
+		return
+	var submenu_limit: float = submenu_root.offset_top - content_root.offset_top - TAB_CONTENT_TO_SUBMENU_GAP
+	var target_frame_bottom: float = submenu_limit + OverlaySceneChrome.SUBMENU_SHELL_FRAME_EXTRA_BOTTOM
+	content_frame.offset_bottom = target_frame_bottom
 
 
 func _process(delta: float) -> void:
@@ -272,19 +282,21 @@ func _apply_profile_to_player_data(profile: Dictionary) -> void:
 
 
 func refresh_from_bootstrap(on_completed: Callable = Callable()) -> void:
-	ApiClient.get_authenticated_bootstrap(func(ok: bool, data: Variant, err: Dictionary) -> void:
-		if ok and data is Dictionary:
-			GameState.apply_player_bootstrap(data)
-			_refresh_resource_label()
-			if _tab_content != null:
-				_rebuild_tab_content()
-		elif not on_completed.is_null():
-			on_completed.call(false, {}, err)
-			return
+	ApiClient.get_authenticated_bootstrap(Callable(self, "_on_refresh_from_bootstrap_completed").bind(on_completed))
 
-		if not on_completed.is_null():
-			on_completed.call(ok, data, err)
-	)
+
+func _on_refresh_from_bootstrap_completed(ok: bool, data: Variant, err: Dictionary, on_completed: Callable) -> void:
+	if ok and data is Dictionary:
+		GameState.apply_player_bootstrap(data)
+		_refresh_resource_label()
+		if _tab_content != null:
+			_rebuild_tab_content()
+	elif not on_completed.is_null():
+		on_completed.call(false, {}, err)
+		return
+
+	if not on_completed.is_null():
+		on_completed.call(ok, data, err)
 
 
 func _refresh_resource_label() -> void:

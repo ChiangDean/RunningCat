@@ -33,19 +33,6 @@ func _ready() -> void:
 		push_error("PartyScene: failed to build overlay content host")
 		return
 
-	var title := Label.new()
-	title.text = UiText.HOME_PARTY
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_box.add_child(title)
-
-	var desc := Label.new()
-	desc.text = UiText.SOCIAL_PARTY_OVERLAY_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	content_box.add_child(desc)
-
 	var social_control := _social_view as Control
 	if social_control != null:
 		social_control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -80,6 +67,7 @@ func _sync_navigation(items: Array, active_key: String) -> void:
 		if button == null:
 			continue
 		button.text = str(item.get("label", key))
+		SceneSubmenuBar.apply_shell_metadata(button, item)
 		button.visible = true
 
 	for key_variant: Variant in _dock_buttons.keys():

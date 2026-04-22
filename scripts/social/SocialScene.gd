@@ -198,50 +198,88 @@ func _maybe_recover_party_cache() -> void:
 	if not _party_detail.is_empty():
 		return
 	_party_cache_recovery_in_flight = true
-	ApiClient.get_my_party_silent(func(success: bool, data: Variant, _error: Dictionary) -> void:
-		if not success or not (data is Dictionary):
-			ApiClient.get_my_party_applications_silent(func(my_success: bool, my_data: Variant, _my_error: Dictionary) -> void:
-				GameState.update_party_social_data({}, {}, [], my_data if my_success and my_data is Array else [])
-				_party_cache_recovery_in_flight = false
-			)
-			return
-		var party_detail: Dictionary = data
-		var party_id: int = int(party_detail.get("partyId", 0))
-		if party_id <= 0:
-			GameState.update_party_social_data(party_detail, {}, [], [])
-			_party_cache_recovery_in_flight = false
-			return
-		_recover_party_related_cache(party_detail, party_id)
-	)
+	ApiClient.get_my_party_silent(Callable(self, "_on_recover_my_party_completed"))
 
 
 func _recover_party_related_cache(party_detail: Dictionary, party_id: int) -> void:
 	var recovered_cheer_status: Dictionary = {}
 	var recovered_applications: Array = []
 	var recovered_my_applications: Array = []
-	ApiClient.get_party_cheer_status_silent(party_id, func(cheer_success: bool, cheer_data: Variant, _cheer_error: Dictionary) -> void:
-		if cheer_success and cheer_data is Dictionary:
-			recovered_cheer_status = cheer_data
-		ApiClient.get_my_party_applications_silent(func(my_success: bool, my_data: Variant, _my_error: Dictionary) -> void:
-			if my_success and my_data is Array:
-				recovered_my_applications = my_data
-			var leader_name: String = str(party_detail.get("leaderDisplayName", "")).strip_edges()
-			var self_names: Array[String] = [
-				str(GameState.player_data.display_name).strip_edges(),
-				str(GameState.player_data.player_name).strip_edges(),
-			]
-			if leader_name in self_names:
-				ApiClient.get_party_applications_silent(party_id, func(app_success: bool, app_data: Variant, _app_error: Dictionary) -> void:
-					if app_success and app_data is Array:
-						recovered_applications = app_data
-					GameState.update_party_social_data(party_detail, recovered_cheer_status, recovered_applications, recovered_my_applications)
-					_party_cache_recovery_in_flight = false
-				)
-				return
-			GameState.update_party_social_data(party_detail, recovered_cheer_status, recovered_applications, recovered_my_applications)
-			_party_cache_recovery_in_flight = false
-		)
+	ApiClient.get_party_cheer_status_silent(
+		party_id,
+		Callable(self, "_on_recover_party_cheer_status_completed").bind(party_detail, party_id, recovered_applications, recovered_my_applications)
 	)
+
+
+func _on_recover_my_party_completed(success: bool, data: Variant, _error: Dictionary) -> void:
+	if not success or not (data is Dictionary):
+		ApiClient.get_my_party_applications_silent(Callable(self, "_on_recover_my_party_applications_only_completed"))
+		return
+	var party_detail: Dictionary = data
+	var party_id: int = int(party_detail.get("partyId", 0))
+	if party_id <= 0:
+		GameState.update_party_social_data(party_detail, {}, [], [])
+		_party_cache_recovery_in_flight = false
+		return
+	_recover_party_related_cache(party_detail, party_id)
+
+
+func _on_recover_my_party_applications_only_completed(my_success: bool, my_data: Variant, _my_error: Dictionary) -> void:
+	GameState.update_party_social_data({}, {}, [], my_data if my_success and my_data is Array else [])
+	_party_cache_recovery_in_flight = false
+
+
+func _on_recover_party_cheer_status_completed(
+	cheer_success: bool,
+	cheer_data: Variant,
+	_my_error: Dictionary,
+	party_detail: Dictionary,
+	party_id: int,
+	recovered_applications: Array,
+	_recovered_my_applications_unused: Array
+) -> void:
+	var recovered_cheer_status: Dictionary = cheer_data if cheer_success and cheer_data is Dictionary else {}
+	ApiClient.get_my_party_applications_silent(
+		Callable(self, "_on_recover_my_party_applications_completed").bind(party_detail, party_id, recovered_cheer_status, recovered_applications)
+	)
+
+
+func _on_recover_my_party_applications_completed(
+	my_success: bool,
+	my_data: Variant,
+	_my_error: Dictionary,
+	party_detail: Dictionary,
+	party_id: int,
+	recovered_cheer_status: Dictionary,
+	recovered_applications: Array
+) -> void:
+	var recovered_my_applications: Array = my_data if my_success and my_data is Array else []
+	var leader_name: String = str(party_detail.get("leaderDisplayName", "")).strip_edges()
+	var self_names: Array[String] = [
+		str(GameState.player_data.display_name).strip_edges(),
+		str(GameState.player_data.player_name).strip_edges(),
+	]
+	if leader_name in self_names:
+		ApiClient.get_party_applications_silent(
+			party_id,
+			Callable(self, "_on_recover_party_applications_completed").bind(party_detail, recovered_cheer_status, recovered_my_applications)
+		)
+		return
+	GameState.update_party_social_data(party_detail, recovered_cheer_status, recovered_applications, recovered_my_applications)
+	_party_cache_recovery_in_flight = false
+
+
+func _on_recover_party_applications_completed(
+	app_success: bool,
+	app_data: Variant,
+	_app_error: Dictionary,
+	party_detail: Dictionary,
+	recovered_cheer_status: Dictionary,
+	recovered_my_applications: Array
+) -> void:
+	var recovered_applications: Array = app_data if app_success and app_data is Array else []
+	GameState.update_party_social_data(party_detail, recovered_cheer_status, recovered_applications, recovered_my_applications)
+	_party_cache_recovery_in_flight = false
 
 
 func _on_social_state_changed(domain_key: String) -> void:
@@ -348,9 +386,24 @@ func _render_friend_footer() -> void:
 
 func _get_friend_footer_items() -> Array:
 	return [
-		{"key": "friends", "label": UiText.SOCIAL_FRIEND_LIST},
-		{"key": "inbox", "label": UiText.SOCIAL_FRIEND_INBOX},
-		{"key": "outbox", "label": UiText.SOCIAL_FRIEND_OUTBOX},
+		{
+			"key": "friends",
+			"label": UiText.SOCIAL_FRIEND_LIST,
+			"shell_description": UiText.SOCIAL_FRIEND_LIST_DESC,
+			"shell_summary_right": Callable(self, "_build_friend_footer_summary").bind("friends"),
+		},
+		{
+			"key": "inbox",
+			"label": UiText.SOCIAL_FRIEND_INBOX,
+			"shell_description": UiText.SOCIAL_FRIEND_INBOX_DESC,
+			"shell_summary_right": Callable(self, "_build_friend_footer_summary").bind("inbox"),
+		},
+		{
+			"key": "outbox",
+			"label": UiText.SOCIAL_FRIEND_OUTBOX,
+			"shell_description": UiText.SOCIAL_FRIEND_OUTBOX_DESC,
+			"shell_summary_right": Callable(self, "_build_friend_footer_summary").bind("outbox"),
+		},
 	]
 
 
@@ -498,9 +551,24 @@ func _refresh_party_footer_buttons() -> void:
 
 func _get_party_footer_items() -> Array:
 	return [
-		{"key": "overview", "label": UiText.SOCIAL_PARTY_OVERVIEW},
-		{"key": "invites", "label": UiText.SOCIAL_PARTY_PENDING_INVITES},
-		{"key": "reviews", "label": UiText.SOCIAL_PARTY_PENDING_REVIEW},
+		{
+			"key": "overview",
+			"label": UiText.SOCIAL_PARTY_OVERVIEW,
+			"shell_description": UiText.SOCIAL_PARTY_OVERLAY_DESC,
+			"shell_summary_right": Callable(self, "_build_party_footer_summary").bind("overview"),
+		},
+		{
+			"key": "invites",
+			"label": UiText.SOCIAL_PARTY_PENDING_INVITES,
+			"shell_description": UiText.SOCIAL_PARTY_PENDING_INVITES_DESC,
+			"shell_summary_right": Callable(self, "_build_party_footer_summary").bind("invites"),
+		},
+		{
+			"key": "reviews",
+			"label": UiText.SOCIAL_PARTY_PENDING_REVIEW,
+			"shell_description": UiText.SOCIAL_PARTY_PENDING_REVIEW_DESC,
+			"shell_summary_right": Callable(self, "_build_party_footer_summary").bind("reviews"),
+		},
 	]
 
 
@@ -548,6 +616,32 @@ func _get_my_pending_party_reviews() -> Array:
 		var item: Dictionary = item_variant as Dictionary
 		return _is_party_player_apply_type(int(item.get("applicationType", 0))) and int(item.get("status", 0)) == 0
 	)
+
+
+func _build_friend_footer_summary(section_key: String) -> String:
+	match section_key:
+		"inbox":
+			return "\u7533\u8acb %d" % _friend_inbox.size()
+		"outbox":
+			return "\u9001\u51fa %d" % _friend_outbox.size()
+		_:
+			var friends: Array = _friend_list.get("friends", [])
+			return "\u597d\u53cb %d/30" % friends.size()
+
+
+func _build_party_footer_summary(section_key: String) -> String:
+	match section_key:
+		"invites":
+			var invite_count: int = _get_my_pending_party_invites().size() if _party_detail.is_empty() else _get_party_pending_invites().size()
+			return "\u5f85\u8655\u7406 %d" % invite_count
+		"reviews":
+			var review_count: int = _get_my_pending_party_reviews().size() if _party_detail.is_empty() else _get_party_pending_reviews().size()
+			return "\u5f85\u8655\u7406 %d" % review_count
+		_:
+			if _party_detail.is_empty():
+				return "\u672a\u52a0\u5165\u968a\u4f0d"
+			var members: Array = _party_detail.get("members", [])
+			return "\u6210\u54e1 %d/5" % members.size()
 
 
 func _get_party_pending_reviews() -> Array:
@@ -1344,28 +1438,14 @@ func _restore_party_inline_input(input: LineEdit, button: Button) -> void:
 
 
 func _submit_create_party_inline(value: String, input: LineEdit, button: Button) -> void:
-	ApiClient.create_party(value, func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			_restore_party_inline_input(input, button)
-			ToastManager.error(UiText.SOCIAL_PARTY_CREATE, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_PARTY_CREATE, UiText.SOCIAL_PARTY_CREATE_SUCCESS % value)
-		_refresh_party()
-	)
+	ApiClient.create_party(value, Callable(self, "_on_create_party_inline_completed").bind(value, input, button))
 
 
 func _submit_apply_party_inline(value: String, input: LineEdit, button: Button) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			_restore_party_inline_input(input, button)
-			ToastManager.error(UiText.SOCIAL_PARTY_APPLY, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_PARTY_APPLY, UiText.SOCIAL_PARTY_APPLY_SUCCESS)
-		_refresh_party()
 	if value.is_valid_int():
-		ApiClient.apply_to_party_by_id(int(value), callback)
+		ApiClient.apply_to_party_by_id(int(value), Callable(self, "_on_apply_party_inline_completed").bind(input, button))
 	else:
-		ApiClient.apply_to_party_by_name(value, callback)
+		ApiClient.apply_to_party_by_name(value, Callable(self, "_on_apply_party_inline_completed").bind(input, button))
 
 
 func _cancel_party_application(application_id: int, party_name: String) -> void:
@@ -1375,15 +1455,38 @@ func _cancel_party_application(application_id: int, party_name: String) -> void:
 	DialogManager.show_confirm(
 		UiText.SOCIAL_PARTY_MY_APPLICATIONS,
 		"\u78ba\u5b9a\u8981\u53d6\u6d88\u5c0d %s \u7684\u7533\u8acb\u55ce\uff1f" % target_label,
-		func() -> void:
-			ApiClient.cancel_party_application(application_id, func(success: bool, _data: Variant, error: Dictionary) -> void:
-				if not success:
-					ToastManager.error(UiText.SOCIAL_PARTY_MY_APPLICATIONS, _error_message(error))
-					return
-				ToastManager.success(UiText.SOCIAL_PARTY_MY_APPLICATIONS, UiText.SOCIAL_PARTY_APPLICATION_CANCEL_SUCCESS)
-				_refresh_party()
-			)
+		Callable(self, "_confirm_cancel_party_application").bind(application_id)
 	)
+
+
+func _on_create_party_inline_completed(success: bool, _data: Variant, error: Dictionary, value: String, input: LineEdit, button: Button) -> void:
+	if not success:
+		_restore_party_inline_input(input, button)
+		ToastManager.error(UiText.SOCIAL_PARTY_CREATE, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_PARTY_CREATE, UiText.SOCIAL_PARTY_CREATE_SUCCESS % value)
+	_refresh_party()
+
+
+func _on_apply_party_inline_completed(success: bool, _data: Variant, error: Dictionary, input: LineEdit, button: Button) -> void:
+	if not success:
+		_restore_party_inline_input(input, button)
+		ToastManager.error(UiText.SOCIAL_PARTY_APPLY, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_PARTY_APPLY, UiText.SOCIAL_PARTY_APPLY_SUCCESS)
+	_refresh_party()
+
+
+func _confirm_cancel_party_application(application_id: int) -> void:
+	ApiClient.cancel_party_application(application_id, Callable(self, "_on_cancel_party_application_completed"))
+
+
+func _on_cancel_party_application_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_PARTY_MY_APPLICATIONS, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_PARTY_MY_APPLICATIONS, UiText.SOCIAL_PARTY_APPLICATION_CANCEL_SUCCESS)
+	_refresh_party()
 
 
 func _is_party_invite_type(application_type: int) -> bool:
@@ -1737,32 +1840,36 @@ func _open_add_friend_dialog() -> void:
 
 
 func _submit_add_friend(value: String) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_FRIEND_ADD, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_FRIEND_ADD, UiText.SOCIAL_FRIEND_ADD_SUCCESS)
-		_refresh_friend()
-	ApiClient.send_friend_request(value, callback)
+	ApiClient.send_friend_request(value, Callable(self, "_on_submit_add_friend_completed"))
+
+
+func _on_submit_add_friend_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_FRIEND_ADD, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_FRIEND_ADD, UiText.SOCIAL_FRIEND_ADD_SUCCESS)
+	_refresh_friend()
 
 
 func _search_friend_candidates(dialog_state: Dictionary, query: String) -> void:
 	_set_friend_search_dialog_busy(dialog_state, true, false)
 	_set_friend_search_dialog_status(dialog_state, "\u641c\u5c0b\u4e2d...", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	ApiClient.search_friend_candidates(query, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_set_friend_search_dialog_busy(dialog_state, false, false)
-		if not success:
-			_set_friend_search_dialog_status(dialog_state, _error_message(error), UiPalette.BUTTON_DANGER_FG)
-			_render_friend_search_candidates(dialog_state, [])
-			return
-		var candidates: Array = data if data is Array else []
-		dialog_state["candidates"] = candidates
-		if candidates.is_empty():
-			_set_friend_search_dialog_status(dialog_state, "\u627e\u4e0d\u5230\u7b26\u5408\u7684\u73a9\u5bb6\u3002", OverlaySceneChrome.MUTED_TEXT_COLOR)
-		else:
-			_set_friend_search_dialog_status(dialog_state, "\u627e\u5230 %d \u4f4d\u73a9\u5bb6\uff0c\u53ef\u76f4\u63a5\u9001\u51fa\u597d\u53cb\u7533\u8acb\u3002" % candidates.size(), OverlaySceneChrome.MUTED_TEXT_COLOR)
-		_render_friend_search_candidates(dialog_state, candidates)
-	)
+	ApiClient.search_friend_candidates(query, Callable(self, "_on_friend_candidates_searched").bind(dialog_state))
+
+
+func _on_friend_candidates_searched(success: bool, data: Variant, error: Dictionary, dialog_state: Dictionary) -> void:
+	_set_friend_search_dialog_busy(dialog_state, false, false)
+	if not success:
+		_set_friend_search_dialog_status(dialog_state, _error_message(error), UiPalette.BUTTON_DANGER_FG)
+		_render_friend_search_candidates(dialog_state, [])
+		return
+	var candidates: Array = data if data is Array else []
+	dialog_state["candidates"] = candidates
+	if candidates.is_empty():
+		_set_friend_search_dialog_status(dialog_state, "\u627e\u4e0d\u5230\u7b26\u5408\u7684\u73a9\u5bb6\u3002", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	else:
+		_set_friend_search_dialog_status(dialog_state, "\u627e\u5230 %d \u4f4d\u73a9\u5bb6\uff0c\u53ef\u76f4\u63a5\u9001\u51fa\u597d\u53cb\u7533\u8acb\u3002" % candidates.size(), OverlaySceneChrome.MUTED_TEXT_COLOR)
+	_render_friend_search_candidates(dialog_state, candidates)
 
 
 func _set_friend_search_dialog_busy(dialog_state: Dictionary, is_searching: bool, is_submitting: bool) -> void:
@@ -1871,27 +1978,31 @@ func _submit_friend_request_from_candidate(dialog_state: Dictionary, candidate: 
 		return
 	_set_friend_search_dialog_busy(dialog_state, false, true)
 	_set_friend_search_dialog_status(dialog_state, "\u6b63\u5728\u9001\u51fa %s \u7684\u597d\u53cb\u7533\u8acb..." % (player_name if player_name != "" else player_uid), OverlaySceneChrome.MUTED_TEXT_COLOR)
-	ApiClient.send_friend_request(player_uid, func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_set_friend_search_dialog_busy(dialog_state, false, false)
-		if not success:
-			_set_friend_search_dialog_status(dialog_state, _error_message(error), UiPalette.BUTTON_DANGER_FG)
-			return
-		var close_dialog_variant: Variant = dialog_state.get("close", Callable())
-		if close_dialog_variant is Callable and (close_dialog_variant as Callable).is_valid():
-			(close_dialog_variant as Callable).call()
-		ToastManager.success(UiText.SOCIAL_FRIEND_ADD, UiText.SOCIAL_FRIEND_ADD_SUCCESS)
-		_refresh_friend()
-	)
+	ApiClient.send_friend_request(player_uid, Callable(self, "_on_friend_request_from_candidate_completed").bind(dialog_state))
+
+
+func _on_friend_request_from_candidate_completed(success: bool, _data: Variant, error: Dictionary, dialog_state: Dictionary) -> void:
+	_set_friend_search_dialog_busy(dialog_state, false, false)
+	if not success:
+		_set_friend_search_dialog_status(dialog_state, _error_message(error), UiPalette.BUTTON_DANGER_FG)
+		return
+	var close_dialog_variant: Variant = dialog_state.get("close", Callable())
+	if close_dialog_variant is Callable and (close_dialog_variant as Callable).is_valid():
+		(close_dialog_variant as Callable).call()
+	ToastManager.success(UiText.SOCIAL_FRIEND_ADD, UiText.SOCIAL_FRIEND_ADD_SUCCESS)
+	_refresh_friend()
 
 
 func _accept_friend_request(request_id: int) -> void:
-	ApiClient.accept_friend_request(request_id, func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_FRIEND_INBOX, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_FRIEND_INBOX, UiText.SOCIAL_FRIEND_ACCEPT_SUCCESS)
-		_refresh_friend()
-	)
+	ApiClient.accept_friend_request(request_id, Callable(self, "_on_accept_friend_request_completed"))
+
+
+func _on_accept_friend_request_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_FRIEND_INBOX, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_FRIEND_INBOX, UiText.SOCIAL_FRIEND_ACCEPT_SUCCESS)
+	_refresh_friend()
 
 
 func _confirm_reject_friend_request(request_id: int, friend_name: String) -> void:
@@ -1907,23 +2018,27 @@ func _confirm_reject_friend_request(request_id: int, friend_name: String) -> voi
 
 
 func _reject_friend_request(request_id: int) -> void:
-	ApiClient.reject_friend_request(request_id, func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_FRIEND_INBOX, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_FRIEND_INBOX, UiText.SOCIAL_FRIEND_REJECT_SUCCESS)
-		_refresh_friend()
-	)
+	ApiClient.reject_friend_request(request_id, Callable(self, "_on_reject_friend_request_completed"))
+
+
+func _on_reject_friend_request_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_FRIEND_INBOX, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_FRIEND_INBOX, UiText.SOCIAL_FRIEND_REJECT_SUCCESS)
+	_refresh_friend()
 
 
 func _cancel_friend_request(request_id: int) -> void:
-	ApiClient.cancel_friend_request(request_id, func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_FRIEND_OUTBOX, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_FRIEND_OUTBOX, UiText.SOCIAL_FRIEND_CANCEL_SUCCESS)
-		_refresh_friend()
-	)
+	ApiClient.cancel_friend_request(request_id, Callable(self, "_on_cancel_friend_request_completed"))
+
+
+func _on_cancel_friend_request_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_FRIEND_OUTBOX, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_FRIEND_OUTBOX, UiText.SOCIAL_FRIEND_CANCEL_SUCCESS)
+	_refresh_friend()
 
 
 func _open_create_party_dialog() -> void:
@@ -1931,17 +2046,19 @@ func _open_create_party_dialog() -> void:
 
 
 func _submit_create_party(value: String) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			_set_text_input_dialog_submitting(_create_party_dialog_state, false)
-			_after_party_action(false, error, UiText.SOCIAL_PARTY_CREATE, UiText.SOCIAL_PARTY_CREATE_SUCCESS % value)
-			return
-		var close_dialog_variant: Variant = _create_party_dialog_state.get("close", Callable())
-		if close_dialog_variant is Callable and (close_dialog_variant as Callable).is_valid():
-			(close_dialog_variant as Callable).call()
-		_create_party_dialog_state = {}
-		_after_party_action(success, error, UiText.SOCIAL_PARTY_CREATE, UiText.SOCIAL_PARTY_CREATE_SUCCESS % value)
-	ApiClient.create_party(value, callback)
+	ApiClient.create_party(value, Callable(self, "_on_submit_create_party_completed").bind(value))
+
+
+func _on_submit_create_party_completed(success: bool, _data: Variant, error: Dictionary, value: String) -> void:
+	if not success:
+		_set_text_input_dialog_submitting(_create_party_dialog_state, false)
+		_after_party_action(false, error, UiText.SOCIAL_PARTY_CREATE, UiText.SOCIAL_PARTY_CREATE_SUCCESS % value)
+		return
+	var close_dialog_variant: Variant = _create_party_dialog_state.get("close", Callable())
+	if close_dialog_variant is Callable and (close_dialog_variant as Callable).is_valid():
+		(close_dialog_variant as Callable).call()
+	_create_party_dialog_state = {}
+	_after_party_action(success, error, UiText.SOCIAL_PARTY_CREATE, UiText.SOCIAL_PARTY_CREATE_SUCCESS % value)
 
 
 func _open_apply_party_dialog() -> void:
@@ -1949,12 +2066,14 @@ func _open_apply_party_dialog() -> void:
 
 
 func _submit_apply_party(value: String) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_after_party_action(success, error, UiText.SOCIAL_PARTY_APPLY, UiText.SOCIAL_PARTY_APPLY_SUCCESS)
 	if value.is_valid_int():
-		ApiClient.apply_to_party_by_id(int(value), callback)
+		ApiClient.apply_to_party_by_id(int(value), Callable(self, "_on_submit_apply_party_completed"))
 	else:
-		ApiClient.apply_to_party_by_name(value, callback)
+		ApiClient.apply_to_party_by_name(value, Callable(self, "_on_submit_apply_party_completed"))
+
+
+func _on_submit_apply_party_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	_after_party_action(success, error, UiText.SOCIAL_PARTY_APPLY, UiText.SOCIAL_PARTY_APPLY_SUCCESS)
 
 
 func _show_my_party_applications() -> void:
@@ -2048,20 +2167,26 @@ func _open_invite_party_dialog() -> void:
 func _search_party_invite_candidates(dialog_state: Dictionary, query: String) -> void:
 	_set_invite_party_dialog_busy(dialog_state, true, false)
 	_set_invite_party_dialog_status(dialog_state, "\u641c\u5c0b\u4e2d...", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	ApiClient.search_party_invite_candidates(int(_party_detail.get("partyId", 0)), query, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_set_invite_party_dialog_busy(dialog_state, false, false)
-		if not success:
-			_set_invite_party_dialog_status(dialog_state, _error_message(error), UiPalette.BUTTON_DANGER_FG)
-			_render_invite_party_candidates(dialog_state, [])
-			return
-		var candidates: Array = data if data is Array else []
-		dialog_state["candidates"] = candidates
-		if candidates.is_empty():
-			_set_invite_party_dialog_status(dialog_state, "\u627e\u4e0d\u5230\u7b26\u5408\u7684\u73a9\u5bb6\u3002", OverlaySceneChrome.MUTED_TEXT_COLOR)
-		else:
-			_set_invite_party_dialog_status(dialog_state, "\u627e\u5230 %d \u4f4d\u73a9\u5bb6\uff0c\u53ef\u76f4\u63a5\u9001\u51fa\u9080\u8acb\u3002" % candidates.size(), OverlaySceneChrome.MUTED_TEXT_COLOR)
-		_render_invite_party_candidates(dialog_state, candidates)
+	ApiClient.search_party_invite_candidates(
+		int(_party_detail.get("partyId", 0)),
+		query,
+		Callable(self, "_on_party_invite_candidates_searched").bind(dialog_state)
 	)
+
+
+func _on_party_invite_candidates_searched(success: bool, data: Variant, error: Dictionary, dialog_state: Dictionary) -> void:
+	_set_invite_party_dialog_busy(dialog_state, false, false)
+	if not success:
+		_set_invite_party_dialog_status(dialog_state, _error_message(error), UiPalette.BUTTON_DANGER_FG)
+		_render_invite_party_candidates(dialog_state, [])
+		return
+	var candidates: Array = data if data is Array else []
+	dialog_state["candidates"] = candidates
+	if candidates.is_empty():
+		_set_invite_party_dialog_status(dialog_state, "\u627e\u4e0d\u5230\u7b26\u5408\u7684\u73a9\u5bb6\u3002", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	else:
+		_set_invite_party_dialog_status(dialog_state, "\u627e\u5230 %d \u4f4d\u73a9\u5bb6\uff0c\u53ef\u76f4\u63a5\u9001\u51fa\u9080\u8acb\u3002" % candidates.size(), OverlaySceneChrome.MUTED_TEXT_COLOR)
+	_render_invite_party_candidates(dialog_state, candidates)
 
 
 func _set_invite_party_dialog_busy(dialog_state: Dictionary, is_busy: bool, is_inviting: bool) -> void:
@@ -2171,19 +2296,25 @@ func _invite_party_candidate(dialog_state: Dictionary, candidate: Dictionary) ->
 	var player_name: String = str(candidate.get("playerName", "")).strip_edges()
 	_set_invite_party_dialog_busy(dialog_state, false, true)
 	_set_invite_party_dialog_status(dialog_state, "\u6b63\u5728\u9080\u8acb %s..." % (player_name if player_name != "" else player_uid), OverlaySceneChrome.MUTED_TEXT_COLOR)
-	ApiClient.invite_player_to_party(int(_party_detail.get("partyId", 0)), player_uid, func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_set_invite_party_dialog_busy(dialog_state, false, false)
-		if not success:
-			_set_invite_party_dialog_status(dialog_state, _error_message(error), UiPalette.BUTTON_DANGER_FG)
-			ToastManager.error(UiText.SOCIAL_PARTY_INVITE, _error_message(error))
-			return
-		var close_variant: Variant = dialog_state.get("close", Callable())
-		if close_variant is Callable and (close_variant as Callable).is_valid():
-			(close_variant as Callable).call()
-		_invite_party_dialog_state = {}
-		ToastManager.success(UiText.SOCIAL_PARTY_INVITE, UiText.SOCIAL_PARTY_INVITE_SUCCESS)
-		_refresh_party()
+	ApiClient.invite_player_to_party(
+		int(_party_detail.get("partyId", 0)),
+		player_uid,
+		Callable(self, "_on_invite_party_candidate_completed").bind(dialog_state)
 	)
+
+
+func _on_invite_party_candidate_completed(success: bool, _data: Variant, error: Dictionary, dialog_state: Dictionary) -> void:
+	_set_invite_party_dialog_busy(dialog_state, false, false)
+	if not success:
+		_set_invite_party_dialog_status(dialog_state, _error_message(error), UiPalette.BUTTON_DANGER_FG)
+		ToastManager.error(UiText.SOCIAL_PARTY_INVITE, _error_message(error))
+		return
+	var close_variant: Variant = dialog_state.get("close", Callable())
+	if close_variant is Callable and (close_variant as Callable).is_valid():
+		(close_variant as Callable).call()
+	_invite_party_dialog_state = {}
+	ToastManager.success(UiText.SOCIAL_PARTY_INVITE, UiText.SOCIAL_PARTY_INVITE_SUCCESS)
+	_refresh_party()
 
 
 func _format_relative_datetime(datetime_variant: Variant) -> String:

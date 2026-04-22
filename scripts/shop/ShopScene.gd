@@ -45,9 +45,6 @@ var _active_tab: String = TAB_VALUE
 var _active_secondary_keys: Dictionary = {}
 var _tab_buttons: Dictionary = {}
 var _secondary_buttons: Dictionary = {}
-var _resource_label: Label
-var _section_title: Label
-var _section_desc: Label
 var _content_host: Control
 var _trap_cage_quantity_dialog_close: Callable = Callable()
 var _trap_cage_keypad_close: Callable = Callable()
@@ -68,9 +65,14 @@ func _ready() -> void:
 func _build_ui() -> void:
 	var dock_items: Array = []
 	for item: Dictionary in CATEGORY_CONFIGS:
+		var tab_key: String = str(item.get("key", ""))
+		var tab_meta: Dictionary = _get_tab_meta(tab_key)
 		dock_items.append({
-			"key": str(item.get("key", "")),
-			"label": _get_top_label(str(item.get("key", ""))),
+			"key": tab_key,
+			"label": _get_top_label(tab_key),
+			"shell_description": str(tab_meta.get("description", "")),
+			"shell_summary_left": Callable(self, "_get_shell_summary_left"),
+			"shell_summary_right": Callable(self, "_build_tab_summary_right").bind(tab_key),
 		})
 
 	var chrome: Dictionary = OverlaySceneChrome.build(self, "shop", Callable(self, "_on_back_pressed"), {
@@ -84,22 +86,6 @@ func _build_ui() -> void:
 	_tab_buttons = chrome.get("dock_buttons", {})
 
 	var content_box: VBoxContainer = chrome.get("content_box")
-
-	_resource_label = Label.new()
-	_resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	_resource_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	content_box.add_child(_resource_label)
-
-	_section_title = Label.new()
-	_section_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	_section_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_box.add_child(_section_title)
-
-	_section_desc = Label.new()
-	_section_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_section_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	_section_desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	content_box.add_child(_section_desc)
 
 	_content_host = Control.new()
 	_content_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -130,28 +116,12 @@ func _switch_secondary_item(item_key: String) -> void:
 
 
 func _refresh_content() -> void:
-	_refresh_resource_label()
-	_refresh_header()
 	_rebuild_content()
 	SceneSubmenuBar.refresh(_tab_buttons, _active_tab, {
 		"active_color": SceneMenuTheme.ACTIVE_COLOR,
 		"inactive_color": SceneMenuTheme.INACTIVE_COLOR,
 	})
 	_refresh_red_dots()
-
-
-func _refresh_resource_label() -> void:
-	_resource_label.text = UiText.SHOP_RESOURCE_WITH_COLLISION_COIN_FORMAT % [
-		GameState.player_data.diamonds,
-		GameState.player_data.trap_points,
-		GameState.player_data.trap_cages,
-	]
-
-
-func _refresh_header() -> void:
-	var meta: Dictionary = _get_tab_meta(_active_tab)
-	_section_title.text = str(meta.get("title", UiText.NAV_SHOP))
-	_section_desc.text = str(meta.get("description", ""))
 
 
 func _rebuild_content() -> void:
@@ -1044,6 +1014,19 @@ func _get_tab_meta(tab_key: String) -> Dictionary:
 			return {"title": UiText.SHOP_SUBMENU_POINT, "description": UiText.SHOP_TAB_DESC_POINT}
 		_:
 			return {"title": UiText.NAV_SHOP, "description": UiText.SHOP_PAGE_DESC}
+
+
+func _get_shell_summary_left() -> String:
+	return UiText.SHOP_RESOURCE_WITH_COLLISION_COIN_FORMAT % [
+		GameState.player_data.diamonds,
+		GameState.player_data.trap_points,
+		GameState.player_data.trap_cages,
+	]
+
+
+func _build_tab_summary_right(tab_key: String) -> String:
+	var item_count: int = _build_secondary_items(tab_key).size()
+	return "\u9805\u76ee %d" % item_count
 
 
 func _on_back_pressed() -> void:

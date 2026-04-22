@@ -25,7 +25,7 @@ var _hint_label: Label
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	custom_minimum_size = Vector2(0.0, 860.0)
+	custom_minimum_size = Vector2(0.0, 0.0) if _overlay_mode else Vector2(0.0, 860.0)
 	_build_ui()
 	GameState.chat_connection_state_changed.connect(_on_connection_state_changed)
 	GameState.chat_messages_changed.connect(_on_messages_changed)
@@ -47,11 +47,28 @@ func set_initial_channel(channel_key: String) -> void:
 
 
 func get_footer_items() -> Array:
-	return _build_channel_defs()
+	var items: Array = []
+	for item_variant: Variant in _build_channel_defs():
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = (item_variant as Dictionary).duplicate(true)
+		var key: String = str(item.get("key", ""))
+		match key:
+			CHANNEL_PARTY:
+				item["shell_description"] = "\u67e5\u770b\u968a\u4f0d\u6210\u54e1\u7684\u5c08\u5c6c\u804a\u5929\u983b\u9053\u3002"
+			_:
+				item["shell_description"] = "\u67e5\u770b\u4e16\u754c\u8207\u7cfb\u7d71\u983b\u9053\u7684\u6700\u65b0\u8a0a\u606f\u3002"
+		item["shell_summary_right"] = Callable(self, "_build_channel_summary_right").bind(key)
+		items.append(item)
+	return items
 
 
 func get_section() -> String:
 	return _active_channel
+
+
+func _build_channel_summary_right(channel_key: String) -> String:
+	return "\u672a\u8b80 %d" % _get_tab_unread_count(channel_key)
 
 
 func set_section(section_key: String) -> void:
@@ -98,15 +115,16 @@ func _build_ui() -> void:
 	shell_box.add_theme_constant_override("separation", 12)
 	shell_margin.add_child(shell_box)
 
-	_section_label = Label.new()
-	_section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	shell_box.add_child(_section_label)
+	if not _overlay_mode:
+		_section_label = Label.new()
+		_section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+		shell_box.add_child(_section_label)
 
-	_hint_label = Label.new()
-	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_hint_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	_hint_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	shell_box.add_child(_hint_label)
+		_hint_label = Label.new()
+		_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_hint_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+		_hint_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		shell_box.add_child(_hint_label)
 
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -128,9 +146,7 @@ func _build_ui() -> void:
 	_input = LineEdit.new()
 	_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_input.placeholder_text = "輸入聊天內容"
-	_input.text_submitted.connect(func(_text: String) -> void:
-		_submit_message()
-	)
+	_input.text_submitted.connect(_on_input_text_submitted)
 	input_row.add_child(_input)
 
 	_send_button = Button.new()
@@ -176,6 +192,8 @@ func _load_channel_history(channel_key: String, before_seq: int) -> void:
 	if resolved_channel_key == "":
 		_refresh_active_channel_ui()
 		return
+	ApiClient.get_chat_history(resolved_channel_key, before_seq, 50, Callable(self, "_on_chat_history_loaded").bind(channel_key))
+	return
 	ApiClient.get_chat_history(resolved_channel_key, before_seq, 50, func(success: bool, data: Variant, error: Dictionary) -> void:
 		if not success:
 			_status_override = str(error.get("message", "載入聊天訊息失敗"))
@@ -206,6 +224,8 @@ func _submit_message() -> void:
 		return
 
 	_send_button.disabled = true
+	ApiClient.post_chat_message(resolved_channel_key, content, Callable(self, "_on_chat_message_posted").bind(content, _active_channel))
+	return
 	ApiClient.post_chat_message(resolved_channel_key, content, func(success: bool, data: Variant, error: Dictionary) -> void:
 		_send_button.disabled = false
 		if success:
@@ -223,6 +243,42 @@ func _submit_message() -> void:
 			_status_override = str(error.get("message", "送出聊天訊息失敗"))
 		_refresh_active_channel_ui()
 	)
+
+
+func _on_input_text_submitted(_text: String) -> void:
+	_submit_message()
+
+
+func _on_chat_history_loaded(success: bool, data: Variant, error: Dictionary, channel_key: String) -> void:
+	if not success:
+		_status_override = str(error.get("message", "頛?予閮憭望?"))
+		_refresh_active_channel_ui()
+		return
+	var payload: Dictionary = data if data is Dictionary else {}
+	var messages_variant: Variant = payload.get("messages", [])
+	if messages_variant is Array:
+		GameState.replace_chat_history(channel_key, messages_variant)
+		if channel_key == _active_channel or (_active_channel == CHANNEL_WORLD and channel_key == "system"):
+			_render_messages()
+			_mark_active_channel_read()
+
+
+func _on_chat_message_posted(success: bool, data: Variant, error: Dictionary, content: String, channel_key: String) -> void:
+	_send_button.disabled = false
+	if success:
+		var payload: Dictionary = data if data is Dictionary else {}
+		var message_variant: Variant = payload.get("message", {})
+		var message: Dictionary = message_variant if message_variant is Dictionary else _build_local_echo_message(content)
+		var ack_sequence: int = int(payload.get("ackSequence", 0))
+		if ack_sequence > 0:
+			GameState.append_chat_message_envelope(channel_key, ack_sequence, message)
+		_input.text = ""
+		_status_override = ""
+		_mark_active_channel_read()
+		_queue_scroll_to_bottom()
+	else:
+		_status_override = str(error.get("message", "??予閮憭望?"))
+	_refresh_active_channel_ui()
 
 
 func _render_messages() -> void:

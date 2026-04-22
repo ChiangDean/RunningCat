@@ -58,6 +58,20 @@ static func attach(
 	scroll.set_meta("inertial_scroller", inst)
 	return inst
 
+
+static func detach(scroll: ScrollContainer) -> void:
+	if scroll == null:
+		return
+	if not scroll.has_meta("inertial_scroller"):
+		return
+
+	var inst: Variant = scroll.get_meta("inertial_scroller")
+	scroll.remove_meta("inertial_scroller")
+	if inst is InertialScroller:
+		var scroller: InertialScroller = inst as InertialScroller
+		if is_instance_valid(scroller):
+			scroller.queue_free()
+
 # ── Init ───────────────────────────────────────────────
 
 func _init_attach() -> void:

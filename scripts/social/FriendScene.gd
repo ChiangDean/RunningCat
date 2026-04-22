@@ -1,10 +1,10 @@
 class_name FriendScene
 extends Control
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const OverlaySceneChromeScript = preload("res://scripts/ui/overlay_scene_chrome.gd")
+const SceneSubmenuBarScript = preload("res://scripts/ui/scene_submenu_bar.gd")
+const UiPaletteScript = preload("res://scripts/ui/ui_palette.gd")
+const RedDotServiceScript = preload("res://scripts/ui/red_dot_service.gd")
 const SOCIAL_SCENE := preload("res://scenes/social/SocialScene.tscn")
 
 var _social_view
@@ -18,7 +18,7 @@ func _ready() -> void:
 	_social_view.set_mode("friend")
 	_social_view.set_friend_overlay_mode(true)
 
-	var chrome: Dictionary = OverlaySceneChrome.build(self, "chat", Callable(self, "_on_back_pressed"), {
+	var chrome: Dictionary = OverlaySceneChromeScript.build(self, "chat", Callable(self, "_on_back_pressed"), {
 		"show_dock": true,
 		"dock_items": _social_view.get_friend_footer_items(),
 		"active_key": _social_view.get_friend_section(),
@@ -32,12 +32,6 @@ func _ready() -> void:
 	if content_box == null:
 		push_error("FriendScene: failed to build overlay content host")
 		return
-
-	var title: Label = Label.new()
-	title.text = UiText.HOME_FRIEND
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_box.add_child(title)
 
 	var social_control: Control = _social_view as Control
 	if social_control != null:
@@ -69,9 +63,10 @@ func _sync_navigation(items: Array, active_key: String) -> void:
 		if button == null:
 			continue
 		button.text = str(item.get("label", key))
+		SceneSubmenuBarScript.apply_shell_metadata(button, item)
 		button.visible = true
 
-	SceneSubmenuBar.refresh(_dock_buttons, active_key, {
+	SceneSubmenuBarScript.refresh(_dock_buttons, active_key, {
 		"active_font_size": 22,
 		"inactive_font_size": 20,
 	})
@@ -79,4 +74,4 @@ func _sync_navigation(items: Array, active_key: String) -> void:
 
 
 func _apply_red_dots() -> void:
-	RedDotService.refresh_dot(_dock_buttons.get("inbox") as Control, RedDotService.has_friend_request_red_dot())
+	RedDotServiceScript.refresh_dot(_dock_buttons.get("inbox") as Control, RedDotServiceScript.has_friend_request_red_dot())

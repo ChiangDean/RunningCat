@@ -69,8 +69,20 @@ func _build_ui() -> void:
 	var chrome: Dictionary = OverlaySceneChrome.build(self, "arena", Callable(self, "_on_back_pressed"), {
 		"show_dock": true,
 		"dock_items": [
-			{"key": "arena", "label": UiText.ARENA_TAB_MAIN},
-			{"key": "rewards", "label": UiText.ARENA_TAB_REWARDS},
+			{
+				"key": "arena",
+				"label": UiText.ARENA_TAB_MAIN,
+				"shell_description": UiText.ARENA_PAGE_DESC,
+				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
+				"shell_summary_right": Callable(self, "_build_shell_summary_right").bind("arena"),
+			},
+			{
+				"key": "rewards",
+				"label": UiText.ARENA_TAB_REWARDS,
+				"shell_description": UiText.ARENA_REWARD_SECTION_DESC,
+				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
+				"shell_summary_right": Callable(self, "_build_shell_summary_right").bind("rewards"),
+			},
 		],
 		"active_key": _active_tab,
 		"button_pressed": Callable(self, "_switch_tab"),
@@ -79,19 +91,6 @@ func _build_ui() -> void:
 	})
 	var content_box: VBoxContainer = chrome.get("content_box")
 	_tab_buttons = chrome.get("dock_buttons", {})
-
-	var title: Label = Label.new()
-	title.text = UiText.ARENA_PAGE_TITLE
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_box.add_child(title)
-
-	var desc: Label = Label.new()
-	desc.text = UiText.ARENA_PAGE_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	content_box.add_child(desc)
 
 	_content_scroll = ScrollContainer.new()
 	_content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -225,29 +224,6 @@ func _build_ui() -> void:
 	_reward_section.add_theme_constant_override("separation", 14)
 	scroll_box.add_child(_reward_section)
 
-	var reward_intro: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	_reward_section.add_child(reward_intro)
-
-	var reward_intro_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	reward_intro.add_child(reward_intro_margin)
-
-	var reward_intro_box: VBoxContainer = VBoxContainer.new()
-	reward_intro_box.add_theme_constant_override("separation", 8)
-	reward_intro_margin.add_child(reward_intro_box)
-
-	var reward_title: Label = Label.new()
-	reward_title.text = UiText.ARENA_REWARD_DIALOG_TITLE
-	reward_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
-	reward_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	reward_intro_box.add_child(reward_title)
-
-	var reward_desc: Label = Label.new()
-	reward_desc.text = UiText.ARENA_REWARD_SECTION_DESC
-	reward_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	reward_desc.add_theme_font_size_override("font_size", 17)
-	reward_desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	reward_intro_box.add_child(reward_desc)
-
 	var reward_list_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
 	_reward_section.add_child(reward_list_panel)
 
@@ -291,7 +267,7 @@ func _apply_overview(overview: Dictionary) -> void:
 	_refresh_team_panel()
 	_render_opponents()
 	_render_rewards()
-	_apply_red_dots()
+	_refresh_tab_state()
 
 
 func _render_opponents() -> void:
@@ -879,3 +855,23 @@ func _build_reward_card(rank: Dictionary) -> PanelContainer:
 		row.add_child(requirement_label)
 
 	return panel
+
+
+func _build_shell_summary_left() -> String:
+	return "%s %d / %s %d" % [
+		UiText.REWARD_DIAMONDS,
+		GameState.player_data.diamonds,
+		"\u9580\u7968",
+		Helpers.get_current_tickets(_overview),
+	]
+
+
+func _build_shell_summary_right(tab_key: String) -> String:
+	if tab_key == "rewards":
+		var claimable_count: int = 0
+		for rank_variant: Variant in _overview.get("ranks", []):
+			if rank_variant is Dictionary and bool((rank_variant as Dictionary).get("isClaimable", false)):
+				claimable_count += 1
+		return "\u53ef\u9818\u53d6 %d" % claimable_count
+
+	return "\u7a4d\u5206 %d" % Helpers.get_current_score(_overview)

@@ -2,6 +2,7 @@ extends Control
 
 const Constants = preload("res://scripts/lineup/LineupConstants.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
 
@@ -24,7 +25,6 @@ var _current_team_type: String = "boss"
 var _api_in_flight: bool = false
 
 var _team_type_btns: Dictionary = {}
-var _page_title: Label
 var _team_summary_label: Label
 var _team_container: GridContainer
 var _cats_title: Label
@@ -44,41 +44,26 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var bg: Control = AssetResolver.make_fullscreen_background("config")
-	add_child(bg)
+	var submenu_items: Array = []
+	for type_key: String in ["boss", "dungeon", "arena_attack", "arena_defense"]:
+		submenu_items.append({
+			"key": type_key,
+			"label": str(Constants.TEAM_LABELS[type_key]),
+			"shell_description": _get_team_type_description(type_key),
+			"shell_summary_right": Callable(self, "_build_team_type_summary").bind(type_key),
+		})
 
-	var dim: ColorRect = ColorRect.new()
-	dim.color = Color(0.04, 0.03, 0.05, 0.34)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
+	var chrome: Dictionary = OverlaySceneChrome.build(self, "config", Callable(self, "_on_back_pressed"), {
+		"show_dock": true,
+		"dock_items": submenu_items,
+		"active_key": _current_team_type,
+		"back_label": UiText.CONFIG_BACK,
+		"button_pressed": Callable(self, "_switch_team_type"),
+		"content_separation": 14,
+	})
+	_team_type_btns = chrome.get("dock_buttons", {})
 
-	var content_panel: PanelContainer = PanelContainer.new()
-	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content_panel.offset_left = 20.0
-	content_panel.offset_top = OverlaySceneChrome.CONTENT_TOP_GAP
-	content_panel.offset_right = -20.0
-	content_panel.offset_bottom = -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H + 12.0)
-	content_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.PANEL_FILL, OverlaySceneChrome.PANEL_BORDER, 18))
-	add_child(content_panel)
-
-	var content_margin: MarginContainer = OverlaySceneChrome.make_content_margin(18)
-	content_panel.add_child(content_margin)
-
-	var content_vbox: VBoxContainer = VBoxContainer.new()
-	content_vbox.add_theme_constant_override("separation", 14)
-	content_margin.add_child(content_vbox)
-
-	_page_title = Label.new()
-	_page_title.text = UiText.CONFIG_PAGE_TITLE
-	_page_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	content_vbox.add_child(_page_title)
-
-	var page_desc: Label = Label.new()
-	page_desc.text = UiText.CONFIG_PAGE_DESC
-	page_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	page_desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	page_desc.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
-	content_vbox.add_child(page_desc)
+	var content_vbox: VBoxContainer = chrome.get("content_box") as VBoxContainer
 
 	var main_split: VBoxContainer = VBoxContainer.new()
 	main_split.add_theme_constant_override("separation", 12)
@@ -169,25 +154,6 @@ func _build_ui() -> void:
 	_cats_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_cats_scroll.add_child(_cats_container)
 	_cats_scroller = InertialScroller.attach(_cats_scroll, "vertical")
-
-	var submenu_items: Array = []
-	for type_key: String in ["boss", "dungeon", "arena_attack", "arena_defense"]:
-		submenu_items.append({
-			"key": type_key,
-			"label": str(Constants.TEAM_LABELS[type_key]),
-		})
-	var submenu: Dictionary = SceneSubmenuBar.build(self, {
-		"items": submenu_items,
-		"active_key": _current_team_type,
-		"back_label": UiText.CONFIG_BACK,
-		"back_pressed": Callable(self, "_on_back_pressed"),
-		"button_pressed": Callable(self, "_switch_team_type"),
-		"panel_fill": OverlaySceneChrome.PANEL_FILL,
-		"panel_border": OverlaySceneChrome.PANEL_BORDER,
-		"top": -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H),
-		"bottom": -OverlaySceneChrome.HOME_MAIN_NAV_H,
-	})
-	_team_type_btns = submenu.get("buttons", {})
 
 	_switch_team_type("boss")
 
@@ -299,12 +265,6 @@ func _mark_current_team_dirty() -> void:
 
 
 func _update_team_title() -> void:
-	var mode_label: String = str(Constants.TEAM_LABELS.get(_current_team_type, _current_team_type))
-	var members: Array = _get_filled_editing_team_members()
-	var max_count: int = _get_max_team_size()
-	var title_text: String = UiText.CONFIG_TEAM_TITLE_FORMAT % [mode_label, members.size(), max_count]
-	_page_title.text = title_text
-
 	_team_summary_label.text = UiText.CONFIG_TEAM_SUMMARY_WITH_DELAY
 
 
@@ -321,6 +281,10 @@ func _refresh_team() -> void:
 
 	_update_team_title()
 	_update_save_section()
+	SceneSubmenuBar.refresh(_team_type_btns, _current_team_type, {
+		"active_color": SceneMenuTheme.ACTIVE_COLOR,
+		"inactive_color": SceneMenuTheme.INACTIVE_COLOR,
+	})
 
 
 func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer:
@@ -837,6 +801,32 @@ func _get_max_team_size() -> int:
 		"arena_attack", "arena_defense":
 			return int(GameState.arena_config.get("max_team_size", 5))
 	return 5
+
+
+func _get_team_type_description(type_key: String) -> String:
+	match type_key:
+		"boss":
+			return "\u8abf\u6574 BOSS \u63a8\u5716\u968a\u4f0d\u8207\u521d\u59cb\u51fa\u624b\u5ef6\u9072\u3002"
+		"dungeon":
+			return "\u8abf\u6574\u5730\u4e0b\u57ce\u6311\u6230\u968a\u4f0d\u8207\u95dc\u5361\u7528\u8c93\u7de8\u6392\u3002"
+		"arena_attack":
+			return "\u8abf\u6574\u7af6\u6280\u5834\u9032\u653b\u968a\u4f0d\u8207\u51fa\u624b\u9806\u5e8f\u3002"
+		"arena_defense":
+			return "\u8abf\u6574\u7af6\u6280\u5834\u9632\u5b88\u968a\u4f0d\u8207\u9632\u79a6\u7de8\u6210\u3002"
+		_:
+			return UiText.CONFIG_PAGE_DESC
+
+
+func _build_team_type_summary(type_key: String) -> String:
+	_ensure_team_draft(type_key)
+	var team: Dictionary = _team_drafts.get(type_key, {})
+	var members_variant: Variant = team.get("members", [])
+	var members: Array = members_variant if members_variant is Array else []
+	var filled_count: int = 0
+	for member_variant: Variant in members:
+		if member_variant is Dictionary and not (member_variant as Dictionary).is_empty():
+			filled_count += 1
+	return "\u5df2\u7de8\u968a %d/%d" % [filled_count, _get_max_team_size_for(type_key)]
 
 
 func _on_back_pressed() -> void:

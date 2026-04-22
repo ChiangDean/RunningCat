@@ -3,6 +3,8 @@ extends RefCounted
 
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
+const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
 
 
 static func refresh_all_labels(scene) -> void:
@@ -39,12 +41,22 @@ static func refresh_all_labels(scene) -> void:
 
 
 static func refresh_resource_label(scene) -> void:
+	var resource_line: String = _build_resource_line(scene)
 	if scene._resource_label == null:
+		if scene._submenu_btns != null and scene._submenu_btns is Dictionary:
+			SceneSubmenuBar.refresh(scene._submenu_btns, scene._active_submenu, {
+				"active_color": SceneMenuTheme.ACTIVE_COLOR,
+				"inactive_color": SceneMenuTheme.INACTIVE_COLOR,
+			})
 		return
-	var resource_line := _build_resource_line(scene)
 	scene._resource_label.text = resource_line
 	if scene._detail_resource_label != null:
 		scene._detail_resource_label.text = resource_line
+	if scene._submenu_btns != null and scene._submenu_btns is Dictionary:
+		SceneSubmenuBar.refresh(scene._submenu_btns, scene._active_submenu, {
+			"active_color": SceneMenuTheme.ACTIVE_COLOR,
+			"inactive_color": SceneMenuTheme.INACTIVE_COLOR,
+		})
 
 
 static func refresh_stat_labels(scene, cat_data: CatData, player_cat: PlayerCatData) -> void:

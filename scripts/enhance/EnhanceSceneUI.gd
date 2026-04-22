@@ -83,57 +83,39 @@ class IdlePreviewPlayer:
 			frame_timer.start()
 
 static func build_ui(scene) -> void:
-	var bg := AssetResolver.make_fullscreen_background("enhance")
-	scene.add_child(bg)
-
-	var dim := ColorRect.new()
-	dim.color = Color(0.04, 0.03, 0.05, 0.34)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	scene.add_child(dim)
-
-	var submenu: Dictionary = SceneSubmenuBar.build(scene, {
-		"items": [
-			{"key": "main", "label": UiText.ENHANCE_SUBMENU_MAIN},
-			{"key": "catalog", "label": UiText.ENHANCE_SUBMENU_CATALOG},
+	var chrome: Dictionary = OverlaySceneChrome.build(scene, "enhance", Callable(scene, "_on_back_pressed"), {
+		"show_dock": true,
+		"dock_items": [
+			{
+				"key": "main",
+				"label": UiText.ENHANCE_SUBMENU_MAIN,
+				"shell_description": "\u9078\u64c7\u4e3b\u5b50\u9032\u884c\u7b49\u7d1a\u3001\u6280\u80fd\u8207\u661f\u968e\u57f9\u990a\u3002",
+				"shell_summary_left": func() -> String:
+					return _build_shell_summary_left(scene),
+				"shell_summary_right": func() -> String:
+					return _build_shell_summary_right(scene, "main"),
+			},
+			{
+				"key": "catalog",
+				"label": UiText.ENHANCE_SUBMENU_CATALOG,
+				"shell_description": UiText.ENHANCE_CATALOG_TODO_BODY,
+				"shell_summary_left": func() -> String:
+					return _build_shell_summary_left(scene),
+				"shell_summary_right": func() -> String:
+					return _build_shell_summary_right(scene, "catalog"),
+			},
 		],
 		"active_key": scene._active_submenu,
 		"back_label": UiText.ENHANCE_BACK,
-		"back_pressed": Callable(scene, "_on_back_pressed"),
 		"button_pressed": Callable(scene, "_switch_submenu"),
-		"panel_fill": OverlaySceneChrome.PANEL_FILL,
-		"panel_border": OverlaySceneChrome.PANEL_BORDER,
 		"button_height": 52.0,
-		"back_anchor_top": 1.0,
-		"back_anchor_bottom": 1.0,
-		"dock_anchor_top": 1.0,
-		"dock_anchor_bottom": 1.0,
-		"top": -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H),
-		"bottom": -OverlaySceneChrome.HOME_MAIN_NAV_H,
+		"content_separation": 14,
 	})
-	scene._submenu_btns = submenu.get("buttons", {})
+	scene._submenu_btns = chrome.get("dock_buttons", {})
 
-	var content_panel := PanelContainer.new()
-	content_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content_panel.offset_left = 20.0
-	content_panel.offset_top = OverlaySceneChrome.CONTENT_TOP_GAP
-	content_panel.offset_right = -20.0
-	content_panel.offset_bottom = -(OverlaySceneChrome.HOME_MAIN_NAV_H + OverlaySceneChrome.BOTTOM_DOCK_H + 12.0)
-	content_panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(OverlaySceneChrome.PANEL_FILL, OverlaySceneChrome.PANEL_BORDER, 18))
-	scene.add_child(content_panel)
-
-	var content_margin := _make_content_margin(18)
-	content_panel.add_child(content_margin)
-
-	var content_vbox := VBoxContainer.new()
+	var content_vbox := chrome.get("content_box") as VBoxContainer
 	content_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_vbox.add_theme_constant_override("separation", 14)
-	content_margin.add_child(content_vbox)
-
-	scene._resource_label = Label.new()
-	scene._resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	scene._resource_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
-	content_vbox.add_child(scene._resource_label)
-	Refresh.refresh_resource_label(scene)
 
 	scene._main_section = VBoxContainer.new()
 	scene._main_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -760,3 +742,14 @@ static func _make_content_margin(value: int) -> MarginContainer:
 	margin.add_theme_constant_override("margin_right", value)
 	margin.add_theme_constant_override("margin_bottom", value)
 	return margin
+
+
+static func _build_shell_summary_left(scene) -> String:
+	return Refresh._build_resource_line(scene)
+
+
+static func _build_shell_summary_right(scene, submenu_key: String) -> String:
+	var owned_count: int = scene.GameState.get_owned_cats().size()
+	if submenu_key == "catalog":
+		return "\u5716\u9451 %d" % owned_count
+	return "\u5df2\u64c1\u6709 %d \u96bb" % owned_count
