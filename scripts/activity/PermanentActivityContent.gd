@@ -52,7 +52,7 @@ const ENTRY_DEFINITIONS: Array[Dictionary] = [
 		"title": UiText.EXPEDITION_PAGE_TITLE,
 		"category": "放置收益",
 		"status": "常駐",
-		"preview_title": "派遣貓咪持續帶回素材",
+		"preview_title": "安排貓咪持續巡視領地",
 		"description": UiText.ACTIVITY_EXPEDITION_DESC,
 		"rewards": "定時收成、碎片素材、長線養成",
 		"button_text": UiText.ACTIVITY_EXPEDITION_BUTTON,

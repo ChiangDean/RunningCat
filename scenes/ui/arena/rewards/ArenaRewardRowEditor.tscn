@@ -1,0 +1,325 @@
+[gd_scene format=3 uid="uid://dcpkh8paoad0y"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://bdvfq1i266esl" path="res://assets/sprites/ui/common/button_bar_m_default.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://bkbp52enbnm0p" path="res://assets/sprites/ui/arena_ranks/master_1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://bgnlujru3nkkk" path="res://assets/sprites/ui/rewards/item_slot_overlay_mask.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://bakdwyhnhd6rl" path="res://assets/sprites/ui/rewards/diamonds.png" id="6"]
+[ext_resource type="Texture2D" uid="uid://xhh112x8cax4" path="res://assets/sprites/ui/rewards/trap_cages.png" id="7"]
+[ext_resource type="Texture2D" uid="uid://cf1k0vs51rj6g" path="res://assets/sprites/ui/rewards/special_cat_food.png" id="8"]
+
+[sub_resource type="StyleBoxFlat" id="1"]
+bg_color = Color(0.8, 0.7, 0.43, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.92, 0.82, 0.56, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="ArenaRewardRowEditor" type="Control" unique_id=1876062860]
+custom_minimum_size = Vector2(688, 114)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 688.0
+offset_bottom = 114.0
+theme = ExtResource("1")
+
+[node name="RowBackground" type="TextureRect" parent="." unique_id=707164443]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_right = -52.315796
+offset_bottom = -9.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="RankBadge" type="TextureRect" parent="." unique_id=804135197]
+layout_mode = 0
+offset_left = 28.0
+offset_right = 130.0
+offset_bottom = 102.0
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RankLabel" type="Label" parent="." unique_id=2010466813]
+layout_mode = 0
+offset_left = 125.0
+offset_top = 11.0
+offset_right = 197.0
+offset_bottom = 93.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.24, 0.11, 0.04, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+text = "大師 I"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RequirementHintLabel" type="Label" parent="." unique_id=56190640]
+visible = false
+layout_mode = 0
+offset_left = 124.0
+offset_top = 64.0
+offset_right = 208.0
+offset_bottom = 90.0
+theme_override_colors/font_color = Color(0.97, 0.88, 0.68, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.04, 0.85)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+text = "需達 1700 分"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RewardSlot1" type="Control" parent="." unique_id=764327472]
+anchors_preset = 0
+offset_left = 191.0
+offset_top = -16.0
+offset_right = 319.0
+offset_bottom = 112.0
+scale = Vector2(0.25, 0.25)
+
+[node name="Frame" type="TextureRect" parent="RewardSlot1" unique_id=203119190]
+layout_mode = 0
+offset_left = 128.0
+offset_top = 128.0
+offset_right = 384.0
+offset_bottom = 384.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemIcon" type="TextureRect" parent="RewardSlot1" unique_id=973227855]
+layout_mode = 0
+offset_left = 148.0
+offset_top = 148.0
+offset_right = 364.0
+offset_bottom = 364.0
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OverlayMask" type="TextureRect" parent="RewardSlot1" unique_id=104724065]
+modulate = Color(1, 1, 1, 0.42)
+layout_mode = 0
+offset_left = 116.0
+offset_top = 116.0
+offset_right = 396.0
+offset_bottom = 396.0
+texture = ExtResource("5")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemNameLabel" type="Label" parent="RewardSlot1" unique_id=640035605]
+layout_mode = 0
+offset_left = 128.0
+offset_top = 376.0
+offset_right = 384.0
+offset_bottom = 430.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 11
+theme_override_font_sizes/font_size = 37
+text = "鑽石"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="CountLabel" type="Label" parent="RewardSlot1" unique_id=618623281]
+layout_mode = 0
+offset_left = 144.0
+offset_top = 288.0
+offset_right = 360.0
+offset_bottom = 373.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 58
+text = "10"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="RewardSlot2" type="Control" parent="." unique_id=1964425228]
+anchors_preset = 0
+offset_left = 263.0
+offset_top = -16.0
+offset_right = 391.0
+offset_bottom = 112.0
+scale = Vector2(0.25, 0.25)
+
+[node name="Frame" type="TextureRect" parent="RewardSlot2" unique_id=1438560308]
+layout_mode = 0
+offset_left = 132.0
+offset_top = 132.0
+offset_right = 380.0
+offset_bottom = 380.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemIcon" type="TextureRect" parent="RewardSlot2" unique_id=1786915935]
+layout_mode = 0
+offset_left = 152.0
+offset_top = 152.0
+offset_right = 360.0
+offset_bottom = 360.0
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OverlayMask" type="TextureRect" parent="RewardSlot2" unique_id=1461025874]
+modulate = Color(1, 1, 1, 0.42)
+layout_mode = 0
+offset_left = 120.0
+offset_top = 120.0
+offset_right = 392.0
+offset_bottom = 392.0
+texture = ExtResource("5")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemNameLabel" type="Label" parent="RewardSlot2" unique_id=867164607]
+layout_mode = 0
+offset_left = 132.0
+offset_top = 372.0
+offset_right = 380.0
+offset_bottom = 426.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 11
+theme_override_font_sizes/font_size = 37
+text = "誘捕籠"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="CountLabel" type="Label" parent="RewardSlot2" unique_id=1888648789]
+layout_mode = 0
+offset_left = 140.0
+offset_top = 288.0
+offset_right = 352.0
+offset_bottom = 373.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 58
+text = "10"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="RewardSlot3" type="Control" parent="." unique_id=1095312736]
+anchors_preset = 0
+offset_left = 334.0
+offset_top = -16.0
+offset_right = 462.0
+offset_bottom = 112.0
+scale = Vector2(0.25, 0.25)
+
+[node name="Frame" type="TextureRect" parent="RewardSlot3" unique_id=1706760204]
+layout_mode = 0
+offset_left = 136.0
+offset_top = 132.0
+offset_right = 380.0
+offset_bottom = 376.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemIcon" type="TextureRect" parent="RewardSlot3" unique_id=1362274053]
+layout_mode = 0
+offset_left = 152.0
+offset_top = 152.0
+offset_right = 360.0
+offset_bottom = 360.0
+texture = ExtResource("8")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OverlayMask" type="TextureRect" parent="RewardSlot3" unique_id=768801316]
+modulate = Color(1, 1, 1, 0.42)
+layout_mode = 0
+offset_left = 140.0
+offset_top = 140.0
+offset_right = 372.0
+offset_bottom = 372.0
+texture = ExtResource("5")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ItemNameLabel" type="Label" parent="RewardSlot3" unique_id=1770024138]
+layout_mode = 0
+offset_left = 136.0
+offset_top = 372.0
+offset_right = 376.0
+offset_bottom = 426.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 11
+theme_override_font_sizes/font_size = 37
+text = "特級貓糧"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="CountLabel" type="Label" parent="RewardSlot3" unique_id=2986936]
+layout_mode = 0
+offset_left = 140.0
+offset_top = 288.0
+offset_right = 348.0
+offset_bottom = 373.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.26, 0.13, 0.04, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 58
+text = "10"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="ClaimButton" type="Button" parent="." unique_id=1768508720]
+layout_mode = 0
+offset_left = 507.0
+offset_top = 32.0
+offset_right = 600.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("1")
+theme_override_styles/pressed = SubResource("1")
+theme_override_styles/hover = SubResource("1")
+text = "領取"
+
+[node name="ClaimedLabel" type="Label" parent="." unique_id=1827312009]
+visible = false
+layout_mode = 0
+offset_left = 497.0
+offset_top = 35.0
+offset_right = 601.0
+offset_bottom = 75.0
+theme_override_colors/font_color = Color(1, 0.97, 0.92, 1)
+theme_override_colors/font_outline_color = Color(0.24, 0.11, 0.04, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 18
+text = "已領取"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LockedLabel" type="Label" parent="." unique_id=1492168707]
+visible = false
+layout_mode = 0
+offset_left = 492.0
+offset_top = 34.0
+offset_right = 616.0
+offset_bottom = 74.0
+theme_override_colors/font_color = Color(0.97, 0.88, 0.68, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.04, 0.85)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+text = "需達 1700 分"
+horizontal_alignment = 1
+vertical_alignment = 1

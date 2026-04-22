@@ -6,6 +6,8 @@ const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const InertialScroller = preload("res://scripts/ui/inertial_scroll.gd")
+const REWARD_ROW_SCENE = preload("res://scenes/ui/arena/rewards/ArenaRewardRowEditor.tscn")
 
 const REROLL_COOLDOWN := 5.0
 const OPPONENT_SLOT_FILL := Color(0.19, 0.17, 0.15, 0.96)
@@ -20,6 +22,7 @@ const TEAM_SLOT_EMPTY_FILL := Color(0.20, 0.18, 0.16, 0.88)
 const TEAM_SLOT_EMPTY_BORDER := Color(0.62, 0.54, 0.40, 0.78)
 const TEAM_DELAY_BG := Color(0.18, 0.12, 0.08, 0.94)
 const STATUS_ACTION_WIDTH := 156.0
+const REWARD_ACTION_WIDTH := 132.0
 const TEAM_SLOT_WIDTH := 108.0
 const OPPONENT_SLOT_WIDTH := 104.0
 const TEAM_SLOT_GAP := 6
@@ -224,15 +227,10 @@ func _build_ui() -> void:
 	_reward_section.add_theme_constant_override("separation", 14)
 	scroll_box.add_child(_reward_section)
 
-	var reward_list_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	_reward_section.add_child(reward_list_panel)
-
-	var reward_list_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	reward_list_panel.add_child(reward_list_margin)
-
 	_reward_list = VBoxContainer.new()
-	_reward_list.add_theme_constant_override("separation", 10)
-	reward_list_margin.add_child(_reward_list)
+	_reward_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_reward_list.add_theme_constant_override("separation", 0)
+	_reward_section.add_child(_reward_list)
 
 	_refresh_tab_state()
 	_apply_overview({})
@@ -330,7 +328,11 @@ func _build_opponent_card(opponent: Dictionary) -> Control:
 	meta_row.add_theme_constant_override("separation", 8)
 	title_box.add_child(meta_row)
 
-	meta_row.add_child(_make_opponent_meta_chip(str(opponent.get("rankName", UiText.ARENA_DEFAULT_RANK))))
+	var rank_chip: PanelContainer = _make_opponent_meta_chip(Helpers.get_rank_display_name(
+		str(opponent.get("rankKey", "")),
+		str(opponent.get("rankName", UiText.ARENA_DEFAULT_RANK))
+	))
+	meta_row.add_child(rank_chip)
 	meta_row.add_child(_make_opponent_meta_chip(UiText.ARENA_SCORE_FORMAT % int(opponent.get("score", 0))))
 
 	box.add_child(_build_opponent_member_row(opponent.get("defenseMembers", [])))
@@ -683,7 +685,10 @@ func _claim_rank_reward(rank_id: int) -> void:
 			GameState.update_arena(overview)
 			_apply_overview(overview)
 		ToastManager.success(UiText.ARENA_REWARD_DIALOG_TITLE, UiText.ARENA_REWARD_CLAIMED_FORMAT % [
-			str(response.get("rankName", UiText.ARENA_REWARD_UNKNOWN_RANK)),
+			Helpers.get_rank_display_name(
+				str(response.get("rankKey", "")),
+				str(response.get("rankName", UiText.ARENA_REWARD_UNKNOWN_RANK))
+			),
 			Helpers.format_rewards(response.get("rewards", []))
 		])
 	)
@@ -794,67 +799,92 @@ func _render_rewards() -> void:
 		_reward_list.add_child(_build_reward_card(rank))
 
 
-func _build_reward_card(rank: Dictionary) -> PanelContainer:
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel(
-		OverlaySceneChrome.CARD_BORDER,
-		Color(0.12, 0.12, 0.14, 0.96),
-		12
-	)
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	margin.add_child(row)
+func _build_reward_card(rank: Dictionary) -> Control:
+	var shell: Control = REWARD_ROW_SCENE.instantiate() as Control
+	if shell == null:
+		return Control.new()
+	shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var badge_texture: Texture2D = Helpers.resolve_rank_texture(
 		rank.get("imagePath", ""),
 		rank.get("rankKey", "")
 	)
-	if badge_texture != null:
-		row.add_child(AssetResolver.create_icon_rect(badge_texture, Vector2(56.0, 56.0)))
+	var rank_badge: TextureRect = shell.get_node("RankBadge") as TextureRect
+	var rank_label: Label = shell.get_node("RankLabel") as Label
+	var requirement_hint: Label = shell.get_node("RequirementHintLabel") as Label
+	var claim_button: Button = shell.get_node("ClaimButton") as Button
+	var claimed_label: Label = shell.get_node("ClaimedLabel") as Label
+	var locked_label: Label = shell.get_node("LockedLabel") as Label
 
-	var text_box: VBoxContainer = VBoxContainer.new()
-	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_box.add_theme_constant_override("separation", 6)
-	row.add_child(text_box)
+	if rank_badge != null:
+		rank_badge.texture = badge_texture
+		rank_badge.visible = badge_texture != null
 
-	var name_label: Label = Label.new()
-	name_label.text = str(rank.get("displayName", UiText.ARENA_REWARD_UNKNOWN_RANK))
-	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	text_box.add_child(name_label)
+	rank_label.text = Helpers.get_rank_display_name(
+		str(rank.get("rankKey", "")),
+		str(rank.get("displayName", UiText.ARENA_REWARD_UNKNOWN_RANK))
+	)
+	requirement_hint.text = UiText.ARENA_REQUIRE_SCORE_FORMAT % int(rank.get("scoreMin", 0))
+	var reward_slot_paths: Array[String] = [
+		"RewardSlot1",
+		"RewardSlot2",
+		"RewardSlot3",
+	]
+	var reward_entries: Array[Dictionary] = Helpers.get_reward_entries(rank.get("rewards", []))
+	for index: int in range(reward_slot_paths.size()):
+		var reward_slot: Control = shell.get_node(reward_slot_paths[index]) as Control
+		if reward_slot == null:
+			continue
+		if index < reward_entries.size():
+			_apply_reward_slot(reward_slot, reward_entries[index])
+			reward_slot.visible = true
+		else:
+			reward_slot.visible = false
 
-	var reward_label: Label = Label.new()
-	reward_label.text = Helpers.format_rewards(rank.get("rewards", []))
-	reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	reward_label.add_theme_font_size_override("font_size", 15)
-	reward_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	text_box.add_child(reward_label)
+	claim_button.visible = false
+	claimed_label.visible = false
+	locked_label.visible = false
 
 	if bool(rank.get("isClaimed", false)):
-		var claimed_label: Label = Label.new()
+		claimed_label.visible = true
 		claimed_label.text = UiText.COMMON_CLAIMED
-		claimed_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-		row.add_child(claimed_label)
 	elif bool(rank.get("isClaimable", false)):
-		var claim_button: Button = Button.new()
+		claim_button.visible = true
 		claim_button.text = UiText.COMMON_CLAIM
-		claim_button.custom_minimum_size = Vector2(96.0, 40.0)
 		claim_button.pressed.connect(func() -> void:
 			_claim_rank_reward(int(rank.get("rankId", 0)))
 		)
-		row.add_child(claim_button)
 		UiPalette.apply_button_kind(claim_button, "primary")
 	else:
-		var requirement_label: Label = Label.new()
-		requirement_label.text = UiText.ARENA_REQUIRE_SCORE_FORMAT % int(rank.get("scoreMin", 0))
-		requirement_label.add_theme_font_size_override("font_size", 15)
-		requirement_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-		row.add_child(requirement_label)
+		locked_label.visible = true
+		locked_label.text = UiText.ARENA_REQUIRE_SCORE_FORMAT % int(rank.get("scoreMin", 0))
 
-	return panel
+	return shell
+
+
+func _apply_reward_slot(slot: Control, reward_entry: Dictionary) -> void:
+	var frame: TextureRect = slot.get_node("Frame") as TextureRect
+	var icon: TextureRect = slot.get_node("ItemIcon") as TextureRect
+	var overlay_mask: TextureRect = slot.get_node("OverlayMask") as TextureRect
+	var name_label: Label = slot.get_node("ItemNameLabel") as Label
+	var qty_label: Label = slot.get_node("CountLabel") as Label
+
+	var texture: Texture2D = AssetResolver.load_texture(
+		AssetResolver.resolve_catalog_path(str(reward_entry.get("path", "")))
+	)
+	if texture != null:
+		icon.texture = texture
+		icon.visible = true
+	else:
+		icon.visible = false
+
+	name_label.text = str(reward_entry.get("name", ""))
+	name_label.tooltip_text = name_label.text
+	qty_label.text = "x%d" % int(reward_entry.get("qty", 0))
+	qty_label.tooltip_text = qty_label.text
+	frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	icon.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	overlay_mask.modulate = Color(1.0, 1.0, 1.0, 0.42)
 
 
 func _build_shell_summary_left() -> String:

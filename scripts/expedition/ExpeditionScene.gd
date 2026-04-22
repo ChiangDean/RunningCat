@@ -2,12 +2,17 @@ class_name ExpeditionScene
 extends Control
 
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
+const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const UiFonts = preload("res://scripts/ui/ui_fonts.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const InertialScroller = preload("res://scripts/ui/inertial_scroll.gd")
+const CARD_TEMPLATE_SCENE = preload("res://scenes/ui/activity/expedition/ExpeditionZoneCardTemplate.tscn")
+const EXPEDITION_SUBMENU_KEY: String = "expedition"
 
+var _content_scroll: ScrollContainer
 var _zone_list: VBoxContainer
+var _dock_buttons: Dictionary = {}
 var _countdown_labels: Dictionary = {}
 var _is_loading: bool = false
 var _cat_picker_close: Callable = Callable()
@@ -18,8 +23,8 @@ var _cat_picker_close: Callable = Callable()
 
 
 func _ready() -> void:
+	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
-	_fetch_expeditions()
 	set_process(true)
 
 
@@ -38,43 +43,45 @@ func _process(_delta: float) -> void:
 		if remaining <= 0:
 			should_refresh = true
 			continue
-		label.text = _format_remaining_time(remaining)
+		label.text = "剩餘時間 %s" % _format_remaining_time(remaining)
 
 	if should_refresh:
 		_refresh_zone_cards()
 
 
 func _build_ui() -> void:
-	var chrome: Dictionary = OverlaySceneChrome.build(self, "expedition", Callable(self, "_on_back_pressed"), {})
+	var chrome: Dictionary = OverlaySceneChrome.build(self, "expedition", Callable(self, "_on_back_pressed"), {
+		"show_dock": true,
+		"dock_items": [
+			{
+				"key": EXPEDITION_SUBMENU_KEY,
+				"label": "巡視",
+				"shell_title": UiText.EXPEDITION_PAGE_TITLE,
+				"shell_description": UiText.EXPEDITION_PAGE_DESC,
+				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
+				"shell_summary_right": Callable(self, "_build_shell_summary_right"),
+			},
+		],
+		"active_key": EXPEDITION_SUBMENU_KEY,
+		"button_pressed": Callable(self, "_on_submenu_pressed"),
+		"button_height": 52.0,
+		"font_size": 20,
+	})
 	var content_box: VBoxContainer = chrome.get("content_box")
+	_dock_buttons = chrome.get("dock_buttons", {})
 
-	var title: Label = Label.new()
-	title.text = UiText.EXPEDITION_PAGE_TITLE
-	UiFonts.apply_noto(title, UiPalette.FONT_SIZE_DISPLAY)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_box.add_child(title)
-
-	var desc: Label = Label.new()
-	desc.text = UiText.EXPEDITION_PAGE_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiFonts.apply_noto(desc, UiPalette.FONT_SIZE_BODY)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	content_box.add_child(desc)
-
-	var separator: HSeparator = HSeparator.new()
-	content_box.add_child(separator)
-
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	content_box.add_child(scroll)
-	InertialScroller.attach(scroll, "vertical")
+	_content_scroll = ScrollContainer.new()
+	_content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content_box.add_child(_content_scroll)
+	InertialScroller.attach(_content_scroll, "vertical")
 
 	_zone_list = VBoxContainer.new()
 	_zone_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_zone_list.add_theme_constant_override("separation", 12)
-	scroll.add_child(_zone_list)
+	_zone_list.add_theme_constant_override("separation", 14)
+	_content_scroll.add_child(_zone_list)
 
+	_refresh_shell_state()
 	_refresh_zone_cards()
 
 
@@ -111,14 +118,75 @@ func _refresh_zone_cards() -> void:
 		UiFonts.apply_noto(empty_label, UiPalette.FONT_SIZE_BODY)
 		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		_zone_list.add_child(empty_label)
+		_refresh_shell_state()
 		return
 
 	for zone_variant: Variant in GameState.expedition_zones:
 		if zone_variant is Dictionary:
 			_zone_list.add_child(_make_zone_card(zone_variant))
+	_refresh_shell_state()
 
 
-func _make_zone_card(zone: Dictionary) -> PanelContainer:
+func _refresh_shell_state() -> void:
+	if _dock_buttons.is_empty():
+		return
+	SceneSubmenuBar.refresh(_dock_buttons, EXPEDITION_SUBMENU_KEY, {
+		"active_color": Color(1.0, 0.95, 0.82, 1.0),
+		"inactive_color": Color(0.65, 0.65, 0.68, 1.0),
+		"active_font_size": 22,
+		"inactive_font_size": 20,
+	})
+
+
+func _build_shell_summary_left() -> String:
+	return "已解鎖 %d/%d" % [_get_unlocked_zone_count(), GameState.expedition_zones.size()]
+
+
+func _build_shell_summary_right() -> String:
+	var active_count: int = _get_active_expedition_count()
+	var claimable_count: int = _get_claimable_expedition_count()
+	if claimable_count > 0:
+		return "可領取 %d" % claimable_count
+	return "巡視中 %d" % active_count
+
+
+func _get_unlocked_zone_count() -> int:
+	var unlocked_count: int = 0
+	for zone_variant: Variant in GameState.expedition_zones:
+		if not (zone_variant is Dictionary):
+			continue
+		var zone: Dictionary = zone_variant
+		if _is_zone_unlocked(zone):
+			unlocked_count += 1
+	return unlocked_count
+
+
+func _get_active_expedition_count() -> int:
+	var active_count: int = 0
+	for expedition_variant: Variant in GameState.expedition_data:
+		if expedition_variant is Dictionary:
+			active_count += 1
+	return active_count
+
+
+func _get_claimable_expedition_count() -> int:
+	var claimable_count: int = 0
+	var now_unix: int = Time.get_unix_time_from_system()
+	for expedition_variant: Variant in GameState.expedition_data:
+		if not (expedition_variant is Dictionary):
+			continue
+		var expedition: Dictionary = expedition_variant
+		if bool(expedition.get("isClaimable", false)) or now_unix >= int(expedition.get("completesAtUnixSeconds", 0)):
+			claimable_count += 1
+	return claimable_count
+
+
+func _on_submenu_pressed(tab_key: String) -> void:
+	if tab_key != EXPEDITION_SUBMENU_KEY:
+		return
+
+
+func _make_zone_card(zone: Dictionary) -> Control:
 	var zone_id: int = int(zone.get("id", 0))
 	var zone_name: String = str(zone.get("displayName", ""))
 	var duration_hours: int = int(zone.get("durationHours", 0))
@@ -138,53 +206,32 @@ func _make_zone_card(zone: Dictionary) -> PanelContainer:
 	elif not expedition.is_empty():
 		accent = Color(0.52, 0.66, 0.84, 1.0)
 
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(accent)
+	var card: Panel = CARD_TEMPLATE_SCENE.instantiate() as Panel
+	if card == null:
+		return Control.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_stylebox_override("panel", _make_zone_card_style(accent))
 
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	card.add_child(margin)
+	var title: Label = card.get_node("Margin/ContentCanvas/TitleLabel") as Label
+	var duration: Label = card.get_node("Margin/ContentCanvas/DurationLabel") as Label
+	var status_badge_label: Label = card.get_node("Margin/ContentCanvas/PreviewRoot/StatusBadge/Label") as Label
+	var description_label: Label = card.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
+	var detail_label: Label = card.get_node("Margin/ContentCanvas/DetailLabel") as Label
+	var countdown_label: Label = card.get_node("Margin/ContentCanvas/CountdownLabel") as Label
+	var action_button: Button = card.get_node("Margin/ContentCanvas/ActionButton") as Button
+	var preview_image: TextureRect = card.get_node("Margin/ContentCanvas/PreviewRoot/PreviewImage") as TextureRect
 
-	var root: VBoxContainer = VBoxContainer.new()
-	root.add_theme_constant_override("separation", 10)
-	margin.add_child(root)
-
-	var header: HBoxContainer = HBoxContainer.new()
-	header.add_theme_constant_override("separation", 8)
-	root.add_child(header)
-
-	var title: Label = Label.new()
 	title.text = zone_name
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiFonts.apply_noto(title, UiPalette.FONT_SIZE_HEADING)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	header.add_child(title)
-
-	var duration: Label = Label.new()
 	duration.text = UiText.EXPEDITION_DURATION_FORMAT % duration_hours
-	UiFonts.apply_noto(duration, UiPalette.FONT_SIZE_LABEL)
-	duration.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	header.add_child(duration)
-
-	var status_label: Label = Label.new()
-	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiFonts.apply_noto(status_label, UiPalette.FONT_SIZE_BODY)
-	status_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	root.add_child(status_label)
-
-	var detail_label: Label = Label.new()
-	detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiFonts.apply_noto(detail_label, UiPalette.FONT_SIZE_LABEL)
-	detail_label.add_theme_color_override("font_color", Color(0.92, 0.88, 0.80, 0.92))
-	root.add_child(detail_label)
-
-	var action_button: Button = Button.new()
-	action_button.custom_minimum_size = Vector2(0.0, 48.0)
-	action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiFonts.apply_noto(action_button, UiPalette.FONT_SIZE_BODY)
-	root.add_child(action_button)
+	description_label.text = UiText.EXPEDITION_PAGE_DESC
+	detail_label.text = "選擇一隻空閒的貓咪開始巡視。"
+	countdown_label.visible = false
+	if preview_image != null:
+		preview_image.texture = AssetResolver.load_texture("res://assets/sprites/ui/activity_background_v1.png")
 
 	if not unlocked:
-		status_label.text = UiText.EXPEDITION_BTN_LOCKED
+		status_badge_label.text = UiText.EXPEDITION_BTN_LOCKED
+		description_label.text = UiText.EXPEDITION_ZONE_LOCKED_DESC % _get_territory_requirement_name(zone)
 		detail_label.text = UiText.EXPEDITION_ZONE_LOCKED_DESC % _get_territory_requirement_name(zone)
 		action_button.text = UiText.EXPEDITION_BTN_LOCKED
 		action_button.disabled = true
@@ -192,11 +239,12 @@ func _make_zone_card(zone: Dictionary) -> PanelContainer:
 		return card
 
 	if expedition.is_empty():
-		status_label.text = UiText.EXPEDITION_DURATION_FORMAT % duration_hours
-		detail_label.text = UiText.EXPEDITION_PAGE_DESC
+		status_badge_label.text = UiText.EXPEDITION_BTN_DEPLOY
+		description_label.text = "選擇一隻空閒貓咪，前往此區域進行巡視。"
+		detail_label.text = "目前狀態：尚未巡視"
 		action_button.text = UiText.EXPEDITION_BTN_DEPLOY
 		action_button.disabled = _is_loading
-		UiPalette.apply_button_kind(action_button, "secondary")
+		UiPalette.apply_button_kind(action_button, "primary")
 		action_button.pressed.connect(func() -> void:
 			_show_cat_picker(zone)
 		)
@@ -205,9 +253,9 @@ func _make_zone_card(zone: Dictionary) -> PanelContainer:
 	var cat_id: String = str(expedition.get("catId", "")).strip_edges()
 	var cat_name: String = _get_cat_display_name(cat_id)
 	if is_claimable:
-		status_label.text = UiText.EXPEDITION_READY
-		status_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.52, 1.0))
-		detail_label.text = "%s: %s" % [UiText.EXPEDITION_IN_PROGRESS, cat_name]
+		status_badge_label.text = UiText.EXPEDITION_READY
+		description_label.text = "巡視已完成，可以回來領取本次收穫。"
+		detail_label.text = "%s：%s" % [UiText.EXPEDITION_IN_PROGRESS, cat_name]
 		action_button.text = UiText.EXPEDITION_BTN_CLAIM
 		action_button.disabled = _is_loading
 		UiPalette.apply_button_kind(action_button, "primary")
@@ -216,14 +264,11 @@ func _make_zone_card(zone: Dictionary) -> PanelContainer:
 		)
 		return card
 
-	status_label.text = "%s: %s" % [UiText.EXPEDITION_IN_PROGRESS, cat_name]
-	detail_label.text = UiText.EXPEDITION_DURATION_FORMAT % duration_hours
-
-	var countdown_label: Label = Label.new()
-	countdown_label.text = _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - Time.get_unix_time_from_system(), 0))
-	UiFonts.apply_noto(countdown_label, UiPalette.FONT_SIZE_BODY_LG)
-	countdown_label.add_theme_color_override("font_color", Color(0.76, 0.88, 1.0, 1.0))
-	root.add_child(countdown_label)
+	status_badge_label.text = UiText.EXPEDITION_IN_PROGRESS
+	description_label.text = "%s：%s" % [UiText.EXPEDITION_IN_PROGRESS, cat_name]
+	detail_label.text = "巡視進行中，時間到後即可返回領取。"
+	countdown_label.visible = true
+	countdown_label.text = "剩餘時間 %s" % _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - Time.get_unix_time_from_system(), 0))
 	_countdown_labels[zone_id] = {
 		"label": countdown_label,
 		"completesAtUnixSeconds": int(expedition.get("completesAtUnixSeconds", 0)),
@@ -233,6 +278,21 @@ func _make_zone_card(zone: Dictionary) -> PanelContainer:
 	action_button.disabled = true
 	UiPalette.apply_button_kind(action_button, "neutral")
 	return card
+
+
+func _make_zone_card_style(accent: Color) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.19, 0.17, 0.15, 0.0)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = accent
+	style.corner_radius_top_left = 14
+	style.corner_radius_top_right = 14
+	style.corner_radius_bottom_left = 14
+	style.corner_radius_bottom_right = 14
+	return style
 
 
 func _show_cat_picker(zone: Dictionary) -> void:
