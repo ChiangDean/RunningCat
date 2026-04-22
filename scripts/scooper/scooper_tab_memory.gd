@@ -158,9 +158,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	elif can_unlock and not api_locked:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCK_BUTTON % [current_shards, cost]
 		RedDotService.refresh_dot(action_btn, true)
-		action_btn.pressed.connect(func() -> void:
-			_confirm_unlock_memory(scene, memory_id, item)
-		)
+		action_btn.pressed.connect(Callable(self, "_confirm_unlock_memory").bind(scene, memory_id, item))
 	else:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCK_NEED % [current_shards, cost]
 		action_btn.disabled = true
@@ -178,37 +176,55 @@ func _confirm_unlock_memory(scene: Control, memory_id: int, memory_item: Diction
 			display_name,
 			_memory_bonus_desc(memory_item),
 		],
-		func() -> void:
-			if scene._api_in_flight:
-				return
-			scene._api_in_flight = true
-			_refresh_memory_tab(scene)
-			scene.ApiClient.unlock_memory(memory_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
-				scene._api_in_flight = false
-				_refresh_memory_tab(scene)
-				if not ok:
-					scene.DialogManager.show_info(
-						UiText.SCOOPER_MEMORY_CONFIRM_FAILED,
-						str(err.get("message", UiText.SCOOPER_MEMORY_CONFIRM_FAILED_DEFAULT))
-					)
-					return
-
-				var result: Dictionary = data if data is Dictionary else {}
-				scene.GameState.player_data.memory_shards = int(result.get("remainingMemoryShards", scene.GameState.player_data.memory_shards))
-				scene._refresh_resource_label()
-				scene.DialogManager.show_info(
-					UiText.SCOOPER_MEMORY_CONFIRM_SUCCESS,
-					"%s\n%s" % [display_name, _memory_bonus_desc(memory_item)]
-				)
-				scene.refresh_from_bootstrap(func(refresh_ok: bool, _refresh_data: Variant, refresh_err: Dictionary) -> void:
-					if not refresh_ok:
-						scene.DialogManager.show_info(
-							UiText.SCOOPER_MEMORY_REFRESH_FAILED,
-							str(refresh_err.get("message", UiText.SCOOPER_MEMORY_REFRESH_FAILED_DEFAULT))
-						)
-				)
-			)
+		Callable(self, "_unlock_memory_confirmed").bind(scene, memory_id, memory_item, display_name)
 	)
+
+
+func _unlock_memory_confirmed(scene: Control, memory_id: int, memory_item: Dictionary, display_name: String) -> void:
+	if scene._api_in_flight:
+		return
+	scene._api_in_flight = true
+	_refresh_memory_tab(scene)
+	scene.ApiClient.unlock_memory(memory_id, Callable(self, "_on_unlock_memory_completed").bind(scene, memory_item, display_name))
+
+
+func _on_unlock_memory_completed(
+	ok: bool,
+	data: Variant,
+	err: Dictionary,
+	scene: Control,
+	memory_item: Dictionary,
+	display_name: String
+) -> void:
+	if scene == null or not is_instance_valid(scene):
+		return
+	scene._api_in_flight = false
+	_refresh_memory_tab(scene)
+	if not ok:
+		scene.DialogManager.show_info(
+			UiText.SCOOPER_MEMORY_CONFIRM_FAILED,
+			str(err.get("message", UiText.SCOOPER_MEMORY_CONFIRM_FAILED_DEFAULT))
+		)
+		return
+
+	var result: Dictionary = data if data is Dictionary else {}
+	scene.GameState.player_data.memory_shards = int(result.get("remainingMemoryShards", scene.GameState.player_data.memory_shards))
+	scene._refresh_resource_label()
+	scene.DialogManager.show_info(
+		UiText.SCOOPER_MEMORY_CONFIRM_SUCCESS,
+		"%s\n%s" % [display_name, _memory_bonus_desc(memory_item)]
+	)
+	scene.refresh_from_bootstrap(Callable(self, "_on_unlock_memory_bootstrap_refreshed").bind(scene))
+
+
+func _on_unlock_memory_bootstrap_refreshed(refresh_ok: bool, _refresh_data: Variant, refresh_err: Dictionary, scene: Control) -> void:
+	if scene == null or not is_instance_valid(scene):
+		return
+	if not refresh_ok:
+		scene.DialogManager.show_info(
+			UiText.SCOOPER_MEMORY_REFRESH_FAILED,
+			str(refresh_err.get("message", UiText.SCOOPER_MEMORY_REFRESH_FAILED_DEFAULT))
+		)
 
 
 func _memory_bonus_desc(item: Dictionary) -> String:

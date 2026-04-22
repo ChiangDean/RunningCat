@@ -351,11 +351,6 @@ func _build_ui() -> void:
 	var content_box: VBoxContainer = chrome.get("content_box") as VBoxContainer
 	_submenu_buttons = chrome.get("dock_buttons", {})
 
-	var title: Label = Label.new()
-	title.text = UiText.SETTINGS_CENTER_TITLE
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	content_box.add_child(title)
-
 	_section_scroll = ScrollContainer.new()
 	_section_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_section_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -402,12 +397,28 @@ func _build_birthday_spin_group(label_text: String, property_name: String, min_v
 
 func _build_section_items() -> Array:
 	var items: Array = [
-		{"key": "profile", "label": UiText.SETTINGS_SECTION_PROFILE},
-		{"key": "account", "label": UiText.SETTINGS_SECTION_ACCOUNT},
-		{"key": "game", "label": UiText.SETTINGS_SECTION_GAME},
+		{
+			"key": "profile",
+			"label": UiText.SETTINGS_SECTION_PROFILE,
+			"shell_description": UiText.SETTINGS_SECTION_PROFILE_DESC,
+		},
+		{
+			"key": "account",
+			"label": UiText.SETTINGS_SECTION_ACCOUNT,
+			"shell_description": UiText.SETTINGS_SECTION_ACCOUNT_DESC,
+		},
+		{
+			"key": "game",
+			"label": UiText.SETTINGS_SECTION_GAME,
+			"shell_description": UiText.SETTINGS_SECTION_GAME_DESC,
+		},
 	]
 	if GameState.is_admin_session():
-		items.append({"key": "admin", "label": "Admin Catalog"})
+		items.append({
+			"key": "admin",
+			"label": "Admin Catalog",
+			"shell_description": "\u7ba1\u7406\u54e1\u76ee\u9304\u8207\u904a\u6232\u8cc7\u6599\u8abf\u6574\u5165\u53e3\u3002",
+		})
 	return items
 
 
@@ -780,9 +791,7 @@ func _build_admin_catalog_row() -> Control:
 
 	var button: Button = _make_action_button("Open", "confirm", 160.0)
 	button.pressed.connect(UiAudio.play_ui_click)
-	button.pressed.connect(func() -> void:
-		SceneNavigator.open_overlay_scene(ADMIN_CATALOG_SCENE_PATH)
-	)
+	button.pressed.connect(_open_admin_catalog_scene)
 	row.add_child(button)
 	return panel
 
@@ -833,9 +842,7 @@ func _build_avatar_card(avatar_id: String) -> Control:
 	button.focus_mode = Control.FOCUS_NONE
 	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	button.pressed.connect(UiAudio.play_ui_click)
-	button.pressed.connect(func() -> void:
-		_on_avatar_selected(avatar_id)
-	)
+	button.pressed.connect(Callable(self, "_on_avatar_selected").bind(avatar_id))
 	panel.add_child(button)
 
 	_avatar_buttons[avatar_id] = {"panel": panel, "label": label}
@@ -895,9 +902,7 @@ func _build_provider_card(provider_name: String, provider_key: String) -> Contro
 	action_button.custom_minimum_size = Vector2(148.0, 42.0)
 	UiPalette.apply_button_kind(action_button, "secondary")
 	action_button.pressed.connect(UiAudio.play_ui_click)
-	action_button.pressed.connect(func() -> void:
-		_on_provider_action_pressed(provider_name, provider_key)
-	)
+	action_button.pressed.connect(Callable(self, "_on_provider_action_pressed").bind(provider_name, provider_key))
 	column.add_child(action_button)
 
 	_provider_card_refs[provider_name] = {
@@ -944,9 +949,7 @@ func _build_audio_row(bus_key: String, label_text: String) -> Control:
 	slider.max_value = 1.0
 	slider.step = 0.01
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slider.value_changed.connect(func(value: float) -> void:
-		_on_audio_slider_changed(bus_key, value)
-	)
+	slider.value_changed.connect(Callable(self, "_on_audio_slider_changed").bind(bus_key))
 	row.add_child(slider)
 	_audio_sliders[bus_key] = slider
 
@@ -960,9 +963,7 @@ func _build_audio_row(bus_key: String, label_text: String) -> Control:
 
 	var mute_box: CheckBox = CheckBox.new()
 	mute_box.text = UiText.SETTINGS_AUDIO_MUTE
-	mute_box.toggled.connect(func(pressed: bool) -> void:
-		_on_audio_mute_toggled(bus_key, pressed)
-	)
+	mute_box.toggled.connect(Callable(self, "_on_audio_mute_toggled").bind(bus_key))
 	row.add_child(mute_box)
 	_audio_mute_boxes[bus_key] = mute_box
 	return panel
@@ -1091,31 +1092,37 @@ func _create_card_shell(margin_value: int = 16) -> Dictionary:
 
 
 func _bind_profile_edit_events() -> void:
-	_player_name_input.text_changed.connect(func(_value: String) -> void:
-		_refresh_profile_counters()
-		_mark_profile_dirty()
-	)
+	_player_name_input.text_changed.connect(_on_player_name_text_changed)
 	_bio_input.text_changed.connect(_on_bio_text_changed)
-	_gender_option.item_selected.connect(func(_index: int) -> void:
-		_mark_profile_dirty()
-	)
+	_gender_option.item_selected.connect(_on_gender_option_item_selected)
+
+
+func _on_player_name_text_changed(_value: String) -> void:
+	_refresh_profile_counters()
+	_mark_profile_dirty()
+
+
+func _on_gender_option_item_selected(_index: int) -> void:
+	_mark_profile_dirty()
 
 
 func _load_profile_from_api() -> void:
 	_profile_loading = true
 	_refresh_profile_save_state()
-	ApiClient.get_profile_me(func(success: bool, data: Variant, error: Dictionary) -> void:
-		_profile_loading = false
-		_refresh_profile_save_state()
-		if not success:
-			ToastManager.hint(UiText.SETTINGS_LOAD_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_LOAD_FAILED_DEFAULT)))
-			return
+	ApiClient.get_profile_me(Callable(self, "_on_profile_loaded"))
 
-		if data is Dictionary:
-			var profile: Dictionary = data as Dictionary
-			GameState.apply_profile_response(profile)
-			_apply_profile_data(profile)
-	)
+
+func _on_profile_loaded(success: bool, data: Variant, error: Dictionary) -> void:
+	_profile_loading = false
+	_refresh_profile_save_state()
+	if not success:
+		ToastManager.hint(UiText.SETTINGS_LOAD_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_LOAD_FAILED_DEFAULT)))
+		return
+
+	if data is Dictionary:
+		var profile: Dictionary = data as Dictionary
+		GameState.apply_profile_response(profile)
+		_apply_profile_data(profile)
 
 
 func _apply_profile_data(data: Dictionary) -> void:
@@ -1417,35 +1424,37 @@ func _schedule_next_oauth_link_poll() -> void:
 func _on_oauth_link_poll_timeout() -> void:
 	if _oauth_link_transaction_id == "":
 		return
-	ApiClient.exchange_oauth_link(_oauth_link_transaction_id, func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			_stop_oauth_link_flow(true)
-			ToastManager.error(_oauth_link_provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
-			return
+	ApiClient.exchange_oauth_link(_oauth_link_transaction_id, Callable(self, "_on_exchange_oauth_link_completed"))
 
-		var payload: Dictionary = data if data is Dictionary else {}
-		var status: String = str(payload.get("status", "")).strip_edges().to_lower()
-		match status:
-			"pending":
-				_schedule_next_oauth_link_poll()
-			"linked":
-				var linked_provider_name := _oauth_link_provider_name
-				_stop_oauth_link_flow(true)
-				var profile: Dictionary = payload.get("profile", {}) if payload.get("profile") is Dictionary else {}
-				if not profile.is_empty():
-					GameState.apply_profile_response(profile)
-					_apply_profile_data(profile)
-				ToastManager.success(ACCOUNT_PROVIDER_LINK_SUCCESS, linked_provider_name)
-			"cancelled":
-				_stop_oauth_link_flow(true)
-				ToastManager.hint(ACCOUNT_PROVIDER_CANCELLED)
-			"failed":
-				_stop_oauth_link_flow(true)
-				var message: String = str(payload.get("errorMessage", ACCOUNT_PROVIDER_CONFLICT))
-				ToastManager.error(_oauth_link_provider_name, message)
-			_:
-				_schedule_next_oauth_link_poll()
-	)
+
+func _on_exchange_oauth_link_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	if not success:
+		_stop_oauth_link_flow(true)
+		ToastManager.error(_oauth_link_provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
+		return
+
+	var payload: Dictionary = data if data is Dictionary else {}
+	var status: String = str(payload.get("status", "")).strip_edges().to_lower()
+	match status:
+		"pending":
+			_schedule_next_oauth_link_poll()
+		"linked":
+			var linked_provider_name: String = _oauth_link_provider_name
+			_stop_oauth_link_flow(true)
+			var profile: Dictionary = payload.get("profile", {}) if payload.get("profile") is Dictionary else {}
+			if not profile.is_empty():
+				GameState.apply_profile_response(profile)
+				_apply_profile_data(profile)
+			ToastManager.success(ACCOUNT_PROVIDER_LINK_SUCCESS, linked_provider_name)
+		"cancelled":
+			_stop_oauth_link_flow(true)
+			ToastManager.hint(ACCOUNT_PROVIDER_CANCELLED)
+		"failed":
+			_stop_oauth_link_flow(true)
+			var message: String = str(payload.get("errorMessage", ACCOUNT_PROVIDER_CONFLICT))
+			ToastManager.error(_oauth_link_provider_name, message)
+		_:
+			_schedule_next_oauth_link_poll()
 
 
 func _stop_oauth_link_flow(clear_provider: bool) -> void:
@@ -1466,25 +1475,31 @@ func _unlink_oauth_provider(provider_name: String, provider_key: String) -> void
 	_oauth_link_provider_key = provider_key
 	_refresh_provider_cards(GameState.get_linked_providers(), GameState.is_password_login_enabled())
 
-	ApiClient.unlink_oauth_provider(provider_key, GameState.get_refresh_token(), func(success: bool, data: Variant, error: Dictionary) -> void:
-		_account_oauth_busy = false
-		_refresh_provider_cards(GameState.get_linked_providers(), GameState.is_password_login_enabled())
-		if not success:
-			ToastManager.error(provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
-			return
-
-		var profile: Dictionary = data if data is Dictionary else {}
-		if not profile.is_empty():
-			GameState.apply_profile_response(profile)
-			_apply_profile_data(profile)
-
-		if _is_current_login_provider(provider_name):
-			ToastManager.success(ACCOUNT_PROVIDER_UNLINK_CURRENT_SUCCESS)
-			_finalize_logout()
-			return
-
-		ToastManager.success(ACCOUNT_PROVIDER_UNLINK_SUCCESS, provider_name)
+	ApiClient.unlink_oauth_provider(
+		provider_key,
+		GameState.get_refresh_token(),
+		Callable(self, "_on_unlink_oauth_provider_completed").bind(provider_name)
 	)
+
+
+func _on_unlink_oauth_provider_completed(success: bool, data: Variant, error: Dictionary, provider_name: String) -> void:
+	_account_oauth_busy = false
+	_refresh_provider_cards(GameState.get_linked_providers(), GameState.is_password_login_enabled())
+	if not success:
+		ToastManager.error(provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
+		return
+
+	var profile: Dictionary = data if data is Dictionary else {}
+	if not profile.is_empty():
+		GameState.apply_profile_response(profile)
+		_apply_profile_data(profile)
+
+	if _is_current_login_provider(provider_name):
+		ToastManager.success(ACCOUNT_PROVIDER_UNLINK_CURRENT_SUCCESS)
+		_finalize_logout()
+		return
+
+	ToastManager.success(ACCOUNT_PROVIDER_UNLINK_SUCCESS, provider_name)
 
 
 func _get_oauth_platform_type() -> String:
@@ -1585,21 +1600,23 @@ func _on_avatar_selected(avatar_id: String) -> void:
 	var payload: Dictionary = _build_profile_payload(true)
 	_profile_saving = true
 	_refresh_profile_save_state()
-	ApiClient.update_profile_me(payload, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_profile_saving = false
-		if not success:
-			_selected_avatar_id = previous_avatar_id
-			_refresh_avatar_selection()
-			_refresh_profile_save_state()
-			ToastManager.error(UiText.SETTINGS_PROFILE_SAVE_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_PROFILE_SAVE_FAILED_DEFAULT)))
-			return
+	ApiClient.update_profile_me(payload, Callable(self, "_on_avatar_profile_updated").bind(previous_avatar_id))
 
-		if data is Dictionary:
-			var profile: Dictionary = data as Dictionary
-			GameState.apply_profile_response(profile)
-			_apply_profile_data(profile)
-		ToastManager.success(UiText.SETTINGS_PROFILE_SAVE_SUCCESS)
-	)
+
+func _on_avatar_profile_updated(success: bool, data: Variant, error: Dictionary, previous_avatar_id: String) -> void:
+	_profile_saving = false
+	if not success:
+		_selected_avatar_id = previous_avatar_id
+		_refresh_avatar_selection()
+		_refresh_profile_save_state()
+		ToastManager.error(UiText.SETTINGS_PROFILE_SAVE_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_PROFILE_SAVE_FAILED_DEFAULT)))
+		return
+
+	if data is Dictionary:
+		var profile: Dictionary = data as Dictionary
+		GameState.apply_profile_response(profile)
+		_apply_profile_data(profile)
+	ToastManager.success(UiText.SETTINGS_PROFILE_SAVE_SUCCESS)
 
 
 func _open_avatar_dialog() -> void:
@@ -1773,20 +1790,7 @@ func _on_save_profile_pressed() -> void:
 	var payload: Dictionary = _build_profile_payload(true)
 	_profile_saving = true
 	_refresh_profile_save_state()
-	ApiClient.update_profile_me(payload, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_profile_saving = false
-		if not success:
-			_profile_dirty = true
-			_refresh_profile_save_state()
-			ToastManager.error(UiText.SETTINGS_PROFILE_SAVE_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_PROFILE_SAVE_FAILED_DEFAULT)))
-			return
-
-		if data is Dictionary:
-			var profile: Dictionary = data as Dictionary
-			GameState.apply_profile_response(profile)
-			_apply_profile_data(profile)
-		ToastManager.success(UiText.SETTINGS_PROFILE_SAVE_SUCCESS)
-	)
+	ApiClient.update_profile_me(payload, Callable(self, "_on_profile_save_completed"))
 
 
 func _on_copy_uid_pressed() -> void:
@@ -1798,6 +1802,21 @@ func _on_copy_uid_pressed() -> void:
 		return
 	DisplayServer.clipboard_set(player_uid)
 	ToastManager.success(ACCOUNT_UID_COPY_SUCCESS, player_uid)
+
+
+func _on_profile_save_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	_profile_saving = false
+	if not success:
+		_profile_dirty = true
+		_refresh_profile_save_state()
+		ToastManager.error(UiText.SETTINGS_PROFILE_SAVE_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_PROFILE_SAVE_FAILED_DEFAULT)))
+		return
+
+	if data is Dictionary:
+		var profile: Dictionary = data as Dictionary
+		GameState.apply_profile_response(profile)
+		_apply_profile_data(profile)
+	ToastManager.success(UiText.SETTINGS_PROFILE_SAVE_SUCCESS)
 
 
 func _on_logout_pressed() -> void:
@@ -1823,20 +1842,22 @@ func _begin_logout() -> void:
 
 	_logout_in_flight = true
 	_refresh_logout_button_state()
-	ApiClient.revoke_refresh_token(refresh_token, UiText.START_LOGOUT_REASON, func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_logout_in_flight = false
-		_refresh_logout_button_state()
-		if success:
-			_finalize_logout()
-			return
+	ApiClient.revoke_refresh_token(refresh_token, UiText.START_LOGOUT_REASON, Callable(self, "_on_revoke_refresh_token_completed"))
 
-		var error_code: String = str(error.get("code", ""))
-		if error_code == "AUTH.REFRESH_TOKEN_NOT_FOUND" or error_code == "AUTH.SESSION_EXPIRED":
-			_finalize_logout()
-			return
 
-		ToastManager.error(UiText.START_LOGOUT_CONFIRM_TITLE, str(error.get("message", UiText.START_STATUS_LOGOUT_FAILED)))
-	)
+func _on_revoke_refresh_token_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	_logout_in_flight = false
+	_refresh_logout_button_state()
+	if success:
+		_finalize_logout()
+		return
+
+	var error_code: String = str(error.get("code", ""))
+	if error_code == "AUTH.REFRESH_TOKEN_NOT_FOUND" or error_code == "AUTH.SESSION_EXPIRED":
+		_finalize_logout()
+		return
+
+	ToastManager.error(UiText.START_LOGOUT_CONFIRM_TITLE, str(error.get("message", UiText.START_STATUS_LOGOUT_FAILED)))
 
 
 func _finalize_logout() -> void:
@@ -1856,22 +1877,24 @@ func _on_redeem_pressed() -> void:
 	_redeem_in_flight = true
 	_redeem_button.disabled = true
 	_redeem_button.text = UiText.SETTINGS_REDEEM_ACTION_WORKING
-	ApiClient.redeem_code(code, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_redeem_in_flight = false
-		_redeem_button.disabled = false
-		_redeem_button.text = UiText.SETTINGS_REDEEM_ACTION
-		if not success:
-			ToastManager.error(UiText.SETTINGS_REDEEM_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_REDEEM_FAILED_DEFAULT)))
-			return
+	ApiClient.redeem_code(code, Callable(self, "_on_redeem_code_completed"))
 
-		var response: Dictionary = data if data is Dictionary else {}
-		var wallet_snapshot: Variant = response.get("walletSnapshot", {})
-		if wallet_snapshot is Dictionary:
-			GameState.apply_wallet_snapshot(wallet_snapshot)
-		_redeem_input.text = ""
-		_show_redeem_result(response)
-		ToastManager.success(UiText.SETTINGS_REDEEM_SUCCESS, str(response.get("redeemedCode", "")))
-	)
+
+func _on_redeem_code_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	_redeem_in_flight = false
+	_redeem_button.disabled = false
+	_redeem_button.text = UiText.SETTINGS_REDEEM_ACTION
+	if not success:
+		ToastManager.error(UiText.SETTINGS_REDEEM_FAILED_TITLE, str(error.get("message", UiText.SETTINGS_REDEEM_FAILED_DEFAULT)))
+		return
+
+	var response: Dictionary = data if data is Dictionary else {}
+	var wallet_snapshot: Variant = response.get("walletSnapshot", {})
+	if wallet_snapshot is Dictionary:
+		GameState.apply_wallet_snapshot(wallet_snapshot)
+	_redeem_input.text = ""
+	_show_redeem_result(response)
+	ToastManager.success(UiText.SETTINGS_REDEEM_SUCCESS, str(response.get("redeemedCode", "")))
 
 
 func _show_redeem_result(response: Dictionary) -> void:
@@ -2019,12 +2042,8 @@ func _build_birthday_dialog_content() -> VBoxContainer:
 	picker_row.add_child(_build_birthday_spin_group(BIRTHDAY_MONTH_LABEL, "_birthday_month_spin", 1, 12))
 	picker_row.add_child(_build_birthday_spin_group(BIRTHDAY_DAY_LABEL, "_birthday_day_spin", 1, 31))
 
-	_birthday_year_spin.value_changed.connect(func(_value: float) -> void:
-		_refresh_birthday_day_limit()
-	)
-	_birthday_month_spin.value_changed.connect(func(_value: float) -> void:
-		_refresh_birthday_day_limit()
-	)
+	_birthday_year_spin.value_changed.connect(_on_birthday_year_changed)
+	_birthday_month_spin.value_changed.connect(_on_birthday_month_changed)
 
 	var actions: HBoxContainer = HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_END
@@ -2089,9 +2108,7 @@ func _build_region_dialog_button(label_text: String, region_value: String) -> Bu
 	else:
 		UiPalette.apply_button_kind(button, "secondary")
 	button.pressed.connect(UiAudio.play_ui_click)
-	button.pressed.connect(func() -> void:
-		_on_region_selected(region_value)
-	)
+	button.pressed.connect(Callable(self, "_on_region_selected").bind(region_value))
 	return button
 
 
@@ -2109,6 +2126,18 @@ func _on_birthday_dialog_closed() -> void:
 
 func _on_region_dialog_closed() -> void:
 	_region_dialog_close = Callable()
+
+
+func _on_birthday_year_changed(_value: float) -> void:
+	_refresh_birthday_day_limit()
+
+
+func _on_birthday_month_changed(_value: float) -> void:
+	_refresh_birthday_day_limit()
+
+
+func _open_admin_catalog_scene() -> void:
+	SceneNavigator.open_overlay_scene(ADMIN_CATALOG_SCENE_PATH)
 
 
 func _close_dialog(close_dialog: Callable) -> Callable:

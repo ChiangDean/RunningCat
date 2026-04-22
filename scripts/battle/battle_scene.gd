@@ -254,6 +254,7 @@ var _nav_buttons: Dictionary = {}
 var _nav_canvas: CanvasLayer
 var _nav_more_button: TextureButton
 var _home_more_buttons_layer: Control
+var _home_more_dismiss_button: Button
 var _home_more_buttons: Dictionary = {}
 var _home_more_button_order: Array[String] = []
 var _home_more_menu_expanded: bool = false
@@ -273,15 +274,9 @@ var _current_enemy_cats: Array = []
 func _ready() -> void:
 	add_to_group("battle_scene")
 	_build_home_scoop_frames()
-	GameState.player_profile_changed.connect(func() -> void:
-		_refresh_ui()
-	)
-	GameState.player_wallet_changed.connect(func() -> void:
-		_refresh_ui()
-	)
-	GameState.red_dot_state_changed.connect(func() -> void:
-		_refresh_home_red_dots()
-	)
+	GameState.player_profile_changed.connect(_on_player_profile_changed)
+	GameState.player_wallet_changed.connect(_on_player_wallet_changed)
+	GameState.red_dot_state_changed.connect(_on_red_dot_state_changed)
 	_build_scene()
 	_refresh_home_red_dots()
 	_refresh_expedition_red_dot_state()
@@ -729,14 +724,8 @@ func _build_ui() -> void:
 	_mail_badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 	_chat_badge = _make_label("", Vector2.ZERO, Vector2(22.0, 18.0), 12)
 	_chat_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	GameState.chat_unread_changed.connect(func(_channel_key: String, _count: int) -> void:
-		_refresh_chat_badge()
-		_refresh_home_red_dots()
-	)
-	GameState.party_cheer_coupon_count_changed.connect(func(_count: int) -> void:
-		_refresh_home_scoop_panel()
-		_refresh_sandbox_btn()
-	)
+	GameState.chat_unread_changed.connect(_on_chat_unread_changed)
+	GameState.party_cheer_coupon_count_changed.connect(_on_party_cheer_coupon_count_changed)
 	_refresh_chat_badge()
 
 	_boss_btn = _make_button(UiText.HOME_BOSS, Vector2(252.0, 350.0), Vector2(216.0, 42.0))
@@ -901,6 +890,22 @@ func _build_ui() -> void:
 	_home_more_buttons_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_home_more_buttons_layer.visible = false
 	_nav_canvas.add_child(_home_more_buttons_layer)
+
+	_home_more_dismiss_button = Button.new()
+	_home_more_dismiss_button.name = "HomeMoreDismissHitArea"
+	_home_more_dismiss_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_home_more_dismiss_button.focus_mode = Control.FOCUS_NONE
+	_home_more_dismiss_button.flat = true
+	_home_more_dismiss_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	_home_more_dismiss_button.text = ""
+	var dismiss_style: StyleBoxEmpty = StyleBoxEmpty.new()
+	_home_more_dismiss_button.add_theme_stylebox_override("normal", dismiss_style)
+	_home_more_dismiss_button.add_theme_stylebox_override("hover", dismiss_style)
+	_home_more_dismiss_button.add_theme_stylebox_override("pressed", dismiss_style)
+	_home_more_dismiss_button.add_theme_stylebox_override("focus", dismiss_style)
+	_home_more_dismiss_button.add_theme_stylebox_override("disabled", dismiss_style)
+	_home_more_dismiss_button.pressed.connect(_close_home_more_menu)
+	_home_more_buttons_layer.add_child(_home_more_dismiss_button)
 	_build_home_main_button_panel()
 
 	var nav_paths: Array[String] = _get_main_nav_button_paths()
@@ -1230,15 +1235,9 @@ func _setup_skill_mode_button_visual(button: Button, path: String) -> void:
 	button.set_meta("skill_mode_base_font_size", _get_bottom_hud_font_size(path, UiPalette.FONT_SIZE_SUBHEADING))
 	button.set_meta("skill_mode_pressed", false)
 	button.set_meta("skill_mode_active", false)
-	button.button_down.connect(func() -> void:
-		_set_skill_mode_button_pressed(button, true)
-	)
-	button.button_up.connect(func() -> void:
-		_set_skill_mode_button_pressed(button, false)
-	)
-	button.mouse_exited.connect(func() -> void:
-		_set_skill_mode_button_pressed(button, false)
-	)
+	button.button_down.connect(Callable(self, "_set_skill_mode_button_pressed").bind(button, true))
+	button.button_up.connect(Callable(self, "_set_skill_mode_button_pressed").bind(button, false))
+	button.mouse_exited.connect(Callable(self, "_set_skill_mode_button_pressed").bind(button, false))
 	_refresh_skill_mode_button_visual(button)
 
 
@@ -1484,15 +1483,9 @@ func _build_home_quick_button(txt: String, pos: Vector2, sz: Vector2, is_main_na
 	btn.set_meta("label_base_rect", Rect2(label.position, label.size))
 	btn.set_meta("home_button_active", false)
 	btn.set_meta("home_button_pressed", false)
-	btn.button_down.connect(func() -> void:
-		_set_home_quick_button_pressed(btn, true)
-	)
-	btn.button_up.connect(func() -> void:
-		_set_home_quick_button_pressed(btn, false)
-	)
-	btn.mouse_exited.connect(func() -> void:
-		_set_home_quick_button_pressed(btn, false)
-	)
+	btn.button_down.connect(Callable(self, "_set_home_quick_button_pressed").bind(btn, true))
+	btn.button_up.connect(Callable(self, "_set_home_quick_button_pressed").bind(btn, false))
+	btn.mouse_exited.connect(Callable(self, "_set_home_quick_button_pressed").bind(btn, false))
 	if is_main_nav:
 		btn.texture_normal = HOME_NAV_BUTTON_DEFAULT_TEXTURE
 		btn.texture_hover = HOME_NAV_BUTTON_ACTIVE_TEXTURE
@@ -1768,13 +1761,7 @@ func _refresh_home_red_dots() -> void:
 
 
 func _refresh_expedition_red_dot_state() -> void:
-	ApiClient.get_expedition(func(success: bool, data: Variant, _error: Dictionary) -> void:
-		if not success or not (data is Dictionary):
-			return
-		var response: Dictionary = data
-		var expeditions_variant: Variant = response.get("activeExpeditions", [])
-		GameState.apply_expedition_data(expeditions_variant if expeditions_variant is Array else [])
-	)
+	ApiClient.get_expedition(Callable(self, "_on_expedition_red_dot_state_refreshed"))
 
 
 func _toggle_home_more_menu() -> void:
@@ -2585,38 +2572,7 @@ func _trigger_home_scoop(play_click_sound: bool) -> void:
 	_start_home_scoop_animation()
 	_refresh_home_scoop_panel()
 	var scoop_count: int = mini(_get_home_auto_scoop_batch_size(), max(GameState.player_data.poop_count, 1))
-	ApiClient.scoop_poop_silent(scoop_count, func(ok: bool, data: Variant, err: Dictionary) -> void:
-		if not ok:
-			_home_scoop_request_in_flight = false
-			_home_scoop_response_ready = false
-			_home_scoop_profile_fetch_in_flight = false
-			_home_scoop_pending_profile.clear()
-			_home_scoop_pending_result.clear()
-			_home_scoop_pending_reward_entries.clear()
-			_home_scoop_cooldown_remaining = 0.0
-			_home_scoop_animation_active = false
-			_home_scoop_animation_elapsed = 0.0
-			_set_home_scoop_frame(0)
-			if _home_auto_scoop_enabled:
-				_set_home_auto_scoop_enabled(false)
-			if _home_scoop_result_label != null:
-				_home_scoop_result_label.text = str(err.get("message", UiText.HOME_SCOOPER_ERROR))
-				_home_scoop_result_label.visible = true
-			_refresh_home_scoop_panel()
-			return
-
-		var result: Dictionary = data if data is Dictionary else {}
-		_home_scoop_pending_result = result.duplicate(true)
-		var updated_profile: Variant = result.get("updatedProfile", {})
-		if updated_profile is Dictionary and not (updated_profile as Dictionary).is_empty():
-			_home_scoop_pending_profile = (updated_profile as Dictionary).duplicate(true)
-			_home_scoop_response_ready = true
-			_try_finalize_home_scoop_resolution()
-			return
-
-		_home_scoop_response_ready = true
-		_try_finalize_home_scoop_resolution()
-	)
+	ApiClient.scoop_poop_silent(scoop_count, Callable(self, "_on_home_scoop_silent_completed"))
 
 
 func _build_home_scoop_frames() -> void:
@@ -2684,32 +2640,7 @@ func _on_home_coupon_pressed() -> void:
 		return
 
 	_home_coupon_button.disabled = true
-	ApiClient.use_party_cheer_coupon(func(ok: bool, data: Variant, err: Dictionary) -> void:
-		if not ok:
-			if _home_scoop_result_label != null:
-				_home_scoop_result_label.text = str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR))
-				_home_scoop_result_label.visible = true
-			_refresh_home_scoop_panel()
-			return
-
-		var result: Dictionary = data if data is Dictionary else {}
-		var wallet_snapshot: Variant = result.get("walletSnapshot", {})
-		if wallet_snapshot is Dictionary:
-			GameState.apply_wallet_snapshot(wallet_snapshot)
-		var remaining_coupon_count: int = GameState.get_party_cheer_coupon_count()
-		if remaining_coupon_count > 0:
-			_start_party_cheer_coupon_cooldown(_home_coupon_button)
-		else:
-			_refresh_party_cheer_coupon_button(_home_coupon_button)
-		if _home_scoop_result_label != null:
-			_home_scoop_result_label.text = ""
-			_home_scoop_result_label.visible = false
-		var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(result.get("rewards", {}))
-		if not reward_entries.is_empty():
-			_queue_reward_floats(reward_entries)
-		_refresh_home_scoop_panel()
-		_refresh_ui()
-	)
+	ApiClient.use_party_cheer_coupon(Callable(self, "_on_home_coupon_completed"))
 
 
 func _refresh_party_cheer_coupon_button(button: Button) -> void:
@@ -2877,12 +2808,7 @@ func _try_finalize_home_scoop_resolution() -> void:
 		if _home_scoop_profile_fetch_in_flight:
 			return
 		_home_scoop_profile_fetch_in_flight = true
-		ApiClient.get_scooper_profile_silent(func(profile_ok: bool, profile_data: Variant, _profile_err: Dictionary) -> void:
-			_home_scoop_profile_fetch_in_flight = false
-			if profile_ok and profile_data is Dictionary:
-				_home_scoop_pending_profile = (profile_data as Dictionary).duplicate(true)
-			_try_finalize_home_scoop_resolution()
-		)
+		ApiClient.get_scooper_profile_silent(Callable(self, "_on_pending_scooper_profile_fetched"))
 		return
 
 	if _home_scoop_pending_reward_entries.is_empty() and not _home_scoop_pending_profile.is_empty():
@@ -2974,50 +2900,10 @@ func _show_sandbox_dialog() -> void:
 	scoop_btn.text = UiText.HOME_SANDBOX_CLEAN_NOW
 	scoop_btn.custom_minimum_size = Vector2(160.0, 52.0)
 	scoop_btn.disabled = GameState.player_data.poop_count <= 0
-	scoop_btn.pressed.connect(func() -> void:
-		if scoop_btn.disabled:
-			return
-		scoop_btn.disabled = true
-		result_lbl.text = ""
-		ApiClient.scoop_poop(1, func(ok: bool, data: Variant, err: Dictionary) -> void:
-			if not ok:
-				result_lbl.text = str(err.get("message", UiText.HOME_SANDBOX_CLEAN_FAILED))
-				scoop_btn.disabled = GameState.player_data.poop_count <= 0
-				return
-
-			var result: Dictionary = data if data is Dictionary else {}
-			var updated_profile: Variant = result.get("updatedProfile", {})
-			if updated_profile is Dictionary:
-				GameState.update_scooper_profile(updated_profile)
-
-			var remaining := GameState.player_data.poop_count
-			poop_count_lbl.text = UiText.HOME_SANDBOX_PENDING_POOP % remaining
-			var parts: Array[String] = []
-			var reward_entries: Array[Dictionary] = []
-
-			var exp_gained := int(result.get("expGained", 0))
-			if exp_gained > 0:
-				parts.append("EXP +%d" % exp_gained)
-				reward_entries.append(_make_reward_float_entry(UiText.REWARD_EXP, exp_gained, "exp"))
-
-			var memory_shards_gained := int(result.get("memoryShardsGained", 0))
-			if memory_shards_gained > 0:
-				parts.append("%s +%d" % [UiText.REWARD_MEMORY_SHARDS, memory_shards_gained])
-				reward_entries.append(_make_reward_float_entry(UiText.REWARD_MEMORY_SHARDS, memory_shards_gained, "memory_shards"))
-
-			var whiskers_gained := int(result.get("WhiskersGained", result.get("whiskersGained", 0)))
-			if whiskers_gained > 0:
-				parts.append("%s +%d" % [UiText.REWARD_WHISKERS, whiskers_gained])
-				reward_entries.append(_make_reward_float_entry(UiText.REWARD_WHISKERS, whiskers_gained, "whiskers"))
-
-			result_lbl.text = UiText.HOME_SANDBOX_NONE_EXTRA if parts.is_empty() else UiText.HOME_SANDBOX_GAINED_PREFIX + " / ".join(parts)
-			if not reward_entries.is_empty():
-				_queue_reward_floats(reward_entries)
-
-			scoop_btn.disabled = remaining <= 0
-			_refresh_ui()
-		)
-	)
+	var scoop_btn_ref: WeakRef = weakref(scoop_btn)
+	var result_lbl_ref: WeakRef = weakref(result_lbl)
+	var poop_count_lbl_ref: WeakRef = weakref(poop_count_lbl)
+	scoop_btn.pressed.connect(Callable(self, "_on_idle_scoop_pressed").bind(scoop_btn_ref, result_lbl_ref, poop_count_lbl_ref))
 	scoop_section.add_child(scoop_btn)
 	if false:
 		vbox.add_child(scoop_section)
@@ -3027,31 +2913,7 @@ func _show_sandbox_dialog() -> void:
 	var coupon_btn: Button = Button.new()
 	coupon_btn.custom_minimum_size = Vector2(200.0, 46.0)
 	_refresh_party_cheer_coupon_button(coupon_btn)
-	coupon_btn.pressed.connect(func() -> void:
-		if coupon_btn.disabled:
-			return
-		coupon_btn.disabled = true
-		ApiClient.use_party_cheer_coupon(func(ok: bool, data: Variant, err: Dictionary) -> void:
-			if not ok:
-				_refresh_party_cheer_coupon_button(coupon_btn)
-				ToastManager.error(UiText.SOCIAL_PARTY_USE_COUPON, str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR)))
-				return
-
-			var result: Dictionary = data if data is Dictionary else {}
-			var wallet_snapshot: Variant = result.get("walletSnapshot", {})
-			if wallet_snapshot is Dictionary:
-				GameState.apply_wallet_snapshot(wallet_snapshot)
-			var remaining_coupon_count: int = GameState.get_party_cheer_coupon_count()
-			if remaining_coupon_count > 0:
-				_start_party_cheer_coupon_cooldown(coupon_btn)
-			else:
-				_refresh_party_cheer_coupon_button(coupon_btn)
-			var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(result.get("rewards", {}))
-			if not reward_entries.is_empty():
-				_queue_reward_floats(reward_entries)
-			_refresh_ui()
-		)
-	)
+	coupon_btn.pressed.connect(Callable(self, "_on_idle_dialog_coupon_pressed").bind(coupon_btn))
 	vbox.add_child(coupon_btn)
 
 	if has_rewards:
@@ -3059,30 +2921,7 @@ func _show_sandbox_dialog() -> void:
 		claim_btn.text = UiText.HOME_CLAIM_REWARDS
 		claim_btn.custom_minimum_size = Vector2(200.0, 52.0)
 		RedDotService.refresh_dot(claim_btn, _has_idle_claim_red_dot())
-		claim_btn.pressed.connect(func() -> void:
-			claim_btn.disabled = true
-			ApiClient.claim_idle_rewards(func(ok: bool, data: Variant, err: Dictionary) -> void:
-				claim_btn.disabled = false
-				if not ok:
-					ToastManager.error(UiText.HOME_CLAIM_FAILED_TITLE, str(err.get("message", UiText.HOME_CLAIM_FAILED_MESSAGE)))
-					return
-
-				var response: Dictionary = data if data is Dictionary else {}
-				GameState.apply_idle_claim_response(response)
-				close_ref[0].call()
-				_refresh_ui()
-
-				var claimed: Dictionary = response.get("rewards", {})
-				var reward_entries: Array[Dictionary] = []
-				for entry: Array in _get_home_reward_defs():
-					var val: int = int(claimed.get(entry[1], 0))
-					if val > 0:
-						reward_entries.append(_make_reward_float_entry(entry[0], val, entry[1]))
-
-				if not reward_entries.is_empty():
-					_queue_reward_floats(reward_entries)
-			)
-		)
+		claim_btn.pressed.connect(Callable(self, "_on_idle_claim_pressed").bind(claim_btn, close_ref))
 		vbox.add_child(claim_btn)
 
 	close_ref[0] = DialogManager.show_info_node(UiText.HOME_IDLE_DIALOG_TITLE, vbox)
@@ -3132,13 +2971,246 @@ func _on_stats_btn_pressed() -> void:
 	var stats_view: Control = load("res://scenes/StatsScene.tscn").instantiate()
 	if stats_view.has_method("set_close_action"):
 		var close_dialog := [Callable()]
-		stats_view.set_close_action(func() -> void:
-			if close_dialog[0].is_valid():
-				close_dialog[0].call()
-		)
+		stats_view.set_close_action(Callable(self, "_close_overlay_dialog_ref").bind(close_dialog))
 		close_dialog[0] = DialogManager.show_info_node(UiText.STATS_PANEL_TITLE, stats_view, Callable(), "xlarge")
 	else:
 		DialogManager.show_info_node(UiText.STATS_PANEL_TITLE, stats_view, Callable(), "xlarge")
+
+
+func _on_home_coupon_completed(ok: bool, data: Variant, err: Dictionary) -> void:
+	if not ok:
+		if _home_scoop_result_label != null:
+			_home_scoop_result_label.text = str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR))
+			_home_scoop_result_label.visible = true
+		_refresh_home_scoop_panel()
+		return
+
+	var result: Dictionary = data if data is Dictionary else {}
+	var wallet_snapshot: Variant = result.get("walletSnapshot", {})
+	if wallet_snapshot is Dictionary:
+		GameState.apply_wallet_snapshot(wallet_snapshot)
+	var remaining_coupon_count: int = GameState.get_party_cheer_coupon_count()
+	if remaining_coupon_count > 0:
+		_start_party_cheer_coupon_cooldown(_home_coupon_button)
+	else:
+		_refresh_party_cheer_coupon_button(_home_coupon_button)
+	if _home_scoop_result_label != null:
+		_home_scoop_result_label.text = ""
+		_home_scoop_result_label.visible = false
+	var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(result.get("rewards", {}))
+	if not reward_entries.is_empty():
+		_queue_reward_floats(reward_entries)
+	_refresh_home_scoop_panel()
+	_refresh_ui()
+
+
+func _on_pending_scooper_profile_fetched(profile_ok: bool, profile_data: Variant, _profile_err: Dictionary) -> void:
+	_home_scoop_profile_fetch_in_flight = false
+	if profile_ok and profile_data is Dictionary:
+		_home_scoop_pending_profile = (profile_data as Dictionary).duplicate(true)
+	_try_finalize_home_scoop_resolution()
+
+
+func _on_expedition_red_dot_state_refreshed(success: bool, data: Variant, _error: Dictionary) -> void:
+	if not success or not (data is Dictionary):
+		return
+	var response: Dictionary = data
+	var expeditions_variant: Variant = response.get("activeExpeditions", [])
+	GameState.apply_expedition_data(expeditions_variant if expeditions_variant is Array else [])
+
+
+func _on_home_scoop_silent_completed(ok: bool, data: Variant, err: Dictionary) -> void:
+	if not ok:
+		_home_scoop_request_in_flight = false
+		_home_scoop_response_ready = false
+		_home_scoop_profile_fetch_in_flight = false
+		_home_scoop_pending_profile.clear()
+		_home_scoop_pending_result.clear()
+		_home_scoop_pending_reward_entries.clear()
+		_home_scoop_cooldown_remaining = 0.0
+		_home_scoop_animation_active = false
+		_home_scoop_animation_elapsed = 0.0
+		_set_home_scoop_frame(0)
+		if _home_auto_scoop_enabled:
+			_set_home_auto_scoop_enabled(false)
+		if _home_scoop_result_label != null:
+			_home_scoop_result_label.text = str(err.get("message", UiText.HOME_SCOOPER_ERROR))
+			_home_scoop_result_label.visible = true
+		_refresh_home_scoop_panel()
+		return
+
+	var result: Dictionary = data if data is Dictionary else {}
+	_home_scoop_pending_result = result.duplicate(true)
+	var updated_profile: Variant = result.get("updatedProfile", {})
+	if updated_profile is Dictionary and not (updated_profile as Dictionary).is_empty():
+		_home_scoop_pending_profile = (updated_profile as Dictionary).duplicate(true)
+		_home_scoop_response_ready = true
+		_try_finalize_home_scoop_resolution()
+		return
+
+	_home_scoop_response_ready = true
+	_try_finalize_home_scoop_resolution()
+
+
+func _on_idle_dialog_coupon_pressed(coupon_btn: Button) -> void:
+	if coupon_btn == null or not is_instance_valid(coupon_btn) or coupon_btn.disabled:
+		return
+	coupon_btn.disabled = true
+	ApiClient.use_party_cheer_coupon(Callable(self, "_on_idle_dialog_coupon_completed").bind(coupon_btn))
+
+
+func _on_idle_dialog_coupon_completed(ok: bool, data: Variant, err: Dictionary, coupon_btn: Button) -> void:
+	if coupon_btn == null or not is_instance_valid(coupon_btn):
+		return
+	if not ok:
+		_refresh_party_cheer_coupon_button(coupon_btn)
+		ToastManager.error(UiText.SOCIAL_PARTY_USE_COUPON, str(err.get("message", UiText.HOME_PARTY_COUPON_ERROR)))
+		return
+
+	var result: Dictionary = data if data is Dictionary else {}
+	var wallet_snapshot: Variant = result.get("walletSnapshot", {})
+	if wallet_snapshot is Dictionary:
+		GameState.apply_wallet_snapshot(wallet_snapshot)
+	var remaining_coupon_count: int = GameState.get_party_cheer_coupon_count()
+	if remaining_coupon_count > 0:
+		_start_party_cheer_coupon_cooldown(coupon_btn)
+	else:
+		_refresh_party_cheer_coupon_button(coupon_btn)
+	var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(result.get("rewards", {}))
+	if not reward_entries.is_empty():
+		_queue_reward_floats(reward_entries)
+	_refresh_ui()
+
+
+func _on_idle_claim_pressed(claim_btn: Button, close_ref: Array) -> void:
+	if claim_btn == null or not is_instance_valid(claim_btn):
+		return
+	claim_btn.disabled = true
+	ApiClient.claim_idle_rewards(Callable(self, "_on_idle_claim_completed").bind(claim_btn, close_ref))
+
+
+func _on_idle_claim_completed(ok: bool, data: Variant, err: Dictionary, claim_btn: Button, close_ref: Array) -> void:
+	if claim_btn != null and is_instance_valid(claim_btn):
+		claim_btn.disabled = false
+	if not ok:
+		ToastManager.error(UiText.HOME_CLAIM_FAILED_TITLE, str(err.get("message", UiText.HOME_CLAIM_FAILED_MESSAGE)))
+		return
+
+	var response: Dictionary = data if data is Dictionary else {}
+	GameState.apply_idle_claim_response(response)
+	_close_overlay_dialog_ref(close_ref)
+	_refresh_ui()
+
+	var claimed: Dictionary = response.get("rewards", {})
+	var reward_entries: Array[Dictionary] = []
+	for entry: Array in _get_home_reward_defs():
+		var val: int = int(claimed.get(entry[1], 0))
+		if val > 0:
+			reward_entries.append(_make_reward_float_entry(entry[0], val, entry[1]))
+
+	if not reward_entries.is_empty():
+		_queue_reward_floats(reward_entries)
+
+
+func _on_idle_scoop_pressed(scoop_btn_ref: WeakRef, result_lbl_ref: WeakRef, poop_count_lbl_ref: WeakRef) -> void:
+	var scoop_btn_obj: Object = scoop_btn_ref.get_ref() if scoop_btn_ref != null else null
+	var result_lbl_obj: Object = result_lbl_ref.get_ref() if result_lbl_ref != null else null
+	if not (scoop_btn_obj is Button):
+		return
+	var scoop_btn: Button = scoop_btn_obj as Button
+	if scoop_btn.disabled:
+		return
+	scoop_btn.disabled = true
+	if result_lbl_obj is Label:
+		(result_lbl_obj as Label).text = ""
+	ApiClient.scoop_poop(1, Callable(self, "_on_idle_scoop_completed").bind(scoop_btn_ref, result_lbl_ref, poop_count_lbl_ref))
+
+
+func _on_idle_scoop_completed(
+	ok: bool,
+	data: Variant,
+	err: Dictionary,
+	scoop_btn_ref: WeakRef,
+	result_lbl_ref: WeakRef,
+	poop_count_lbl_ref: WeakRef
+) -> void:
+	var scoop_btn_obj: Object = scoop_btn_ref.get_ref() if scoop_btn_ref != null else null
+	var result_lbl_obj: Object = result_lbl_ref.get_ref() if result_lbl_ref != null else null
+	var poop_count_lbl_obj: Object = poop_count_lbl_ref.get_ref() if poop_count_lbl_ref != null else null
+	var scoop_btn: Button = scoop_btn_obj as Button if scoop_btn_obj is Button else null
+	var result_lbl: Label = result_lbl_obj as Label if result_lbl_obj is Label else null
+	var poop_count_lbl: Label = poop_count_lbl_obj as Label if poop_count_lbl_obj is Label else null
+	if not ok:
+		if result_lbl != null:
+			result_lbl.text = str(err.get("message", UiText.HOME_SANDBOX_CLEAN_FAILED))
+		if scoop_btn != null:
+			scoop_btn.disabled = GameState.player_data.poop_count <= 0
+		return
+
+	var result: Dictionary = data if data is Dictionary else {}
+	var updated_profile: Variant = result.get("updatedProfile", {})
+	if updated_profile is Dictionary:
+		GameState.update_scooper_profile(updated_profile)
+
+	var remaining: int = GameState.player_data.poop_count
+	if poop_count_lbl != null:
+		poop_count_lbl.text = UiText.HOME_SANDBOX_PENDING_POOP % remaining
+	var parts: Array[String] = []
+	var reward_entries: Array[Dictionary] = []
+
+	var exp_gained: int = int(result.get("expGained", 0))
+	if exp_gained > 0:
+		parts.append("EXP +%d" % exp_gained)
+		reward_entries.append(_make_reward_float_entry(UiText.REWARD_EXP, exp_gained, "exp"))
+
+	var memory_shards_gained: int = int(result.get("memoryShardsGained", 0))
+	if memory_shards_gained > 0:
+		parts.append("%s +%d" % [UiText.REWARD_MEMORY_SHARDS, memory_shards_gained])
+		reward_entries.append(_make_reward_float_entry(UiText.REWARD_MEMORY_SHARDS, memory_shards_gained, "memory_shards"))
+
+	var whiskers_gained: int = int(result.get("WhiskersGained", result.get("whiskersGained", 0)))
+	if whiskers_gained > 0:
+		parts.append("%s +%d" % [UiText.REWARD_WHISKERS, whiskers_gained])
+		reward_entries.append(_make_reward_float_entry(UiText.REWARD_WHISKERS, whiskers_gained, "whiskers"))
+
+	if result_lbl != null:
+		result_lbl.text = UiText.HOME_SANDBOX_NONE_EXTRA if parts.is_empty() else UiText.HOME_SANDBOX_GAINED_PREFIX + " / ".join(parts)
+	if not reward_entries.is_empty():
+		_queue_reward_floats(reward_entries)
+
+	if scoop_btn != null:
+		scoop_btn.disabled = remaining <= 0
+	_refresh_ui()
+
+
+func _close_overlay_dialog_ref(close_ref: Array) -> void:
+	if close_ref.is_empty():
+		return
+	var close_callable: Callable = close_ref[0]
+	if close_callable.is_valid():
+		close_callable.call()
+
+
+func _on_player_profile_changed() -> void:
+	_refresh_ui()
+
+
+func _on_player_wallet_changed() -> void:
+	_refresh_ui()
+
+
+func _on_red_dot_state_changed() -> void:
+	_refresh_home_red_dots()
+
+
+func _on_chat_unread_changed(_channel_key: String, _count: int) -> void:
+	_refresh_chat_badge()
+	_refresh_home_red_dots()
+
+
+func _on_party_cheer_coupon_count_changed(_count: int) -> void:
+	_refresh_home_scoop_panel()
+	_refresh_sandbox_btn()
 
 
 func _open_friend() -> void:

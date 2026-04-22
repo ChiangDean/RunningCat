@@ -36,19 +36,6 @@ static func build_ui(scene) -> void:
 	scene._root_vbox = chrome.get("content_box")
 	scene._submenu_buttons = chrome.get("dock_buttons", {})
 
-	var title: Label = Label.new()
-	title.text = UiText.DUNGEON_PAGE_TITLE
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	scene._root_vbox.add_child(title)
-
-	var desc: Label = Label.new()
-	desc.text = UiText.DUNGEON_PAGE_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	scene._root_vbox.add_child(desc)
-
 	scene._scroll = ScrollContainer.new()
 	scene._scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scene._scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -96,6 +83,11 @@ static func _build_submenu_items(scene) -> Array:
 		items.append({
 			"key": key,
 			"label": str(dungeon.get("displayName", key)),
+			"shell_description": str(dungeon.get("description", "")),
+			"shell_summary_left": func() -> String:
+				return _build_shell_summary_left(scene, key),
+			"shell_summary_right": func() -> String:
+				return _build_shell_summary_right(scene, key),
 		})
 	return items
 
@@ -441,3 +433,40 @@ static func _resolve_dungeon_preview_texture(dungeon: Dictionary) -> Texture2D:
 			return AssetResolver.load_texture(str(DEFAULT_DUNGEON_ICON_BY_KEY[key]))
 
 	return null
+
+
+static func _build_shell_summary_left(scene, dungeon_key: String) -> String:
+	match dungeon_key:
+		"cat_food":
+			return "%s %d / %s %d" % [
+				UiText.REWARD_CAT_FOOD,
+				scene.GameState.player_data.cat_food,
+				UiText.REWARD_SPECIAL_CAT_FOOD,
+				scene.GameState.player_data.special_cat_food,
+			]
+		"diamond":
+			return "%s %d / %s %d" % [
+				UiText.REWARD_DIAMONDS,
+				scene.GameState.player_data.diamonds,
+				UiText.REWARD_TRAP_CAGE,
+				scene.GameState.player_data.trap_cages,
+			]
+		"whisker":
+			return "%s %d / %s %d" % [
+				UiText.REWARD_DIAMONDS,
+				scene.GameState.player_data.diamonds,
+				UiText.REWARD_WHISKERS,
+				scene.GameState.player_data.whisker_shards,
+			]
+		_:
+			return ""
+
+
+static func _build_shell_summary_right(scene, dungeon_key: String) -> String:
+	var dungeon: Dictionary = scene.GameState.get_dungeon_entry_by_key(dungeon_key)
+	if dungeon.is_empty():
+		return ""
+	return "\u5c64\u6578 %d / \u9580\u7968 %d" % [
+		maxi(int(dungeon.get("maxClearedFloor", 0)), 1),
+		int(dungeon.get("remainingTicketCount", 0)),
+	]

@@ -103,9 +103,7 @@ func _add_achievement_section(scene: Control, title_text: String, entries: Array
 		claim_all_btn.disabled = bool(scene._api_in_flight)
 		UiPalette.apply_button_kind(claim_all_btn, "confirm")
 		RedDotService.refresh_dot(claim_all_btn, not claim_all_btn.disabled)
-		claim_all_btn.pressed.connect(func() -> void:
-			_claim_all_achievements(scene)
-		)
+		claim_all_btn.pressed.connect(Callable(self, "_claim_all_achievements").bind(scene))
 		header.add_child(claim_all_btn)
 
 	if entries.is_empty():
@@ -211,9 +209,7 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 		action_btn.disabled = bool(scene._api_in_flight)
 		UiPalette.apply_button_kind(action_btn, "confirm")
 		RedDotService.refresh_dot(action_btn, not action_btn.disabled)
-		action_btn.pressed.connect(func() -> void:
-			_claim_achievement(scene, achievement_id)
-		)
+		action_btn.pressed.connect(Callable(self, "_claim_achievement").bind(scene, achievement_id))
 	elif is_claimed:
 		action_btn.text = UiText.SCOOPER_ACHIEVEMENT_ACTION_CLAIMED
 		action_btn.disabled = true
@@ -233,21 +229,7 @@ func _claim_achievement(scene: Control, achievement_id: int) -> void:
 	_refresh_achievement_tab(scene)
 	scene._refresh_tab_button_labels()
 
-	scene.ApiClient.claim_achievement_silent(achievement_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
-		if not ok:
-			scene._api_in_flight = false
-			_refresh_achievement_tab(scene)
-			scene._refresh_tab_button_labels()
-			_set_feedback(scene, str(err.get("message", UiText.SCOOPER_ACHIEVEMENT_CLAIM_FAILED_DEFAULT)))
-			return
-
-		var result: Dictionary = data if data is Dictionary else {}
-		var reward_entries: Array[Dictionary] = _extract_reward_float_entries(scene, result)
-		if not reward_entries.is_empty():
-			scene.queue_home_reward_floats(reward_entries)
-		_apply_claim_result(scene, result)
-		_refresh_achievements_after_claim(scene)
-	)
+	scene.ApiClient.claim_achievement_silent(achievement_id, Callable(self, "_on_claim_achievement_completed").bind(scene))
 
 
 func _claim_all_achievements(scene: Control) -> void:
@@ -276,40 +258,87 @@ func _claim_next_achievement(scene: Control, pending_ids: Array[int], reward_ent
 
 	var next_ids: Array[int] = pending_ids.duplicate()
 	var achievement_id: int = next_ids.pop_front()
-	scene.ApiClient.claim_achievement_silent(achievement_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
-		if not ok:
-			scene._api_in_flight = false
-			_refresh_achievement_tab(scene)
-			scene._refresh_tab_button_labels()
-			_set_feedback(scene, str(err.get("message", UiText.SCOOPER_ACHIEVEMENT_CLAIM_FAILED_DEFAULT)))
-			return
-
-		var result: Dictionary = data if data is Dictionary else {}
-		var next_entries: Array[Dictionary] = reward_entries.duplicate()
-		next_entries.append_array(_extract_reward_float_entries(scene, result))
-		_apply_claim_profile(scene)
-		_claim_next_achievement(scene, next_ids, next_entries)
-	)
+	scene.ApiClient.claim_achievement_silent(achievement_id, Callable(self, "_on_claim_next_achievement_completed").bind(scene, next_ids, reward_entries))
 
 
 func _refresh_achievements_after_claim(scene: Control) -> void:
-	scene.ApiClient.get_scooper_profile_silent(func(profile_ok: bool, profile_data: Variant, _profile_err: Dictionary) -> void:
-		if profile_ok and profile_data is Dictionary:
-			scene.GameState.update_scooper_profile(profile_data)
-			scene._refresh_resource_label()
+	scene.ApiClient.get_scooper_profile_silent(Callable(self, "_on_refresh_achievements_profile_completed").bind(scene))
 
-		scene.ApiClient.get_achievements_silent(func(refresh_ok: bool, refresh_data: Variant, refresh_err: Dictionary) -> void:
-			scene._api_in_flight = false
-			if refresh_ok and refresh_data is Array:
-				scene.GameState.update_scooper_achievement(refresh_data)
-				_refresh_achievement_tab(scene)
-				scene._refresh_tab_button_labels()
-				return
-			_refresh_achievement_tab(scene)
-			scene._refresh_tab_button_labels()
-			_set_feedback(scene, str(refresh_err.get("message", UiText.SCOOPER_ACHIEVEMENT_REFRESH_FAILED_DEFAULT)))
-		)
-	)
+
+func _on_claim_achievement_completed(ok: bool, data: Variant, err: Dictionary, scene: Control) -> void:
+	if scene == null or not is_instance_valid(scene):
+		return
+	if not ok:
+		scene._api_in_flight = false
+		_refresh_achievement_tab(scene)
+		scene._refresh_tab_button_labels()
+		_set_feedback(scene, str(err.get("message", UiText.SCOOPER_ACHIEVEMENT_CLAIM_FAILED_DEFAULT)))
+		return
+
+	var result: Dictionary = data if data is Dictionary else {}
+	var reward_entries: Array[Dictionary] = _extract_reward_float_entries(scene, result)
+	if not reward_entries.is_empty():
+		scene.queue_home_reward_floats(reward_entries)
+	_apply_claim_result(scene, result)
+	_refresh_achievements_after_claim(scene)
+
+
+func _on_claim_next_achievement_completed(
+	ok: bool,
+	data: Variant,
+	err: Dictionary,
+	scene: Control,
+	next_ids: Array[int],
+	reward_entries: Array[Dictionary]
+) -> void:
+	if scene == null or not is_instance_valid(scene):
+		return
+	if not ok:
+		scene._api_in_flight = false
+		_refresh_achievement_tab(scene)
+		scene._refresh_tab_button_labels()
+		_set_feedback(scene, str(err.get("message", UiText.SCOOPER_ACHIEVEMENT_CLAIM_FAILED_DEFAULT)))
+		return
+
+	var result: Dictionary = data if data is Dictionary else {}
+	var next_entries: Array[Dictionary] = reward_entries.duplicate()
+	next_entries.append_array(_extract_reward_float_entries(scene, result))
+	_apply_claim_profile(scene)
+	_claim_next_achievement(scene, next_ids, next_entries)
+
+
+func _on_refresh_achievements_profile_completed(
+	profile_ok: bool,
+	profile_data: Variant,
+	_profile_err: Dictionary,
+	scene: Control
+) -> void:
+	if scene == null or not is_instance_valid(scene):
+		return
+	if profile_ok and profile_data is Dictionary:
+		scene.GameState.update_scooper_profile(profile_data)
+		scene._refresh_resource_label()
+
+	scene.ApiClient.get_achievements_silent(Callable(self, "_on_refresh_achievements_completed").bind(scene))
+
+
+func _on_refresh_achievements_completed(
+	refresh_ok: bool,
+	refresh_data: Variant,
+	refresh_err: Dictionary,
+	scene: Control
+) -> void:
+	if scene == null or not is_instance_valid(scene):
+		return
+	scene._api_in_flight = false
+	if refresh_ok and refresh_data is Array:
+		scene.GameState.update_scooper_achievement(refresh_data)
+		_refresh_achievement_tab(scene)
+		scene._refresh_tab_button_labels()
+		return
+	_refresh_achievement_tab(scene)
+	scene._refresh_tab_button_labels()
+	_set_feedback(scene, str(refresh_err.get("message", UiText.SCOOPER_ACHIEVEMENT_REFRESH_FAILED_DEFAULT)))
 
 
 func _apply_claim_result(scene: Control, result: Dictionary) -> void:

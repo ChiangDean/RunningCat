@@ -68,12 +68,22 @@ func _build_ui() -> void:
 
 
 func _on_back_pressed() -> void:
-	if _close_action.is_valid():
+	if _can_invoke_callable(_close_action):
 		_close_action.call()
 		return
 	var scene_navigator: Node = get_node_or_null("/root/SceneNavigator")
 	if scene_navigator != null and scene_navigator.has_method("return_to_battle"):
 		scene_navigator.call("return_to_battle")
+
+
+func _can_invoke_callable(callback: Callable) -> bool:
+	if callback.is_null() or not callback.is_valid():
+		return false
+	var object_id: int = callback.get_object_id()
+	if object_id == 0:
+		return true
+	var target: Object = instance_from_id(object_id)
+	return target != null and is_instance_valid(target)
 
 
 func _build_tab_items() -> Array:

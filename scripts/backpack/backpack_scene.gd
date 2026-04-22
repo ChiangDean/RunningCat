@@ -2,6 +2,7 @@ class_name BackpackScene
 extends Control
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/ItemSlotTemplate.tscn")
 
@@ -52,21 +53,6 @@ func _switch_tab(tab_key: String) -> void:
 
 
 func _build_content(box: VBoxContainer) -> void:
-	var title: Label = Label.new()
-	title.text = UiText.BACKPACK_TITLE
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	box.add_child(title)
-
-	var subtitle: Label = Label.new()
-	subtitle.text = "切換下方子選單檢視背包內容。"
-	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	subtitle.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	subtitle.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	box.add_child(subtitle)
-
-	box.add_child(HSeparator.new())
-
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(scroll)
@@ -86,46 +72,54 @@ func _refresh_content() -> void:
 
 	match _active_tab:
 		TAB_CURRENCY:
-			_build_currency_section(_content_box)
+			_build_item_grid(_content_box, _get_currency_items())
 		TAB_TICKET:
-			_build_ticket_section(_content_box)
+			_build_item_grid(_content_box, _get_ticket_items())
 		TAB_CONSUMABLE:
-			_build_consumable_section(_content_box)
+			_build_item_grid(_content_box, _get_consumable_items())
 		_:
-			_build_all_section(_content_box)
+			_build_item_grid(_content_box, _get_all_items())
 
 	SceneSubmenuBar.refresh(_tab_buttons, _active_tab)
 
 
 func _build_tab_items() -> Array:
 	return [
-		{"key": TAB_ALL, "label": "全部"},
-		{"key": TAB_CURRENCY, "label": UiText.BACKPACK_SECTION_CURRENCY},
-		{"key": TAB_TICKET, "label": UiText.BACKPACK_SECTION_TICKET},
-		{"key": TAB_CONSUMABLE, "label": UiText.BACKPACK_SECTION_CONSUMABLE},
+		{
+			"key": TAB_ALL,
+			"label": "\u5168\u90e8",
+			"shell_description": "\u67e5\u770b\u80cc\u5305\u5167\u76ee\u524d\u6301\u6709\u7684\u5168\u90e8\u8ca8\u5e63\u3001\u7968\u5238\u8207\u6d88\u8017\u9053\u5177\u3002",
+			"shell_summary_left": Callable(self, "_build_shell_summary_left").bind(TAB_ALL),
+			"shell_summary_right": Callable(self, "_build_shell_summary_right").bind(TAB_ALL),
+		},
+		{
+			"key": TAB_CURRENCY,
+			"label": UiText.BACKPACK_SECTION_CURRENCY,
+			"shell_description": "\u67e5\u770b\u76ee\u524d\u6301\u6709\u7684\u91d1\u5e63\u3001\u947d\u77f3\u8207\u885d\u649e\u5e63\u3002",
+			"shell_summary_left": Callable(self, "_build_shell_summary_left").bind(TAB_CURRENCY),
+			"shell_summary_right": Callable(self, "_build_shell_summary_right").bind(TAB_CURRENCY),
+		},
+		{
+			"key": TAB_TICKET,
+			"label": UiText.BACKPACK_SECTION_TICKET,
+			"shell_description": "\u67e5\u770b\u7af6\u6280\u5834\u5238\u3001\u5730\u4e0b\u57ce\u5238\u8207\u7d44\u968a\u6536\u76ca\u5238\u7b49\u7968\u5238\u6578\u91cf\u3002",
+			"shell_summary_left": Callable(self, "_build_shell_summary_left").bind(TAB_TICKET),
+			"shell_summary_right": Callable(self, "_build_shell_summary_right").bind(TAB_TICKET),
+		},
+		{
+			"key": TAB_CONSUMABLE,
+			"label": UiText.BACKPACK_SECTION_CONSUMABLE,
+			"shell_description": "\u67e5\u770b\u8c93\u7ce7\u3001\u7279\u7d1a\u8c93\u7ce7\u3001\u8a98\u6355\u7c60\u8207\u5404\u985e\u788e\u7247\u5b58\u91cf\u3002",
+			"shell_summary_left": Callable(self, "_build_shell_summary_left").bind(TAB_CONSUMABLE),
+			"shell_summary_right": Callable(self, "_build_shell_summary_right").bind(TAB_CONSUMABLE),
+		},
 	]
-
-
-func _build_section_header(parent: VBoxContainer, label_text: String) -> void:
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	parent.add_child(row)
-
-	var lbl: Label = Label.new()
-	lbl.text = label_text
-	lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	lbl.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	row.add_child(lbl)
-
-	var sep: HSeparator = HSeparator.new()
-	sep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(sep)
 
 
 func _build_item_grid(parent: VBoxContainer, items: Array) -> void:
 	var grid_width: float = (
 		(BACKPACK_SLOT_CELL_SIZE.x * float(GRID_COLS))
-		+ (BACKPACK_GRID_H_SEPARATION * float(max(GRID_COLS - 1, 0)))
+		+ (BACKPACK_GRID_H_SEPARATION * float(maxi(GRID_COLS - 1, 0)))
 	)
 	var center: CenterContainer = CenterContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -150,18 +144,19 @@ func _make_item_card(item: Dictionary) -> Control:
 	var frame: TextureRect = slot.get_node("Frame") as TextureRect
 	var icon: TextureRect = slot.get_node("ItemIcon") as TextureRect
 	var overlay_mask: TextureRect = slot.get_node("OverlayMask") as TextureRect
-	var name_lbl: Label = slot.get_node("ItemNameLabel") as Label
-	var qty_lbl: Label = slot.get_node("CountLabel") as Label
-	var tex: Texture2D = AssetResolver.load_texture(
+	var name_label: Label = slot.get_node("ItemNameLabel") as Label
+	var qty_label: Label = slot.get_node("CountLabel") as Label
+	var texture: Texture2D = AssetResolver.load_texture(
 		AssetResolver.resolve_catalog_path(str(item.get("path", "")))
 	)
-	name_lbl.text = str(item.get("name", ""))
-	name_lbl.tooltip_text = name_lbl.text
-	qty_lbl.text = str(qty)
-	qty_lbl.tooltip_text = qty_lbl.text
 
-	if tex != null:
-		icon.texture = tex
+	name_label.text = str(item.get("name", ""))
+	name_label.tooltip_text = name_label.text
+	qty_label.text = str(qty)
+	qty_label.tooltip_text = qty_label.text
+
+	if texture != null:
+		icon.texture = texture
 	else:
 		icon.visible = false
 
@@ -169,27 +164,23 @@ func _make_item_card(item: Dictionary) -> Control:
 		frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		icon.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		overlay_mask.modulate = Color(1.0, 1.0, 1.0, 0.42)
-		name_lbl.add_theme_color_override("font_color", Color(1.0, 0.97, 0.92, 1.0))
-		qty_lbl.add_theme_color_override("font_color", SLOT_COUNT_TEXT)
+		name_label.add_theme_color_override("font_color", Color(1.0, 0.97, 0.92, 1.0))
+		qty_label.add_theme_color_override("font_color", SLOT_COUNT_TEXT)
 	else:
 		frame.modulate = SLOT_DISABLED_MODULATE
 		icon.modulate = SLOT_DISABLED_MODULATE
 		overlay_mask.modulate = Color(0.78, 0.78, 0.78, 0.22)
-		name_lbl.add_theme_color_override("font_color", SLOT_DISABLED_TEXT)
-		qty_lbl.add_theme_color_override("font_color", SLOT_DISABLED_TEXT)
+		name_label.add_theme_color_override("font_color", SLOT_DISABLED_TEXT)
+		qty_label.add_theme_color_override("font_color", SLOT_DISABLED_TEXT)
 
 	slot.scale = Vector2(BACKPACK_SLOT_SCALE, BACKPACK_SLOT_SCALE)
+
 	var cell: Control = Control.new()
 	cell.custom_minimum_size = BACKPACK_SLOT_CELL_SIZE
 	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	slot.position = Vector2.ZERO
 	cell.add_child(slot)
 	return cell
-
-
-func _build_all_section(parent: VBoxContainer) -> void:
-	_build_item_grid(parent, _get_all_items())
 
 
 func _get_all_items() -> Array:
@@ -200,39 +191,12 @@ func _get_all_items() -> Array:
 	return items
 
 
-func _build_currency_section(parent: VBoxContainer) -> void:
-	_build_section_header(parent, UiText.BACKPACK_SECTION_CURRENCY)
-	_build_item_grid(parent, _get_currency_items())
-
-
-func _build_consumable_section(parent: VBoxContainer) -> void:
-	_build_section_header(parent, UiText.BACKPACK_SECTION_CONSUMABLE)
-	_build_item_grid(parent, _get_consumable_items())
-
-
-func _build_ticket_section(parent: VBoxContainer) -> void:
-	_build_section_header(parent, UiText.BACKPACK_SECTION_TICKET)
-	_build_item_grid(parent, _get_ticket_items())
-
-
 func _get_currency_items() -> Array:
-	var pd = GameState.player_data
+	var player_data = GameState.player_data
 	return [
-		{"path": "catalog/currency/gold", "name": UiText.REWARD_GOLD, "qty": pd.gold},
-		{"path": "catalog/currency/diamonds", "name": UiText.REWARD_DIAMONDS, "qty": pd.diamonds},
-		{"path": "catalog/currency/trap_points", "name": UiText.BACKPACK_TRAP_POINTS, "qty": pd.trap_points},
-	]
-
-
-func _get_consumable_items() -> Array:
-	var pd = GameState.player_data
-	return [
-		{"path": "catalog/consumable/cat_food", "name": UiText.REWARD_CAT_FOOD, "qty": pd.cat_food},
-		{"path": "catalog/consumable/special_cat_food", "name": UiText.REWARD_SPECIAL_CAT_FOOD, "qty": pd.special_cat_food},
-		{"path": "catalog/consumable/trap_cages", "name": UiText.REWARD_TRAP_CAGE, "qty": pd.trap_cages},
-		{"path": "catalog/consumable/poop_count", "name": UiText.REWARD_POOP, "qty": pd.poop_count},
-		{"path": "catalog/consumable/memory_shards", "name": UiText.REWARD_MEMORY_SHARDS, "qty": pd.memory_shards},
-		{"path": "catalog/consumable/whisker_shards", "name": UiText.BACKPACK_WHISKER_SHARDS, "qty": pd.whisker_shards},
+		{"path": "catalog/currency/gold", "name": UiText.REWARD_GOLD, "qty": int(player_data.gold)},
+		{"path": "catalog/currency/diamonds", "name": UiText.REWARD_DIAMONDS, "qty": int(player_data.diamonds)},
+		{"path": "catalog/currency/trap_points", "name": UiText.BACKPACK_TRAP_POINTS, "qty": int(player_data.trap_points)},
 	]
 
 
@@ -246,7 +210,7 @@ func _get_ticket_items() -> Array:
 	})
 	items.append({
 		"path": "catalog/consumable/party_cheer_coupon",
-		"name": "收益券(1小時)",
+		"name": UiText.SOCIAL_PARTY_USE_COUPON,
 		"qty": int(GameState.get_party_cheer_coupon_count()),
 	})
 
@@ -261,5 +225,79 @@ func _get_ticket_items() -> Array:
 			"name": str(dungeon.get("displayName", UiText.BACKPACK_DUNGEON_TICKET)),
 			"qty": int(dungeon.get("remainingTicketCount", 0)),
 		})
-
 	return items
+
+
+func _get_consumable_items() -> Array:
+	var player_data = GameState.player_data
+	return [
+		{"path": "catalog/consumable/cat_food", "name": UiText.REWARD_CAT_FOOD, "qty": int(player_data.cat_food)},
+		{"path": "catalog/consumable/special_cat_food", "name": UiText.REWARD_SPECIAL_CAT_FOOD, "qty": int(player_data.special_cat_food)},
+		{"path": "catalog/consumable/trap_cages", "name": UiText.REWARD_TRAP_CAGE, "qty": int(player_data.trap_cages)},
+		{"path": "catalog/consumable/poop_count", "name": UiText.REWARD_POOP, "qty": int(player_data.poop_count)},
+		{"path": "catalog/consumable/memory_shards", "name": UiText.REWARD_MEMORY_SHARDS, "qty": int(player_data.memory_shards)},
+		{"path": "catalog/consumable/whisker_shards", "name": UiText.BACKPACK_WHISKER_SHARDS, "qty": int(player_data.whisker_shards)},
+	]
+
+
+func _build_shell_summary_left(tab_key: String) -> String:
+	var player_data = GameState.player_data
+	match tab_key:
+		TAB_CURRENCY:
+			return "%s %d / %s %d / %s %d" % [
+				UiText.REWARD_GOLD,
+				int(player_data.gold),
+				UiText.REWARD_DIAMONDS,
+				int(player_data.diamonds),
+				UiText.BACKPACK_TRAP_POINTS,
+				int(player_data.trap_points),
+			]
+		TAB_TICKET:
+			var arena_overview: Dictionary = GameState.arena_overview_data if GameState.arena_overview_data is Dictionary else {}
+			return "%s %d / %s %d" % [
+				UiText.BACKPACK_ARENA_TICKET,
+				int(arena_overview.get("tickets", 0)),
+				UiText.SOCIAL_PARTY_USE_COUPON,
+				int(GameState.get_party_cheer_coupon_count()),
+			]
+		TAB_CONSUMABLE:
+			return "%s %d / %s %d / %s %d / %s %d" % [
+				UiText.REWARD_CAT_FOOD,
+				int(player_data.cat_food),
+				UiText.REWARD_TRAP_CAGE,
+				int(player_data.trap_cages),
+				UiText.REWARD_MEMORY_SHARDS,
+				int(player_data.memory_shards),
+				UiText.BACKPACK_WHISKER_SHARDS,
+				int(player_data.whisker_shards),
+			]
+		_:
+			return "%s %d / %s %d / %s %d / %s %d" % [
+				UiText.REWARD_GOLD,
+				int(player_data.gold),
+				UiText.REWARD_DIAMONDS,
+				int(player_data.diamonds),
+				UiText.REWARD_TRAP_CAGE,
+				int(player_data.trap_cages),
+				UiText.REWARD_MEMORY_SHARDS,
+				int(player_data.memory_shards),
+			]
+
+
+func _build_shell_summary_right(tab_key: String) -> String:
+	var items: Array = []
+	match tab_key:
+		TAB_CURRENCY:
+			items = _get_currency_items()
+		TAB_TICKET:
+			items = _get_ticket_items()
+		TAB_CONSUMABLE:
+			items = _get_consumable_items()
+		_:
+			items = _get_all_items()
+
+	var owned_count: int = 0
+	for item_variant: Variant in items:
+		if item_variant is Dictionary and int((item_variant as Dictionary).get("qty", 0)) > 0:
+			owned_count += 1
+	return "\u5df2\u64c1\u6709 %d \u9805" % owned_count

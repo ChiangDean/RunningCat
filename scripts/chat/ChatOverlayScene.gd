@@ -3,7 +3,6 @@ extends Control
 
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const CHAT_SCENE := preload("res://scenes/chat/ChatScene.tscn")
 
 var _chat_view
@@ -30,12 +29,6 @@ func _ready() -> void:
 	if content_box == null:
 		push_error("ChatOverlayScene: failed to build overlay content host")
 		return
-
-	var title: Label = Label.new()
-	title.text = "聊天"
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_box.add_child(title)
 
 	var chat_control: Control = _chat_view as Control
 	if chat_control != null:
@@ -67,6 +60,7 @@ func _sync_navigation(items: Array, active_key: String) -> void:
 		if button == null:
 			continue
 		button.text = str(item.get("label", key))
+		SceneSubmenuBar.apply_shell_metadata(button, item)
 		button.visible = true
 
 	SceneSubmenuBar.refresh(_dock_buttons, active_key, {

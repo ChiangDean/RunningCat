@@ -201,18 +201,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 			_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON)
 		action_btn.disabled = api_locked or not can_afford_purchase
 		RedDotService.refresh_dot(action_btn, can_afford_purchase and not api_locked)
-		action_btn.pressed.connect(func() -> void:
-			if not _is_scene_alive(scene):
-				return
-			scene.DialogManager.show_confirm(
-				UiText.SCOOPER_EQUIPMENT_UNLOCK_CONFIRM_TITLE,
-				UiText.SCOOPER_EQUIPMENT_UNLOCK_CONFIRM_BODY % [purchase_cost, name_str],
-				func() -> void:
-					if not _is_scene_alive(scene):
-						return
-					_do_equipment_action(scene, "purchase", equip_id)
-			)
-		)
+		action_btn.pressed.connect(Callable(self, "_show_purchase_confirm").bind(scene, purchase_cost, name_str, equip_id))
 		return panel
 
 	title_lbl.text = name_str
@@ -234,9 +223,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 			_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON)
 		_register_cooldown_button(scene, action_btn, equip_id, "repair")
 		action_btn.disabled = api_locked or _is_action_cooling(scene, equip_id, "repair") or not can_afford_repair
-		action_btn.pressed.connect(func() -> void:
-			_do_equipment_action(scene, "repair", equip_id)
-		)
+		action_btn.pressed.connect(Callable(self, "_do_equipment_action").bind(scene, "repair", equip_id))
 		return panel
 
 	if treat_mode:
@@ -251,9 +238,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 			_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_INSUFFICIENT_GOLD_BUTTON)
 		_register_cooldown_button(scene, action_btn, equip_id, "treat")
 		action_btn.disabled = api_locked or _is_action_cooling(scene, equip_id, "treat") or not can_afford_treat
-		action_btn.pressed.connect(func() -> void:
-			_do_equipment_action(scene, "treat", equip_id)
-		)
+		action_btn.pressed.connect(Callable(self, "_do_equipment_action").bind(scene, "treat", equip_id))
 		return panel
 
 	if is_level_capped:
@@ -277,18 +262,38 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	elif is_level_capped and not api_locked:
 		action_btn.disabled = true
 
-	action_btn.pressed.connect(func() -> void:
-		if is_level_capped:
-			scene.DialogManager.show_info(
-				UiText.SCOOPER_EQUIPMENT_LEVEL_MAX,
-				UiText.SCOOPER_EQUIPMENT_LEVEL_UP_HINT
-			)
-			return
-		if not can_afford_upgrade:
-			return
-		_do_equipment_action(scene, "upgrade", equip_id)
-	)
+	action_btn.pressed.connect(Callable(self, "_on_upgrade_button_pressed").bind(scene, is_level_capped, can_afford_upgrade, equip_id))
 	return panel
+
+
+func _show_purchase_confirm(scene: Control, purchase_cost: int, item_name: String, equip_id: int) -> void:
+	if not _is_scene_alive(scene):
+		return
+	scene.DialogManager.show_confirm(
+		UiText.SCOOPER_EQUIPMENT_UNLOCK_CONFIRM_TITLE,
+		UiText.SCOOPER_EQUIPMENT_UNLOCK_CONFIRM_BODY % [purchase_cost, item_name],
+		Callable(self, "_confirm_purchase_equipment").bind(scene, equip_id)
+	)
+
+
+func _confirm_purchase_equipment(scene: Control, equip_id: int) -> void:
+	if not _is_scene_alive(scene):
+		return
+	_do_equipment_action(scene, "purchase", equip_id)
+
+
+func _on_upgrade_button_pressed(scene: Control, is_level_capped: bool, can_afford_upgrade: bool, equip_id: int) -> void:
+	if not _is_scene_alive(scene):
+		return
+	if is_level_capped:
+		scene.DialogManager.show_info(
+			UiText.SCOOPER_EQUIPMENT_LEVEL_MAX,
+			UiText.SCOOPER_EQUIPMENT_LEVEL_UP_HINT
+		)
+		return
+	if not can_afford_upgrade:
+		return
+	_do_equipment_action(scene, "upgrade", equip_id)
 
 
 func _do_equipment_action(scene: Control, action: String, equip_id: int) -> void:
@@ -299,9 +304,28 @@ func _do_equipment_action(scene: Control, action: String, equip_id: int) -> void
 	scene._api_in_flight = true
 	_refresh_equipment_tab(scene)
 
-	var on_error: Callable = func(err: Dictionary) -> void:
-		if not _is_scene_alive(scene):
-			return
+	match action:
+		"purchase":
+			scene.ApiClient.purchase_equipment(equip_id, Callable(self, "_on_equipment_action_completed").bind(scene, action))
+		"upgrade":
+			scene.ApiClient.upgrade_equipment_silent(equip_id, Callable(self, "_on_equipment_action_completed").bind(scene, action, equip_id))
+		"repair":
+			scene.ApiClient.repair_equipment_silent(equip_id, Callable(self, "_on_equipment_action_completed").bind(scene, action, equip_id))
+		"treat":
+			scene.ApiClient.treat_equipment_silent(equip_id, Callable(self, "_on_equipment_action_completed").bind(scene, action, equip_id))
+
+
+func _on_equipment_action_completed(
+	ok: bool,
+	data: Variant,
+	err: Dictionary,
+	scene: Control,
+	action: String,
+	equip_id: int = 0
+) -> void:
+	if not _is_scene_alive(scene):
+		return
+	if not ok:
 		scene._api_in_flight = false
 		_refresh_equipment_tab(scene)
 		if action == "upgrade":
@@ -311,78 +335,54 @@ func _do_equipment_action(scene: Control, action: String, equip_id: int) -> void
 			UiText.SCOOPER_EQUIPMENT_ACTION_FAILED % _action_label(action),
 			str(err.get("message", UiText.SCOOPER_EQUIPMENT_ACTION_FAILED_DEFAULT))
 		)
+		return
 
-	match action:
-		"purchase":
-			scene.ApiClient.purchase_equipment(equip_id, func(ok: bool, _data: Variant, err: Dictionary) -> void:
-				if not _is_scene_alive(scene):
-					return
-				if not ok:
-					on_error.call(err)
-					return
-				_refresh_equipment_after_action(scene)
-			)
-		"upgrade":
-			scene.ApiClient.upgrade_equipment_silent(equip_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
-				if not _is_scene_alive(scene):
-					return
-				if not ok:
-					on_error.call(err)
-					return
-				var result: Dictionary = data if data is Dictionary else {}
-				var reward_entries: Array[Dictionary] = []
-				var gained: int = int(result.get("expGained", 0))
-				if gained > 0:
-					reward_entries.append(scene.make_reward_float_entry(UiText.REWARD_EXP, gained, "exp"))
-				if not reward_entries.is_empty():
-					scene.queue_home_reward_floats(reward_entries)
-				_start_action_cooldown(scene, equip_id, action)
-				_refresh_equipment_after_action(scene)
-			)
-		"repair":
-			scene.ApiClient.repair_equipment_silent(equip_id, func(ok: bool, _data: Variant, err: Dictionary) -> void:
-				if not _is_scene_alive(scene):
-					return
-				if not ok:
-					on_error.call(err)
-					return
-				_start_action_cooldown(scene, equip_id, action)
-				_refresh_equipment_after_action(scene)
-			)
-		"treat":
-			scene.ApiClient.treat_equipment_silent(equip_id, func(ok: bool, _data: Variant, err: Dictionary) -> void:
-				if not _is_scene_alive(scene):
-					return
-				if not ok:
-					on_error.call(err)
-					return
-				_start_action_cooldown(scene, equip_id, action)
-				_refresh_equipment_after_action(scene)
-			)
+	if action == "upgrade":
+		var result: Dictionary = data if data is Dictionary else {}
+		var reward_entries: Array[Dictionary] = []
+		var gained: int = int(result.get("expGained", 0))
+		if gained > 0:
+			reward_entries.append(scene.make_reward_float_entry(UiText.REWARD_EXP, gained, "exp"))
+		if not reward_entries.is_empty():
+			scene.queue_home_reward_floats(reward_entries)
+		_start_action_cooldown(scene, equip_id, action)
+	elif action == "repair" or action == "treat":
+		_start_action_cooldown(scene, equip_id, action)
+
+	_refresh_equipment_after_action(scene)
 
 
 func _refresh_equipment_after_action(scene: Control) -> void:
-	scene.ApiClient.get_scooper_profile_silent(func(profile_ok: bool, profile_data: Variant, _profile_err: Dictionary) -> void:
-		if not _is_scene_alive(scene):
-			return
-		if profile_ok and profile_data is Dictionary:
-			scene.GameState.update_scooper_profile(profile_data)
-			scene._refresh_resource_label()
+	scene.ApiClient.get_scooper_profile_silent(Callable(self, "_on_refresh_equipment_profile_completed").bind(scene))
 
-		scene.ApiClient.get_equipment_list_silent(func(ok: bool, data: Variant, err: Dictionary) -> void:
-			if not _is_scene_alive(scene):
-				return
-			scene._api_in_flight = false
-			if ok and data is Array:
-				scene.GameState.update_scooper_equipment(data)
-				_refresh_equipment_tab(scene)
-				return
-			_refresh_equipment_tab(scene)
-			scene.DialogManager.show_info(
-				UiText.SCOOPER_EQUIPMENT_REFRESH_FAILED,
-				str(err.get("message", UiText.SCOOPER_EQUIPMENT_REFRESH_FAILED_DEFAULT))
-			)
-		)
+
+func _on_refresh_equipment_profile_completed(
+	profile_ok: bool,
+	profile_data: Variant,
+	_profile_err: Dictionary,
+	scene: Control
+) -> void:
+	if not _is_scene_alive(scene):
+		return
+	if profile_ok and profile_data is Dictionary:
+		scene.GameState.update_scooper_profile(profile_data)
+		scene._refresh_resource_label()
+
+	scene.ApiClient.get_equipment_list_silent(Callable(self, "_on_refresh_equipment_list_completed").bind(scene))
+
+
+func _on_refresh_equipment_list_completed(ok: bool, data: Variant, err: Dictionary, scene: Control) -> void:
+	if not _is_scene_alive(scene):
+		return
+	scene._api_in_flight = false
+	if ok and data is Array:
+		scene.GameState.update_scooper_equipment(data)
+		_refresh_equipment_tab(scene)
+		return
+	_refresh_equipment_tab(scene)
+	scene.DialogManager.show_info(
+		UiText.SCOOPER_EQUIPMENT_REFRESH_FAILED,
+		str(err.get("message", UiText.SCOOPER_EQUIPMENT_REFRESH_FAILED_DEFAULT))
 	)
 
 

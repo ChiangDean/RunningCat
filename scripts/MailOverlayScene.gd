@@ -35,12 +35,6 @@ func _ready() -> void:
 		push_error("MailOverlayScene: failed to build overlay content host")
 		return
 
-	var title: Label = Label.new()
-	title.text = UiText.HOME_MAIL
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_DISPLAY)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_box.add_child(title)
-
 	_mail_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_mail_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
@@ -70,6 +64,7 @@ func _sync_navigation(items: Array, active_key: String) -> void:
 		if button == null:
 			continue
 		button.text = str(item.get("label", key))
+		SceneSubmenuBar.apply_shell_metadata(button, item)
 		button.visible = true
 
 	SceneSubmenuBar.refresh(_dock_buttons, active_key, {

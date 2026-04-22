@@ -86,16 +86,36 @@ text = "金幣：137165    貓砂：594    回憶碎片：12"
 
 [node name="SummaryRight" type="Label" parent="ContentRoot" unique_id=299784635]
 layout_mode = 0
-offset_left = 528.0
+offset_left = 349.0
 offset_top = 133.0
 offset_right = 647.0
-offset_bottom = 159.0
+offset_bottom = 184.0
 theme_override_colors/font_color = Color(0.97, 0.88, 0.68, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.08, 0.04, 0.85)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 16
 text = "已解鎖 2/8"
 horizontal_alignment = 2
+
+[node name="ShellContentHost" type="MarginContainer" parent="ContentRoot" unique_id=923134487]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 31.0
+offset_top = 184.0
+offset_right = -31.0
+offset_bottom = 922.0
+grow_horizontal = 2
+
+[node name="ShellViewportScroll" type="ScrollContainer" parent="ContentRoot/ShellContentHost" unique_id=5160264]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ShellContentBox" type="VBoxContainer" parent="ContentRoot/ShellContentHost/ShellViewportScroll" unique_id=2060323010]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="SubmenuBarRoot" type="Control" parent="." unique_id=1377157554]
 anchors_preset = 0

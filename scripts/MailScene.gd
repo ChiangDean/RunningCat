@@ -87,13 +87,32 @@ func set_overlay_mode(_enabled: bool) -> void:
 
 func get_footer_items() -> Array:
 	return [
-		{"key": SECTION_UNREAD, "label": LABEL_UNREAD_MAIL},
-		{"key": SECTION_READ, "label": LABEL_READ_MAIL},
+		{
+			"key": SECTION_UNREAD,
+			"label": LABEL_UNREAD_MAIL,
+			"shell_description": "\u67e5\u770b\u5c1a\u672a\u95b1\u8b80\u7684\u4fe1\u4ef6\u8207\u5f85\u9818\u53d6\u9644\u4ef6\u3002",
+			"shell_summary_right": Callable(self, "_build_footer_summary_right").bind(SECTION_UNREAD),
+		},
+		{
+			"key": SECTION_READ,
+			"label": LABEL_READ_MAIL,
+			"shell_description": "\u67e5\u770b\u5df2\u95b1\u8b80\u4fe1\u4ef6\u8207\u5df2\u9818\u53d6\u7d00\u9304\u3002",
+			"shell_summary_right": Callable(self, "_build_footer_summary_right").bind(SECTION_READ),
+		},
 	]
 
 
 func get_section() -> String:
 	return _active_section
+
+
+func _build_footer_summary_right(section_key: String) -> String:
+	var unread_count: int = int(GameState.mail_summary_data.get("unreadCount", 0))
+	var claimable_count: int = int(GameState.mail_summary_data.get("claimableCount", 0))
+	var total_count: int = int(GameState.mail_summary_data.get("totalCount", 0))
+	if section_key == SECTION_READ:
+		return "\u5df2\u8b80 %d" % maxi(0, total_count - unread_count)
+	return "\u672a\u8b80 %d / \u53ef\u9818 %d" % [unread_count, claimable_count]
 
 
 func set_section(section_key: String) -> void:
@@ -268,6 +287,7 @@ func _apply_mail_cache() -> void:
 	_ensure_selected_mail_visible()
 	_refresh_action_buttons()
 	_mail_state_refresh_in_progress = false
+	_emit_navigation_changed()
 	_maybe_recover_mail_cache()
 
 
@@ -347,9 +367,7 @@ func _build_mail_list_item(item: Dictionary) -> PanelContainer:
 	click_button.focus_mode = Control.FOCUS_NONE
 	click_button.text = ""
 	click_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	click_button.pressed.connect(func() -> void:
-		_select_mail(mail_id)
-	)
+	click_button.pressed.connect(Callable(self, "_select_mail").bind(mail_id))
 	panel.add_child(click_button)
 
 	return panel
@@ -436,10 +454,7 @@ func _load_mail_detail(mail_id: int) -> void:
 
 	if not bool(detail.get("isRead", false)):
 		GameState.mark_mail_read_local(mail_id)
-		ApiClient.mark_mail_read_silent(mail_id, func(mark_success: bool, mark_data: Variant, _mark_error: Dictionary) -> void:
-			if mark_success and mark_data is Dictionary:
-				GameState.update_mail_summary(mark_data)
-		)
+		ApiClient.mark_mail_read_silent(mail_id, Callable(self, "_on_mark_mail_read_completed"))
 
 
 func _maybe_recover_mail_cache() -> void:
@@ -451,15 +466,7 @@ func _maybe_recover_mail_cache() -> void:
 		return
 	_mail_cache_recovery_in_flight = true
 	var page_size: int = mini(maxi(int(GameState.mail_summary_data.get("totalCount", 0)), 1), 100)
-	ApiClient.get_mail_list_silent(func(success: bool, data: Variant, _error: Dictionary) -> void:
-		_mail_cache_recovery_in_flight = false
-		if not success or not (data is Dictionary):
-			return
-		var payload: Dictionary = data
-		var items_variant: Variant = payload.get("items", [])
-		if items_variant is Array:
-			GameState.update_mail_list(items_variant)
-	, 1, page_size)
+	ApiClient.get_mail_list_silent(Callable(self, "_on_mail_list_recovered"), 1, page_size)
 
 
 func _recover_mail_detail_silent(mail_id: int) -> void:
@@ -468,16 +475,7 @@ func _recover_mail_detail_silent(mail_id: int) -> void:
 	if _mail_detail_recovery_ids.has(mail_id):
 		return
 	_mail_detail_recovery_ids.append(mail_id)
-	ApiClient.get_mail_detail_silent(mail_id, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_mail_detail_recovery_ids.erase(mail_id)
-		if not success or not (data is Dictionary):
-			_set_status(str(error.get("message", LABEL_MAIL_CONTENT_FAILED)), true)
-			return
-		GameState.update_selected_mail(data)
-		_render_detail(GameState.selected_mail_data)
-		_refresh_action_buttons()
-		_set_status("", false)
-	)
+	ApiClient.get_mail_detail_silent(mail_id, Callable(self, "_on_mail_detail_recovered").bind(mail_id))
 
 
 func _render_detail(detail: Dictionary) -> void:
@@ -604,23 +602,7 @@ func _on_claim_pressed() -> void:
 
 	_api_in_flight = true
 	_refresh_action_buttons()
-	ApiClient.claim_mail(mail_id, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_api_in_flight = false
-		if not success:
-			_refresh_action_buttons()
-			_set_status(str(error.get("message", LABEL_CLAIM_FAILED)), true)
-			return
-
-		var payload: Dictionary = data if data is Dictionary else {}
-		GameState.apply_wallet_snapshot(payload.get("walletSnapshot", {}))
-		GameState.update_mail_summary(payload.get("mailSummary", {}))
-		GameState.mark_mail_claimed_local(mail_id)
-		_rebuild_mail_buttons()
-		_ensure_selected_mail_visible()
-		_refresh_action_buttons()
-		_set_status("", false)
-		_render_reward_dialog(payload.get("grantedRewards", []), LABEL_CLAIM_SUCCESS)
-	)
+	ApiClient.claim_mail(mail_id, Callable(self, "_on_claim_mail_completed").bind(mail_id))
 
 
 func _on_claim_all_pressed() -> void:
@@ -630,27 +612,7 @@ func _on_claim_all_pressed() -> void:
 		_set_status(LABEL_NO_CLAIMABLE, true)
 		return
 
-	DialogManager.show_confirm(LABEL_CONFIRM_CLAIM_ALL_TITLE, LABEL_CONFIRM_CLAIM_ALL_BODY, func() -> void:
-		_api_in_flight = true
-		_refresh_action_buttons()
-		ApiClient.claim_all_mails(func(success: bool, data: Variant, error: Dictionary) -> void:
-			_api_in_flight = false
-			if not success:
-				_refresh_action_buttons()
-				_set_status(str(error.get("message", LABEL_CLAIM_ALL_FAILED)), true)
-				return
-
-			var payload: Dictionary = data if data is Dictionary else {}
-			GameState.apply_wallet_snapshot(payload.get("walletSnapshot", {}))
-			GameState.update_mail_summary(payload.get("mailSummary", {}))
-			GameState.mark_mail_claimed_many_local(payload.get("claimedMailIds", []))
-			_rebuild_mail_buttons()
-			_ensure_selected_mail_visible()
-			_refresh_action_buttons()
-			_set_status("", false)
-			_render_reward_dialog(payload.get("grantedRewards", []), LABEL_CLAIM_ALL_SUCCESS)
-		)
-	)
+	DialogManager.show_confirm(LABEL_CONFIRM_CLAIM_ALL_TITLE, LABEL_CONFIRM_CLAIM_ALL_BODY, Callable(self, "_confirm_claim_all_mails"))
 
 
 func _on_delete_read_pressed() -> void:
@@ -660,25 +622,97 @@ func _on_delete_read_pressed() -> void:
 		_set_status(LABEL_NO_DELETABLE, true)
 		return
 
-	DialogManager.show_confirm(LABEL_CONFIRM_DELETE_READ_TITLE, LABEL_CONFIRM_DELETE_READ_BODY, func() -> void:
-		_api_in_flight = true
-		_refresh_action_buttons()
-		ApiClient.delete_read_mails(func(success: bool, data: Variant, error: Dictionary) -> void:
-			_api_in_flight = false
-			if not success:
-				_refresh_action_buttons()
-				_set_status(str(error.get("message", LABEL_DELETE_READ_FAILED)), true)
-				return
+	DialogManager.show_confirm(LABEL_CONFIRM_DELETE_READ_TITLE, LABEL_CONFIRM_DELETE_READ_BODY, Callable(self, "_confirm_delete_read_mails"))
 
-			if data is Dictionary:
-				GameState.update_mail_summary(data)
-			GameState.remove_processed_mails_local()
-			GameState.update_selected_mail({})
-			_selected_mail_id = 0
-			_apply_mail_cache()
-			_set_status(LABEL_DELETE_READ_SUCCESS, false)
-		)
-	)
+
+func _on_mark_mail_read_completed(mark_success: bool, mark_data: Variant, _mark_error: Dictionary) -> void:
+	if mark_success and mark_data is Dictionary:
+		GameState.update_mail_summary(mark_data)
+
+
+func _on_mail_list_recovered(success: bool, data: Variant, _error: Dictionary) -> void:
+	_mail_cache_recovery_in_flight = false
+	if not success or not (data is Dictionary):
+		return
+	var payload: Dictionary = data
+	var items_variant: Variant = payload.get("items", [])
+	if items_variant is Array:
+		GameState.update_mail_list(items_variant)
+
+
+func _on_mail_detail_recovered(success: bool, data: Variant, error: Dictionary, mail_id: int) -> void:
+	_mail_detail_recovery_ids.erase(mail_id)
+	if not success or not (data is Dictionary):
+		_set_status(str(error.get("message", LABEL_MAIL_CONTENT_FAILED)), true)
+		return
+	GameState.update_selected_mail(data)
+	_render_detail(GameState.selected_mail_data)
+	_refresh_action_buttons()
+	_set_status("", false)
+
+
+func _on_claim_mail_completed(success: bool, data: Variant, error: Dictionary, mail_id: int) -> void:
+	_api_in_flight = false
+	if not success:
+		_refresh_action_buttons()
+		_set_status(str(error.get("message", LABEL_CLAIM_FAILED)), true)
+		return
+
+	var payload: Dictionary = data if data is Dictionary else {}
+	GameState.apply_wallet_snapshot(payload.get("walletSnapshot", {}))
+	GameState.update_mail_summary(payload.get("mailSummary", {}))
+	GameState.mark_mail_claimed_local(mail_id)
+	_rebuild_mail_buttons()
+	_ensure_selected_mail_visible()
+	_refresh_action_buttons()
+	_set_status("", false)
+	_render_reward_dialog(payload.get("grantedRewards", []), LABEL_CLAIM_SUCCESS)
+
+
+func _confirm_claim_all_mails() -> void:
+	_api_in_flight = true
+	_refresh_action_buttons()
+	ApiClient.claim_all_mails(Callable(self, "_on_claim_all_mails_completed"))
+
+
+func _on_claim_all_mails_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	_api_in_flight = false
+	if not success:
+		_refresh_action_buttons()
+		_set_status(str(error.get("message", LABEL_CLAIM_ALL_FAILED)), true)
+		return
+
+	var payload: Dictionary = data if data is Dictionary else {}
+	GameState.apply_wallet_snapshot(payload.get("walletSnapshot", {}))
+	GameState.update_mail_summary(payload.get("mailSummary", {}))
+	GameState.mark_mail_claimed_many_local(payload.get("claimedMailIds", []))
+	_rebuild_mail_buttons()
+	_ensure_selected_mail_visible()
+	_refresh_action_buttons()
+	_set_status("", false)
+	_render_reward_dialog(payload.get("grantedRewards", []), LABEL_CLAIM_ALL_SUCCESS)
+
+
+func _confirm_delete_read_mails() -> void:
+	_api_in_flight = true
+	_refresh_action_buttons()
+	ApiClient.delete_read_mails(Callable(self, "_on_delete_read_mails_completed"))
+
+
+func _on_delete_read_mails_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	_api_in_flight = false
+	if not success:
+		_refresh_action_buttons()
+		_set_status(str(error.get("message", LABEL_DELETE_READ_FAILED)), true)
+		return
+
+	if data is Dictionary:
+		GameState.update_mail_summary(data)
+	GameState.remove_processed_mails_local()
+	GameState.update_selected_mail({})
+	_selected_mail_id = 0
+	_apply_mail_cache()
+	_set_status(LABEL_DELETE_READ_SUCCESS, false)
 
 
 func _render_reward_dialog(rewards: Variant, title: String) -> void:

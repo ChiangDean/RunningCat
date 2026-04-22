@@ -143,6 +143,7 @@ func _spawn_toast(type: ToastType, message: String, sub_text: String) -> void:
 	control_root.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	control_root.offset_bottom = TOAST_MIN_HEIGHT + TOAST_TOP_OFFSET + 40.0
 	_canvas.add_child(control_root)
+	var control_root_ref: WeakRef = weakref(control_root)
 
 	panel.position = Vector2(TOAST_SIDE_MARGIN, -TOAST_MIN_HEIGHT - 20.0)
 	control_root.add_child(panel)
@@ -157,7 +158,12 @@ func _spawn_toast(type: ToastType, message: String, sub_text: String) -> void:
 	# --- 動畫：淡出 ---
 	tween.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
 	tween.tween_property(panel, "modulate:a", 0.0, TOAST_ANIM_OUT)
-	tween.tween_callback(func() -> void:
-		control_root.queue_free()
-		_show_next()
-	)
+	tween.tween_callback(Callable(self, "_finish_toast").bind(control_root_ref))
+
+
+func _finish_toast(control_root_ref: WeakRef) -> void:
+	if control_root_ref != null:
+		var control_root_obj: Object = control_root_ref.get_ref()
+		if control_root_obj is Control:
+			(control_root_obj as Control).queue_free()
+	_show_next()

@@ -8,10 +8,11 @@ const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 var _active_tab: String = "pull"
 var _tab_buttons: Dictionary = {}
-var _resource_label: Label
-var _pull_summary_label: Label
+var _content_box: VBoxContainer
+var _pull_panel: PanelContainer
 var _pull_option_list: VBoxContainer
 var _free_button: Button
+var _technique_panel: PanelContainer
 var _technique_title: Label
 var _technique_desc: Label
 var _technique_list: VBoxContainer
@@ -29,8 +30,20 @@ func _build_ui() -> void:
 	var chrome: Dictionary = OverlaySceneChrome.build(self, "gacha", Callable(self, "_on_back_pressed"), {
 		"show_dock": true,
 		"dock_items": [
-			{"key": "pull", "label": UiText.GACHA_TAB_PULL},
-			{"key": "technique", "label": UiText.GACHA_TAB_TECHNIQUE},
+			{
+				"key": "pull",
+				"label": UiText.GACHA_TAB_PULL,
+				"shell_description": UiText.GACHA_PULL_DESC,
+				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
+				"shell_summary_right": Callable(self, "_build_shell_summary_right").bind("pull"),
+			},
+			{
+				"key": "technique",
+				"label": UiText.GACHA_TAB_TECHNIQUE,
+				"shell_description": "\u67e5\u770b\u8a98\u6355\u6280\u8853\u7b49\u7d1a\u8207\u5404\u968e\u6bb5\u6a5f\u7387\u8abf\u6574\u3002",
+				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
+				"shell_summary_right": Callable(self, "_build_shell_summary_right").bind("technique"),
+			},
 		],
 		"active_key": _active_tab,
 		"button_pressed": Callable(self, "_switch_tab"),
@@ -39,37 +52,19 @@ func _build_ui() -> void:
 	})
 	_tab_buttons = chrome.get("dock_buttons", {})
 
-	var content_box: VBoxContainer = chrome.get("content_box")
+	_content_box = chrome.get("content_box")
 
-	_resource_label = Label.new()
-	_resource_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	_resource_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	content_box.add_child(_resource_label)
-
-	_pull_summary_label = Label.new()
-	_pull_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_pull_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	_pull_summary_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_box.add_child(_pull_summary_label)
-
-	var pull_panel: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	pull_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_box.add_child(pull_panel)
+	_pull_panel = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
+	_pull_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content_box.add_child(_pull_panel)
 
 	var pull_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	pull_panel.add_child(pull_margin)
+	_pull_panel.add_child(pull_margin)
 
 	var pull_box: VBoxContainer = VBoxContainer.new()
 	pull_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pull_box.add_theme_constant_override("separation", 12)
 	pull_margin.add_child(pull_box)
-
-	var pull_intro: Label = Label.new()
-	pull_intro.text = UiText.GACHA_PULL_DESC
-	pull_intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	pull_intro.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	pull_intro.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	pull_box.add_child(pull_intro)
 
 	_pull_option_list = VBoxContainer.new()
 	_pull_option_list.add_theme_constant_override("separation", 10)
@@ -90,12 +85,12 @@ func _build_ui() -> void:
 	hint.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	pull_box.add_child(hint)
 
-	var technique_panel: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.CARD_BORDER)
-	technique_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_box.add_child(technique_panel)
+	_technique_panel = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.CARD_BORDER)
+	_technique_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content_box.add_child(_technique_panel)
 
 	var technique_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	technique_panel.add_child(technique_margin)
+	_technique_panel.add_child(technique_margin)
 
 	var technique_box: VBoxContainer = VBoxContainer.new()
 	technique_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -124,10 +119,6 @@ func _build_ui() -> void:
 	_technique_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	technique_scroll.add_child(_technique_list)
 
-	pull_panel.name = "PullPanel"
-	technique_panel.name = "TechniquePanel"
-
-
 func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
 	_api_client.get_authenticated_bootstrap(func(success: bool, data: Variant, error: Dictionary) -> void:
 		if success and data is Dictionary:
@@ -147,7 +138,6 @@ func _switch_tab(tab_key: String) -> void:
 
 
 func _refresh_view() -> void:
-	_refresh_summary()
 	_refresh_pull_options()
 	_refresh_technique_panel()
 	_refresh_panel_state()
@@ -156,27 +146,6 @@ func _refresh_view() -> void:
 		"active_color": Color(1.0, 0.95, 0.82, 1.0),
 		"inactive_color": Color(0.65, 0.65, 0.68, 1.0),
 	})
-
-
-func _refresh_summary() -> void:
-	var overview: Dictionary = GameState.gacha_data
-	var technique_level: int = int(overview.get("techniqueLevel", 0))
-	var total_pulls: int = int(overview.get("totalPulls", 0))
-	var next_required: int = int(overview.get("nextTechniqueLevelRequiredPulls", 0))
-	var remaining_text: String = UiText.GACHA_TECHNIQUE_MAX
-	if next_required > total_pulls:
-		remaining_text = UiText.GACHA_TECHNIQUE_NEXT_FORMAT % (next_required - total_pulls)
-
-	_resource_label.text = UiText.GACHA_RESOURCE_FORMAT % [
-		GameState.player_data.diamonds,
-		GameState.player_data.trap_cages,
-	]
-	_pull_summary_label.text = UiText.GACHA_SUMMARY_FORMAT % [
-		technique_level,
-		total_pulls,
-		remaining_text,
-	]
-
 
 func _refresh_pull_options() -> void:
 	for child in _pull_option_list.get_children():
@@ -233,15 +202,10 @@ func _refresh_technique_panel() -> void:
 
 
 func _refresh_panel_state() -> void:
-	var content_box: VBoxContainer = _resource_label.get_parent()
-	if content_box == null:
-		return
-	var pull_panel: Control = content_box.get_node_or_null("PullPanel")
-	var technique_panel: Control = content_box.get_node_or_null("TechniquePanel")
-	if pull_panel != null:
-		pull_panel.visible = _active_tab == "pull"
-	if technique_panel != null:
-		technique_panel.visible = _active_tab == "technique"
+	if _pull_panel != null:
+		_pull_panel.visible = _active_tab == "pull"
+	if _technique_panel != null:
+		_technique_panel.visible = _active_tab == "technique"
 
 
 func _build_pull_option_card(option: Dictionary) -> Control:
@@ -433,6 +397,26 @@ func _get_rate_order() -> Array[String]:
 		"common",
 	]
 	return rate_order
+
+
+func _build_shell_summary_left() -> String:
+	return UiText.GACHA_RESOURCE_FORMAT % [
+		GameState.player_data.diamonds,
+		GameState.player_data.trap_cages,
+	]
+
+
+func _build_shell_summary_right(tab_key: String) -> String:
+	var overview: Dictionary = GameState.gacha_data
+	var total_pulls: int = int(overview.get("totalPulls", 0))
+	if tab_key == "technique":
+		var technique_level: int = int(overview.get("techniqueLevel", 0))
+		return "\u6280\u8853 Lv.%d / \u7d2f\u8a08 %d" % [technique_level, total_pulls]
+
+	var free_pull_count: int = int(overview.get("freePullCount", 0))
+	var has_used_free_pull_today: bool = bool(overview.get("hasUsedFreePullToday", false))
+	var free_text: String = "\u5df2\u4f7f\u7528" if has_used_free_pull_today else str(maxi(free_pull_count, 1))
+	return "\u514d\u8cbb %s / \u7d2f\u8a08 %d" % [free_text, total_pulls]
 
 
 func _on_back_pressed() -> void:

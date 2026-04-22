@@ -124,6 +124,7 @@ func _build(
 	var canvas := CanvasLayer.new()
 	canvas.layer = 100
 	add_child(canvas)
+	var canvas_ref: WeakRef = weakref(canvas)
 
 	# 半透明底層 overlay
 	var overlay := ColorRect.new()
@@ -134,12 +135,7 @@ func _build(
 	if not is_confirm:
 		# 點擊 overlay（panel 外側）即關閉
 		overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-		overlay.gui_input.connect(func(event: InputEvent) -> void:
-			if event is InputEventMouseButton and event.pressed:
-				canvas.queue_free()
-				if on_ok.is_valid():
-					on_ok.call()
-		)
+		overlay.gui_input.connect(Callable(self, "_on_dialog_overlay_gui_input").bind(canvas_ref, on_ok))
 	else:
 		# Confirm 框：overlay 不可點擊關閉
 		overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -205,11 +201,7 @@ func _build(
 		close_btn.text = "✕"
 		close_btn.custom_minimum_size = Vector2(36.0, 36.0)
 		close_btn.flat = false
-		close_btn.pressed.connect(func() -> void:
-			canvas.queue_free()
-			if on_ok.is_valid():
-				on_ok.call()
-		)
+		close_btn.pressed.connect(Callable(self, "_close_dialog_canvas_and_call").bind(canvas_ref, on_ok))
 		title_row.add_child(close_btn)
 
 	# 內容
@@ -234,20 +226,12 @@ func _build(
 		cancel_btn.text = cancel_text
 		cancel_btn.custom_minimum_size = Vector2(110.0, 44.0)
 		cancel_btn.add_theme_font_size_override("font_size", _FONT_BTN)
-		cancel_btn.pressed.connect(func() -> void:
-			canvas.queue_free()
-			if on_cancel.is_valid():
-				on_cancel.call()
-		)
+		cancel_btn.pressed.connect(Callable(self, "_close_dialog_canvas_and_call").bind(canvas_ref, on_cancel))
 		var ok_btn := Button.new()
 		ok_btn.text = ok_text
 		ok_btn.custom_minimum_size = Vector2(110.0, 44.0)
 		ok_btn.add_theme_font_size_override("font_size", _FONT_BTN)
-		ok_btn.pressed.connect(func() -> void:
-			canvas.queue_free()
-			if on_ok.is_valid():
-				on_ok.call()
-		)
+		ok_btn.pressed.connect(Callable(self, "_close_dialog_canvas_and_call").bind(canvas_ref, on_ok))
 		btn_row.add_child(ok_btn)
 		btn_row.add_child(cancel_btn)
 
@@ -266,9 +250,7 @@ func _build(
 	panel.size = panel.custom_minimum_size
 	dialog_stack.custom_minimum_size = Vector2(panel.custom_minimum_size.x, panel.custom_minimum_size.y + hint_min.y + (10.0 if not is_confirm else 0.0))
 	call_deferred("_fit_dialog_to_content", panel, margin, vbox, dialog_stack, hint_lbl, panel_width)
-	return func() -> void:
-		if is_instance_valid(canvas):
-			canvas.queue_free()
+	return Callable(self, "_close_dialog_canvas").bind(canvas_ref)
 
 
 func _fit_dialog_to_content(
@@ -292,3 +274,32 @@ func _fit_dialog_to_content(
 		hint_height = hint_lbl.get_combined_minimum_size().y + 10.0
 
 	dialog_stack.custom_minimum_size = Vector2(panel_width, panel_height + hint_height)
+
+
+func _on_dialog_overlay_gui_input(event: InputEvent, canvas_ref: WeakRef, on_ok: Callable) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		_close_dialog_canvas_and_call(canvas_ref, on_ok)
+
+
+func _close_dialog_canvas(canvas_ref: WeakRef) -> void:
+	if canvas_ref == null:
+		return
+	var canvas_obj: Object = canvas_ref.get_ref()
+	if canvas_obj is CanvasLayer:
+		(canvas_obj as CanvasLayer).queue_free()
+
+
+func _close_dialog_canvas_and_call(canvas_ref: WeakRef, callback: Callable) -> void:
+	_close_dialog_canvas(canvas_ref)
+	if _can_invoke_callable(callback):
+		callback.call()
+
+
+func _can_invoke_callable(callback: Callable) -> bool:
+	if callback.is_null() or not callback.is_valid():
+		return false
+	var object_id: int = callback.get_object_id()
+	if object_id == 0:
+		return true
+	var target: Object = instance_from_id(object_id)
+	return target != null and is_instance_valid(target)

@@ -758,13 +758,19 @@ func _on_refresh_failed() -> void:
 
 
 func _invoke_callback(callback: Callable, success: bool, data: Variant, error: Dictionary) -> void:
-	if callback.is_null():
+	if not _can_invoke_callable(callback):
 		return
-	if callback.is_standard():
-		var target := instance_from_id(callback.get_object_id())
-		if target == null or not is_instance_valid(target):
-			return
 	callback.call(success, data, error)
+
+
+func _can_invoke_callable(callback: Callable) -> bool:
+	if callback.is_null() or not callback.is_valid():
+		return false
+	var object_id: int = callback.get_object_id()
+	if object_id == 0:
+		return true
+	var target: Object = instance_from_id(object_id)
+	return target != null and is_instance_valid(target)
 
 
 func _release_loading_overlay_if_tracked(entry: Dictionary) -> void:
