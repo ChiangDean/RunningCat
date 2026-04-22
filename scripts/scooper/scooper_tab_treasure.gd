@@ -1,15 +1,16 @@
 extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/treasure/ScooperTreasureCardTemplate.tscn")
 
 
 func build(scene: Control) -> void:
-	var summary_row: HBoxContainer = HBoxContainer.new()
-	summary_row.add_theme_constant_override("separation", 10)
-	scene._tab_content.add_child(summary_row)
-
 	scene._treasure_summary_label = scene._tab_header_summary
 	if scene._treasure_summary_label == null:
+		var summary_row: HBoxContainer = HBoxContainer.new()
+		summary_row.add_theme_constant_override("separation", 10)
+		scene._tab_content.add_child(summary_row)
+
 		var section_label: Label = Label.new()
 		section_label.text = UiText.SCOOPER_TAB_TREASURE
 		section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
@@ -23,19 +24,6 @@ func build(scene: Control) -> void:
 		scene._treasure_summary_label.text = ""
 		scene._treasure_summary_label.visible = false
 		summary_row.add_child(scene._treasure_summary_label)
-	else:
-		var spacer: Control = Control.new()
-		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		summary_row.add_child(spacer)
-
-	var total_bonus_btn: Button = Button.new()
-	total_bonus_btn.text = UiText.SCOOPER_TREASURE_TOTAL_BONUS
-	total_bonus_btn.custom_minimum_size = Vector2(120.0, 40.0)
-	UiPalette.apply_button_kind(total_bonus_btn, "info")
-	total_bonus_btn.pressed.connect(Callable(self, "_show_total_bonus_dialog").bind(scene))
-	summary_row.add_child(total_bonus_btn)
-
-	scene._tab_content.add_child(scene._make_separator())
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -85,47 +73,21 @@ func _refresh_treasure_tab(scene: Control) -> void:
 
 func _make_treasure_card(scene: Control, item: Dictionary) -> Control:
 	var accent: Color = _get_treasure_placeholder_color(item)
-	var panel: PanelContainer = scene._make_card_panel(accent)
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	panel.add_child(margin)
-
-	var card: VBoxContainer = VBoxContainer.new()
-	card.add_theme_constant_override("separation", 8)
-	margin.add_child(card)
-
-	var header: HBoxContainer = HBoxContainer.new()
-	header.add_theme_constant_override("separation", 8)
-	card.add_child(header)
-
+	var panel: Panel = CARD_TEMPLATE.instantiate() as Panel
+	var icon_rect: TextureRect = panel.get_node("Margin/ContentCanvas/Icon") as TextureRect
+	var title_lbl: Label = panel.get_node("Margin/ContentCanvas/TitleLabel") as Label
+	var qty: Label = panel.get_node("Margin/ContentCanvas/QuantityLabel") as Label
+	var desc: Label = panel.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
+	var bonus: Label = panel.get_node("Margin/ContentCanvas/BonusLabel") as Label
 	var treasure_texture: Texture2D = AssetResolver.load_texture(AssetResolver.resolve_catalog_path(item.get("imagePath", "")))
-	if treasure_texture != null:
-		header.add_child(AssetResolver.create_icon_rect(treasure_texture, Vector2(52.0, 52.0)))
-
-	var title_lbl: Label = Label.new()
+	icon_rect.texture = treasure_texture
+	icon_rect.visible = treasure_texture != null
 	title_lbl.text = str(item.get("displayName", ""))
-	title_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title_lbl)
-
-	var qty: Label = Label.new()
 	qty.text = "x%d" % int(item.get("quantity", 0))
-	qty.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	qty.add_theme_color_override("font_color", accent)
-	header.add_child(qty)
-
-	var desc: Label = Label.new()
 	desc.text = str(item.get("description", ""))
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc.add_theme_color_override("font_color", Color(0.80, 0.80, 0.80, 1.0))
-	card.add_child(desc)
-
-	var bonus: Label = Label.new()
 	bonus.text = _treasure_bonus_desc(item)
-	bonus.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	bonus.add_theme_font_size_override("font_size", 17)
-	bonus.add_theme_color_override("font_color", Color(0.82, 0.94, 1.0, 1.0))
-	card.add_child(bonus)
+	bonus.visible = bonus.text.strip_edges() != ""
 
 	return panel
 

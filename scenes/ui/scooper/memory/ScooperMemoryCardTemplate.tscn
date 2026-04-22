@@ -1,0 +1,170 @@
+[gd_scene format=3 uid="uid://cesf6ey7skoqv"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://ud0q1ef7irvk" path="res://assets/sprites/ui/common/content_s2_default_uncheck_v1.png" id="2_yi5ag"]
+[ext_resource type="Texture2D" uid="uid://d4abnan4xn376" path="res://assets/sprites/ui/memory/sunny_nap.png" id="3"]
+
+[sub_resource type="StyleBoxFlat" id="1"]
+bg_color = Color(0.19, 0.17, 0.15, 0)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+border_color = Color(0.82, 0.7, 0.42, 0.95)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[node name="ScooperMemoryCardTemplate" type="Panel" unique_id=711458634]
+custom_minimum_size = Vector2(640, 345)
+offset_right = 640.0
+offset_bottom = 345.0
+size_flags_horizontal = 3
+theme = ExtResource("1")
+theme_override_styles/panel = SubResource("1")
+
+[node name="FreeLayer" type="Control" parent="." unique_id=1224300181]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Frame" type="TextureRect" parent="FreeLayer" unique_id=1278563016]
+layout_mode = 0
+offset_right = 639.74054
+offset_bottom = 350.0
+texture = ExtResource("2_yi5ag")
+expand_mode = 1
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=1425767245]
+layout_mode = 0
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="ContentCanvas" type="Control" parent="Margin" unique_id=789485394]
+custom_minimum_size = Vector2(612, 317)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="TitleLabel" type="Label" parent="Margin/ContentCanvas" unique_id=1006186047]
+layout_mode = 0
+offset_left = 47.0
+offset_top = 7.0
+offset_right = 575.0
+offset_bottom = 48.0
+theme_override_colors/font_color = Color(0.99, 0.97, 0.9, 1)
+theme_override_colors/font_outline_color = Color(0.16, 0.07, 0.03, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 22
+text = "暖陽午睡"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PreviewRoot" type="Control" parent="Margin/ContentCanvas" unique_id=1640760314]
+anchors_preset = 0
+offset_left = 69.0
+offset_top = 75.0
+offset_right = 541.0
+offset_bottom = 219.0
+
+[node name="PreviewBackground" type="ColorRect" parent="Margin/ContentCanvas/PreviewRoot" unique_id=1887015902]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -54.0
+offset_right = 58.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.85, 0.64, 0.37, 1)
+
+[node name="PreviewImage" type="TextureRect" parent="Margin/ContentCanvas/PreviewRoot" unique_id=982718140]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -55.0
+offset_right = 58.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="LockOverlay" type="ColorRect" parent="Margin/ContentCanvas/PreviewRoot" unique_id=491757615]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -56.0
+offset_right = 58.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.66)
+
+[node name="PreviewTextLabel" type="Label" parent="Margin/ContentCanvas/PreviewRoot" unique_id=280221019]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -56.0
+offset_top = 1.0
+offset_right = 57.0
+offset_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.16, 0.07, 0.03, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 22
+text = "暖陽午睡"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DescriptionLabel" type="Label" parent="Margin/ContentCanvas" unique_id=433663618]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 227.0
+offset_right = 596.0
+offset_bottom = 250.0
+theme_override_colors/font_color = Color(0.81960785, 0.9411765, 1, 1)
+theme_override_colors/font_outline_color = Color(0.14, 0.06, 0.02, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 13
+text = "在午後陽光裡熟睡，替全隊撐起更穩的血量。"
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="BonusLabel" type="Label" parent="Margin/ContentCanvas" unique_id=1387162604]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 249.0
+offset_right = 487.0
+offset_bottom = 278.0
+theme_override_colors/font_color = Color(0.9019608, 0.8392157, 0.7607843, 1)
+theme_override_colors/font_outline_color = Color(0.14, 0.06, 0.02, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+text = "全隊 HP +3.0%"
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="ActionButton" type="Button" parent="Margin/ContentCanvas" unique_id=640264595]
+custom_minimum_size = Vector2(160, 36)
+layout_mode = 0
+offset_left = 19.0
+offset_top = 282.0
+offset_right = 601.0
+offset_bottom = 318.0
+theme_override_colors/font_color = Color(0.36, 0.21, 0.08, 1)
+theme_override_colors/font_pressed_color = Color(0.36, 0.21, 0.08, 1)
+theme_override_colors/font_hover_color = Color(0.36, 0.21, 0.08, 1)
+theme_override_font_sizes/font_size = 15
+text = "已解鎖"

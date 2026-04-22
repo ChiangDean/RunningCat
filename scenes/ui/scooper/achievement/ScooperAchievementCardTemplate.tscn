@@ -1,0 +1,153 @@
+[gd_scene format=3 uid="uid://1pkla06lbvy"]
+
+[ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://df5tkswcfbvwd" path="res://assets/sprites/ui/common/content_xs_default_uncheck_v1.png" id="2_o2l61"]
+[ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="3_3f78s"]
+[ext_resource type="Texture2D" uid="uid://3ispmsnkb4cm" path="res://assets/sprites/ui/scooper_abilities/triple_speed.png" id="4_u3pah"]
+
+[sub_resource type="StyleBoxFlat" id="1"]
+bg_color = Color(0.19, 0.17, 0.15, 0)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+border_color = Color(0.94, 0.78, 0.36, 0.95)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[node name="ScooperAchievementCardTemplate" type="Panel" unique_id=172249509]
+custom_minimum_size = Vector2(640, 200)
+offset_right = 640.0
+offset_bottom = 200.0
+size_flags_horizontal = 3
+theme = ExtResource("1")
+theme_override_styles/panel = SubResource("1")
+
+[node name="FreeLayer" type="Control" parent="." unique_id=564782311]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Frame" type="TextureRect" parent="FreeLayer" unique_id=1400751851]
+layout_mode = 0
+offset_right = 634.01794
+offset_bottom = 200.0
+texture = ExtResource("2_o2l61")
+expand_mode = 1
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=279899650]
+layout_mode = 0
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="ContentCanvas" type="Control" parent="Margin" unique_id=337297374]
+custom_minimum_size = Vector2(612, 172)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="NameLabel" type="Label" parent="Margin/ContentCanvas" unique_id=2109449756]
+layout_mode = 0
+offset_left = 197.0
+offset_top = -6.0
+offset_right = 411.0
+offset_bottom = 26.0
+theme_override_colors/font_color = Color(0.99, 0.97, 0.9, 1)
+theme_override_colors/font_outline_color = Color(0.16, 0.07, 0.03, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 20
+text = "鏟屎官等級 8"
+horizontal_alignment = 1
+
+[node name="ConditionLabel" type="Label" parent="Margin/ContentCanvas" unique_id=1922349858]
+layout_mode = 0
+offset_left = 110.0
+offset_top = 69.0
+offset_right = 601.0
+offset_bottom = 91.0
+theme_override_colors/font_color = Color(0.81960785, 0.9411765, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "條件：鏟屎官等級達到 8"
+horizontal_alignment = 2
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="ClaimedAtLabel" type="Label" parent="Margin/ContentCanvas" unique_id=117761207]
+layout_mode = 0
+offset_left = 13.0
+offset_top = 138.0
+offset_right = 596.0
+offset_bottom = 161.0
+theme_override_colors/font_color = Color(0.68, 0.68, 0.68, 1)
+theme_override_font_sizes/font_size = 15
+text = "領取時間"
+horizontal_alignment = 1
+
+[node name="RewardLabel" type="Label" parent="Margin/ContentCanvas" unique_id=1589999349]
+layout_mode = 0
+offset_left = 128.0
+offset_top = 69.0
+offset_right = 513.0
+offset_bottom = 136.0
+theme_override_colors/font_color = Color(0.9019608, 0.8392157, 0.7607843, 1)
+theme_override_colors/font_outline_color = Color(0.14, 0.06, 0.02, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+text = "獎勵：三倍速模式"
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="ActionButton" type="Button" parent="Margin/ContentCanvas" unique_id=1953892852]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 0
+offset_left = 495.0
+offset_top = 93.0
+offset_right = 602.0
+offset_bottom = 135.0
+theme_override_colors/font_color = Color(0.36, 0.21, 0.08, 1)
+theme_override_colors/font_pressed_color = Color(0.36, 0.21, 0.08, 1)
+theme_override_colors/font_hover_color = Color(0.36, 0.21, 0.08, 1)
+theme_override_font_sizes/font_size = 17
+text = "領取"
+
+[node name="SlotFrame" type="TextureRect" parent="Margin/ContentCanvas" unique_id=255747078]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 51.0
+offset_right = 125.0
+offset_bottom = 154.0
+texture = ExtResource("3_3f78s")
+expand_mode = 1
+
+[node name="Icon" type="TextureRect" parent="Margin/ContentCanvas/SlotFrame" unique_id=152237841]
+texture_filter = 1
+layout_mode = 0
+offset_left = 18.0
+offset_top = 19.0
+offset_right = 83.0
+offset_bottom = 84.0
+texture = ExtResource("4_u3pah")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="CountLabel" type="Label" parent="Margin/ContentCanvas/SlotFrame" unique_id=735647386]
+layout_mode = 0
+offset_left = 19.0
+offset_top = 55.0
+offset_right = 80.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.82, 0.94, 1, 1)
+theme_override_colors/font_outline_color = Color(0.14, 0.06, 0.02, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 15
+text = " 1"
+horizontal_alignment = 2
+vertical_alignment = 1

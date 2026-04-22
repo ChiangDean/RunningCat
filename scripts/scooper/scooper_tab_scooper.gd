@@ -2,7 +2,7 @@ extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
-const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/ScooperEquipmentCardTemplate.tscn")
+const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/equipment/ScooperEquipmentCardTemplate.tscn")
 const ACTION_COOLDOWN: float = 0.5
 
 
