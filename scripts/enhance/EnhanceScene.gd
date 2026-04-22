@@ -34,6 +34,9 @@ var _food_max_btn: Button
 var _cat_hscroll: ScrollContainer
 var _cats_container: GridContainer
 var _cat_scroller: InertialScroller
+var _catalog_hscroll: ScrollContainer
+var _catalog_container: GridContainer
+var _catalog_scroller: InertialScroller
 var _detail_dialog_close: Callable = Callable()
 var _detail_dialog_scroll: ScrollContainer
 var _detail_dialog_scroller: InertialScroller
@@ -56,6 +59,7 @@ var _submenu_btns: Dictionary = {}
 var _active_submenu: String = "main"
 var _main_section: Control
 var _catalog_section: Control
+var _detail_context_submenu: String = ""
 
 @onready var GameState = get_node("/root/GameState")
 @onready var ApiClient = get_node("/root/ApiClient")
@@ -103,14 +107,30 @@ func _populate_cat_buttons() -> void:
 	UI.populate_cat_buttons(self)
 
 
+func _populate_catalog_buttons() -> void:
+	UI.populate_catalog_buttons(self)
+
+
+func _refresh_cat_card_sizes() -> void:
+	UI.refresh_cat_card_sizes(self)
+
+
+func _refresh_catalog_card_sizes() -> void:
+	UI.refresh_catalog_card_sizes(self)
+
+
 func _select_cat(cat_id: String) -> void:
 	_selected_cat_id = cat_id
 	_reset_special_point_draft()
-	_populate_cat_buttons()
+	if _active_submenu == "catalog":
+		_populate_catalog_buttons()
+	else:
+		_populate_cat_buttons()
 
 
 func _on_cat_button_pressed(cat_id: String) -> void:
-	if _cat_scroller != null and _cat_scroller.consume_moved():
+	var active_scroller: InertialScroller = _catalog_scroller if _active_submenu == "catalog" else _cat_scroller
+	if active_scroller != null and active_scroller.consume_moved():
 		return
 	_select_cat(cat_id)
 	_open_selected_cat_dialog()
@@ -121,6 +141,10 @@ func _switch_submenu(submenu_key: String) -> void:
 		return
 	_active_submenu = submenu_key
 	UI.refresh_submenu_state(self)
+	if submenu_key == "catalog":
+		_populate_catalog_buttons()
+	else:
+		_populate_cat_buttons()
 
 
 func _rebuild_detail_panel() -> void:
@@ -305,7 +329,8 @@ func _refresh_rank_labels(player_cat: PlayerCatData) -> void:
 
 func _refresh_red_dots() -> void:
 	_populate_cat_buttons()
-	if _detail_panel != null and is_instance_valid(_detail_panel):
+	_populate_catalog_buttons()
+	if _detail_panel != null and is_instance_valid(_detail_panel) and not _is_catalog_detail_mode():
 		_refresh_all_labels()
 
 
@@ -351,6 +376,20 @@ func _get_selected_player_cat_id() -> int:
 
 func _request_enhance_overview() -> void:
 	Actions.request_enhance_overview(self)
+
+
+func _is_catalog_detail_mode() -> bool:
+	return _detail_context_submenu == "catalog"
+
+
+func _build_catalog_preview_cat(cat_id: String) -> PlayerCatData:
+	var preview := PlayerCatData.new()
+	preview.cat_id = cat_id
+	preview.cat_food_level = 1
+	preview.rank = 0
+	preview.special_food_points = {"hp": 0, "atk": 0, "def": 0}
+	preview.cat_shards = 0
+	return preview
 
 
 func _run_enhance_action(action: Callable, action_type: String = "", refresh_achievements: bool = false) -> void:
