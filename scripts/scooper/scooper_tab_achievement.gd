@@ -1,6 +1,8 @@
 extends RefCounted
 
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/achievement/ScooperAchievementCardTemplate.tscn")
 
 
 func build(scene: Control) -> void:
@@ -26,12 +28,11 @@ func build(scene: Control) -> void:
 
 	scene._achievement_feedback_label = Label.new()
 	scene._achievement_feedback_label.text = ""
+	scene._achievement_feedback_label.visible = false
 	scene._achievement_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	scene._achievement_feedback_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	scene._achievement_feedback_label.add_theme_color_override("font_color", Color(0.88, 0.98, 0.80, 1.0))
 	scene._tab_content.add_child(scene._achievement_feedback_label)
-
-	scene._tab_content.add_child(scene._make_separator())
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -151,57 +152,30 @@ func _add_claimed_achievement_section(scene: Control, entries: Array) -> void:
 
 
 func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
-	var panel: PanelContainer = scene._make_card_panel(_achievement_border_color(entry))
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	panel.add_child(margin)
-
-	var card: VBoxContainer = VBoxContainer.new()
-	card.add_theme_constant_override("separation", 8)
-	margin.add_child(card)
-
-	var header: HBoxContainer = HBoxContainer.new()
-	header.add_theme_constant_override("separation", 8)
-	card.add_child(header)
-
-	var name_lbl: Label = Label.new()
+	var panel: Panel = CARD_TEMPLATE.instantiate() as Panel
+	var name_lbl: Label = panel.get_node("Margin/ContentCanvas/NameLabel") as Label
+	var condition_lbl: Label = panel.get_node("Margin/ContentCanvas/ConditionLabel") as Label
+	var claimed_time_lbl: Label = panel.get_node("Margin/ContentCanvas/ClaimedAtLabel") as Label
+	var reward_lbl: Label = panel.get_node("Margin/ContentCanvas/RewardLabel") as Label
+	var action_btn: Button = panel.get_node("Margin/ContentCanvas/ActionButton") as Button
+	var reward_icon: TextureRect = panel.get_node("Margin/ContentCanvas/SlotFrame/Icon") as TextureRect
+	var reward_count_lbl: Label = panel.get_node("Margin/ContentCanvas/SlotFrame/CountLabel") as Label
 	name_lbl.text = str(entry.get("displayName", ""))
-	name_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(name_lbl)
-
-	var condition_lbl: Label = Label.new()
 	condition_lbl.text = _format_achievement_text(entry.get("conditionText", ""))
-	condition_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	condition_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	condition_lbl.add_theme_color_override("font_color", Color(0.84, 0.84, 0.84, 1.0))
-	card.add_child(condition_lbl)
-
-	var progress_lbl: Label = Label.new()
-	progress_lbl.text = _format_achievement_text(entry.get("progressText", ""))
-	progress_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	progress_lbl.add_theme_color_override("font_color", Color(0.72, 0.82, 0.95, 1.0))
-	card.add_child(progress_lbl)
 
 	var is_completed: bool = bool(entry.get("isCompleted", false))
 	var is_claimed: bool = bool(entry.get("isClaimed", false))
-	if is_claimed:
-		var time_lbl: Label = Label.new()
-		time_lbl.text = UiText.SCOOPER_ACHIEVEMENT_CLAIMED_AT % str(entry.get("claimedAtUtc", "-"))
-		time_lbl.add_theme_font_size_override("font_size", 15)
-		time_lbl.add_theme_color_override("font_color", Color(0.68, 0.68, 0.68, 1.0))
-		card.add_child(time_lbl)
-
-	var reward_lbl: Label = Label.new()
-	reward_lbl.text = UiText.SCOOPER_ACHIEVEMENT_REWARD_PREFIX % _format_achievement_text(entry.get("rewardText", ""))
-	reward_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	reward_lbl.add_theme_font_size_override("font_size", 17)
-	reward_lbl.add_theme_color_override("font_color", Color(0.92, 0.92, 0.72, 1.0))
-	card.add_child(reward_lbl)
-
-	var action_btn: Button = Button.new()
-	action_btn.custom_minimum_size = Vector2(0.0, 42.0)
-	action_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_child(action_btn)
+	var claimed_time_text: String = _achievement_claimed_at_text(entry)
+	claimed_time_lbl.visible = is_claimed and claimed_time_text != ""
+	if claimed_time_lbl.visible:
+		claimed_time_lbl.text = UiText.SCOOPER_ACHIEVEMENT_CLAIMED_AT % claimed_time_text
+	var reward_info: Dictionary = _parse_reward_display(entry.get("rewardText", ""))
+	reward_lbl.text = str(reward_info.get("label", ""))
+	reward_icon.texture = _resolve_reward_texture(str(reward_info.get("icon_path", "")))
+	reward_icon.visible = reward_icon.texture != null
+	var reward_amount: int = int(reward_info.get("amount", 0))
+	reward_count_lbl.visible = reward_amount > 0
+	reward_count_lbl.text = "x%d" % reward_amount
 
 	var achievement_id: int = int(entry.get("achievementId", 0))
 	if is_completed and not is_claimed:
@@ -427,6 +401,56 @@ func _format_reward_string(reward_text: String) -> String:
 			return "%s +%s" % [name_text, amount]
 
 
+func _achievement_claimed_at_text(entry: Dictionary) -> String:
+	for key: String in ["claimedAtUtc", "claimedAt", "claimTime", "claimedTime"]:
+		var value: String = str(entry.get(key, "")).strip_edges()
+		if value != "":
+			return value
+	return ""
+
+
+func _parse_reward_display(value: Variant) -> Dictionary:
+	var raw_text: String = _format_achievement_text(value).strip_edges()
+	if raw_text == "":
+		return {"label": "", "amount": 0, "icon_path": ""}
+
+	var entry_match: RegEx = RegEx.new()
+	entry_match.compile("^\\s*(.+?)\\s*[xX×]\\s*(\\d+)\\s*$")
+	var result: RegExMatch = entry_match.search(raw_text)
+	var name_text: String = raw_text
+	var amount: int = 0
+	if result != null:
+		name_text = result.get_string(1).strip_edges()
+		amount = int(result.get_string(2))
+
+	var normalized: String = name_text.to_lower().replace(" ", "").replace("_", "")
+	match normalized:
+		"gold", "金幣":
+			return {"label": UiText.REWARD_GOLD, "amount": amount, "icon_path": "catalog/currency/gold"}
+		"diamonds", "diamond", "鑽石":
+			return {"label": UiText.REWARD_DIAMONDS, "amount": amount, "icon_path": "catalog/currency/diamonds"}
+		"catfood", "貓糧":
+			return {"label": UiText.REWARD_CAT_FOOD, "amount": amount, "icon_path": "catalog/consumable/cat_food"}
+		"specialcatfood", "特殊乾糧":
+			return {"label": UiText.REWARD_SPECIAL_CAT_FOOD, "amount": amount, "icon_path": "catalog/consumable/special_cat_food"}
+		"memoryshards", "回憶碎片":
+			return {"label": UiText.REWARD_MEMORY_SHARDS, "amount": amount, "icon_path": "catalog/consumable/memory_shards"}
+		"whiskers", "whiskershards", "鬍鬚", "鬍鬚碎片":
+			return {"label": UiText.REWARD_WHISKERS, "amount": amount, "icon_path": "catalog/consumable/whisker_shards"}
+		"trapcage", "trapcages", "誘捕籠":
+			return {"label": UiText.REWARD_TRAP_CAGE, "amount": amount, "icon_path": "catalog/consumable/trap_cages"}
+		"poop", "poopcount", "屎堆":
+			return {"label": UiText.REWARD_POOP, "amount": amount, "icon_path": "catalog/consumable/poop_count"}
+		_:
+			return {"label": name_text, "amount": amount, "icon_path": ""}
+
+
+func _resolve_reward_texture(icon_path: String) -> Texture2D:
+	if icon_path == "":
+		return null
+	return AssetResolver.load_texture(AssetResolver.resolve_catalog_path(icon_path))
+
+
 func _format_achievement_text(value: Variant) -> String:
 	if value is Dictionary:
 		var dict_value: Dictionary = value
@@ -447,11 +471,4 @@ func _format_achievement_text(value: Variant) -> String:
 func _set_feedback(scene: Control, text: String) -> void:
 	if scene._achievement_feedback_label != null:
 		scene._achievement_feedback_label.text = text
-
-
-func _achievement_border_color(entry: Dictionary) -> Color:
-	if bool(entry.get("isClaimed", false)):
-		return Color(0.50, 0.50, 0.50, 1.0)
-	if bool(entry.get("isCompleted", false)):
-		return Color(0.94, 0.78, 0.36, 1.0)
-	return Color(0.34, 0.36, 0.40, 1.0)
+		scene._achievement_feedback_label.visible = text.strip_edges() != ""

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/ability/ScooperAbilityCardTemplate.tscn")
 
 
 func build(scene: Control) -> void:
@@ -69,41 +70,15 @@ func _refresh_ability_ui(scene: Control) -> void:
 
 
 func _make_ability_card(scene: Control, item: Dictionary) -> Control:
-	var panel: PanelContainer = scene._make_card_panel(Color(0.54, 0.76, 0.92, 0.95))
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	panel.add_child(margin)
-
-	var card: VBoxContainer = VBoxContainer.new()
-	card.add_theme_constant_override("separation", 8)
-	margin.add_child(card)
-
-	var header: HBoxContainer = HBoxContainer.new()
-	header.add_theme_constant_override("separation", 10)
-	card.add_child(header)
-
+	var panel: Panel = CARD_TEMPLATE.instantiate() as Panel
+	var icon_rect: TextureRect = panel.get_node("Margin/ContentCanvas/Icon") as TextureRect
+	var title: Label = panel.get_node("Margin/ContentCanvas/TitleLabel") as Label
+	var source_chip: Label = panel.get_node("Margin/ContentCanvas/SourceLabel") as Label
+	var desc: Label = panel.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
 	var icon: Texture2D = AssetResolver.resolve_ability_icon(item)
-	if icon != null:
-		header.add_child(AssetResolver.create_icon_rect(icon, Vector2(52.0, 52.0)))
-
-	var title: Label = Label.new()
+	icon_rect.texture = icon
+	icon_rect.visible = icon != null
 	title.text = str(item.get("displayName", item.get("display_name", "")))
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title)
-
-	var source_chip: Label = Label.new()
 	source_chip.text = UiText.SCOOPER_ABILITY_SOURCE_VALUE
-	source_chip.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	source_chip.add_theme_color_override("font_color", Color(0.90, 0.82, 0.60, 1.0))
-	source_chip.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	source_chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	header.add_child(source_chip)
-
-	var desc: Label = Label.new()
 	desc.text = str(item.get("description", ""))
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc.add_theme_color_override("font_color", Color(0.86, 0.86, 0.84, 1.0))
-	card.add_child(desc)
-
 	return panel

@@ -2,6 +2,7 @@ extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/memory/ScooperMemoryCardTemplate.tscn")
 
 
 func build(scene: Control) -> void:
@@ -78,90 +79,43 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	var accent: Color = _get_memory_placeholder_color(item)
 	var current_shards: int = mini(scene.GameState.player_data.memory_shards, cost)
 
-	var panel: PanelContainer = scene._make_card_panel(accent if unlocked else Color(0.42, 0.42, 0.46, 0.94))
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	panel.add_child(margin)
-
-	var card: VBoxContainer = VBoxContainer.new()
-	card.add_theme_constant_override("separation", 10)
-	margin.add_child(card)
-
-	var header: HBoxContainer = HBoxContainer.new()
-	header.add_theme_constant_override("separation", 8)
-	card.add_child(header)
-
+	var panel: Panel = CARD_TEMPLATE.instantiate() as Panel
 	var display_name: String = str(item.get("displayName", ""))
-	var title_lbl: Label = Label.new()
+	var title_lbl: Label = panel.get_node("Margin/ContentCanvas/TitleLabel") as Label
 	title_lbl.text = display_name
-	title_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title_lbl)
-
-	var preview: Control = Control.new()
-	preview.custom_minimum_size = Vector2(0.0, 176.0)
-	card.add_child(preview)
-
-	var preview_bg: ColorRect = ColorRect.new()
-	preview_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var preview_bg: ColorRect = panel.get_node("Margin/ContentCanvas/PreviewRoot/PreviewBackground") as ColorRect
+	var preview_image: TextureRect = panel.get_node("Margin/ContentCanvas/PreviewRoot/PreviewImage") as TextureRect
+	var overlay: ColorRect = panel.get_node("Margin/ContentCanvas/PreviewRoot/LockOverlay") as ColorRect
+	var preview_text: Label = panel.get_node("Margin/ContentCanvas/PreviewRoot/PreviewTextLabel") as Label
+	var desc: Label = panel.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
+	var bonus: Label = panel.get_node("Margin/ContentCanvas/BonusLabel") as Label
+	var action_btn: Button = panel.get_node("Margin/ContentCanvas/ActionButton") as Button
 	preview_bg.color = accent
-	preview.add_child(preview_bg)
 
 	var photo_path: String = AssetResolver.resolve_catalog_path(item.get("imagePath", ""))
 	var texture: Texture2D = AssetResolver.load_texture(photo_path)
-	if texture != null:
-		var photo: TextureRect = TextureRect.new()
-		photo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		photo.texture = texture
-		photo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		photo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		photo.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		preview.add_child(photo)
+	preview_image.texture = texture
+	preview_image.visible = texture != null
 
-	if not unlocked:
-		var overlay: ColorRect = ColorRect.new()
-		overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		overlay.color = Color(0.0, 0.0, 0.0, 0.66)
-		preview.add_child(overlay)
-
-	var preview_text: Label = Label.new()
-	preview_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	preview_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	preview_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	preview_text.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
-	preview_text.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	overlay.visible = not unlocked
 	preview_text.text = display_name if unlocked else UiText.SCOOPER_MEMORY_LOCKED
-	preview.add_child(preview_text)
 
-	var desc: Label = Label.new()
 	desc.text = str(item.get("description", ""))
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc.add_theme_color_override("font_color", Color(0.80, 0.80, 0.80, 1.0))
-	card.add_child(desc)
-
-	var bonus: Label = Label.new()
-	bonus.text = UiText.SCOOPER_MEMORY_BONUS_PREFIX % _memory_bonus_desc(item)
-	bonus.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	bonus.add_theme_font_size_override("font_size", 17)
-	bonus.add_theme_color_override("font_color", Color(0.82, 0.94, 1.0, 1.0))
-	card.add_child(bonus)
-
-	var action_btn: Button = Button.new()
-	action_btn.custom_minimum_size = Vector2(190.0, 42.0)
-	action_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiPalette.apply_button_kind(action_btn, "confirm")
-	card.add_child(action_btn)
+	bonus.text = _memory_bonus_desc(item)
 
 	if unlocked:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCKED_BUTTON
 		action_btn.disabled = true
+		UiPalette.apply_button_kind(action_btn, "neutral")
 	elif can_unlock and not api_locked:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCK_BUTTON % [current_shards, cost]
+		UiPalette.apply_button_kind(action_btn, "confirm")
 		RedDotService.refresh_dot(action_btn, true)
 		action_btn.pressed.connect(Callable(self, "_confirm_unlock_memory").bind(scene, memory_id, item))
 	else:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCK_NEED % [current_shards, cost]
 		action_btn.disabled = true
+		UiPalette.apply_button_kind(action_btn, "neutral")
 
 	return panel
 
@@ -254,3 +208,14 @@ func _get_memory_placeholder_color(item: Dictionary) -> Color:
 
 func _is_api_locked(scene: Control) -> bool:
 	return bool(scene._api_in_flight)
+
+
+func _set_panel_style(panel: Panel, accent: Color) -> void:
+	if panel == null:
+		return
+	var style: StyleBoxFlat = panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if style == null:
+		return
+	var style_copy: StyleBoxFlat = style.duplicate()
+	style_copy.border_color = accent
+	panel.add_theme_stylebox_override("panel", style_copy)
