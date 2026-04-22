@@ -1,0 +1,135 @@
+extends VBoxContainer
+
+signal entry_pressed(entry_key: String)
+
+const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
+const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const UiPalette = preload("res://scripts/ui/ui_palette.gd")
+
+const CARD_TEMPLATE_SCENE = preload("res://scenes/ui/activity/permanent/PermanentActivityCardTemplate.tscn")
+
+const GACHA_CARD_ART: String = "res://assets/sprites/ui/gacha_background_v1.png"
+const DUNGEON_CARD_ART: String = "res://assets/sprites/ui/dungeon_background_v1.png"
+const ARENA_CARD_ART: String = "res://assets/sprites/ui/arena_background_v1.png"
+const EXPEDITION_CARD_ART: String = "res://assets/sprites/ui/activity_background_v1.png"
+
+const ENTRY_DEFINITIONS: Array[Dictionary] = [
+	{
+		"key": "gacha",
+		"title": UiText.GACHA_PAGE_TITLE,
+		"category": "招募補強",
+		"status": "常駐",
+		"preview_title": "擴充隊伍來源",
+		"description": UiText.ACTIVITY_GACHA_DESC,
+		"rewards": "誘捕籠消耗、技術成長、稀有新貓",
+		"button_text": UiText.ACTIVITY_GACHA_BUTTON,
+		"art_path": GACHA_CARD_ART,
+	},
+	{
+		"key": "dungeon",
+		"title": UiText.DUNGEON_PAGE_TITLE,
+		"category": "資源挑戰",
+		"status": "常駐",
+		"preview_title": "層層推進的長線關卡",
+		"description": UiText.ACTIVITY_DUNGEON_DESC,
+		"rewards": "通關層數、培養資源、推圖節奏",
+		"button_text": UiText.ACTIVITY_DUNGEON_BUTTON,
+		"art_path": DUNGEON_CARD_ART,
+	},
+	{
+		"key": "arena",
+		"title": UiText.ARENA_PAGE_TITLE,
+		"category": "排名對戰",
+		"status": "常駐",
+		"preview_title": "與其他玩家競逐牌位",
+		"description": UiText.ACTIVITY_ARENA_DESC,
+		"rewards": "牌位提升、賽季獎勵、防守配置",
+		"button_text": UiText.ACTIVITY_ARENA_BUTTON,
+		"art_path": ARENA_CARD_ART,
+	},
+	{
+		"key": "expedition",
+		"title": UiText.EXPEDITION_PAGE_TITLE,
+		"category": "放置收益",
+		"status": "常駐",
+		"preview_title": "派遣貓咪持續帶回素材",
+		"description": UiText.ACTIVITY_EXPEDITION_DESC,
+		"rewards": "定時收成、碎片素材、長線養成",
+		"button_text": UiText.ACTIVITY_EXPEDITION_BUTTON,
+		"art_path": EXPEDITION_CARD_ART,
+	},
+]
+
+var _entry_buttons: Dictionary = {}
+
+
+func _ready() -> void:
+	if get_child_count() > 0:
+		return
+	_build_content()
+	refresh_red_dots()
+
+
+func refresh_red_dots() -> void:
+	RedDotService.refresh_dot(_entry_buttons.get("gacha") as Control, RedDotService.has_gacha_red_dot())
+	RedDotService.refresh_dot(_entry_buttons.get("dungeon") as Control, RedDotService.has_dungeon_red_dot())
+	RedDotService.refresh_dot(_entry_buttons.get("arena") as Control, RedDotService.has_arena_red_dot())
+	RedDotService.refresh_dot(_entry_buttons.get("expedition") as Control, RedDotService.has_expedition_red_dot())
+
+
+func _build_content() -> void:
+	for index: int in range(ENTRY_DEFINITIONS.size()):
+		var entry_data: Dictionary = ENTRY_DEFINITIONS[index]
+		add_child(_make_entry_row(entry_data, index < ENTRY_DEFINITIONS.size() - 1))
+
+
+func _make_entry_row(entry_data: Dictionary, show_separator: bool) -> Control:
+	var row: VBoxContainer = VBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 14)
+	row.add_child(_make_entry_card(entry_data))
+
+	if show_separator:
+		var separator: ColorRect = ColorRect.new()
+		separator.custom_minimum_size = Vector2(0.0, 2.0)
+		separator.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		separator.color = Color(0.86, 0.75, 0.50, 0.55)
+		row.add_child(separator)
+
+	return row
+
+
+func _make_entry_card(entry_data: Dictionary) -> Control:
+	var card: Control = CARD_TEMPLATE_SCENE.instantiate() as Control
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var title_label: Label = card.get_node("Margin/ContentCanvas/TitleLabel") as Label
+	var category_label: Label = card.get_node("Margin/ContentCanvas/CategoryBadge/Label") as Label
+	var status_label: Label = card.get_node("Margin/ContentCanvas/StatusBadge/Label") as Label
+	var preview_label: Label = card.get_node("Margin/ContentCanvas/PreviewRoot/PreviewTextLabel") as Label
+	var preview_image: TextureRect = card.get_node("Margin/ContentCanvas/PreviewRoot/PreviewImage") as TextureRect
+	var description_label: Label = card.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
+	var reward_label: Label = card.get_node("Margin/ContentCanvas/RewardLabel") as Label
+	var action_button: Button = card.get_node("Margin/ContentCanvas/ActionButton") as Button
+
+	title_label.text = str(entry_data.get("title", ""))
+	category_label.text = str(entry_data.get("category", ""))
+	status_label.text = str(entry_data.get("status", "常駐"))
+	preview_label.text = str(entry_data.get("preview_title", ""))
+	description_label.text = str(entry_data.get("description", ""))
+	reward_label.text = "重點內容：" + str(entry_data.get("rewards", ""))
+	action_button.text = str(entry_data.get("button_text", "前往活動"))
+	UiPalette.apply_button_kind(action_button, "primary")
+
+	var art_path: String = str(entry_data.get("art_path", ""))
+	preview_image.texture = AssetResolver.load_texture(art_path)
+
+	var entry_key: String = str(entry_data.get("key", ""))
+	action_button.pressed.connect(_emit_entry_pressed.bind(entry_key))
+	_entry_buttons[entry_key] = action_button
+
+	return card
+
+
+func _emit_entry_pressed(entry_key: String) -> void:
+	entry_pressed.emit(entry_key)

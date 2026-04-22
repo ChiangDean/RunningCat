@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/activity/LimitedActivityContent.gd" id="1"]
+[ext_resource type="Theme" path="res://resources/default_theme.tres" id="2"]
+
+[node name="LimitedActivityContent" type="VBoxContainer"]
+size_flags_horizontal = 3
+theme = ExtResource("2")
+theme_override_constants/separation = 24
+script = ExtResource("1")
