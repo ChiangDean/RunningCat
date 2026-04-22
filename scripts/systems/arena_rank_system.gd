@@ -110,38 +110,6 @@ static func rank_key_to_index(rank_key: String) -> int:
 	return RANK_ORDER.find(rank_key)
 
 
-# ── 積分變化計算 ──────────────────────────────────────
-
-## 計算勝利積分變化
-## player_score: 己方積分, opponent_score: 對手積分
-## win_streak: 當前連勝數（勝後再+1前的數值）
-static func calc_win_delta(player_score: int, opponent_score: int, win_streak: int) -> int:
-	var player_idx  := rank_key_to_index(score_to_rank_key(player_score))
-	var opponent_idx := rank_key_to_index(score_to_rank_key(opponent_score))
-	var base: int
-	if opponent_idx > player_idx:
-		base = randi_range(21, 30)
-	elif opponent_idx == player_idx:
-		base = randi_range(10, 20)
-	else:
-		base = randi_range(5, 10)
-	# 連勝每場額外 +1（連勝數已計入當前勝場）
-	return base + mini(win_streak, 10)
-
-## 計算失敗積分變化（回傳負數）
-static func calc_loss_delta(player_score: int, opponent_score: int, loss_streak: int) -> int:
-	var player_idx  := rank_key_to_index(score_to_rank_key(player_score))
-	var opponent_idx := rank_key_to_index(score_to_rank_key(opponent_score))
-	var base: int
-	if opponent_idx > player_idx:
-		base = randi_range(5, 10)
-	elif opponent_idx == player_idx:
-		base = randi_range(10, 20)
-	else:
-		base = randi_range(21, 30)
-	return -(base + mini(loss_streak, 10))
-
-
 # ── 段位獎勵 ──────────────────────────────────────────
 
 ## 取得某積分可領取但尚未領取的段位獎勵 key 列表
