@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://b2jb16ilffv38"]
+
+[ext_resource type="PackedScene" uid="uid://c4wm38uss2ii1" path="res://scenes/ui/cats/CatCardSquareTemplate.tscn" id="1"]
+
+[node name="CatCardLineupOwnedTemplate" unique_id=230786111 instance=ExtResource("1")]
+
+[node name="TypeIcon" parent="." index="1" unique_id=858657682]
+offset_left = -17.0
+offset_top = -3.0
+offset_right = 124.0
+offset_bottom = 119.0
+
+[node name="RarityLabel" parent="." index="2" unique_id=227261098]
+offset_left = 104.0
+offset_top = 34.0
+offset_right = 413.0
+offset_bottom = 77.0
+
+[node name="LevelLabel" parent="." index="3" unique_id=960751155]
+offset_left = 78.0
+offset_top = 470.0
+offset_right = 152.0
+offset_bottom = 510.0
+
+[node name="NameLabel" parent="." index="5" unique_id=865579714]
+offset_left = 66.0
+offset_top = 468.0
+offset_right = 415.0
+offset_bottom = 516.0
+
+[node name="RankLabel" parent="." index="6" unique_id=582830414]
+offset_top = 432.0
+offset_bottom = 512.0

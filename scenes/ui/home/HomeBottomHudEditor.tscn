@@ -5,7 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://3wbngnf81u4r" path="res://assets/sprites/ui/home/v2/slices/background/home_lower_mainmenu_background.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://m846eg1gj2se" path="res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_panel_long_default.png" id="4"]
 [ext_resource type="Texture2D" uid="uid://hcxyjfljp2yk" path="res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_default.png" id="6"]
-[ext_resource type="PackedScene" uid="uid://cikgbyv5iye5t" path="res://scenes/ui/HomeScoopButtonTemplate.tscn" id="7"]
+[ext_resource type="PackedScene" uid="uid://cikgbyv5iye5t" path="res://scenes/ui/home/HomeScoopButtonTemplate.tscn" id="7"]
 
 [node name="HomeBottomHudEditor" type="Control" unique_id=184677552]
 layout_mode = 3

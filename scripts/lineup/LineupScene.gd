@@ -5,6 +5,8 @@ const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
+const TOP_SECTION_SCENE = preload("res://scenes/ui/lineup/LineupTopSectionEditor.tscn")
+const BOTTOM_SECTION_SCENE = preload("res://scenes/ui/lineup/LineupBottomSectionEditor.tscn")
 
 const DANGER_BUTTON_COLOR := Color(0.94, 0.48, 0.42, 1.0)
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
@@ -25,8 +27,9 @@ var _current_team_type: String = "boss"
 var _api_in_flight: bool = false
 
 var _team_type_btns: Dictionary = {}
+var _team_title_label: Label
 var _team_summary_label: Label
-var _team_container: GridContainer
+var _team_slot_views: Array[Dictionary] = []
 var _cats_title: Label
 var _cats_sort_btns: Dictionary = {}
 var _cats_scroll: ScrollContainer
@@ -67,70 +70,64 @@ func _build_ui() -> void:
 
 	var main_split: VBoxContainer = VBoxContainer.new()
 	main_split.add_theme_constant_override("separation", 12)
+	main_split.clip_contents = true
+	main_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_vbox.add_child(main_split)
 
-	var team_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	team_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	team_panel.size_flags_vertical = 0
-	main_split.add_child(team_panel)
+	var top_section: Control = TOP_SECTION_SCENE.instantiate() as Control
+	top_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main_split.add_child(top_section)
 
-	var team_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	team_panel.add_child(team_margin)
+	_team_title_label = top_section.get_node_or_null("TitleLabel") as Label
+	_team_summary_label = top_section.get_node_or_null("SummaryLabel") as Label
+	_team_slot_views.clear()
+	for slot_index: int in range(5):
+		var slot_root: Control = top_section.get_node_or_null("TeamGridHost/Slot" + str(slot_index + 1)) as Control
+		if slot_root == null:
+			continue
+		var card_host: Control = slot_root.get_node_or_null("CardHost") as Control
+		var badge_label: Label = slot_root.get_node_or_null("SlotBadgeLabel") as Label
+		var name_label: Label = slot_root.get_node_or_null("SlotNameLabel") as Label
+		var remove_button: Button = slot_root.get_node_or_null("RemoveButton") as Button
+		var delay_button: Button = slot_root.get_node_or_null("DelayButton") as Button
+		if remove_button != null:
+			remove_button.pressed.connect(_on_team_slot_remove_pressed.bind(slot_index))
+			_apply_team_slot_remove_button_style(remove_button)
+		if delay_button != null:
+			delay_button.pressed.connect(_on_team_slot_delay_pressed.bind(slot_index))
+		_team_slot_views.append({
+			"root": slot_root,
+			"card_host": card_host,
+			"badge_label": badge_label,
+			"name_label": name_label,
+			"remove_button": remove_button,
+			"delay_button": delay_button,
+			"placeholder_name": name_label.text if name_label != null else "",
+			"placeholder_delay": delay_button.text if delay_button != null else "",
+		})
 
-	var team_vbox: VBoxContainer = VBoxContainer.new()
-	team_vbox.add_theme_constant_override("separation", 10)
-	team_vbox.size_flags_vertical = 0
-	team_margin.add_child(team_vbox)
+	_save_team_btn = top_section.get_node_or_null("ConfirmButton") as Button
+	if _save_team_btn != null:
+		_save_team_btn.text = UiText.CONFIG_SAVE_BUTTON
+		_save_team_btn.pressed.connect(_on_save_team_pressed)
+		UiPalette.apply_button_kind(_save_team_btn, "confirm")
+	var bottom_section: Control = BOTTOM_SECTION_SCENE.instantiate() as Control
+	bottom_section.custom_minimum_size = Vector2.ZERO
+	bottom_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bottom_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main_split.add_child(bottom_section)
 
-	_team_summary_label = Label.new()
-	_team_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_team_summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	_team_summary_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
-	_team_summary_label.visible = false
-	team_vbox.add_child(_team_summary_label)
-
-	_team_container = GridContainer.new()
-	_team_container.columns = 5
-	_team_container.add_theme_constant_override("separation", 6)
-	_team_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_team_container.size_flags_vertical = 0
-	team_vbox.add_child(_team_container)
-
-	_save_team_btn = Button.new()
-	_save_team_btn.text = UiText.CONFIG_SAVE_BUTTON
-	_save_team_btn.custom_minimum_size = Vector2(0.0, 52.0)
-	_save_team_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	_save_team_btn.pressed.connect(_on_save_team_pressed)
-	UiPalette.apply_button_kind(_save_team_btn, "confirm")
-	team_vbox.add_child(_save_team_btn)
-
-	var cats_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	cats_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cats_panel.size_flags_stretch_ratio = 1.05
-	main_split.add_child(cats_panel)
-
-	var cats_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	cats_panel.add_child(cats_margin)
-
-	var cats_vbox: VBoxContainer = VBoxContainer.new()
-	cats_vbox.add_theme_constant_override("separation", 10)
-	cats_margin.add_child(cats_vbox)
-
-	var cats_header: HBoxContainer = HBoxContainer.new()
-	cats_header.add_theme_constant_override("separation", 8)
-	cats_vbox.add_child(cats_header)
-
-	_cats_title = Label.new()
-	_cats_title.text = UiText.CONFIG_OWNED_CATS_TITLE
-	_cats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
-	_cats_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cats_header.add_child(_cats_title)
+	_cats_title = bottom_section.get_node_or_null("TitleLabel") as Label
+	if _cats_title != null:
+		_cats_title.text = UiText.CONFIG_OWNED_CATS_TITLE
 
 	var sort_row: HBoxContainer = HBoxContainer.new()
 	sort_row.add_theme_constant_override("separation", 6)
-	cats_header.add_child(sort_row)
+	sort_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var sort_host: Control = bottom_section.get_node_or_null("SortHost") as Control
+	if sort_host != null:
+		sort_host.add_child(sort_row)
 
 	for sort_key: String in ["level", "rank"]:
 		var sort_btn: Button = Button.new()
@@ -145,12 +142,18 @@ func _build_ui() -> void:
 
 	_cats_scroll = ScrollContainer.new()
 	_cats_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_cats_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_cats_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	cats_vbox.add_child(_cats_scroll)
+	_cats_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var cats_list_host: Control = bottom_section.get_node_or_null("CatsListHost") as Control
+	if cats_list_host != null:
+		cats_list_host.custom_minimum_size = Vector2.ZERO
+		cats_list_host.add_child(_cats_scroll)
 
 	_cats_container = GridContainer.new()
-	_cats_container.columns = 3
-	_cats_container.add_theme_constant_override("separation", 12)
+	_cats_container.columns = 4
+	_cats_container.add_theme_constant_override("h_separation", 4)
+	_cats_container.add_theme_constant_override("v_separation", 4)
 	_cats_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_cats_scroll.add_child(_cats_container)
 	_cats_scroller = InertialScroller.attach(_cats_scroll, "vertical")
@@ -265,19 +268,50 @@ func _mark_current_team_dirty() -> void:
 
 
 func _update_team_title() -> void:
-	_team_summary_label.text = UiText.CONFIG_TEAM_SUMMARY_WITH_DELAY
-
-
+	if _team_title_label != null:
+		_team_title_label.text = "編隊陣容"
+	if _team_summary_label != null:
+		_team_summary_label.text = UiText.CONFIG_TEAM_SUMMARY_WITH_DELAY
 func _refresh_team() -> void:
-	for child: Node in _team_container.get_children():
-		child.queue_free()
-
 	var members: Array = _get_editing_team_members()
 	var max_count: int = _get_max_team_size()
-	_team_container.columns = maxi(1, max_count)
-	for i: int in range(max_count):
-		var member: Dictionary = members[i] if i < members.size() else {}
-		_team_container.add_child(_make_team_slot_card(i, member))
+	for slot_index: int in range(_team_slot_views.size()):
+		var slot_view: Dictionary = _team_slot_views[slot_index]
+		var slot_root: Control = slot_view.get("root", null) as Control
+		if slot_root == null:
+			continue
+		slot_root.visible = slot_index < max_count
+		if slot_index >= max_count:
+			continue
+
+		var badge_label: Label = slot_view.get("badge_label", null) as Label
+		var name_label: Label = slot_view.get("name_label", null) as Label
+		var remove_button: Button = slot_view.get("remove_button", null) as Button
+		var delay_button: Button = slot_view.get("delay_button", null) as Button
+		var card_host: Control = slot_view.get("card_host", null) as Control
+		var member: Dictionary = members[slot_index] if slot_index < members.size() else {}
+		var is_filled: bool = not member.is_empty()
+		var cat_name: String = str(member.get("catDisplayName", "")) if is_filled else str(slot_view.get("placeholder_name", ""))
+		var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
+
+		if badge_label != null:
+			badge_label.text = UiText.CONFIG_SLOT_BADGE_FORMAT % [slot_index + 1]
+		if name_label != null:
+			name_label.text = cat_name
+		if remove_button != null:
+			remove_button.visible = is_filled
+			remove_button.disabled = _api_in_flight or not is_filled
+		if delay_button != null:
+			delay_button.text = UiText.CONFIG_DELAY_BUTTON_FORMAT % [_format_delay_label(delay_seconds)] if is_filled else UiText.CONFIG_DELAY_BUTTON_EMPTY
+			delay_button.disabled = _api_in_flight or not is_filled
+			UiPalette.apply_button_palette(delay_button, SLOT_DELAY_BG, Color(0.98, 0.90, 0.72, 1.0))
+
+		if card_host != null:
+			for child: Node in card_host.get_children():
+				child.queue_free()
+			var slot_card: Control = _make_team_slot_card(slot_index, member, card_host.size)
+			slot_card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			card_host.add_child(slot_card)
 
 	_update_team_title()
 	_update_save_section()
@@ -287,73 +321,19 @@ func _refresh_team() -> void:
 	})
 
 
-func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer:
+func _make_team_slot_card(slot_index: int, member: Dictionary, host_size: Vector2) -> Control:
 	var is_filled: bool = not member.is_empty()
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER if is_filled else SLOT_EMPTY_BORDER)
-	card.custom_minimum_size = Vector2(0.0, 236.0)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(6)
-	card.add_child(margin)
-
-	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 6)
-	margin.add_child(column)
-
 	var cat_name: String = str(member.get("catDisplayName", "")) if is_filled else UiText.CONFIG_EMPTY_SLOT
 	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
 	var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
 	var cat_file_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id) if is_filled else ""
 	var team_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_file_id)
 	var cat_data: CatData = CatData.from_json_file(cat_file_id + ".json") if cat_file_id != "" else null
-
-	var top_row: HBoxContainer = HBoxContainer.new()
-	top_row.add_theme_constant_override("separation", 4)
-	column.add_child(top_row)
-
-	var slot_badge: Label = Label.new()
-	slot_badge.text = UiText.CONFIG_SLOT_BADGE_FORMAT % [slot_index + 1]
-	slot_badge.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
-	slot_badge.add_theme_color_override("font_color", Color(0.98, 0.90, 0.72, 1.0))
-	top_row.add_child(slot_badge)
-
-	var top_name: Label = Label.new()
-	top_name.text = cat_name if is_filled else UiText.CONFIG_TEAM_SLOT_EMPTY_NAME
-	top_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_name.clip_text = true
-	top_name.add_theme_font_size_override("font_size", 15)
-	top_name.add_theme_color_override("font_color", SLOT_NAME_COLOR if is_filled else EMPTY_SLOT_TEXT_COLOR)
-	top_row.add_child(top_name)
-
-	if is_filled:
-		var remove_btn: Button = Button.new()
-		remove_btn.text = "X"
-		remove_btn.custom_minimum_size = Vector2(22.0, 22.0)
-		remove_btn.add_theme_font_size_override("font_size", 11)
-		remove_btn.add_theme_color_override("font_color", Color(1.0, 0.97, 0.95, 1.0))
-		remove_btn.disabled = _api_in_flight
-		var remove_style: StyleBoxFlat = StyleBoxFlat.new()
-		remove_style.bg_color = SLOT_REMOVE_BG
-		remove_style.corner_radius_top_left = 999
-		remove_style.corner_radius_top_right = 999
-		remove_style.corner_radius_bottom_left = 999
-		remove_style.corner_radius_bottom_right = 999
-		remove_style.border_width_left = 1
-		remove_style.border_width_right = 1
-		remove_style.border_width_top = 1
-		remove_style.border_width_bottom = 1
-		remove_style.border_color = Color(1.0, 0.82, 0.78, 0.95)
-		remove_btn.add_theme_stylebox_override("normal", remove_style)
-		var remove_hover: StyleBoxFlat = remove_style.duplicate()
-		remove_hover.bg_color = SLOT_REMOVE_BG.lightened(0.08)
-		var remove_pressed: StyleBoxFlat = remove_style.duplicate()
-		remove_pressed.bg_color = SLOT_REMOVE_BG.darkened(0.08)
-		remove_btn.add_theme_stylebox_override("hover", remove_hover)
-		remove_btn.add_theme_stylebox_override("pressed", remove_pressed)
-		if not _api_in_flight:
-			remove_btn.pressed.connect(func() -> void:
-				_remove_member_from_draft(slot_index)
-			)
-		top_row.add_child(remove_btn)
+	var resolved_host_size: Vector2 = host_size
+	if resolved_host_size.x <= 0.0:
+		resolved_host_size.x = 110.0
+	if resolved_host_size.y <= 0.0:
+		resolved_host_size.y = 232.0
 
 	var card_gui_input: Callable = Callable()
 	if is_filled and cat_file_id != "":
@@ -367,7 +347,7 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 
 	var slot_card: PanelContainer = CatRosterCard.build({
 		"template_key": "lineup_team",
-		"title_text": cat_name,
+		"title_text": "",
 		"icon_texture": team_icon,
 		"fallback_text": _get_cat_visual_fallback(cat_name),
 		"level_value": int(member.get("catFoodLevel", 1)) if is_filled else 0,
@@ -375,10 +355,11 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 		"cat_type": cat_data.cat_type if cat_data != null else "base",
 		"rarity_key": cat_data.rarity if cat_data != null else "common",
 		"whole_card_gui_input": card_gui_input,
-		"card_height": 160.0,
+		"card_height": resolved_host_size.y,
 		"icon_size": Vector2(92.0, 92.0),
-		"card_border": SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER,
-		"selected_card_border": SLOT_IMAGE_BORDER if is_filled else SLOT_EMPTY_BORDER,
+		"frame_margin": 0,
+		"card_border": Color(0.0, 0.0, 0.0, 0.0),
+		"selected_card_border": Color(0.0, 0.0, 0.0, 0.0),
 		"title_color": Color(0.42, 0.28, 0.15, 1.0) if is_filled else EMPTY_SLOT_TEXT_COLOR,
 		"title_font_size": 13,
 		"show_type_icon": is_filled,
@@ -386,22 +367,27 @@ func _make_team_slot_card(slot_index: int, member: Dictionary) -> PanelContainer
 		"show_level_label": is_filled,
 		"show_rank_label": is_filled,
 	})
-	column.add_child(slot_card)
+	slot_card.custom_minimum_size = resolved_host_size
+	slot_card.size_flags_horizontal = 0
+	return slot_card
 
-	var delay_button: Button = Button.new()
-	delay_button.text = UiText.CONFIG_DELAY_BUTTON_FORMAT % [_format_delay_label(delay_seconds)] if is_filled else UiText.CONFIG_DELAY_BUTTON_EMPTY
-	delay_button.custom_minimum_size = Vector2(0.0, 24.0)
-	delay_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	delay_button.add_theme_font_size_override("font_size", 13)
-	delay_button.disabled = not is_filled or _api_in_flight
-	UiPalette.apply_button_palette(delay_button, SLOT_DELAY_BG, Color(0.98, 0.90, 0.72, 1.0))
-	if is_filled and not _api_in_flight:
-		delay_button.pressed.connect(func() -> void:
-			_update_member_delay_in_draft(slot_index, _get_next_delay_value(delay_seconds))
-		)
-	column.add_child(delay_button)
 
-	return card
+func _on_team_slot_remove_pressed(slot_index: int) -> void:
+	_remove_member_from_draft(slot_index)
+
+
+func _on_team_slot_delay_pressed(slot_index: int) -> void:
+	var members: Array = _get_editing_team_members()
+	if slot_index < 0 or slot_index >= members.size():
+		return
+	var member_variant: Variant = members[slot_index]
+	if not (member_variant is Dictionary):
+		return
+	var member: Dictionary = member_variant as Dictionary
+	if member.is_empty():
+		return
+	var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0))
+	_update_member_delay_in_draft(slot_index, _get_next_delay_value(delay_seconds))
 
 func _refresh_cats_list() -> void:
 	for child: Node in _cats_container.get_children():
@@ -488,10 +474,13 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 		"whole_card_gui_input": whole_card_gui_input,
 		"card_height": 232.0,
 		"icon_size": Vector2(110.0, 110.0),
-		"card_border": OverlaySceneChrome.CARD_BORDER,
-		"selected_card_border": OverlaySceneChrome.PANEL_BORDER,
+		"frame_margin": 0,
+		"card_border": Color(0.0, 0.0, 0.0, 0.0),
+		"selected_card_border": Color(0.0, 0.0, 0.0, 0.0),
 		"title_color": Color(0.42, 0.28, 0.15, 1.0),
 	})
+	card.custom_minimum_size = Vector2(146.0, 168.0)
+	card.size_flags_horizontal = 0
 	card.add_child(hold_timer)
 	return card
 
@@ -662,6 +651,8 @@ func _update_member_delay_in_draft(slot_no: int, delay_seconds: float) -> void:
 
 
 func _update_save_section() -> void:
+	if _save_team_btn == null:
+		return
 	var dirty: bool = _is_current_team_dirty()
 	_save_team_btn.disabled = _api_in_flight or not dirty
 	if dirty and not _api_in_flight:
@@ -775,6 +766,31 @@ func _make_chip_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
 	return style
 
 
+func _apply_team_slot_remove_button_style(remove_button: Button) -> void:
+	if remove_button == null:
+		return
+	remove_button.add_theme_font_size_override("font_size", 11)
+	remove_button.add_theme_color_override("font_color", Color(1.0, 0.97, 0.95, 1.0))
+	var remove_style: StyleBoxFlat = StyleBoxFlat.new()
+	remove_style.bg_color = SLOT_REMOVE_BG
+	remove_style.corner_radius_top_left = 999
+	remove_style.corner_radius_top_right = 999
+	remove_style.corner_radius_bottom_left = 999
+	remove_style.corner_radius_bottom_right = 999
+	remove_style.border_width_left = 1
+	remove_style.border_width_right = 1
+	remove_style.border_width_top = 1
+	remove_style.border_width_bottom = 1
+	remove_style.border_color = Color(1.0, 0.82, 0.78, 0.95)
+	remove_button.add_theme_stylebox_override("normal", remove_style)
+	var remove_hover: StyleBoxFlat = remove_style.duplicate()
+	remove_hover.bg_color = SLOT_REMOVE_BG.lightened(0.08)
+	var remove_pressed: StyleBoxFlat = remove_style.duplicate()
+	remove_pressed.bg_color = SLOT_REMOVE_BG.darkened(0.08)
+	remove_button.add_theme_stylebox_override("hover", remove_hover)
+	remove_button.add_theme_stylebox_override("pressed", remove_pressed)
+
+
 func _get_next_delay_value(current_delay: float) -> float:
 	var current_seconds: int = maxi(0, int(round(current_delay)))
 	return float((current_seconds + 1) % 10)
@@ -783,8 +799,6 @@ func _get_next_delay_value(current_delay: float) -> float:
 func _format_delay_label(delay_seconds: float) -> String:
 	var seconds: int = maxi(0, int(round(delay_seconds)))
 	return str(seconds) + "秒"
-
-
 func _get_cat_visual_fallback(cat_name: String) -> String:
 	var trimmed: String = cat_name.strip_edges()
 	if trimmed == "":
@@ -806,17 +820,15 @@ func _get_max_team_size() -> int:
 func _get_team_type_description(type_key: String) -> String:
 	match type_key:
 		"boss":
-			return "\u8abf\u6574 BOSS \u63a8\u5716\u968a\u4f0d\u8207\u521d\u59cb\u51fa\u624b\u5ef6\u9072\u3002"
+			return "調整 BOSS 推圖隊伍與初始出手延遲。"
 		"dungeon":
-			return "\u8abf\u6574\u5730\u4e0b\u57ce\u6311\u6230\u968a\u4f0d\u8207\u95dc\u5361\u7528\u8c93\u7de8\u6392\u3002"
+			return "調整地下城挑戰隊伍與關卡用貓編排。"
 		"arena_attack":
-			return "\u8abf\u6574\u7af6\u6280\u5834\u9032\u653b\u968a\u4f0d\u8207\u51fa\u624b\u9806\u5e8f\u3002"
+			return "調整競技場進攻隊伍與出手順序。"
 		"arena_defense":
-			return "\u8abf\u6574\u7af6\u6280\u5834\u9632\u5b88\u968a\u4f0d\u8207\u9632\u79a6\u7de8\u6210\u3002"
+			return "調整競技場防守隊伍與防禦編成。"
 		_:
 			return UiText.CONFIG_PAGE_DESC
-
-
 func _build_team_type_summary(type_key: String) -> String:
 	_ensure_team_draft(type_key)
 	var team: Dictionary = _team_drafts.get(type_key, {})
@@ -826,9 +838,7 @@ func _build_team_type_summary(type_key: String) -> String:
 	for member_variant: Variant in members:
 		if member_variant is Dictionary and not (member_variant as Dictionary).is_empty():
 			filled_count += 1
-	return "\u5df2\u7de8\u968a %d/%d" % [filled_count, _get_max_team_size_for(type_key)]
-
-
+	return "已編隊 %d/%d" % [filled_count, _get_max_team_size_for(type_key)]
 func _on_back_pressed() -> void:
 	var boss_team: Dictionary = GameState.get_team("Boss")
 	var boss_members: Array = boss_team.get("members", [])

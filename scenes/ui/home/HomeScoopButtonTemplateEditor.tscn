@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Theme" path="res://resources/default_theme.tres" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/ui/HomeScoopButtonTemplate.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/home/HomeScoopButtonTemplate.tscn" id="2"]
 
 [node name="HomeScoopButtonTemplateEditor" type="Control"]
 layout_mode = 3

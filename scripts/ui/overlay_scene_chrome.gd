@@ -3,7 +3,7 @@ extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const SUBMENU_SHELL_SCENE = preload("res://scenes/ui/SubmenuShellEditor.tscn")
+const SUBMENU_SHELL_SCENE = preload("res://scenes/ui/overlay/SubmenuShellEditor.tscn")
 
 const BOTTOM_DOCK_H := 112.0
 const HOME_MAIN_NAV_H := 110.0

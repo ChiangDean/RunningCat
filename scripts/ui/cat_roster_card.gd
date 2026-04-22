@@ -3,10 +3,10 @@ extends RefCounted
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SquareTemplateScene = preload("res://scenes/ui/CatCardSquareTemplate.tscn")
-const LineupTeamTemplateScene = preload("res://scenes/ui/CatCardLineupTeamTemplate.tscn")
-const LineupOwnedTemplateScene = preload("res://scenes/ui/CatCardLineupOwnedTemplate.tscn")
-const EnhanceListTemplateScene = preload("res://scenes/ui/enhance/CatCardEnhanceListTemplate.tscn")
+const SquareTemplateScene = preload("res://scenes/ui/cats/CatCardSquareTemplate.tscn")
+const LineupTeamTemplateScene = preload("res://scenes/ui/lineup/CatCardLineupTeamTemplate.tscn")
+const LineupOwnedTemplateScene = preload("res://scenes/ui/lineup/CatCardLineupOwnedTemplate.tscn")
+const EnhanceListTemplateScene = preload("res://scenes/ui/cats/CatCardEnhanceListTemplate.tscn")
 
 const CARD_RATIO := 1.0
 const FRAME_MARGIN := 6.0

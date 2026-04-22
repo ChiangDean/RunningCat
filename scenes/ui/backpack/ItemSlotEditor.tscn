@@ -87,8 +87,10 @@ offset_bottom = 628.0
 
 [node name="Frame" type="TextureRect" parent="MainSlot" unique_id=1064914775]
 layout_mode = 0
-offset_right = 512.0
-offset_bottom = 512.0
+offset_left = 81.0
+offset_top = 81.0
+offset_right = 431.0
+offset_bottom = 431.0
 texture = ExtResource("2")
 expand_mode = 1
 stretch_mode = 6

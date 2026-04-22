@@ -7,10 +7,6 @@
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.19, 0.17, 0.15, 0)
-border_width_left = 0
-border_width_top = 0
-border_width_right = 0
-border_width_bottom = 0
 border_color = Color(0.82, 0.7, 0.42, 0.95)
 corner_radius_top_left = 14
 corner_radius_top_right = 14
@@ -33,7 +29,7 @@ texture = ExtResource("2")
 expand_mode = 1
 
 [node name="Margin" type="MarginContainer" parent="." unique_id=291284520]
-layout_mode = 2
+layout_mode = 0
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 0
@@ -47,10 +43,10 @@ size_flags_vertical = 3
 
 [node name="SlotFrame" type="TextureRect" parent="Margin/ContentCanvas" unique_id=60523423]
 layout_mode = 0
-offset_left = 3.0
-offset_top = 45.0
-offset_right = 177.0
-offset_bottom = 219.0
+offset_left = 29.0
+offset_top = 71.0
+offset_right = 151.0
+offset_bottom = 193.0
 texture = ExtResource("3")
 expand_mode = 1
 

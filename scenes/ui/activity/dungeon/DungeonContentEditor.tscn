@@ -241,8 +241,10 @@ scale = Vector2(0.25, 0.25)
 
 [node name="Frame" type="TextureRect" parent="ContentRoot/SweepCard/RewardSlotA" unique_id=287102651]
 layout_mode = 0
-offset_right = 512.0
-offset_bottom = 512.0
+offset_left = 84.0
+offset_top = 84.0
+offset_right = 428.0
+offset_bottom = 428.0
 texture = ExtResource("6")
 expand_mode = 1
 stretch_mode = 6
@@ -306,8 +308,10 @@ scale = Vector2(0.25, 0.25)
 
 [node name="Frame" type="TextureRect" parent="ContentRoot/SweepCard/RewardSlotB" unique_id=1537339447]
 layout_mode = 0
-offset_right = 512.0
-offset_bottom = 512.0
+offset_left = 84.0
+offset_top = 84.0
+offset_right = 428.0
+offset_bottom = 428.0
 texture = ExtResource("6")
 expand_mode = 1
 stretch_mode = 6
@@ -431,8 +435,10 @@ scale = Vector2(0.25, 0.25)
 
 [node name="Frame" type="TextureRect" parent="ContentRoot/ChallengeCard/RewardSlotA" unique_id=1118605975]
 layout_mode = 0
-offset_right = 512.0
-offset_bottom = 512.0
+offset_left = 84.0
+offset_top = 84.0
+offset_right = 428.0
+offset_bottom = 428.0
 texture = ExtResource("6")
 expand_mode = 1
 stretch_mode = 6
@@ -496,8 +502,10 @@ scale = Vector2(0.25, 0.25)
 
 [node name="Frame" type="TextureRect" parent="ContentRoot/ChallengeCard/RewardSlotB" unique_id=595685130]
 layout_mode = 0
-offset_right = 512.0
-offset_bottom = 512.0
+offset_left = 84.0
+offset_top = 84.0
+offset_right = 428.0
+offset_bottom = 428.0
 texture = ExtResource("6")
 expand_mode = 1
 stretch_mode = 6
