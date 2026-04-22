@@ -2,20 +2,16 @@ extends Control
 
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
-
-const DUNGEON_CARD_ART := "res://assets/sprites/ui/dungeon_background_v1.png"
-const ARENA_CARD_ART := "res://assets/sprites/ui/arena_background_v1.png"
-const GACHA_CARD_ART := "res://assets/sprites/ui/gacha_background_v1.png"
-const EXPEDITION_CARD_ART := "res://assets/sprites/ui/activity_background_v1.png"
+const PermanentActivityContentScene = preload("res://scenes/activity/permanent/PermanentActivityContent.tscn")
+const LimitedActivityContentScene = preload("res://scenes/activity/limited/LimitedActivityContent.tscn")
 
 var _active_tab: String = "permanent"
 var _tab_buttons: Dictionary = {}
-var _entry_buttons: Dictionary = {}
 var _content_scroll: ScrollContainer
 var _scroll_box: VBoxContainer
+var _permanent_content: Control
+var _limited_content: Control
 
 
 func _ready() -> void:
@@ -64,86 +60,6 @@ func _build_ui() -> void:
 	_rebuild_tab_content()
 
 
-func _make_entry_card(
-	entry_key: String,
-	title_text: String,
-	subtitle_text: String,
-	art_path: String,
-	button_text: String,
-	callback: Callable
-) -> PanelContainer:
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	card.custom_minimum_size = Vector2(0.0, 320.0)
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	card.add_child(margin)
-
-	var layout: VBoxContainer = VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 14)
-	margin.add_child(layout)
-
-	var art_shell: PanelContainer = OverlaySceneChrome.make_card_panel(
-		OverlaySceneChrome.CARD_BORDER,
-		Color(0.14, 0.13, 0.15, 0.98),
-		16
-	)
-	art_shell.custom_minimum_size = Vector2(0.0, 188.0)
-	layout.add_child(art_shell)
-
-	var art: TextureRect = TextureRect.new()
-	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	art.texture = AssetResolver.load_texture(art_path)
-	art_shell.add_child(art)
-
-	var art_overlay: ColorRect = ColorRect.new()
-	art_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	art_overlay.color = Color(0.02, 0.02, 0.03, 0.30)
-	art_shell.add_child(art_overlay)
-
-	var info_box: VBoxContainer = VBoxContainer.new()
-	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info_box.add_theme_constant_override("separation", 8)
-	layout.add_child(info_box)
-
-	var title: Label = Label.new()
-	title.text = title_text
-	UiFonts.apply_noto(title, UiPalette.FONT_SIZE_HEADING)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	info_box.add_child(title)
-
-	var subtitle: Label = Label.new()
-	subtitle.text = subtitle_text
-	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	subtitle.custom_minimum_size = Vector2(0.0, 52.0)
-	UiFonts.apply_noto(subtitle, 17)
-	subtitle.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	info_box.add_child(subtitle)
-
-	var action_row: HBoxContainer = HBoxContainer.new()
-	action_row.add_theme_constant_override("separation", 12)
-	info_box.add_child(action_row)
-
-	var action_spacer: Control = Control.new()
-	action_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	action_row.add_child(action_spacer)
-
-	var action_button: Button = Button.new()
-	action_button.text = button_text
-	action_button.custom_minimum_size = Vector2(168.0, 56.0)
-	UiFonts.apply_noto(action_button, UiPalette.FONT_SIZE_BODY_LG)
-	action_button.pressed.connect(callback)
-	UiPalette.apply_button_kind(action_button, "primary")
-	action_row.add_child(action_button)
-	_entry_buttons[entry_key] = action_button
-
-	return card
-
-
 func _switch_tab(tab_key: String) -> void:
 	if _active_tab == tab_key:
 		return
@@ -164,7 +80,8 @@ func _rebuild_tab_content() -> void:
 		return
 	for child: Node in _scroll_box.get_children():
 		child.queue_free()
-	_entry_buttons.clear()
+	_permanent_content = null
+	_limited_content = null
 
 	match _active_tab:
 		"limited":
@@ -174,70 +91,23 @@ func _rebuild_tab_content() -> void:
 
 
 func _build_permanent_content() -> void:
-	_scroll_box.add_child(_make_entry_card(
-		"gacha",
-		UiText.GACHA_PAGE_TITLE,
-		UiText.ACTIVITY_GACHA_DESC,
-		GACHA_CARD_ART,
-		UiText.ACTIVITY_GACHA_BUTTON,
-		Callable(self, "_on_gacha_pressed")
-	))
-	_scroll_box.add_child(_make_entry_card(
-		"dungeon",
-		UiText.DUNGEON_PAGE_TITLE,
-		UiText.ACTIVITY_DUNGEON_DESC,
-		DUNGEON_CARD_ART,
-		UiText.ACTIVITY_DUNGEON_BUTTON,
-		Callable(self, "_on_dungeon_pressed")
-	))
-	_scroll_box.add_child(_make_entry_card(
-		"arena",
-		UiText.ARENA_PAGE_TITLE,
-		UiText.ACTIVITY_ARENA_DESC,
-		ARENA_CARD_ART,
-		UiText.ACTIVITY_ARENA_BUTTON,
-		Callable(self, "_on_arena_pressed")
-	))
-	_scroll_box.add_child(_make_entry_card(
-		"expedition",
-		UiText.EXPEDITION_PAGE_TITLE,
-		UiText.ACTIVITY_EXPEDITION_DESC,
-		EXPEDITION_CARD_ART,
-		UiText.ACTIVITY_EXPEDITION_BUTTON,
-		Callable(self, "_on_expedition_pressed")
-	))
+	_permanent_content = PermanentActivityContentScene.instantiate() as Control
+	if _permanent_content != null:
+		_permanent_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_permanent_content.connect("entry_pressed", Callable(self, "_on_permanent_entry_pressed"))
+		_scroll_box.add_child(_permanent_content)
 
 
 func _build_limited_content() -> void:
-	var empty_card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	_scroll_box.add_child(empty_card)
-
-	var empty_margin: MarginContainer = OverlaySceneChrome.make_content_margin(18)
-	empty_card.add_child(empty_margin)
-
-	var empty_box: VBoxContainer = VBoxContainer.new()
-	empty_box.add_theme_constant_override("separation", 10)
-	empty_margin.add_child(empty_box)
-
-	var empty_title: Label = Label.new()
-	empty_title.text = UiText.ACTIVITY_LIMITED_EMPTY_TITLE
-	UiFonts.apply_noto(empty_title, UiPalette.FONT_SIZE_HEADING)
-	empty_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	empty_box.add_child(empty_title)
-
-	var empty_desc: Label = Label.new()
-	empty_desc.text = UiText.ACTIVITY_LIMITED_EMPTY_BODY
-	empty_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiFonts.apply_noto(empty_desc, 17)
-	empty_desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	empty_box.add_child(empty_desc)
+	_limited_content = LimitedActivityContentScene.instantiate() as Control
+	if _limited_content != null:
+		_limited_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_scroll_box.add_child(_limited_content)
 
 
 func _refresh_red_dots() -> void:
-	RedDotService.refresh_dot(_entry_buttons.get("gacha") as Control, RedDotService.has_gacha_red_dot())
-	RedDotService.refresh_dot(_entry_buttons.get("dungeon") as Control, RedDotService.has_dungeon_red_dot())
-	RedDotService.refresh_dot(_entry_buttons.get("arena") as Control, RedDotService.has_arena_red_dot())
-	RedDotService.refresh_dot(_entry_buttons.get("expedition") as Control, RedDotService.has_expedition_red_dot())
+	if _permanent_content != null and _permanent_content.has_method("refresh_red_dots"):
+		_permanent_content.call("refresh_red_dots")
 
 
 func _build_tab_summary_right(tab_key: String) -> String:
@@ -260,6 +130,18 @@ func _on_gacha_pressed() -> void:
 
 func _on_expedition_pressed() -> void:
 	SceneNavigator.open_overlay_scene("res://scenes/ExpeditionScene.tscn")
+
+
+func _on_permanent_entry_pressed(entry_key: String) -> void:
+	match entry_key:
+		"gacha":
+			_on_gacha_pressed()
+		"dungeon":
+			_on_dungeon_pressed()
+		"arena":
+			_on_arena_pressed()
+		"expedition":
+			_on_expedition_pressed()
 
 
 func _on_back_pressed() -> void:
