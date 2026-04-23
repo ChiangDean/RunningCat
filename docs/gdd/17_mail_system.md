@@ -1,9 +1,11 @@
 # 17. Mail System
 
-> Update 2026-04-19:
+> Update 2026-04-23:
 > Mail now opens as an overlay scene, not a dialog.
 > The shared bottom submenu only keeps `未讀郵件` and `已讀郵件`.
 > Expired mail is excluded from all client mail lists.
+> The old bottom status strip is removed; non-blocking action feedback now uses `ToastManager`.
+> The right detail pane now uses a top-to-bottom structure of title, expiry meta row, plain content text, attachment slots, and a bottom claim button.
 
 ## 1. Feature Summary
 
@@ -22,9 +24,9 @@ Current frontend behavior:
 - Expired mail is not shown.
 - The right content pane only shows:
   - title
+  - remaining time to expiry on the second row, right aligned
   - content
-  - attachments
-  - remaining days before expiry
+  - attachments rendered with `ItemSlotTemplate.tscn`
 
 ## 2. Scene Structure
 
@@ -45,9 +47,9 @@ Layout:
   - mail title list only
 - right column
   - title
-  - content card
-  - expiry label at bottom-right
-  - attachment list
+  - expiry label on the second row, right aligned
+  - plain content text with no content card border
+  - attachment slots near the bottom
   - `領取附件` button when applicable
 
 ## 3. Bottom Submenu
@@ -86,8 +88,10 @@ The right pane displays the selected mail.
 
 Shown fields:
 - title
+- expiry countdown on the second row, right aligned
 - content
 - attachments
+- claim attachment button at the bottom
 - `剩餘X天過期`
 
 Removed fields:
@@ -99,6 +103,10 @@ Attachment button rules:
 - If the mail has no attachment, hide `領取附件`.
 - If the mail attachment is already claimed, hide `領取附件`.
 - If the mail can be claimed, show `領取附件`.
+
+Attachment presentation rules:
+- Attachments use the same `ItemSlotTemplate.tscn` visual treatment as backpack item slots.
+- Each slot shows the item icon, quantity, and display name inside the slot template.
 
 ## 6. Actions
 
@@ -130,6 +138,7 @@ Flow:
 2. Client shows a confirm dialog.
 3. Confirm calls `POST /api/mail/claim-all`.
 4. All currently claimable attachments are claimed.
+5. If no claimable mail exists, show a toast hint instead of using an inline status row.
 
 Button enablement:
 - Enabled only when `claimableCount > 0`.
@@ -142,6 +151,7 @@ Flow:
 2. Client shows a confirm dialog.
 3. Confirm calls `DELETE /api/mail/read`.
 4. All mails that are already processed are removed from the visible inbox.
+5. Success or failure feedback is shown through toast, not a persistent inline footer label.
 
 Button style:
 - Uses the shared danger button style.
@@ -204,3 +214,4 @@ Client-side local update helpers are used after actions such as:
 - Mail no longer uses the old dialog-style mail surface.
 - Top-right actions are placed above the two-column body, not inside the right pane.
 - Attachment reward popup may still be shown after successful claim, but the main mail surface stays in overlay-scene flow.
+- The old bottom status label row is intentionally removed so the mail body can use more vertical space.

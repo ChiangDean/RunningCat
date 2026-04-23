@@ -284,8 +284,13 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 		return ""
 	if image_path.begins_with("res://"):
 		return image_path
-	if image_path.begins_with("catalog/"):
-		var suffix := image_path.trim_prefix("catalog/")
+	var normalized_path: String = image_path
+	if not normalized_path.begins_with("catalog/"):
+		var legacy_parts: PackedStringArray = normalized_path.split("/")
+		if legacy_parts.size() >= 2:
+			normalized_path = "catalog/%s/%s" % [str(legacy_parts[0]), str(legacy_parts[1])]
+	if normalized_path.begins_with("catalog/"):
+		var suffix := normalized_path.trim_prefix("catalog/")
 		var parts := suffix.split("/")
 		if parts.size() < 2:
 			return ""
@@ -296,7 +301,7 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 				if key == "gold":
 					return UI_ROOT + "rewards/gold.png.png"
 				if key == "party_cheer_coupon":
-					return UI_ROOT + "rewards/party_cheer_coupon.svg"
+					return UI_ROOT + "rewards/party_cheer_coupon.png"
 				return UI_ROOT + "rewards/%s.png" % key
 			"dungeon":
 				return UI_ROOT + "dungeon/%s.png" % key

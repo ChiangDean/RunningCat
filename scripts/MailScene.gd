@@ -7,6 +7,7 @@ const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/backpack/ItemSlotTemplate.tscn")
 
 const SECTION_UNREAD := "unread"
 const SECTION_READ := "read"
@@ -44,24 +45,30 @@ const LIST_ITEM_FILL := Color(0.17, 0.16, 0.19, 0.96)
 const LIST_ITEM_FILL_SELECTED := Color(0.24, 0.21, 0.16, 0.98)
 const LIST_ITEM_BORDER := Color(0.40, 0.35, 0.28, 0.90)
 const LIST_ITEM_BORDER_SELECTED := Color(0.83, 0.69, 0.43, 0.98)
-const ERROR_COLOR := Color(1.0, 0.45, 0.45, 1.0)
-const NORMAL_COLOR := Color(0.92, 0.92, 0.92, 1.0)
-const CONTENT_FILL := Color(0.16, 0.15, 0.18, 0.92)
-const CONTENT_BORDER := Color(0.34, 0.31, 0.28, 0.86)
+const MAIL_CONTAINER_FILL := Color(0.16, 0.15, 0.18, 0.25)
+const MAIL_PAGE_SIDE_MARGIN := 10
+const ATTACHMENT_SLOT_BASE_SIZE := Vector2(512.0, 512.0)
+const ATTACHMENT_SLOT_SCALE := 0.27
+const ATTACHMENT_SLOT_CELL_SIZE := Vector2(148.0, 148.0)
 
 var _active_section: String = SECTION_UNREAD
+var _mail_list_scroll: ScrollContainer
+var _mail_empty_state: CenterContainer
+var _empty_mail_label: Label
 var _mail_button_list: VBoxContainer
 var _mail_buttons: Dictionary = {}
 var _detail_title: Label
-var _detail_content_panel: PanelContainer
+var _detail_meta_row: HBoxContainer
+var _detail_empty_state: CenterContainer
+var _detail_content_scroll: ScrollContainer
 var _detail_content: Label
 var _expire_label: Label
 var _attachment_title: Label
-var _attachment_box: VBoxContainer
+var _attachment_section: VBoxContainer
+var _attachment_box: HFlowContainer
 var _claim_btn: Button
 var _claim_all_btn: Button
 var _delete_read_btn: Button
-var _status_label: Label
 var _empty_detail_label: Label
 var _api_in_flight: bool = false
 var _selected_mail_id: int = 0
@@ -129,11 +136,17 @@ func set_section(section_key: String) -> void:
 
 
 func _build_ui() -> void:
+	var page_margin: MarginContainer = MarginContainer.new()
+	page_margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	page_margin.add_theme_constant_override("margin_left", MAIL_PAGE_SIDE_MARGIN)
+	page_margin.add_theme_constant_override("margin_right", MAIL_PAGE_SIDE_MARGIN)
+	add_child(page_margin)
+
 	var root: VBoxContainer = VBoxContainer.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root.add_theme_constant_override("separation", 12)
-	add_child(root)
+	page_margin.add_child(root)
 
 	var action_row: HBoxContainer = HBoxContainer.new()
 	action_row.add_theme_constant_override("separation", 10)
@@ -147,6 +160,7 @@ func _build_ui() -> void:
 	_claim_all_btn.text = LABEL_CLAIM_ALL
 	_claim_all_btn.custom_minimum_size = Vector2(132.0, 46.0)
 	UiPalette.apply_button_kind(_claim_all_btn, "confirm")
+	_claim_all_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	_claim_all_btn.pressed.connect(_on_claim_all_pressed)
 	action_row.add_child(_claim_all_btn)
 
@@ -154,6 +168,7 @@ func _build_ui() -> void:
 	_delete_read_btn.text = LABEL_DELETE_READ
 	_delete_read_btn.custom_minimum_size = Vector2(172.0, 46.0)
 	UiPalette.apply_button_kind(_delete_read_btn, "danger")
+	_delete_read_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	_delete_read_btn.pressed.connect(_on_delete_read_pressed)
 	action_row.add_child(_delete_read_btn)
 
@@ -162,7 +177,10 @@ func _build_ui() -> void:
 	body_row.add_theme_constant_override("separation", 14)
 	root.add_child(body_row)
 
-	var left_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
+	var left_panel: PanelContainer = OverlaySceneChrome.make_card_panel(
+		OverlaySceneChrome.CARD_BORDER,
+		MAIL_CONTAINER_FILL
+	)
 	left_panel.custom_minimum_size = Vector2(248.0, 0.0)
 	left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body_row.add_child(left_panel)
@@ -175,19 +193,34 @@ func _build_ui() -> void:
 	left_box.add_theme_constant_override("separation", 12)
 	left_margin.add_child(left_box)
 
-	var list_scroll: ScrollContainer = ScrollContainer.new()
-	list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	left_box.add_child(list_scroll)
-	InertialScroller.attach(list_scroll, "vertical")
+	_mail_list_scroll = ScrollContainer.new()
+	_mail_list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mail_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_mail_list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	left_box.add_child(_mail_list_scroll)
+	InertialScroller.attach(_mail_list_scroll, "vertical")
 
 	_mail_button_list = VBoxContainer.new()
 	_mail_button_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_mail_button_list.add_theme_constant_override("separation", 8)
-	list_scroll.add_child(_mail_button_list)
+	_mail_list_scroll.add_child(_mail_button_list)
 
-	var right_panel: PanelContainer = OverlaySceneChrome.make_card_panel()
+	_mail_empty_state = CenterContainer.new()
+	_mail_empty_state.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mail_empty_state.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left_box.add_child(_mail_empty_state)
+
+	_empty_mail_label = Label.new()
+	_empty_mail_label.text = LABEL_NO_MAIL
+	_empty_mail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_empty_mail_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	_empty_mail_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	_mail_empty_state.add_child(_empty_mail_label)
+
+	var right_panel: PanelContainer = OverlaySceneChrome.make_card_panel(
+		OverlaySceneChrome.CARD_BORDER,
+		MAIL_CONTAINER_FILL
+	)
 	right_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body_row.add_child(right_panel)
@@ -206,65 +239,67 @@ func _build_ui() -> void:
 	_detail_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	right_box.add_child(_detail_title)
 
-	var detail_scroll: ScrollContainer = ScrollContainer.new()
-	detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	right_box.add_child(detail_scroll)
-	InertialScroller.attach(detail_scroll, "vertical")
+	_detail_meta_row = HBoxContainer.new()
+	_detail_meta_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_box.add_child(_detail_meta_row)
 
-	var detail_layout: VBoxContainer = VBoxContainer.new()
-	detail_layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail_layout.add_theme_constant_override("separation", 14)
-	detail_scroll.add_child(detail_layout)
+	var meta_spacer: Control = Control.new()
+	meta_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_detail_meta_row.add_child(meta_spacer)
+
+	_expire_label = Label.new()
+	_expire_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_expire_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	_expire_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	_detail_meta_row.add_child(_expire_label)
+
+	_detail_empty_state = CenterContainer.new()
+	_detail_empty_state.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_detail_empty_state.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right_box.add_child(_detail_empty_state)
 
 	_empty_detail_label = Label.new()
 	_empty_detail_label.text = LABEL_SELECT_MAIL
 	_empty_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_empty_detail_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_empty_detail_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	detail_layout.add_child(_empty_detail_label)
+	_detail_empty_state.add_child(_empty_detail_label)
 
-	_detail_content_panel = PanelContainer.new()
-	_detail_content_panel.add_theme_stylebox_override(
-		"panel",
-		OverlaySceneChrome.make_panel_style(CONTENT_FILL, CONTENT_BORDER, 12)
-	)
-	detail_layout.add_child(_detail_content_panel)
+	_detail_content_scroll = ScrollContainer.new()
+	_detail_content_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_detail_content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_detail_content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right_box.add_child(_detail_content_scroll)
+	InertialScroller.attach(_detail_content_scroll, "vertical")
 
-	var content_margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	_detail_content_panel.add_child(content_margin)
+	var detail_content_margin: MarginContainer = MarginContainer.new()
+	detail_content_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_content_margin.add_theme_constant_override("margin_right", 6)
+	_detail_content_scroll.add_child(detail_content_margin)
 
 	_detail_content = Label.new()
+	_detail_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_detail_content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_detail_content.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_detail_content.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	content_margin.add_child(_detail_content)
+	detail_content_margin.add_child(_detail_content)
 
-	var meta_row: HBoxContainer = HBoxContainer.new()
-	meta_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail_layout.add_child(meta_row)
-
-	var meta_spacer: Control = Control.new()
-	meta_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	meta_row.add_child(meta_spacer)
-
-	_expire_label = Label.new()
-	_expire_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_expire_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	_expire_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	meta_row.add_child(_expire_label)
+	_attachment_section = VBoxContainer.new()
+	_attachment_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_attachment_section.add_theme_constant_override("separation", 10)
+	right_box.add_child(_attachment_section)
 
 	_attachment_title = Label.new()
 	_attachment_title.text = LABEL_ATTACHMENT
 	_attachment_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	_attachment_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	detail_layout.add_child(_attachment_title)
+	_attachment_section.add_child(_attachment_title)
 
-	_attachment_box = VBoxContainer.new()
+	_attachment_box = HFlowContainer.new()
 	_attachment_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_attachment_box.add_theme_constant_override("separation", 8)
-	detail_layout.add_child(_attachment_box)
+	_attachment_box.add_theme_constant_override("h_separation", 12)
+	_attachment_box.add_theme_constant_override("v_separation", 12)
+	_attachment_section.add_child(_attachment_box)
 
 	_claim_btn = Button.new()
 	_claim_btn.text = LABEL_CLAIM_ATTACHMENT
@@ -273,17 +308,12 @@ func _build_ui() -> void:
 	_claim_btn.pressed.connect(_on_claim_pressed)
 	right_box.add_child(_claim_btn)
 
-	_status_label = Label.new()
-	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	root.add_child(_status_label)
-
 
 func _apply_mail_cache() -> void:
 	if _mail_state_refresh_in_progress:
 		return
 	_mail_state_refresh_in_progress = true
 	_rebuild_mail_buttons()
-	_set_status("", false)
 	_ensure_selected_mail_visible()
 	_refresh_action_buttons()
 	_mail_state_refresh_in_progress = false
@@ -302,8 +332,11 @@ func _rebuild_mail_buttons() -> void:
 
 	var visible_items: Array = _get_visible_mail_items()
 	if visible_items.is_empty():
-		_mail_button_list.add_child(_build_empty_list_state())
+		_mail_list_scroll.visible = false
+		_mail_empty_state.visible = true
 		return
+	_mail_list_scroll.visible = true
+	_mail_empty_state.visible = false
 
 	for item_variant: Variant in visible_items:
 		if not (item_variant is Dictionary):
@@ -317,22 +350,6 @@ func _rebuild_mail_buttons() -> void:
 		_mail_buttons[mail_id] = card
 
 	_refresh_mail_button_states()
-
-
-func _build_empty_list_state() -> Control:
-	var center: CenterContainer = CenterContainer.new()
-	center.custom_minimum_size = Vector2(0.0, 260.0)
-	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var label: Label = Label.new()
-	label.text = LABEL_NO_MAIL
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	center.add_child(label)
-	return center
-
-
 func _build_mail_list_item(item: Dictionary) -> PanelContainer:
 	var mail_id: int = int(item.get("mailId", 0))
 	var panel: PanelContainer = PanelContainer.new()
@@ -433,15 +450,18 @@ func _refresh_mail_button_states() -> void:
 func _load_mail_detail(mail_id: int) -> void:
 	var detail: Dictionary = _get_mail_detail_from_cache(mail_id)
 	if detail.is_empty():
+		GameState.update_selected_mail({})
+		_render_detail_placeholder({}, LABEL_MAIL_CONTENT_LOADING)
+		_refresh_action_buttons()
 		_recover_mail_detail_silent(mail_id)
-		_set_status(LABEL_MAIL_CONTENT_LOADING, false)
 		return
 	if not _mail_item_has_detail(detail):
+		GameState.update_selected_mail(detail)
+		_render_detail_placeholder(detail, LABEL_MAIL_CONTENT_LOADING)
+		_refresh_action_buttons()
 		_recover_mail_detail_silent(mail_id)
-		_set_status(LABEL_MAIL_CONTENT_LOADING, false)
 		return
 	if _is_expired_mail(detail):
-		_set_status("", false)
 		if not GameState.selected_mail_data.is_empty():
 			GameState.update_selected_mail({})
 		_selected_mail_id = 0
@@ -450,7 +470,7 @@ func _load_mail_detail(mail_id: int) -> void:
 
 	GameState.update_selected_mail(detail)
 	_render_detail(detail)
-	_set_status("", false)
+	_refresh_action_buttons()
 
 	if not bool(detail.get("isRead", false)):
 		GameState.mark_mail_read_local(mail_id)
@@ -483,30 +503,33 @@ func _render_detail(detail: Dictionary) -> void:
 		child.queue_free()
 
 	var has_detail: bool = not detail.is_empty()
-	_empty_detail_label.visible = not has_detail
+	_detail_empty_state.visible = not has_detail
 	_detail_title.visible = has_detail
-	_detail_content_panel.visible = has_detail
+	_detail_meta_row.visible = has_detail
+	_detail_content_scroll.visible = has_detail
 	_detail_content.visible = has_detail
 	_expire_label.visible = has_detail
+	_attachment_section.visible = has_detail
 
 	if not has_detail:
+		_empty_detail_label.text = LABEL_SELECT_MAIL
 		_detail_title.text = ""
 		_detail_content.text = ""
 		_expire_label.text = ""
-		_expire_label.visible = false
-		_attachment_title.visible = false
+		_detail_meta_row.visible = false
+		_attachment_section.visible = false
 		_claim_btn.visible = false
-		_attachment_box.visible = false
 		return
 
 	_detail_title.text = str(detail.get("title", LABEL_UNTITLED))
 	_detail_content.text = str(detail.get("content", "")).strip_edges()
 	_expire_label.text = _format_expire_days(detail.get("expireAtUtc", null))
-	_expire_label.visible = _expire_label.text != ""
+	_detail_meta_row.visible = _expire_label.text != ""
 
 	var attachments_variant: Variant = detail.get("attachments", [])
 	var attachments: Array = attachments_variant if attachments_variant is Array else []
 	var has_attachments: bool = not attachments.is_empty()
+	_attachment_section.visible = has_attachments
 	_attachment_title.visible = has_attachments
 	_attachment_box.visible = has_attachments
 
@@ -517,7 +540,7 @@ func _render_detail(detail: Dictionary) -> void:
 	for attachment_variant: Variant in attachments:
 		if not (attachment_variant is Dictionary):
 			continue
-		_attachment_box.add_child(_build_attachment_row(attachment_variant))
+		_attachment_box.add_child(_build_attachment_slot(attachment_variant))
 
 	var can_claim: bool = bool(detail.get("canClaim", false))
 	var is_claimed: bool = bool(detail.get("isClaimed", false))
@@ -545,52 +568,61 @@ func _format_expire_days(expire_at_value: Variant) -> String:
 	return LABEL_EXPIRE_DAYS % remaining_days
 
 
-func _build_attachment_row(attachment_variant: Variant) -> Control:
+func _render_detail_placeholder(detail: Dictionary, message: String) -> void:
+	for child: Node in _attachment_box.get_children():
+		child.queue_free()
+
+	_detail_empty_state.visible = false
+	_detail_title.visible = true
+	_detail_meta_row.visible = false
+	_detail_content_scroll.visible = true
+	_detail_content.visible = true
+	_expire_label.visible = false
+	_attachment_section.visible = false
+	_claim_btn.visible = false
+	_detail_title.text = str(detail.get("title", LABEL_UNTITLED)) if not detail.is_empty() else LABEL_UNTITLED
+	_detail_content.text = message
+	_expire_label.text = ""
+
+
+func _build_attachment_slot(attachment_variant: Variant) -> Control:
 	var attachment: Dictionary = attachment_variant
-	var panel: PanelContainer = PanelContainer.new()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override(
-		"panel",
-		OverlaySceneChrome.make_panel_style(CONTENT_FILL, CONTENT_BORDER, 10)
+	var slot: Control = ITEM_SLOT_TEMPLATE.instantiate() as Control
+	var frame: TextureRect = slot.get_node("Frame") as TextureRect
+	var icon: TextureRect = slot.get_node("ItemIcon") as TextureRect
+	var overlay_mask: TextureRect = slot.get_node("OverlayMask") as TextureRect
+	var name_label: Label = slot.get_node("ItemNameLabel") as Label
+	var qty_label: Label = slot.get_node("CountLabel") as Label
+	var quantity: int = int(attachment.get("quantity", 0))
+	var texture: Texture2D = AssetResolver.load_texture(
+		AssetResolver.resolve_catalog_path(str(attachment.get("imagePath", "")))
+	)
+	var display_name: String = str(attachment.get("displayName", attachment.get("rewardType", "")))
+
+	if texture != null:
+		icon.texture = texture
+	else:
+		icon.visible = false
+
+	frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	overlay_mask.modulate = Color(1.0, 1.0, 1.0, 0.42)
+	name_label.text = display_name
+	name_label.tooltip_text = display_name
+	qty_label.text = GameState.format_number(quantity)
+	qty_label.tooltip_text = qty_label.text
+
+	slot.scale = Vector2(ATTACHMENT_SLOT_SCALE, ATTACHMENT_SLOT_SCALE)
+	var scaled_size: Vector2 = ATTACHMENT_SLOT_BASE_SIZE * ATTACHMENT_SLOT_SCALE
+	slot.position = Vector2(
+		(ATTACHMENT_SLOT_CELL_SIZE.x - scaled_size.x) * 0.5,
+		(ATTACHMENT_SLOT_CELL_SIZE.y - scaled_size.y) * 0.5
 	)
 
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	margin.add_child(row)
-
-	var texture: Texture2D = AssetResolver.load_texture(AssetResolver.resolve_catalog_path(attachment.get("imagePath", "")))
-	if texture != null:
-		row.add_child(AssetResolver.create_icon_rect(texture, Vector2(48.0, 48.0)))
-
-	var body: VBoxContainer = VBoxContainer.new()
-	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 4)
-	row.add_child(body)
-
-	var name_label: Label = Label.new()
-	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	name_label.text = "%s x%d" % [
-		str(attachment.get("displayName", attachment.get("rewardType", ""))),
-		int(attachment.get("quantity", 0))
-	]
-	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	body.add_child(name_label)
-
-	var desc_text: String = str(attachment.get("description", "")).strip_edges()
-	if desc_text != "":
-		var desc_label: Label = Label.new()
-		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc_label.text = desc_text
-		desc_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-		desc_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-		body.add_child(desc_label)
-
-	return panel
+	var cell: Control = Control.new()
+	cell.custom_minimum_size = ATTACHMENT_SLOT_CELL_SIZE
+	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(slot)
+	return cell
 
 
 func _on_claim_pressed() -> void:
@@ -609,7 +641,7 @@ func _on_claim_all_pressed() -> void:
 	if _api_in_flight:
 		return
 	if int(GameState.mail_summary_data.get("claimableCount", 0)) <= 0:
-		_set_status(LABEL_NO_CLAIMABLE, true)
+		ToastManager.hint(LABEL_NO_CLAIMABLE)
 		return
 
 	DialogManager.show_confirm(LABEL_CONFIRM_CLAIM_ALL_TITLE, LABEL_CONFIRM_CLAIM_ALL_BODY, Callable(self, "_confirm_claim_all_mails"))
@@ -619,7 +651,7 @@ func _on_delete_read_pressed() -> void:
 	if _api_in_flight:
 		return
 	if _count_deletable_mails() <= 0:
-		_set_status(LABEL_NO_DELETABLE, true)
+		ToastManager.hint(LABEL_NO_DELETABLE)
 		return
 
 	DialogManager.show_confirm(LABEL_CONFIRM_DELETE_READ_TITLE, LABEL_CONFIRM_DELETE_READ_BODY, Callable(self, "_confirm_delete_read_mails"))
@@ -643,19 +675,23 @@ func _on_mail_list_recovered(success: bool, data: Variant, _error: Dictionary) -
 func _on_mail_detail_recovered(success: bool, data: Variant, error: Dictionary, mail_id: int) -> void:
 	_mail_detail_recovery_ids.erase(mail_id)
 	if not success or not (data is Dictionary):
-		_set_status(str(error.get("message", LABEL_MAIL_CONTENT_FAILED)), true)
+		var error_message: String = str(error.get("message", LABEL_MAIL_CONTENT_FAILED))
+		var cached_detail: Dictionary = _get_mail_detail_from_cache(mail_id)
+		GameState.update_selected_mail(cached_detail)
+		_render_detail_placeholder(cached_detail, error_message)
+		_refresh_action_buttons()
+		_show_error_toast(LABEL_MAIL_CONTENT_FAILED, error_message)
 		return
 	GameState.update_selected_mail(data)
 	_render_detail(GameState.selected_mail_data)
 	_refresh_action_buttons()
-	_set_status("", false)
 
 
 func _on_claim_mail_completed(success: bool, data: Variant, error: Dictionary, mail_id: int) -> void:
 	_api_in_flight = false
 	if not success:
 		_refresh_action_buttons()
-		_set_status(str(error.get("message", LABEL_CLAIM_FAILED)), true)
+		_show_error_toast(LABEL_CLAIM_FAILED, str(error.get("message", LABEL_CLAIM_FAILED)))
 		return
 
 	var payload: Dictionary = data if data is Dictionary else {}
@@ -665,7 +701,6 @@ func _on_claim_mail_completed(success: bool, data: Variant, error: Dictionary, m
 	_rebuild_mail_buttons()
 	_ensure_selected_mail_visible()
 	_refresh_action_buttons()
-	_set_status("", false)
 	_render_reward_dialog(payload.get("grantedRewards", []), LABEL_CLAIM_SUCCESS)
 
 
@@ -679,7 +714,7 @@ func _on_claim_all_mails_completed(success: bool, data: Variant, error: Dictiona
 	_api_in_flight = false
 	if not success:
 		_refresh_action_buttons()
-		_set_status(str(error.get("message", LABEL_CLAIM_ALL_FAILED)), true)
+		_show_error_toast(LABEL_CLAIM_ALL_FAILED, str(error.get("message", LABEL_CLAIM_ALL_FAILED)))
 		return
 
 	var payload: Dictionary = data if data is Dictionary else {}
@@ -689,7 +724,6 @@ func _on_claim_all_mails_completed(success: bool, data: Variant, error: Dictiona
 	_rebuild_mail_buttons()
 	_ensure_selected_mail_visible()
 	_refresh_action_buttons()
-	_set_status("", false)
 	_render_reward_dialog(payload.get("grantedRewards", []), LABEL_CLAIM_ALL_SUCCESS)
 
 
@@ -703,7 +737,7 @@ func _on_delete_read_mails_completed(success: bool, data: Variant, error: Dictio
 	_api_in_flight = false
 	if not success:
 		_refresh_action_buttons()
-		_set_status(str(error.get("message", LABEL_DELETE_READ_FAILED)), true)
+		_show_error_toast(LABEL_DELETE_READ_FAILED, str(error.get("message", LABEL_DELETE_READ_FAILED)))
 		return
 
 	if data is Dictionary:
@@ -712,7 +746,7 @@ func _on_delete_read_mails_completed(success: bool, data: Variant, error: Dictio
 	GameState.update_selected_mail({})
 	_selected_mail_id = 0
 	_apply_mail_cache()
-	_set_status(LABEL_DELETE_READ_SUCCESS, false)
+	ToastManager.success(LABEL_DELETE_READ_SUCCESS)
 
 
 func _render_reward_dialog(rewards: Variant, title: String) -> void:
@@ -744,9 +778,13 @@ func _count_deletable_mails() -> int:
 	return count
 
 
-func _set_status(message: String, is_error: bool) -> void:
-	_status_label.text = message
-	_status_label.modulate = ERROR_COLOR if is_error else NORMAL_COLOR
+func _show_error_toast(title: String, detail: String = "") -> void:
+	var normalized_title: String = title.strip_edges()
+	var normalized_detail: String = detail.strip_edges()
+	if normalized_detail == "" or normalized_detail == normalized_title:
+		ToastManager.error(normalized_title)
+		return
+	ToastManager.error(normalized_title, normalized_detail)
 
 
 func _refresh_action_buttons() -> void:

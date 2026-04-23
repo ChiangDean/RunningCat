@@ -61,6 +61,7 @@ static func build(host: Control, options: Dictionary) -> Dictionary:
 	content_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content_scroll.vertical_scroll_mode = int(options.get("content_vertical_scroll_mode", ScrollContainer.SCROLL_MODE_AUTO))
 	content_margin.add_child(content_scroll)
 	InertialScroller.attach(content_scroll, "vertical")
 
