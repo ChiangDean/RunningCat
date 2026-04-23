@@ -1,6 +1,6 @@
 # 18. Frontend Architecture
 
-> Last updated: 2026-04-19
+> Last updated: 2026-04-23
 > Audience: AI agents and engineers modifying `MeowPartyDashClient`
 
 This document describes the current frontend architecture of `MeowPartyDashClient` so an agent can quickly find the correct edit location, understand data flow, and avoid reintroducing the old `ConfigScene = team config` assumption.
@@ -323,6 +323,9 @@ Key files:
 - runtime reads:
   - `res://config/runtime_config.json`
   - `res://config/runtime_config.local.json`
+- current release flags:
+  - `feature_flags.oauth_enabled`
+  - `feature_flags.paid_shop_enabled`
 
 ### 6.2 Persistent `user://` Storage
 

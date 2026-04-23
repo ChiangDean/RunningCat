@@ -1,6 +1,7 @@
 {
   "api_base_url": "http://localhost:5000/api",
   "feature_flags": {
-    "oauth_enabled": true
+    "oauth_enabled": true,
+    "paid_shop_enabled": true
   }
 }

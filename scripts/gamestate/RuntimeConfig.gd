@@ -4,6 +4,8 @@ extends RefCounted
 const CONFIG_PATH := "res://config/runtime_config.json"
 const LOCAL_CONFIG_PATH := "res://config/runtime_config.local.json"
 const DEFAULT_ENVIRONMENT := "Local"
+const FEATURE_FLAG_OAUTH_ENABLED := "oauth_enabled"
+const FEATURE_FLAG_PAID_SHOP_ENABLED := "paid_shop_enabled"
 
 
 static func get_config() -> Dictionary:
@@ -24,17 +26,25 @@ static func get_api_base_url(default_api_base_url: String) -> String:
 
 
 static func is_oauth_enabled() -> bool:
+	return _get_feature_flag(FEATURE_FLAG_OAUTH_ENABLED, true)
+
+
+static func is_paid_shop_enabled() -> bool:
+	return _get_feature_flag(FEATURE_FLAG_PAID_SHOP_ENABLED, true)
+
+
+static func _get_feature_flag(flag_name: String, default_value: bool) -> bool:
 	var config: Dictionary = get_config()
-	var top_level_value: Variant = _read_oauth_flag(config)
+	var top_level_value: Variant = _read_feature_flag(config, flag_name)
 	if top_level_value != null:
 		return bool(top_level_value)
 
 	var environment_config: Dictionary = _get_active_environment_config(config)
-	var environment_value: Variant = _read_oauth_flag(environment_config)
+	var environment_value: Variant = _read_feature_flag(environment_config, flag_name)
 	if environment_value != null:
 		return bool(environment_value)
 
-	return true
+	return default_value
 
 
 static func _get_active_environment_config(config: Dictionary) -> Dictionary:
@@ -46,14 +56,14 @@ static func _get_active_environment_config(config: Dictionary) -> Dictionary:
 	return environment_variant if environment_variant is Dictionary else {}
 
 
-static func _read_oauth_flag(config: Dictionary) -> Variant:
-	if config.has("oauth_enabled"):
-		return config.get("oauth_enabled")
+static func _read_feature_flag(config: Dictionary, flag_name: String) -> Variant:
+	if config.has(flag_name):
+		return config.get(flag_name)
 
 	var feature_flags_variant: Variant = config.get("feature_flags", {})
 	var feature_flags: Dictionary = feature_flags_variant if feature_flags_variant is Dictionary else {}
-	if feature_flags.has("oauth_enabled"):
-		return feature_flags.get("oauth_enabled")
+	if feature_flags.has(flag_name):
+		return feature_flags.get(flag_name)
 
 	return null
 
