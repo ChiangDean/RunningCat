@@ -42,6 +42,8 @@ const ACCOUNT_UID_COPY_EMPTY := UiText.SETTINGS_ACCOUNT_UID_COPY_EMPTY
 const ACCOUNT_UID_HINT := UiText.SETTINGS_ACCOUNT_UID_HINT
 const ACCOUNT_LINKED_TITLE := "OAuth"
 const ACCOUNT_LINKED_DESC := UiText.SETTINGS_ACCOUNT_LINKED_DESC
+const ACCOUNT_SUPPORT_TITLE := UiText.SETTINGS_ACCOUNT_SUPPORT_TITLE
+const ACCOUNT_SUPPORT_DESC := UiText.SETTINGS_ACCOUNT_SUPPORT_DESC
 const ACCOUNT_SESSION_TITLE := UiText.SETTINGS_ACCOUNT_SESSION_TITLE
 const ACCOUNT_SESSION_DESC := UiText.SETTINGS_ACCOUNT_SESSION_DESC
 const ACCOUNT_CURRENT_LOGIN_TITLE := UiText.SETTINGS_ACCOUNT_CURRENT_LOGIN_TITLE
@@ -61,6 +63,31 @@ const ACCOUNT_PROVIDER_TIMEOUT := UiText.SETTINGS_ACCOUNT_PROVIDER_TIMEOUT
 const ACCOUNT_PROVIDER_CONFLICT := UiText.SETTINGS_ACCOUNT_PROVIDER_CONFLICT
 const ACCOUNT_PROVIDER_PENDING := UiText.SETTINGS_ACCOUNT_PROVIDER_PENDING
 const ACCOUNT_PROVIDER_DISABLED_HINT_FORMAT := UiText.SETTINGS_ACCOUNT_PROVIDER_DISABLED_HINT_FORMAT
+const ACCOUNT_SUPPORT_EMAIL_TITLE := UiText.SETTINGS_ACCOUNT_SUPPORT_EMAIL_TITLE
+const ACCOUNT_SUPPORT_EMAIL_COPY_TEXT := UiText.SETTINGS_ACCOUNT_SUPPORT_EMAIL_COPY
+const ACCOUNT_SUPPORT_EMAIL_COPY_SUCCESS := UiText.SETTINGS_ACCOUNT_SUPPORT_EMAIL_COPY_SUCCESS
+const ACCOUNT_SUPPORT_EMAIL_COPY_EMPTY := UiText.SETTINGS_ACCOUNT_SUPPORT_EMAIL_COPY_EMPTY
+const ACCOUNT_SUPPORT_PAGE_TITLE := UiText.SETTINGS_ACCOUNT_SUPPORT_PAGE_TITLE
+const ACCOUNT_SUPPORT_PAGE_HINT := UiText.SETTINGS_ACCOUNT_SUPPORT_PAGE_HINT
+const ACCOUNT_PRIVACY_TITLE := UiText.SETTINGS_ACCOUNT_PRIVACY_TITLE
+const ACCOUNT_PRIVACY_HINT := UiText.SETTINGS_ACCOUNT_PRIVACY_HINT
+const ACCOUNT_DELETION_WEB_TITLE := UiText.SETTINGS_ACCOUNT_DELETION_WEB_TITLE
+const ACCOUNT_DELETION_WEB_HINT := UiText.SETTINGS_ACCOUNT_DELETION_WEB_HINT
+const ACCOUNT_LINK_ACTION := UiText.SETTINGS_ACCOUNT_LINK_ACTION
+const ACCOUNT_LINK_MISSING := UiText.SETTINGS_ACCOUNT_LINK_MISSING
+const ACCOUNT_LINK_OPEN_SUCCESS := UiText.SETTINGS_ACCOUNT_LINK_OPEN_SUCCESS
+const ACCOUNT_LINK_OPEN_FAILED_TITLE := UiText.SETTINGS_ACCOUNT_LINK_OPEN_FAILED_TITLE
+const ACCOUNT_LINK_OPEN_FAILED_FORMAT := UiText.SETTINGS_ACCOUNT_LINK_OPEN_FAILED_FORMAT
+const ACCOUNT_DELETE_TITLE := UiText.SETTINGS_ACCOUNT_DELETE_TITLE
+const ACCOUNT_DELETE_DESC := UiText.SETTINGS_ACCOUNT_DELETE_DESC
+const ACCOUNT_DELETE_BUTTON_TEXT := UiText.SETTINGS_ACCOUNT_DELETE_BUTTON
+const ACCOUNT_DELETE_BUTTON_WORKING_TEXT := UiText.SETTINGS_ACCOUNT_DELETE_BUTTON_WORKING
+const ACCOUNT_DELETE_CONFIRM_TITLE := UiText.SETTINGS_ACCOUNT_DELETE_CONFIRM_TITLE
+const ACCOUNT_DELETE_CONFIRM_BODY := UiText.SETTINGS_ACCOUNT_DELETE_CONFIRM_BODY
+const ACCOUNT_DELETE_SUCCESS_TITLE := UiText.SETTINGS_ACCOUNT_DELETE_SUCCESS_TITLE
+const ACCOUNT_DELETE_SUCCESS_BODY := UiText.SETTINGS_ACCOUNT_DELETE_SUCCESS_BODY
+const ACCOUNT_DELETE_FAILED_TITLE := UiText.SETTINGS_ACCOUNT_DELETE_FAILED_TITLE
+const ACCOUNT_DELETE_FAILED_DEFAULT := UiText.SETTINGS_ACCOUNT_DELETE_FAILED_DEFAULT
 const OAUTH_BRAND_GOOGLE_TEXTURE := preload("res://assets/sprites/ui/oauth/google/google_signin_neutral_square_220.png")
 const OAUTH_BRAND_APPLE_TEXTURE := preload("res://assets/sprites/ui/oauth/apple/apple_signin_left_black_220x50.png")
 const OAUTH_BRAND_LINE_TEXTURE := preload("res://assets/sprites/ui/oauth/line/line_login_base_220.png")
@@ -285,6 +312,7 @@ var _profile_loading: bool = false
 var _profile_saving: bool = false
 var _redeem_in_flight: bool = false
 var _logout_in_flight: bool = false
+var _account_delete_in_flight: bool = false
 var _applying_profile_form: bool = false
 var _clamping_bio_text: bool = false
 var _selected_avatar_id: String = AssetResolver.DEFAULT_PROFILE_AVATAR_ID
@@ -310,6 +338,7 @@ var _save_profile_hint_label: Label
 var _account_value_label: LineEdit
 var _player_uid_value_label: LineEdit
 var _account_logout_button: Button
+var _account_delete_button: Button
 var _account_current_login_label: LineEdit
 var _provider_card_refs: Dictionary = {}
 var _redeem_input: LineEdit
@@ -481,6 +510,7 @@ func _clear_section_control_refs() -> void:
 	_player_uid_value_label = null
 	_account_current_login_label = null
 	_account_logout_button = null
+	_account_delete_button = null
 	_provider_card_refs = {}
 	_redeem_input = null
 	_redeem_button = null
@@ -659,6 +689,7 @@ func _build_account_section() -> Control:
 	if RuntimeConfig.is_oauth_enabled():
 		root.add_child(_build_account_linked_card())
 	root.add_child(_build_redeem_card())
+	root.add_child(_build_account_support_card())
 	root.add_child(_build_account_session_card())
 	return root
 
@@ -747,6 +778,55 @@ func _build_account_session_card() -> Control:
 	return panel
 
 
+func _build_account_support_card() -> Control:
+	var shell: Dictionary = _create_card_shell()
+	var panel: PanelContainer = shell.get("panel") as PanelContainer
+	var column: VBoxContainer = shell.get("column") as VBoxContainer
+	column.add_child(_make_section_header(ACCOUNT_SUPPORT_TITLE, ACCOUNT_SUPPORT_DESC))
+
+	var support_email: String = RuntimeConfig.get_support_email()
+	var support_email_value: LineEdit = _make_readonly_value(support_email if support_email != "" else ACCOUNT_LINK_MISSING)
+	var copy_support_button: Button = _make_action_button(ACCOUNT_SUPPORT_EMAIL_COPY_TEXT, "secondary", 108.0)
+	copy_support_button.disabled = support_email == ""
+	copy_support_button.pressed.connect(UiAudio.play_ui_click)
+	copy_support_button.pressed.connect(_on_copy_support_email_pressed)
+	column.add_child(_build_inline_action_field(ACCOUNT_SUPPORT_EMAIL_TITLE, support_email_value, [copy_support_button]))
+
+	column.add_child(_build_external_link_row(
+		ACCOUNT_SUPPORT_PAGE_TITLE,
+		ACCOUNT_SUPPORT_PAGE_HINT,
+		RuntimeConfig.get_support_url(),
+		Callable(self, "_on_open_support_page_pressed")
+	))
+	column.add_child(_build_external_link_row(
+		ACCOUNT_PRIVACY_TITLE,
+		ACCOUNT_PRIVACY_HINT,
+		RuntimeConfig.get_privacy_policy_url(),
+		Callable(self, "_on_open_privacy_policy_pressed")
+	))
+	column.add_child(_build_external_link_row(
+		ACCOUNT_DELETION_WEB_TITLE,
+		ACCOUNT_DELETION_WEB_HINT,
+		RuntimeConfig.get_account_deletion_url(),
+		Callable(self, "_on_open_account_deletion_page_pressed")
+	))
+
+	var delete_hint: Label = Label.new()
+	delete_hint.text = ACCOUNT_DELETE_DESC
+	delete_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	delete_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	delete_hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	column.add_child(delete_hint)
+
+	_account_delete_button = Button.new()
+	_account_delete_button.custom_minimum_size = Vector2(0.0, 50.0)
+	UiPalette.apply_button_kind(_account_delete_button, "danger")
+	_account_delete_button.pressed.connect(UiAudio.play_ui_click)
+	_account_delete_button.pressed.connect(_on_delete_account_pressed)
+	column.add_child(_account_delete_button)
+	return panel
+
+
 func _build_game_settings_section() -> Control:
 	var section: PanelContainer = OverlaySceneChrome.make_card_panel()
 	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
@@ -810,6 +890,42 @@ func _build_admin_section() -> Control:
 	column.add_child(_make_section_header("Admin Catalog", UiText.SETTINGS_ADMIN_DESC))
 	column.add_child(_build_admin_catalog_row())
 	return section
+
+
+func _build_external_link_row(title_text: String, hint_text: String, url: String, callback: Callable) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	panel.add_child(margin)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	margin.add_child(row)
+
+	var text_box: VBoxContainer = VBoxContainer.new()
+	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_box.add_theme_constant_override("separation", 4)
+	row.add_child(text_box)
+
+	var title: Label = Label.new()
+	title.text = title_text
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	text_box.add_child(title)
+
+	var hint: Label = Label.new()
+	hint.text = hint_text if url.strip_edges() != "" else ACCOUNT_LINK_MISSING
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	text_box.add_child(hint)
+
+	var button: Button = _make_action_button(ACCOUNT_LINK_ACTION, "secondary", 132.0)
+	button.disabled = url.strip_edges() == ""
+	button.pressed.connect(UiAudio.play_ui_click)
+	button.pressed.connect(callback)
+	row.add_child(button)
+	return panel
 
 
 func _build_avatar_card(avatar_id: String) -> Control:
@@ -1309,12 +1425,14 @@ func _refresh_profile_save_state() -> void:
 
 
 func _refresh_logout_button_state() -> void:
-	if not is_instance_valid(_account_logout_button):
-		return
-	_account_logout_button.disabled = _logout_in_flight
-	_account_logout_button.text = UiText.START_LOGOUT_BUTTON_WORKING if _logout_in_flight else UiText.START_LOGOUT_BUTTON
 	if is_instance_valid(_account_current_login_label):
 		_account_current_login_label.text = _get_current_login_method_label()
+	if is_instance_valid(_account_logout_button):
+		_account_logout_button.disabled = _logout_in_flight or _account_delete_in_flight
+		_account_logout_button.text = UiText.START_LOGOUT_BUTTON_WORKING if _logout_in_flight else UiText.START_LOGOUT_BUTTON
+	if is_instance_valid(_account_delete_button):
+		_account_delete_button.disabled = _logout_in_flight or _account_delete_in_flight
+		_account_delete_button.text = ACCOUNT_DELETE_BUTTON_WORKING_TEXT if _account_delete_in_flight else ACCOUNT_DELETE_BUTTON_TEXT
 
 
 func _get_current_login_method_label() -> String:
@@ -1809,6 +1927,41 @@ func _on_copy_uid_pressed() -> void:
 	ToastManager.success(ACCOUNT_UID_COPY_SUCCESS, player_uid)
 
 
+func _on_copy_support_email_pressed() -> void:
+	var support_email: String = RuntimeConfig.get_support_email()
+	if support_email == "":
+		ToastManager.error(ACCOUNT_SUPPORT_EMAIL_COPY_EMPTY)
+		return
+	DisplayServer.clipboard_set(support_email)
+	ToastManager.success(ACCOUNT_SUPPORT_EMAIL_COPY_SUCCESS, support_email)
+
+
+func _on_open_support_page_pressed() -> void:
+	_open_external_url(RuntimeConfig.get_support_url(), ACCOUNT_SUPPORT_PAGE_TITLE)
+
+
+func _on_open_privacy_policy_pressed() -> void:
+	_open_external_url(RuntimeConfig.get_privacy_policy_url(), ACCOUNT_PRIVACY_TITLE)
+
+
+func _on_open_account_deletion_page_pressed() -> void:
+	_open_external_url(RuntimeConfig.get_account_deletion_url(), ACCOUNT_DELETION_WEB_TITLE)
+
+
+func _open_external_url(url: String, label_text: String) -> void:
+	var trimmed_url: String = url.strip_edges()
+	if trimmed_url == "":
+		ToastManager.hint(ACCOUNT_LINK_MISSING)
+		return
+
+	var open_error: int = OS.shell_open(trimmed_url)
+	if open_error != OK:
+		ToastManager.error(ACCOUNT_LINK_OPEN_FAILED_TITLE, ACCOUNT_LINK_OPEN_FAILED_FORMAT % [label_text, str(open_error)])
+		return
+
+	ToastManager.success(ACCOUNT_LINK_OPEN_SUCCESS, label_text)
+
+
 func _on_profile_save_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	_profile_saving = false
 	if not success:
@@ -1825,7 +1978,7 @@ func _on_profile_save_completed(success: bool, data: Variant, error: Dictionary)
 
 
 func _on_logout_pressed() -> void:
-	if _logout_in_flight:
+	if _logout_in_flight or _account_delete_in_flight:
 		return
 	DialogManager.show_confirm(
 		UiText.START_LOGOUT_CONFIRM_TITLE,
@@ -1837,7 +1990,7 @@ func _on_logout_pressed() -> void:
 
 
 func _begin_logout() -> void:
-	if _logout_in_flight:
+	if _logout_in_flight or _account_delete_in_flight:
 		return
 
 	var refresh_token: String = GameState.get_refresh_token()
@@ -1863,6 +2016,43 @@ func _on_revoke_refresh_token_completed(success: bool, _data: Variant, error: Di
 		return
 
 	ToastManager.error(UiText.START_LOGOUT_CONFIRM_TITLE, str(error.get("message", UiText.START_STATUS_LOGOUT_FAILED)))
+
+
+func _on_delete_account_pressed() -> void:
+	if _account_delete_in_flight or _logout_in_flight:
+		return
+
+	DialogManager.show_confirm(
+		ACCOUNT_DELETE_CONFIRM_TITLE,
+		ACCOUNT_DELETE_CONFIRM_BODY,
+		Callable(self, "_begin_delete_account"),
+		func() -> void:
+			pass
+	)
+
+
+func _begin_delete_account() -> void:
+	if _account_delete_in_flight or _logout_in_flight:
+		return
+
+	_account_delete_in_flight = true
+	_refresh_logout_button_state()
+	ApiClient.delete_profile_me(Callable(self, "_on_delete_account_completed"))
+
+
+func _on_delete_account_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	_account_delete_in_flight = false
+	_refresh_logout_button_state()
+	if success:
+		DialogManager.show_info(ACCOUNT_DELETE_SUCCESS_TITLE, ACCOUNT_DELETE_SUCCESS_BODY, Callable(self, "_finalize_logout"))
+		return
+
+	var error_code: String = str(error.get("code", ""))
+	if error_code == "AUTH.USER_INACTIVE" or error_code == "AUTH.UNAUTHORIZED":
+		_finalize_logout()
+		return
+
+	ToastManager.error(ACCOUNT_DELETE_FAILED_TITLE, str(error.get("message", ACCOUNT_DELETE_FAILED_DEFAULT)))
 
 
 func _finalize_logout() -> void:

@@ -168,6 +168,10 @@ func update_profile_me(payload: Dictionary, callback: Callable) -> void:
 	_api_put("profile/me", payload, callback)
 
 
+func delete_profile_me(callback: Callable) -> void:
+	_api_delete("profile/me", callback)
+
+
 func begin_oauth_link(provider_key: String, payload: Dictionary, callback: Callable) -> void:
 	_api_post("profile/oauth/%s/begin-link" % provider_key.uri_encode(), payload, callback)
 

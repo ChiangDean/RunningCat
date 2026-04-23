@@ -32,10 +32,15 @@ jobs:
             */api) FINAL_API_BASE_URL="$API_BASE_URL" ;;
             *) FINAL_API_BASE_URL="${API_BASE_URL%/}/api" ;;
           esac
+          SITE_BASE_URL="https://chiangdean.github.io/MeowPartyDashClient"
           mkdir -p config
           cat > config/runtime_config.json <<EOF
           {
-            "api_base_url": "$FINAL_API_BASE_URL"
+            "api_base_url": "$FINAL_API_BASE_URL",
+            "support_email": "",
+            "support_url": "$SITE_BASE_URL/support/",
+            "privacy_policy_url": "$SITE_BASE_URL/privacy/",
+            "account_deletion_url": "$SITE_BASE_URL/account-deletion/"
           }
           EOF
 
@@ -53,6 +58,7 @@ jobs:
         run: |
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
+          cp -R site/. build/web/
 
       - name: Deploy to Production
         uses: peaceiris/actions-gh-pages@v4

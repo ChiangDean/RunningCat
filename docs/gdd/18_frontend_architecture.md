@@ -326,6 +326,11 @@ Key files:
 - current release flags:
   - `feature_flags.oauth_enabled`
   - `feature_flags.paid_shop_enabled`
+- current release-side links:
+  - `support_email`
+  - `support_url`
+  - `privacy_policy_url`
+  - `account_deletion_url`
 
 ### 6.2 Persistent `user://` Storage
 
@@ -491,9 +496,10 @@ Current notes:
 Current notes:
 
 - `ConfigScene` is now the real settings center.
-- It owns profile editing, account / linked-provider display, redeem code UI, and local audio settings.
+- It owns profile editing, account / linked-provider display, support / legal links, account deletion, redeem code UI, and local audio settings.
 - Profile editing now keeps avatar selection in a shared dialog, shows live player-name / bio character counts, uses a small shared picker dialog for optional birthday input, and constrains region selection to a shared country list dialog with inertial scroll drag.
 - Account details now expose `Player UID` with a copy action and provide a logout action from inside the settings center.
+- Account details now also expose runtime-config driven support / privacy / account-deletion links, plus an in-app delete-account action that calls `DELETE /api/profile/me`.
 - OAuth is currently status-only: `Google` and `Apple` cards are visible but disabled when unbound.
 
 ### 9.4 Team Lineup
