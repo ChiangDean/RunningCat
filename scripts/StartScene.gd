@@ -1,13 +1,11 @@
 extends Control
 
 const HERO_IMAGE := preload("res://assets/sprites/ui/start_scene_homey_v1.png")
+const RuntimeConfig = preload("res://scripts/gamestate/RuntimeConfig.gd")
 const TITLE_TEXT := UiText.START_TITLE
 const SUBTITLE_TEXT := UiText.START_SUBTITLE
 const TAP_TO_START_TEXT := UiText.START_TAP_TO_START
-const CONFIG_PATH := "res://config/runtime_config.json"
-const LOCAL_CONFIG_PATH := "res://config/runtime_config.local.json"
 const DEVICE_ID_PATH := "user://device_id.txt"
-const DEFAULT_ENVIRONMENT := "Local"
 const DEFAULT_API_BASE_URL := "http://localhost:5000/api"
 const REQUEST_TIMEOUT_SECONDS := 15.0
 const BOOTSTRAP_MAX_RETRY_COUNT := 2
@@ -292,39 +290,40 @@ func _build_auth_block() -> PanelContainer:
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f"))
 	content.add_child(_status_label)
 
-	_oauth_intro_label = Label.new()
-	_oauth_intro_label.text = OAUTH_DIVIDER_TEXT
-	_oauth_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiFonts.apply_noto(_oauth_intro_label, 14)
-	_oauth_intro_label.add_theme_color_override("font_color", Color("6a5547"))
-	content.add_child(_oauth_intro_label)
+	if RuntimeConfig.is_oauth_enabled():
+		_oauth_intro_label = Label.new()
+		_oauth_intro_label.text = OAUTH_DIVIDER_TEXT
+		_oauth_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		UiFonts.apply_noto(_oauth_intro_label, 14)
+		_oauth_intro_label.add_theme_color_override("font_color", Color("6a5547"))
+		content.add_child(_oauth_intro_label)
 
-	_oauth_button_row = VBoxContainer.new()
-	_oauth_button_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_oauth_button_row.add_theme_constant_override("separation", 10)
-	content.add_child(_oauth_button_row)
+		_oauth_button_row = VBoxContainer.new()
+		_oauth_button_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		_oauth_button_row.add_theme_constant_override("separation", 10)
+		content.add_child(_oauth_button_row)
 
-	_oauth_google_button = _build_oauth_button(OAUTH_GOOGLE_BUTTON_TEXTURE)
-	_oauth_google_button.pressed.connect(func() -> void:
-		_begin_oauth_sign_in(OAUTH_PROVIDER_GOOGLE, OAUTH_PROVIDER_NAME_GOOGLE)
-	)
-	_oauth_button_row.add_child(_oauth_google_button)
+		_oauth_google_button = _build_oauth_button(OAUTH_GOOGLE_BUTTON_TEXTURE)
+		_oauth_google_button.pressed.connect(func() -> void:
+			_begin_oauth_sign_in(OAUTH_PROVIDER_GOOGLE, OAUTH_PROVIDER_NAME_GOOGLE)
+		)
+		_oauth_button_row.add_child(_oauth_google_button)
 
-	_oauth_apple_button = _build_oauth_button(OAUTH_APPLE_BUTTON_TEXTURE)
-	_oauth_apple_button.pressed.connect(func() -> void:
-		_begin_oauth_sign_in(OAUTH_PROVIDER_APPLE, OAUTH_PROVIDER_NAME_APPLE)
-	)
-	_oauth_button_row.add_child(_oauth_apple_button)
+		_oauth_apple_button = _build_oauth_button(OAUTH_APPLE_BUTTON_TEXTURE)
+		_oauth_apple_button.pressed.connect(func() -> void:
+			_begin_oauth_sign_in(OAUTH_PROVIDER_APPLE, OAUTH_PROVIDER_NAME_APPLE)
+		)
+		_oauth_button_row.add_child(_oauth_apple_button)
 
-	_oauth_line_button = _build_oauth_button(
-		OAUTH_LINE_BUTTON_TEXTURE,
-		OAUTH_LINE_BUTTON_HOVER_TEXTURE,
-		OAUTH_LINE_BUTTON_PRESS_TEXTURE
-	)
-	_oauth_line_button.pressed.connect(func() -> void:
-		_begin_oauth_sign_in(OAUTH_PROVIDER_LINE, OAUTH_PROVIDER_NAME_LINE)
-	)
-	_oauth_button_row.add_child(_oauth_line_button)
+		_oauth_line_button = _build_oauth_button(
+			OAUTH_LINE_BUTTON_TEXTURE,
+			OAUTH_LINE_BUTTON_HOVER_TEXTURE,
+			OAUTH_LINE_BUTTON_PRESS_TEXTURE
+		)
+		_oauth_line_button.pressed.connect(func() -> void:
+			_begin_oauth_sign_in(OAUTH_PROVIDER_LINE, OAUTH_PROVIDER_NAME_LINE)
+		)
+		_oauth_button_row.add_child(_oauth_line_button)
 
 	return panel
 
@@ -659,6 +658,9 @@ func _submit_register() -> void:
 
 func _begin_oauth_sign_in(provider_key: String, provider_name: String) -> void:
 	if _request_in_flight:
+		return
+	if not RuntimeConfig.is_oauth_enabled():
+		_set_status(UiText.START_STATUS_OAUTH_DISABLED, true)
 		return
 
 	_mode = AuthMode.LOGIN
@@ -1411,52 +1413,7 @@ func _build_request_headers(access_token: String = "", include_json_content_type
 	return headers
 
 func _resolve_api_base_url() -> String:
-	var config := _load_runtime_config()
-	if config.has("api_base_url"):
-		return str(config.get("api_base_url", DEFAULT_API_BASE_URL)).rstrip("/")
-
-	var configured_environment = config.get("environment") if config.get("environment") != null else DEFAULT_ENVIRONMENT
-	var environment_name := _normalize_environment_name(configured_environment)
-	var environments_variant: Variant = config.get("environments", {})
-	var environments: Dictionary = environments_variant if environments_variant is Dictionary else {}
-	var environment_variant: Variant = environments.get(environment_name, {})
-	var environment_config: Dictionary = environment_variant if environment_variant is Dictionary else {}
-	var api_base_url = environment_config.get("api_base_url") if environment_config.get("api_base_url") != null else DEFAULT_API_BASE_URL
-	return api_base_url.rstrip("/")
-
-
-func _load_runtime_config() -> Dictionary:
-	var local_config := _load_json_config(LOCAL_CONFIG_PATH)
-	if not local_config.is_empty():
-		return local_config
-
-	return _load_json_config(CONFIG_PATH)
-
-
-func _load_json_config(path: String) -> Dictionary:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return {}
-
-	var json := JSON.new()
-	var content := file.get_as_text()
-	file.close()
-	if json.parse(content) != OK:
-		return {}
-
-	var data: Variant = json.get_data()
-	return data if data is Dictionary else {}
-
-
-func _normalize_environment_name(environment_name: String) -> String:
-	var normalized := environment_name.strip_edges()
-	if normalized.to_lower() == "dev":
-		return "DEV"
-	if normalized.to_lower() == "sandbox":
-		return "Sandbox"
-	if normalized.to_lower() == "production":
-		return "Production"
-	return "Local"
+	return RuntimeConfig.get_api_base_url(DEFAULT_API_BASE_URL)
 
 
 func _build_device_name() -> String:

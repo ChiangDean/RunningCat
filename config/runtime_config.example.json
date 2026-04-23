@@ -1,5 +1,8 @@
 {
   "environment": "Local",
+  "feature_flags": {
+    "oauth_enabled": true
+  },
   "environments": {
     "Local": {
       "api_base_url": "http://localhost:5000/api"
