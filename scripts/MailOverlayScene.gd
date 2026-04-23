@@ -1,10 +1,6 @@
 class_name MailOverlayScene
 extends Control
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const MAIL_SCENE := preload("res://scenes/MailScene.tscn")
 
 var _mail_view: Control

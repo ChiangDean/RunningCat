@@ -1,10 +1,6 @@
 extends Control
 
 const Constants = preload("res://scripts/lineup/LineupConstants.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
 const TOP_SECTION_SCENE = preload("res://scenes/ui/lineup/LineupTopSectionEditor.tscn")
 const BOTTOM_SECTION_SCENE = preload("res://scenes/ui/lineup/LineupBottomSectionEditor.tscn")
 
@@ -134,9 +130,7 @@ func _build_ui() -> void:
 		sort_btn.text = UiText.CONFIG_SORT_LEVEL if sort_key == "level" else UiText.CONFIG_SORT_RANK
 		sort_btn.custom_minimum_size = Vector2(64.0, 28.0)
 		sort_btn.add_theme_font_size_override("font_size", 13)
-		sort_btn.pressed.connect(func() -> void:
-			_set_cats_sort_mode(sort_key)
-		)
+		sort_btn.pressed.connect(Callable(self, "_set_cats_sort_mode").bind(sort_key))
 		sort_row.add_child(sort_btn)
 		_cats_sort_btns[sort_key] = sort_btn
 
@@ -321,11 +315,11 @@ func _refresh_team() -> void:
 	})
 
 
-func _make_team_slot_card(slot_index: int, member: Dictionary, host_size: Vector2) -> Control:
+func _make_team_slot_card(_slot_index: int, member: Dictionary, host_size: Vector2) -> Control:
 	var is_filled: bool = not member.is_empty()
 	var cat_name: String = str(member.get("catDisplayName", "")) if is_filled else UiText.CONFIG_EMPTY_SLOT
 	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
-	var delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
+	var _delay_seconds: float = float(member.get("initialDelaySeconds", 0.0)) if is_filled else 0.0
 	var cat_file_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id) if is_filled else ""
 	var team_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_file_id)
 	var cat_data: CatData = CatData.from_json_file(cat_file_id + ".json") if cat_file_id != "" else null
@@ -337,13 +331,7 @@ func _make_team_slot_card(slot_index: int, member: Dictionary, host_size: Vector
 
 	var card_gui_input: Callable = Callable()
 	if is_filled and cat_file_id != "":
-		card_gui_input = func(event: InputEvent) -> void:
-			if not (event is InputEventMouseButton):
-				return
-			var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-			if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
-				return
-			_show_skill_popup(cat_file_id)
+		card_gui_input = Callable(self, "_on_team_slot_card_gui_input").bind(cat_file_id)
 
 	var slot_card: PanelContainer = CatRosterCard.build({
 		"template_key": "lineup_team",
@@ -393,12 +381,8 @@ func _refresh_cats_list() -> void:
 	for child: Node in _cats_container.get_children():
 		child.queue_free()
 
-	var in_team_ids: Array = _get_editing_team_members().map(func(member: Dictionary) -> int:
-		return int(member.get("playerCatId", 0))
-	)
-	in_team_ids = in_team_ids.filter(func(id: int) -> bool:
-		return id > 0
-	)
+	var in_team_ids: Array = _get_editing_team_members().map(_get_member_player_cat_id)
+	in_team_ids = in_team_ids.filter(_is_positive_team_member_id)
 	var owned_cats: Array = _get_sorted_owned_cats()
 	for cat_variant: Variant in owned_cats:
 		if cat_variant is Dictionary:
@@ -423,43 +407,17 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 	hold_timer.wait_time = CAT_CARD_HOLD_SECONDS
 	var pointer_down: Array[bool] = [false]
 	var long_press_triggered: Array[bool] = [false]
-	hold_timer.timeout.connect(func() -> void:
-		if not pointer_down[0]:
-			return
-		if local_cat_id == "":
-			return
-		if _cats_scroller != null and _cats_scroller.consume_moved():
-			return
-		long_press_triggered[0] = true
-		_show_skill_popup(local_cat_id)
-	)
+	var card_interaction_state: Dictionary = {
+		"pointer_down": pointer_down,
+		"long_press_triggered": long_press_triggered,
+		"local_cat_id": local_cat_id,
+		"action_disabled": action_disabled,
+		"player_cat_id": player_cat_id,
+		"hold_timer": hold_timer,
+	}
+	hold_timer.timeout.connect(Callable(self, "_on_cat_card_hold_timeout").bind(card_interaction_state))
 
-	var whole_card_gui_input: Callable = func(event: InputEvent) -> void:
-		if not (event is InputEventMouseButton):
-			return
-		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-		if mouse_event.button_index != MOUSE_BUTTON_LEFT:
-			return
-		if mouse_event.pressed:
-			pointer_down[0] = true
-			long_press_triggered[0] = false
-			if local_cat_id != "":
-				hold_timer.start()
-			return
-
-		var was_pressed: bool = pointer_down[0]
-		pointer_down[0] = false
-		hold_timer.stop()
-		if not was_pressed:
-			return
-		if _cats_scroller != null and _cats_scroller.consume_moved():
-			return
-		if long_press_triggered[0]:
-			long_press_triggered[0] = false
-			return
-		if action_disabled:
-			return
-		_toggle_member_in_draft(player_cat_id)
+	var whole_card_gui_input: Callable = Callable(self, "_on_owned_cat_card_gui_input").bind(card_interaction_state)
 
 	var card: PanelContainer = CatRosterCard.build({
 		"is_selected": already_in,
@@ -505,28 +463,7 @@ func _refresh_cats_sort_buttons() -> void:
 
 func _get_sorted_owned_cats() -> Array:
 	var owned_cats: Array = GameState.get_config_owned_cats().duplicate(true)
-	owned_cats.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if _cats_sort_mode == "rank":
-			var a_rank: int = int(a.get("rank", 0))
-			var b_rank: int = int(b.get("rank", 0))
-			if a_rank != b_rank:
-				return a_rank > b_rank
-			var a_level: int = int(a.get("catFoodLevel", 1))
-			var b_level: int = int(b.get("catFoodLevel", 1))
-			if a_level != b_level:
-				return a_level > b_level
-			return int(a.get("playerCatId", 0)) < int(b.get("playerCatId", 0))
-
-		var a_level_default: int = int(a.get("catFoodLevel", 1))
-		var b_level_default: int = int(b.get("catFoodLevel", 1))
-		if a_level_default != b_level_default:
-			return a_level_default > b_level_default
-		var a_rank_default: int = int(a.get("rank", 0))
-		var b_rank_default: int = int(b.get("rank", 0))
-		if a_rank_default != b_rank_default:
-			return a_rank_default > b_rank_default
-		return int(a.get("playerCatId", 0)) < int(b.get("playerCatId", 0))
-	)
+	owned_cats.sort_custom(_sort_owned_cat_entries)
 	return owned_cats
 
 
@@ -680,26 +617,7 @@ func _on_save_team_pressed() -> void:
 	_refresh_team()
 	_refresh_cats_list()
 
-	ApiClient.replace_team(_current_team_type, request_members, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_api_in_flight = false
-		if not success:
-			ToastManager.error(UiText.CONFIG_SAVE_FAILED_TITLE, str(error.get("message", UiText.CONFIG_UNKNOWN_ERROR)))
-			_refresh_team()
-			_refresh_cats_list()
-			return
-
-		if data is Dictionary:
-			var team_response: Dictionary = data as Dictionary
-			_apply_team_update(team_response)
-			var saved_type_key: String = _team_scene_type_to_key(str(team_response.get("teamType", "")))
-			if saved_type_key != "":
-				_reset_team_draft(saved_type_key, team_response)
-				_restart_home_battle_if_needed(saved_type_key)
-
-		_refresh_team()
-		_refresh_cats_list()
-		ToastManager.success(UiText.CONFIG_SAVE_HINT_CLEAN)
-	)
+	ApiClient.replace_team(_current_team_type, request_members, _on_replace_team_completed)
 
 
 func _team_scene_type_to_key(team_type: String) -> String:
@@ -842,7 +760,113 @@ func _build_team_type_summary(type_key: String) -> String:
 func _on_back_pressed() -> void:
 	var boss_team: Dictionary = GameState.get_team("Boss")
 	var boss_members: Array = boss_team.get("members", [])
-	GameState.player_team = boss_members.map(func(member: Dictionary) -> int:
-		return int(member.get("playerCatId", 0))
-	)
+	GameState.player_team = boss_members.map(_get_member_player_cat_id)
 	SceneNavigator.return_to_battle()
+
+
+func _on_team_slot_card_gui_input(event: InputEvent, cat_file_id: String) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+	if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	_show_skill_popup(cat_file_id)
+
+
+func _get_member_player_cat_id(member: Dictionary) -> int:
+	return int(member.get("playerCatId", 0))
+
+
+func _is_positive_team_member_id(id: int) -> bool:
+	return id > 0
+
+
+func _on_cat_card_hold_timeout(card_interaction_state: Dictionary) -> void:
+	var pointer_down: Array[bool] = card_interaction_state.get("pointer_down", [false])
+	var long_press_triggered: Array[bool] = card_interaction_state.get("long_press_triggered", [false])
+	var local_cat_id: String = str(card_interaction_state.get("local_cat_id", ""))
+	if not pointer_down[0] or local_cat_id == "":
+		return
+	if _cats_scroller != null and _cats_scroller.consume_moved():
+		return
+	long_press_triggered[0] = true
+	_show_skill_popup(local_cat_id)
+
+
+func _on_owned_cat_card_gui_input(event: InputEvent, card_interaction_state: Dictionary) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	var pointer_down: Array[bool] = card_interaction_state.get("pointer_down", [false])
+	var long_press_triggered: Array[bool] = card_interaction_state.get("long_press_triggered", [false])
+	var local_cat_id: String = str(card_interaction_state.get("local_cat_id", ""))
+	var action_disabled: bool = bool(card_interaction_state.get("action_disabled", false))
+	var player_cat_id: int = int(card_interaction_state.get("player_cat_id", 0))
+	var hold_timer: Timer = card_interaction_state.get("hold_timer", null) as Timer
+	if mouse_event.pressed:
+		pointer_down[0] = true
+		long_press_triggered[0] = false
+		if local_cat_id != "" and hold_timer != null:
+			hold_timer.start()
+		return
+
+	var was_pressed: bool = pointer_down[0]
+	pointer_down[0] = false
+	if hold_timer != null:
+		hold_timer.stop()
+	if not was_pressed:
+		return
+	if _cats_scroller != null and _cats_scroller.consume_moved():
+		return
+	if long_press_triggered[0]:
+		long_press_triggered[0] = false
+		return
+	if action_disabled:
+		return
+	_toggle_member_in_draft(player_cat_id)
+
+
+func _sort_owned_cat_entries(a: Dictionary, b: Dictionary) -> bool:
+	if _cats_sort_mode == "rank":
+		var a_rank: int = int(a.get("rank", 0))
+		var b_rank: int = int(b.get("rank", 0))
+		if a_rank != b_rank:
+			return a_rank > b_rank
+		var a_level: int = int(a.get("catFoodLevel", 1))
+		var b_level: int = int(b.get("catFoodLevel", 1))
+		if a_level != b_level:
+			return a_level > b_level
+		return int(a.get("playerCatId", 0)) < int(b.get("playerCatId", 0))
+
+	var a_level_default: int = int(a.get("catFoodLevel", 1))
+	var b_level_default: int = int(b.get("catFoodLevel", 1))
+	if a_level_default != b_level_default:
+		return a_level_default > b_level_default
+	var a_rank_default: int = int(a.get("rank", 0))
+	var b_rank_default: int = int(b.get("rank", 0))
+	if a_rank_default != b_rank_default:
+		return a_rank_default > b_rank_default
+	return int(a.get("playerCatId", 0)) < int(b.get("playerCatId", 0))
+
+
+func _on_replace_team_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	_api_in_flight = false
+	if not success:
+		ToastManager.error(UiText.CONFIG_SAVE_FAILED_TITLE, str(error.get("message", UiText.CONFIG_UNKNOWN_ERROR)))
+		_refresh_team()
+		_refresh_cats_list()
+		return
+
+	if data is Dictionary:
+		var team_response: Dictionary = data as Dictionary
+		_apply_team_update(team_response)
+		var saved_type_key: String = _team_scene_type_to_key(str(team_response.get("teamType", "")))
+		if saved_type_key != "":
+			_reset_team_draft(saved_type_key, team_response)
+			_restart_home_battle_if_needed(saved_type_key)
+
+	_refresh_team()
+	_refresh_cats_list()
+	ToastManager.success(UiText.CONFIG_SAVE_HINT_CLEAN)

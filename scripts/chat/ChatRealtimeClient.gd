@@ -58,9 +58,11 @@ func mark_read(channel_key: String, last_read_sequence: int) -> void:
 	if _socket != null and _socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		_send_json({"action": "mark_read", "channelKey": channel_key, "lastReadSequence": last_read_sequence})
 	else:
-		ApiClient.post_chat_read_silent(channel_key, last_read_sequence, func(_success: bool, _data: Variant, _error: Dictionary) -> void:
-			pass
-		)
+		ApiClient.post_chat_read_silent(channel_key, last_read_sequence, Callable(self, "_on_silent_chat_read_completed"))
+
+
+func _on_silent_chat_read_completed(_success: bool, _data: Variant, _error: Dictionary) -> void:
+	pass
 
 
 func reconnect_now() -> void:

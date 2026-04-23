@@ -4,7 +4,6 @@ signal navigation_changed(items: Array, active_key: String)
 
 const ChatTabScript = preload("res://scripts/chat/chat_channel_tab.gd")
 const ChatItemScript = preload("res://scripts/chat/chat_message_item.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const CONTENT_FULL_TEXTURE = preload("res://assets/sprites/ui/common/content_full_default_v1.png")
 
 const CHANNEL_WORLD := "world"
@@ -328,13 +327,7 @@ func _get_render_messages_for_channel(channel_key: String) -> Array:
 	var merged: Array = []
 	merged.append_array(_decorate_messages("system", GameState.get_chat_messages("system")))
 	merged.append_array(_decorate_messages(CHANNEL_WORLD, GameState.get_chat_messages(CHANNEL_WORLD)))
-	merged.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var a_time: String = str(a.get("sentAtUtc", ""))
-		var b_time: String = str(b.get("sentAtUtc", ""))
-		if a_time == b_time:
-			return int(a.get("sequence", 0)) < int(b.get("sequence", 0))
-		return a_time < b_time
-	)
+	merged.sort_custom(_compare_render_messages)
 	return merged
 
 
@@ -347,6 +340,14 @@ func _decorate_messages(channel_key: String, messages: Array) -> Array:
 		entry["_channelKey"] = channel_key
 		result.append(entry)
 	return result
+
+
+func _compare_render_messages(a: Dictionary, b: Dictionary) -> bool:
+	var a_time: String = str(a.get("sentAtUtc", ""))
+	var b_time: String = str(b.get("sentAtUtc", ""))
+	if a_time == b_time:
+		return int(a.get("sequence", 0)) < int(b.get("sequence", 0))
+	return a_time < b_time
 
 
 func _queue_scroll_to_bottom() -> void:

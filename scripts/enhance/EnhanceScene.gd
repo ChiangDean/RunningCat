@@ -45,7 +45,6 @@ var _detail_tab_btns: Dictionary = {}
 var _detail_upgrade_tab: Control
 var _detail_skill_tab: Control
 var _detail_rank_tab: Control
-var _cat_drag_threshold: float = 8.0
 var _action_inflight: bool = false
 var _special_point_draft: Dictionary = {"hp": 0, "atk": 0, "def": 0}
 var _loading_canvas: CanvasLayer
@@ -66,6 +65,7 @@ var _detail_context_submenu: String = ""
 
 
 func _ready() -> void:
+	_register_helper_shared_state()
 	_build_feedback_layers()
 	_build_ui()
 	GameState.red_dot_state_changed.connect(_refresh_red_dots)
@@ -97,6 +97,49 @@ func _build_feedback_layers() -> void:
 	_float_canvas = CanvasLayer.new()
 	_float_canvas.layer = 121
 	add_child(_float_canvas)
+
+
+func _register_helper_shared_state() -> void:
+	# These scene fields are intentionally read and mutated by helper modules.
+	var shared_state_snapshot: Array[Variant] = [
+		_resource_label,
+		_detail_resource_label,
+		_stat_labels,
+		_food_level_label,
+		_cat_name_label,
+		_food_cost_label,
+		_food_progress_bar,
+		_food_progress_label,
+		_special_cost_label,
+		_special_point_labels,
+		_rank_stars_label,
+		_rank_progress_bar,
+		_rank_progress_label,
+		_rank_upgrade_btn,
+		_special_plus_btns,
+		_special_minus_btns,
+		_special_apply_btn,
+		_special_reset_btn,
+		_food_upgrade_btn,
+		_food_max_btn,
+		_cat_hscroll,
+		_cats_container,
+		_catalog_hscroll,
+		_catalog_container,
+		_detail_dialog_close,
+		_detail_dialog_scroll,
+		_detail_dialog_scroller,
+		_detail_tab_btns,
+		_detail_upgrade_tab,
+		_detail_skill_tab,
+		_detail_rank_tab,
+		_action_inflight,
+		_submenu_btns,
+		_main_section,
+		_catalog_section,
+	]
+	if shared_state_snapshot.is_empty():
+		return
 
 
 func _build_ui() -> void:
@@ -200,9 +243,9 @@ func _switch_detail_tab(tab_key: String) -> void:
 	UI.refresh_detail_tab_state(self)
 
 
-func _set_loading_overlay(visible: bool) -> void:
+func _set_loading_overlay(should_show: bool) -> void:
 	if _loading_overlay != null:
-		_loading_overlay.visible = visible
+		_loading_overlay.visible = should_show
 
 
 func _prepare_action_feedback(action_type: String) -> void:

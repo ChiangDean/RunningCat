@@ -2,9 +2,6 @@ extends VBoxContainer
 
 signal entry_pressed(entry_key: String)
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 
 const CARD_TEMPLATE_SCENE = preload("res://scenes/ui/activity/permanent/PermanentActivityCardTemplate.tscn")
 

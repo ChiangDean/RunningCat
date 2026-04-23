@@ -1,8 +1,6 @@
 class_name SceneSubmenuBar
 extends RefCounted
 
-const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SHELL_TAB_LABEL_PATHS: Array[String] = [
 	"TabEquipLabel",
 	"TabAbilityLabel",

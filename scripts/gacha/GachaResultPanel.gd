@@ -1,6 +1,5 @@
 extends VBoxContainer
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 
 func setup(results: Array) -> void:

@@ -3,12 +3,12 @@ extends Control
 
 signal changed
 
-# ── State ────────────────────────────────────────────────────────
+#  State 
 
 var _cat_controls: Array = []
 
 
-# ── Public API ───────────────────────────────────────────────────
+#  Public API 
 
 func setup(data: Dictionary) -> void:
 	for child: Node in get_children():
@@ -37,7 +37,7 @@ func get_data() -> Dictionary:
 	return {"cats": _collect_cats()}
 
 
-# ── Cat Block ────────────────────────────────────────────────────
+#  Cat Block 
 
 func _build_cat_block(entry: Dictionary, parent: VBoxContainer, is_odd: bool) -> Dictionary:
 	var block_panel := AdminCatalogFormHelpers.make_data_row_panel(is_odd)
@@ -52,7 +52,7 @@ func _build_cat_block(entry: Dictionary, parent: VBoxContainer, is_odd: bool) ->
 	block_vbox.add_theme_constant_override("separation", 4)
 	block_margin.add_child(block_vbox)
 
-	# ── Row 1: Identity ───────────────────────────────────────────
+	#  Row 1: Identity 
 	var row1 := AdminCatalogFormHelpers.make_row_hbox()
 	block_vbox.add_child(row1)
 
@@ -71,12 +71,12 @@ func _build_cat_block(entry: Dictionary, parent: VBoxContainer, is_odd: bool) ->
 	row1.add_child(_add_labeled("啟用", en_cb))
 	row1.add_child(_add_labeled("圖片路徑", image_edit))
 
-	_connect_change(rarity_ob, "item_selected", func(_v: Variant) -> void: changed.emit())
+	_connect_change(rarity_ob, "item_selected", Callable(self, "_on_changed_value"))
 	for edit: Node in [cat_key_edit, cat_type_edit, display_name_edit, image_edit]:
-		_connect_change(edit, "text_changed", func(_v: Variant) -> void: changed.emit())
-	_connect_change(en_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+		_connect_change(edit, "text_changed", Callable(self, "_on_changed_value"))
+	_connect_change(en_cb, "toggled", Callable(self, "_on_changed_value"))
 
-	# ── Row 2: Base Stats ─────────────────────────────────────────
+	#  Row 2: Base Stats 
 	var row2 := AdminCatalogFormHelpers.make_row_hbox()
 	block_vbox.add_child(row2)
 
@@ -97,10 +97,10 @@ func _build_cat_block(entry: Dictionary, parent: VBoxContainer, is_odd: bool) ->
 	row2.add_child(_add_labeled("抽卡權重", gacha_w_spin))
 
 	for node: Node in [hp_spin, atk_spin, def_spin, spd_spin, gacha_w_spin]:
-		_connect_change(node, "value_changed", func(_v: Variant) -> void: changed.emit())
-	_connect_change(gacha_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "value_changed", Callable(self, "_on_changed_value"))
+	_connect_change(gacha_cb, "toggled", Callable(self, "_on_changed_value"))
 
-	# ── Row 3: Growth + Description ───────────────────────────────
+	#  Row 3: Growth + Description 
 	var row3 := AdminCatalogFormHelpers.make_row_hbox()
 	block_vbox.add_child(row3)
 
@@ -115,14 +115,14 @@ func _build_cat_block(entry: Dictionary, parent: VBoxContainer, is_odd: bool) ->
 	row3.add_child(_add_labeled("描述", desc_edit))
 
 	for node: Node in [hp_g_spin, atk_g_spin, def_g_spin]:
-		_connect_change(node, "value_changed", func(_v: Variant) -> void: changed.emit())
-	_connect_change(desc_edit, "text_changed", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "value_changed", Callable(self, "_on_changed_value"))
+	_connect_change(desc_edit, "text_changed", Callable(self, "_on_changed_value"))
 
-	# ── PassiveSkills Sub-table ───────────────────────────────────
+	#  PassiveSkills Sub-table 
 	var passive_skills: Array = entry.get("passiveSkills", []) if entry.get("passiveSkills") is Array else []
 	var passive_controls := _build_passive_skills_subtable(passive_skills, block_vbox)
 
-	# ── ActiveSkills Sub-table ────────────────────────────────────
+	#  ActiveSkills Sub-table 
 	var active_skills: Array = entry.get("activeSkills", []) if entry.get("activeSkills") is Array else []
 	var active_controls := _build_active_skills_subtable(active_skills, block_vbox)
 
@@ -187,8 +187,8 @@ func _build_passive_skills_subtable(skills: Array, parent: VBoxContainer) -> Arr
 		rb.add_child(skill_id_spin)
 		rb.add_child(en_cb)
 
-		_connect_change(skill_id_spin, "value_changed", func(_v: Variant) -> void: changed.emit())
-		_connect_change(en_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+		_connect_change(skill_id_spin, "value_changed", Callable(self, "_on_changed_value"))
+		_connect_change(en_cb, "toggled", Callable(self, "_on_changed_value"))
 
 		result.append({
 			"id": sk.get("id", 0),
@@ -246,8 +246,8 @@ func _build_active_skills_subtable(skills: Array, parent: VBoxContainer) -> Arra
 		rb.add_child(en_cb)
 
 		for node: Node in [skill_id_spin, delay_spin]:
-			_connect_change(node, "value_changed", func(_v: Variant) -> void: changed.emit())
-		_connect_change(en_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+			_connect_change(node, "value_changed", Callable(self, "_on_changed_value"))
+		_connect_change(en_cb, "toggled", Callable(self, "_on_changed_value"))
 
 		result.append({
 			"id": sk.get("id", 0),
@@ -259,7 +259,7 @@ func _build_active_skills_subtable(skills: Array, parent: VBoxContainer) -> Arra
 	return result
 
 
-# ── Collect ──────────────────────────────────────────────────────
+#  Collect 
 
 func _collect_cats() -> Array:
 	var result: Array = []
@@ -305,7 +305,7 @@ func _collect_cats() -> Array:
 	return result
 
 
-# ── Layout Helpers ────────────────────────────────────────────────
+#  Layout Helpers 
 
 static func _add_labeled(label_text: String, control: Control) -> HBoxContainer:
 	var hb := HBoxContainer.new()
@@ -340,3 +340,6 @@ static func _make_small_margin() -> MarginContainer:
 
 static func _connect_change(node: Node, signal_name: String, callable: Callable) -> void:
 	node.connect(signal_name, callable)
+
+func _on_changed_value(_value: Variant) -> void:
+	changed.emit()

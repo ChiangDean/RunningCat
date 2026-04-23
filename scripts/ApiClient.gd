@@ -322,12 +322,12 @@ func get_party(party_id: int, callback: Callable) -> void:
 	_api_get("party/%d" % party_id, callback)
 
 
-func create_party(name: String, callback: Callable) -> void:
-	_api_post("party", {"name": name}, callback)
+func create_party(party_name: String, callback: Callable) -> void:
+	_api_post("party", {"name": party_name}, callback)
 
 
-func update_party_name(party_id: int, name: String, callback: Callable) -> void:
-	_api_put("party/%d/name" % party_id, {"name": name}, callback)
+func update_party_name(party_id: int, party_name: String, callback: Callable) -> void:
+	_api_put("party/%d/name" % party_id, {"name": party_name}, callback)
 
 
 func disband_party(party_id: int, callback: Callable) -> void:

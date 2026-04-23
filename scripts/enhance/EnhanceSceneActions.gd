@@ -59,7 +59,7 @@ static func on_upgrade_one_pressed(scene) -> void:
 		return
 	run_enhance_action(
 		scene,
-		func(callback: Callable): scene.ApiClient.upgrade_cat_food(player_cat_id, callback),
+		Callable(EnhanceSceneActions, "_request_upgrade_one").bind(scene, player_cat_id),
 		"upgrade",
 		true)
 
@@ -68,13 +68,10 @@ static func on_upgrade_max_pressed(scene) -> void:
 	var player_cat_id := get_selected_player_cat_id(scene)
 	if player_cat_id <= 0:
 		return
-	var on_confirm := func():
-		run_enhance_action(
-			scene,
-			func(callback: Callable): scene.ApiClient.upgrade_cat_food_to_max(player_cat_id, callback),
-			"upgrade_max",
-			true)
-	scene._show_confirm(UiText.ENHANCE_FOOD_MAX_CONFIRM_BODY, on_confirm)
+	scene._show_confirm(
+		UiText.ENHANCE_FOOD_MAX_CONFIRM_BODY,
+		Callable(EnhanceSceneActions, "_confirm_upgrade_max").bind(scene, player_cat_id)
+	)
 
 
 static func on_special_add_pressed(scene, stat_key: String) -> void:
@@ -147,21 +144,30 @@ static func _run_special_point_operations(scene, player_cat_id: int, operations:
 
 	var operation: Dictionary = operations[index]
 	var stat_key: String = str(operation.get("stat_key", ""))
-	var callback := func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			scene._action_inflight = false
-			scene._set_loading_overlay(false)
-			var message := str(error.get("message", UiText.ENHANCE_ACTION_FAILED_DEFAULT))
-			ToastManager.error(UiText.ENHANCE_ACTION_FAILED_TITLE, message)
-			scene._refresh_all_labels()
-			return
-		var next_last_data: Dictionary = data if data is Dictionary else last_data
-		_run_special_point_operations(scene, player_cat_id, operations, index + 1, next_last_data)
-
 	if str(operation.get("kind", "")) == "remove":
-		scene.ApiClient.remove_cat_special_point(player_cat_id, stat_key, callback)
+		scene.ApiClient.remove_cat_special_point(
+			player_cat_id,
+			stat_key,
+			Callable(EnhanceSceneActions, "_on_special_point_operation_completed").bind(
+				scene,
+				player_cat_id,
+				operations,
+				index,
+				last_data
+			)
+		)
 	else:
-		scene.ApiClient.add_cat_special_point(player_cat_id, stat_key, callback)
+		scene.ApiClient.add_cat_special_point(
+			player_cat_id,
+			stat_key,
+			Callable(EnhanceSceneActions, "_on_special_point_operation_completed").bind(
+				scene,
+				player_cat_id,
+				operations,
+				index,
+				last_data
+			)
+		)
 
 
 static func on_rank_upgrade_pressed(scene) -> void:
@@ -170,7 +176,7 @@ static func on_rank_upgrade_pressed(scene) -> void:
 		return
 	run_enhance_action(
 		scene,
-		func(callback: Callable): scene.ApiClient.upgrade_cat_rank(player_cat_id, callback),
+		Callable(EnhanceSceneActions, "_request_rank_upgrade").bind(scene, player_cat_id),
 		"rank",
 		true)
 
@@ -180,12 +186,10 @@ static func on_reset_pressed(scene) -> void:
 	if player_cat_id <= 0:
 		return
 
-	var on_confirm := func():
-		run_enhance_action(
-			scene,
-			func(callback: Callable): scene.ApiClient.reset_cat_enhance(player_cat_id, callback))
-
-	scene._show_confirm(UiText.ENHANCE_RESET_CONFIRM_BODY, on_confirm)
+	scene._show_confirm(
+		UiText.ENHANCE_RESET_CONFIRM_BODY,
+		Callable(EnhanceSceneActions, "_confirm_reset_enhance").bind(scene, player_cat_id)
+	)
 
 
 static func on_reset_special_points_pressed(scene) -> void:
@@ -210,10 +214,68 @@ static func on_reset_special_points_pressed(scene) -> void:
 			scene._refresh_all_labels()
 		return
 
-	var on_confirm := func():
-		scene._action_inflight = true
-		scene._set_loading_overlay(true)
-		scene._reset_special_point_draft()
+	scene._show_confirm(
+		UiText.ENHANCE_RESET_SPECIAL_CONFIRM_BODY,
+		Callable(EnhanceSceneActions, "_confirm_reset_special_points").bind(scene, player_cat_id, operations)
+	)
+
+
+static func _request_upgrade_one(callback: Callable, scene, player_cat_id: int) -> void:
+	scene.ApiClient.upgrade_cat_food(player_cat_id, callback)
+
+
+static func _confirm_upgrade_max(scene, player_cat_id: int) -> void:
+	run_enhance_action(
+		scene,
+		Callable(EnhanceSceneActions, "_request_upgrade_max").bind(scene, player_cat_id),
+		"upgrade_max",
+		true
+	)
+
+
+static func _request_upgrade_max(callback: Callable, scene, player_cat_id: int) -> void:
+	scene.ApiClient.upgrade_cat_food_to_max(player_cat_id, callback)
+
+
+static func _request_rank_upgrade(callback: Callable, scene, player_cat_id: int) -> void:
+	scene.ApiClient.upgrade_cat_rank(player_cat_id, callback)
+
+
+static func _confirm_reset_enhance(scene, player_cat_id: int) -> void:
+	run_enhance_action(
+		scene,
+		Callable(EnhanceSceneActions, "_request_reset_enhance").bind(scene, player_cat_id)
+	)
+
+
+static func _request_reset_enhance(callback: Callable, scene, player_cat_id: int) -> void:
+	scene.ApiClient.reset_cat_enhance(player_cat_id, callback)
+
+
+static func _confirm_reset_special_points(scene, player_cat_id: int, operations: Array[Dictionary]) -> void:
+	scene._action_inflight = true
+	scene._set_loading_overlay(true)
+	scene._reset_special_point_draft()
+	scene._refresh_all_labels()
+	_run_special_point_operations(scene, player_cat_id, operations, 0, {})
+
+
+static func _on_special_point_operation_completed(
+	success: bool,
+	data: Variant,
+	error: Dictionary,
+	scene,
+	player_cat_id: int,
+	operations: Array[Dictionary],
+	index: int,
+	last_data: Dictionary
+) -> void:
+	if not success:
+		scene._action_inflight = false
+		scene._set_loading_overlay(false)
+		var message := str(error.get("message", UiText.ENHANCE_ACTION_FAILED_DEFAULT))
+		ToastManager.error(UiText.ENHANCE_ACTION_FAILED_TITLE, message)
 		scene._refresh_all_labels()
-		_run_special_point_operations(scene, player_cat_id, operations, 0, {})
-	scene._show_confirm(UiText.ENHANCE_RESET_SPECIAL_CONFIRM_BODY, on_confirm)
+		return
+	var next_last_data: Dictionary = data if data is Dictionary else last_data
+	_run_special_point_operations(scene, player_cat_id, operations, index + 1, next_last_data)

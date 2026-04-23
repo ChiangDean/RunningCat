@@ -73,7 +73,7 @@ func _build_achievement_block(entry: Dictionary, parent: VBoxContainer, is_odd: 
 	vbox.add_theme_constant_override("separation", 4)
 	margin.add_child(vbox)
 
-	# ── Main row ──────────────────────────────────────────────
+	# Main row 
 	var main_hb := AdminCatalogFormHelpers.make_row_hbox()
 	vbox.add_child(main_hb)
 
@@ -106,11 +106,11 @@ func _build_achievement_block(entry: Dictionary, parent: VBoxContainer, is_odd: 
 	_add_labeled(main_hb, "啟用:", enabled_cb)
 
 	for node: Node in [name_edit, condition_val_edit]:
-		_connect_change(node, "text_changed", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "text_changed", Callable(self, "_on_changed_value"))
 	for node: Node in [category_ob, condition_ob]:
-		_connect_change(node, "item_selected", func(_v: Variant) -> void: changed.emit())
-	_connect_change(sort_spin, "value_changed", func(_v: Variant) -> void: changed.emit())
-	_connect_change(enabled_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "item_selected", Callable(self, "_on_changed_value"))
+	_connect_change(sort_spin, "value_changed", Callable(self, "_on_changed_value"))
+	_connect_change(enabled_cb, "toggled", Callable(self, "_on_changed_value"))
 
 	# ── Rewards sub-table ─────────────────────────────────────
 	var rewards: Array = entry.get("rewards", []) if entry.get("rewards") is Array else []
@@ -210,10 +210,10 @@ func _build_rewards_subtable(rewards: Array, parent: VBoxContainer) -> Array:
 		r_hb.add_child(rw_enabled)
 
 		for node: Node in [reward_ob, dup_type_ob]:
-			_connect_change(node, "item_selected", func(_v: Variant) -> void: changed.emit())
+			_connect_change(node, "item_selected", Callable(self, "_on_changed_value"))
 		for node: Node in [qty_spin, dup_qty_spin]:
-			_connect_change(node, "value_changed", func(_v: Variant) -> void: changed.emit())
-		_connect_change(rw_enabled, "toggled", func(_v: Variant) -> void: changed.emit())
+			_connect_change(node, "value_changed", Callable(self, "_on_changed_value"))
+		_connect_change(rw_enabled, "toggled", Callable(self, "_on_changed_value"))
 
 		controls.append({
 			"id": rw.get("id", 0),
@@ -228,7 +228,7 @@ func _build_rewards_subtable(rewards: Array, parent: VBoxContainer) -> Array:
 	return controls
 
 
-# ── Layout Helpers ────────────────────────────────────────────
+#  Layout Helpers 
 
 static func _add_labeled(hb: HBoxContainer, label_text: String, control: Control) -> void:
 	var lbl := Label.new()
@@ -260,3 +260,6 @@ static func _make_small_margin() -> MarginContainer:
 
 static func _connect_change(node: Node, signal_name: String, callable: Callable) -> void:
 	node.connect(signal_name, callable)
+
+func _on_changed_value(_value: Variant) -> void:
+	changed.emit()

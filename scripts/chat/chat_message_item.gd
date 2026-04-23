@@ -1,7 +1,5 @@
 extends PanelContainer
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 
 
 func _ready() -> void:

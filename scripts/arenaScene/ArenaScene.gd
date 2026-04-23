@@ -1,12 +1,6 @@
 extends Control
 
 const Helpers = preload("res://scripts/arenaScene/arena_scene_helpers.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
-const InertialScroller = preload("res://scripts/ui/inertial_scroll.gd")
 const REWARD_ROW_SCENE = preload("res://scenes/ui/arena/rewards/ArenaRewardRowEditor.tscn")
 
 const REROLL_COOLDOWN := 5.0
@@ -237,14 +231,16 @@ func _build_ui() -> void:
 
 
 func _refresh_overview(excluded_opponent_ids: Array) -> void:
-	ApiClient.get_arena_overview(excluded_opponent_ids, func(success: bool, data: Variant, error: Dictionary) -> void:
-		if success and data is Dictionary:
-			GameState.update_arena(data)
-			_apply_overview(data)
-			return
-		if _overview.is_empty():
-			_show_dialog(UiText.ARENA_DIALOG_TITLE, Helpers.build_error_message(error))
-	)
+	ApiClient.get_arena_overview(excluded_opponent_ids, Callable(self, "_on_arena_overview_received"))
+
+
+func _on_arena_overview_received(success: bool, data: Variant, error: Dictionary) -> void:
+	if success and data is Dictionary:
+		GameState.update_arena(data)
+		_apply_overview(data)
+		return
+	if _overview.is_empty():
+		_show_dialog(UiText.ARENA_DIALOG_TITLE, Helpers.build_error_message(error))
 
 
 func _apply_overview(overview: Dictionary) -> void:
@@ -340,7 +336,7 @@ func _build_opponent_card(opponent: Dictionary) -> Control:
 	var challenge_button: Button = Button.new()
 	challenge_button.text = _get_opponent_action_text()
 	challenge_button.custom_minimum_size = Vector2(0.0, 48.0)
-	challenge_button.pressed.connect(func() -> void: _on_challenge_pressed(opponent))
+	challenge_button.pressed.connect(Callable(self, "_on_opponent_challenge_pressed").bind(opponent))
 	box.add_child(challenge_button)
 	_apply_opponent_action_style(challenge_button)
 
@@ -666,6 +662,10 @@ func _on_challenge_pressed(opponent: Dictionary) -> void:
 	GameState.arena_opponent = opponent.duplicate(true)
 	get_tree().change_scene_to_file("res://scenes/ArenaBattleScene.tscn")
 
+
+func _on_opponent_challenge_pressed(opponent: Dictionary) -> void:
+	_on_challenge_pressed(opponent)
+
 func _get_opponent_action_text() -> String:
 	return UiText.ARENA_PURCHASE_BUTTON if Helpers.get_current_tickets(_overview) <= 0 else UiText.ARENA_CHALLENGE_BUTTON
 
@@ -675,23 +675,25 @@ func _apply_opponent_action_style(button: Button) -> void:
 
 
 func _claim_rank_reward(rank_id: int) -> void:
-	ApiClient.claim_arena_rank_reward(rank_id, func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success or not (data is Dictionary):
-			ToastManager.error(UiText.ARENA_REWARD_DIALOG_TITLE, Helpers.build_error_message(error))
-			return
-		var response: Dictionary = data
-		var overview: Dictionary = response.get("overview", {})
-		if not overview.is_empty():
-			GameState.update_arena(overview)
-			_apply_overview(overview)
-		ToastManager.success(UiText.ARENA_REWARD_DIALOG_TITLE, UiText.ARENA_REWARD_CLAIMED_FORMAT % [
-			Helpers.get_rank_display_name(
-				str(response.get("rankKey", "")),
-				str(response.get("rankName", UiText.ARENA_REWARD_UNKNOWN_RANK))
-			),
-			Helpers.format_rewards(response.get("rewards", []))
-		])
-	)
+	ApiClient.claim_arena_rank_reward(rank_id, Callable(self, "_on_claim_rank_reward_completed"))
+
+
+func _on_claim_rank_reward_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	if not success or not (data is Dictionary):
+		ToastManager.error(UiText.ARENA_REWARD_DIALOG_TITLE, Helpers.build_error_message(error))
+		return
+	var response: Dictionary = data
+	var overview: Dictionary = response.get("overview", {})
+	if not overview.is_empty():
+		GameState.update_arena(overview)
+		_apply_overview(overview)
+	ToastManager.success(UiText.ARENA_REWARD_DIALOG_TITLE, UiText.ARENA_REWARD_CLAIMED_FORMAT % [
+		Helpers.get_rank_display_name(
+			str(response.get("rankKey", "")),
+			str(response.get("rankName", UiText.ARENA_REWARD_UNKNOWN_RANK))
+		),
+		Helpers.format_rewards(response.get("rewards", []))
+	])
 
 
 func _on_purchase_pressed() -> void:
@@ -851,15 +853,17 @@ func _build_reward_card(rank: Dictionary) -> Control:
 	elif bool(rank.get("isClaimable", false)):
 		claim_button.visible = true
 		claim_button.text = UiText.COMMON_CLAIM
-		claim_button.pressed.connect(func() -> void:
-			_claim_rank_reward(int(rank.get("rankId", 0)))
-		)
+		claim_button.pressed.connect(Callable(self, "_on_reward_claim_button_pressed").bind(int(rank.get("rankId", 0))))
 		UiPalette.apply_button_kind(claim_button, "primary")
 	else:
 		locked_label.visible = true
 		locked_label.text = UiText.ARENA_REQUIRE_SCORE_FORMAT % int(rank.get("scoreMin", 0))
 
 	return shell
+
+
+func _on_reward_claim_button_pressed(rank_id: int) -> void:
+	_claim_rank_reward(rank_id)
 
 
 func _apply_reward_slot(slot: Control, reward_entry: Dictionary) -> void:

@@ -1,8 +1,5 @@
 extends Control
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const PermanentActivityContentScene = preload("res://scenes/activity/permanent/PermanentActivityContent.tscn")
 const LimitedActivityContentScene = preload("res://scenes/activity/limited/LimitedActivityContent.tscn")
 

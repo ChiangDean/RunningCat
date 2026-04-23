@@ -43,7 +43,7 @@ func get_data() -> Dictionary:
 	}
 
 
-# ── Setting Tab ───────────────────────────────────────────────
+#  Setting Tab
 
 func _build_setting_tab(s: Dictionary) -> ScrollContainer:
 	var scroll := ScrollContainer.new()
@@ -90,8 +90,8 @@ func _build_setting_tab(s: Dictionary) -> ScrollContainer:
 	}
 
 	for node: Node in [free_spin, max_purch_spin, per_purch_spin]:
-		_connect_change(node, "value_changed", func(_v: Variant) -> void: changed.emit())
-	_connect_change(enabled_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "value_changed", Callable(self, "_on_changed_value"))
+	_connect_change(enabled_cb, "toggled", Callable(self, "_on_changed_value"))
 
 	return scroll
 
@@ -134,8 +134,8 @@ func _build_cost_row(cost: Dictionary, panel: PanelContainer, idx: int) -> Dicti
 	hb.add_child(en_lbl)
 	hb.add_child(enabled_cb)
 
-	_connect_change(diamond_spin, "value_changed", func(_v: Variant) -> void: changed.emit())
-	_connect_change(enabled_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+	_connect_change(diamond_spin, "value_changed", Callable(self, "_on_changed_value"))
+	_connect_change(enabled_cb, "toggled", Callable(self, "_on_changed_value"))
 
 	return {
 		"id": cost.get("id", 0),
@@ -164,7 +164,7 @@ func _collect_setting() -> Dictionary:
 	}
 
 
-# ── Ranks Tab ─────────────────────────────────────────────────
+#  Ranks Tab 
 
 func _build_ranks_tab(entries: Array) -> ScrollContainer:
 	var scroll := ScrollContainer.new()
@@ -229,10 +229,10 @@ func _build_rank_row(entry: Dictionary, panel: PanelContainer) -> Dictionary:
 	hb.add_child(enabled_cb)
 
 	for node: Node in [key_edit, name_edit, path_edit]:
-		_connect_change(node, "text_changed", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "text_changed", Callable(self, "_on_changed_value"))
 	for node: Node in [min_spin, max_spin, sort_spin]:
-		_connect_change(node, "value_changed", func(_v: Variant) -> void: changed.emit())
-	_connect_change(enabled_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "value_changed", Callable(self, "_on_changed_value"))
+	_connect_change(enabled_cb, "toggled", Callable(self, "_on_changed_value"))
 
 	return {
 		"id": entry.get("id", 0),
@@ -258,7 +258,7 @@ func _collect_ranks() -> Array:
 	return result
 
 
-# ── Bots Tab ──────────────────────────────────────────────────
+#  Bots Tab 
 
 func _build_bots_tab(entries: Array) -> ScrollContainer:
 	var scroll := ScrollContainer.new()
@@ -344,10 +344,10 @@ func _build_bot_block(entry: Dictionary, parent: VBoxContainer, is_odd: bool) ->
 	hb.add_child(enabled_cb)
 
 	for node: Node in [key_edit, name_edit]:
-		_connect_change(node, "text_changed", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "text_changed", Callable(self, "_on_changed_value"))
 	for node: Node in [offset_spin, sort_spin]:
-		_connect_change(node, "value_changed", func(_v: Variant) -> void: changed.emit())
-	_connect_change(enabled_cb, "toggled", func(_v: Variant) -> void: changed.emit())
+		_connect_change(node, "value_changed", Callable(self, "_on_changed_value"))
+	_connect_change(enabled_cb, "toggled", Callable(self, "_on_changed_value"))
 
 	# Members sub-section
 	var members: Array = entry.get("members", []) if entry.get("members") is Array else []
@@ -407,8 +407,8 @@ func _build_members_subtable(members: Array, parent: VBoxContainer) -> Array:
 		r_hb.add_child(cat_spin)
 		r_hb.add_child(m_enabled)
 
-		_connect_change(cat_spin, "value_changed", func(_v: Variant) -> void: changed.emit())
-		_connect_change(m_enabled, "toggled", func(_v: Variant) -> void: changed.emit())
+		_connect_change(cat_spin, "value_changed", Callable(self, "_on_changed_value"))
+		_connect_change(m_enabled, "toggled", Callable(self, "_on_changed_value"))
 
 		controls.append({
 			"id": m.get("id", 0),
@@ -443,7 +443,7 @@ func _collect_bots() -> Array:
 	return result
 
 
-# ── Layout Helpers ────────────────────────────────────────────
+#  Layout Helpers 
 
 static func _make_form_margin() -> MarginContainer:
 	var m := MarginContainer.new()
@@ -474,3 +474,6 @@ static func _make_small_margin() -> MarginContainer:
 
 static func _connect_change(node: Node, signal_name: String, callable: Callable) -> void:
 	node.connect(signal_name, callable)
+
+func _on_changed_value(_value: Variant) -> void:
+	changed.emit()

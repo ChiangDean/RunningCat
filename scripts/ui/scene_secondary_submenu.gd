@@ -1,9 +1,6 @@
 class_name SceneSecondarySubmenu
 extends RefCounted
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
 
 
 static func build(host: Control, options: Dictionary) -> Dictionary:
@@ -61,7 +58,10 @@ static func build(host: Control, options: Dictionary) -> Dictionary:
 	content_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	content_scroll.vertical_scroll_mode = int(options.get("content_vertical_scroll_mode", ScrollContainer.SCROLL_MODE_AUTO))
+	var vertical_scroll_mode: ScrollContainer.ScrollMode = int(
+		options.get("content_vertical_scroll_mode", ScrollContainer.SCROLL_MODE_AUTO)
+	) as ScrollContainer.ScrollMode
+	content_scroll.vertical_scroll_mode = vertical_scroll_mode
 	content_margin.add_child(content_scroll)
 	InertialScroller.attach(content_scroll, "vertical")
 

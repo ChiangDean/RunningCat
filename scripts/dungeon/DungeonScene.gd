@@ -20,6 +20,7 @@ var _scroll: ScrollContainer
 
 
 func _ready() -> void:
+	_register_helper_shared_state()
 	_build_ui()
 	GameState.red_dot_state_changed.connect(_apply_red_dots)
 	if GameState.dungeon_overview_data.is_empty():
@@ -31,6 +32,21 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	UI.build_ui(self)
+
+
+func _register_helper_shared_state() -> void:
+	# These scene fields are intentionally read and mutated by helper modules.
+	var shared_state_snapshot: Array[Variant] = [
+		_dungeon_panels,
+		_action_inflight,
+		_submenu_buttons,
+		_ui_layer,
+		_root_vbox,
+		_dungeon_list,
+		_scroll,
+	]
+	if shared_state_snapshot.is_empty():
+		return
 
 
 func _rebuild_dungeon_panels() -> void:

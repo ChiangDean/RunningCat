@@ -46,15 +46,10 @@ static func on_ad_pressed(scene, dungeon_id: int) -> void:
 	if scene._action_inflight:
 		return
 
-	var on_confirm: Callable = func() -> void:
-		scene._action_inflight = true
-		scene._rebuild_dungeon_panels()
-		scene.ApiClient.grant_dungeon_ad_ticket(dungeon_id, Callable(scene, "_on_dungeon_overview_completed"))
-
 	DialogManager.show_confirm(
 		UiText.DUNGEON_AD_CONFIRM_TITLE,
 		UiText.DUNGEON_AD_CONFIRM_BODY,
-		on_confirm,
+		Callable(DungeonSceneActions, "_confirm_ad_ticket").bind(scene, dungeon_id),
 		Callable(),
 		UiText.COMMON_CANCEL,
 		UiText.COMMON_CONFIRM
@@ -109,24 +104,10 @@ static func _prompt_ad_ticket(scene, dungeon: Dictionary) -> void:
 		ToastManager.error(UiText.DUNGEON_ACTION_FAILED_TITLE, "\u4eca\u65e5\u88dc\u7968\u6b21\u6578\u5df2\u7528\u5b8c\u3002")
 		return
 
-	var on_confirm: Callable = func() -> void:
-		scene._action_inflight = true
-		scene._rebuild_dungeon_panels()
-		scene.ApiClient.grant_dungeon_ad_ticket(int(dungeon.get("dungeonId", 0)), func(success: bool, data: Variant, error: Dictionary) -> void:
-			scene._action_inflight = false
-			if success and data is Dictionary:
-				scene.GameState.apply_dungeon_overview(data)
-				scene._rebuild_dungeon_panels()
-				return
-			var message: String = str(error.get("message", UiText.DUNGEON_ACTION_FAILED_DEFAULT))
-			ToastManager.error(UiText.DUNGEON_ACTION_FAILED_TITLE, message)
-			scene._rebuild_dungeon_panels()
-		)
-
 	DialogManager.show_confirm(
 		"\u9580\u7968\u4e0d\u8db3",
 		"\u76ee\u524d\u6c92\u6709\u9580\u7968\uff0c\u662f\u5426\u89c0\u770b\u5ee3\u544a\u88dc\u5145 1 \u5f35\u9580\u7968\u4e26\u7e7c\u7e8c\uff1f",
-		on_confirm
+		Callable(DungeonSceneActions, "_confirm_prompt_ad_ticket").bind(scene, int(dungeon.get("dungeonId", 0)))
 	)
 
 
@@ -144,3 +125,29 @@ static func show_reward_popup(header: String, level: int, rewards: Dictionary) -
 		lines.append(UiText.DUNGEON_REWARD_WHISKER_FORMAT % int(rewards.get("whiskerShards", 0)))
 
 	DialogManager.show_info(header, "\n".join(lines))
+
+
+static func _confirm_ad_ticket(scene, dungeon_id: int) -> void:
+	scene._action_inflight = true
+	scene._rebuild_dungeon_panels()
+	scene.ApiClient.grant_dungeon_ad_ticket(dungeon_id, Callable(scene, "_on_dungeon_overview_completed"))
+
+
+static func _confirm_prompt_ad_ticket(scene, dungeon_id: int) -> void:
+	scene._action_inflight = true
+	scene._rebuild_dungeon_panels()
+	scene.ApiClient.grant_dungeon_ad_ticket(
+		dungeon_id,
+		Callable(DungeonSceneActions, "_on_prompt_ad_ticket_completed").bind(scene)
+	)
+
+
+static func _on_prompt_ad_ticket_completed(success: bool, data: Variant, error: Dictionary, scene) -> void:
+	scene._action_inflight = false
+	if success and data is Dictionary:
+		scene.GameState.apply_dungeon_overview(data)
+		scene._rebuild_dungeon_panels()
+		return
+	var message: String = str(error.get("message", UiText.DUNGEON_ACTION_FAILED_DEFAULT))
+	ToastManager.error(UiText.DUNGEON_ACTION_FAILED_TITLE, message)
+	scene._rebuild_dungeon_panels()

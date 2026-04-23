@@ -1,6 +1,5 @@
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/treasure/ScooperTreasureCardTemplate.tscn")
 
 
@@ -71,7 +70,7 @@ func _refresh_treasure_tab(scene: Control) -> void:
 		first_item = false
 
 
-func _make_treasure_card(scene: Control, item: Dictionary) -> Control:
+func _make_treasure_card(_scene: Control, item: Dictionary) -> Control:
 	var accent: Color = _get_treasure_placeholder_color(item)
 	var panel: Panel = CARD_TEMPLATE.instantiate() as Panel
 	var icon_rect: TextureRect = panel.get_node("Margin/ContentCanvas/Icon") as TextureRect

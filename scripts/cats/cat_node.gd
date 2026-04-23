@@ -1,7 +1,6 @@
 class_name CatNode
 extends Node2D
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const DAMAGE_GRADIENT_SHADER := preload("res://scripts/ui/damage_number_gradient.gdshader")
 const DAMAGE_NUMBER_FONT := preload("res://assets/fonts/Fredoka/Fredoka-Bold.ttf")
 
@@ -148,7 +147,7 @@ func _build_shadow() -> void:
 
 func _build_animated_body() -> void:
 	var sprite_frames: SpriteFrames = SpriteFrames.new()
-	var preview_texture: Texture2D
+	var preview_texture: Texture2D = null
 	for animation_name: String in AssetResolver.get_cat_battle_animation_names():
 		var animation_path: String = AssetResolver.resolve_cat_battle_animation_path(cat_file_id, animation_name)
 		if animation_path == "":
@@ -171,7 +170,7 @@ func _build_animated_body() -> void:
 		var effective_sheet_width: int = mini(sheet_texture.get_width(), sheet_width)
 		var effective_sheet_height: int = mini(sheet_texture.get_height(), sheet_height)
 		var effective_frame_height: int = mini(frame_height, effective_sheet_height)
-		var frame_count: int = int(effective_sheet_width / frame_width)
+		var frame_count: int = floori(float(effective_sheet_width) / float(frame_width))
 		if frame_count <= 0:
 			continue
 
@@ -300,10 +299,7 @@ func show_damage_number(damage: int) -> void:
 		tween.tween_property(label_node, "position:x", start_pos.x + offset_x, DAMAGE_POP_LIFETIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tween.parallel().tween_property(label_node, "modulate:a", 0.0, 0.18).set_delay(fade_delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tween.chain().tween_property(pop_root, "scale", Vector2(0.96, 0.96), 0.12).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN_OUT)
-	tween.chain().tween_callback(func() -> void:
-		if is_instance_valid(pop_root):
-			pop_root.queue_free()
-	)
+	tween.chain().tween_callback(Callable(pop_root, "queue_free"))
 
 
 func move_to(target_x: float) -> void:
@@ -353,15 +349,16 @@ func play_death() -> void:
 	tween.tween_property(self, "position:x", position.x + dir * 400.0, 0.8)
 	tween.tween_property(self, "position:y", position.y - 200.0, 0.4).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_property(self, "position:y", position.y + 600.0, 0.4).set_ease(Tween.EASE_IN)
-	tween.chain().tween_callback(func():
-		died.emit(self)
-		queue_free()
-	)
+	tween.chain().tween_callback(Callable(self, "_on_death_tween_finished"))
 
 
 func flash_skill() -> void:
 	play_skill()
-	var target: CanvasItem = _animated_sprite if _animated_sprite != null and _animated_sprite.visible else _static_sprite
+	var target: Variant = null
+	if _animated_sprite != null and _animated_sprite.visible:
+		target = _animated_sprite
+	else:
+		target = _static_sprite
 	if target == null:
 		target = _body_rect
 	if target == null:
@@ -397,17 +394,24 @@ func _play_temporary(animation_name: String, duration: float) -> void:
 	_set_animation_visual_active(true)
 	_animated_sprite.play(animation_name)
 	_revert_timer = get_tree().create_timer(duration)
-	_revert_timer.timeout.connect(func():
-		if revert_token != _revert_token:
-			return
-		_revert_timer = null
-		play_run()
-	, CONNECT_ONE_SHOT)
+	_revert_timer.timeout.connect(Callable(self, "_on_revert_timer_timeout").bind(revert_token), CONNECT_ONE_SHOT)
 
 
 func _cancel_revert() -> void:
 	_revert_token += 1
 	_revert_timer = null
+
+
+func _on_death_tween_finished() -> void:
+	died.emit(self)
+	queue_free()
+
+
+func _on_revert_timer_timeout(revert_token: int) -> void:
+	if revert_token != _revert_token:
+		return
+	_revert_timer = null
+	play_run()
 
 
 func _has_animation(animation_name: String) -> bool:
@@ -443,7 +447,7 @@ func _get_damage_palette() -> Dictionary:
 
 func _add_damage_digit(parent_node: Node2D, damage_text: String, digit_position: Vector2,
 		front_top_color: Color, front_mid_color: Color, front_bottom_color: Color,
-		outline_color: Color,
+		_outline_color: Color,
 		digit_delay: float) -> Array[Control]:
 	var digit_rotation: float = deg_to_rad(_damage_rng.randf_range(-8.0, 8.0))
 	var black_outline_label := Label.new()
@@ -498,7 +502,11 @@ func _add_damage_digit(parent_node: Node2D, damage_text: String, digit_position:
 
 
 func _play_hit_feedback() -> void:
-	var body_target: Variant = _animated_sprite if _animated_sprite != null and _animated_sprite.visible else _static_sprite
+	var body_target: Variant = null
+	if _animated_sprite != null and _animated_sprite.visible:
+		body_target = _animated_sprite
+	else:
+		body_target = _static_sprite
 	if body_target == null:
 		body_target = _body_rect
 	if body_target != null:

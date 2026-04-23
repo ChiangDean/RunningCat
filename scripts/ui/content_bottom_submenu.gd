@@ -1,7 +1,6 @@
 class_name ContentBottomSubmenu
 extends RefCounted
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 
 
 static func build(host: Control, options: Dictionary) -> Dictionary:

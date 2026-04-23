@@ -1,11 +1,6 @@
 extends Control
 
-const ContentBottomSubmenu = preload("res://scripts/ui/content_bottom_submenu.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const FriendStageFormatter = preload("res://scripts/gamestate/GameStateBossStage.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const BUTTON_BAR_TEXTURE = preload("res://assets/sprites/ui/common/button_bar_s_color2.png")
 const BUTTON_BAR_TEXTURE_MEDIUM = preload("res://assets/sprites/ui/common/button_bar_m_color2.png")
 const CONTENT_FULL_TEXTURE = preload("res://assets/sprites/ui/common/content_full_default_v1.png")
@@ -232,7 +227,7 @@ func _maybe_recover_party_cache() -> void:
 
 
 func _recover_party_related_cache(party_detail: Dictionary, party_id: int) -> void:
-	var recovered_cheer_status: Dictionary = {}
+	var _recovered_cheer_status: Dictionary = {}
 	var recovered_applications: Array = []
 	var recovered_my_applications: Array = []
 	ApiClient.get_party_cheer_status_silent(
@@ -704,21 +699,25 @@ func _notify_party_navigation_changed() -> void:
 
 
 func _get_my_pending_party_invites() -> Array:
-	return _party_my_applications.filter(func(item_variant: Variant) -> bool:
-		if not (item_variant is Dictionary):
-			return false
-		var item: Dictionary = item_variant as Dictionary
-		return _is_party_invite_type(int(item.get("applicationType", 0))) and int(item.get("status", 0)) == 0
-	)
+	return _party_my_applications.filter(Callable(self, "_is_pending_my_party_invite"))
 
 
 func _get_my_pending_party_reviews() -> Array:
-	return _party_my_applications.filter(func(item_variant: Variant) -> bool:
-		if not (item_variant is Dictionary):
-			return false
-		var item: Dictionary = item_variant as Dictionary
-		return _is_party_player_apply_type(int(item.get("applicationType", 0))) and int(item.get("status", 0)) == 0
-	)
+	return _party_my_applications.filter(Callable(self, "_is_pending_my_party_review"))
+
+
+func _is_pending_my_party_invite(item_variant: Variant) -> bool:
+	if not (item_variant is Dictionary):
+		return false
+	var item: Dictionary = item_variant as Dictionary
+	return _is_party_invite_type(int(item.get("applicationType", 0))) and int(item.get("status", 0)) == 0
+
+
+func _is_pending_my_party_review(item_variant: Variant) -> bool:
+	if not (item_variant is Dictionary):
+		return false
+	var item: Dictionary = item_variant as Dictionary
+	return _is_party_player_apply_type(int(item.get("applicationType", 0))) and int(item.get("status", 0)) == 0
 
 
 func _build_friend_footer_summary(section_key: String) -> String:
@@ -748,18 +747,22 @@ func _build_party_footer_summary(section_key: String) -> String:
 
 
 func _get_party_pending_reviews() -> Array:
-	return _party_applications.filter(func(item_variant: Variant) -> bool:
-		return item_variant is Dictionary and _is_party_player_apply_type(int((item_variant as Dictionary).get("applicationType", 0)))
-	)
+	return _party_applications.filter(Callable(self, "_is_pending_party_review"))
 
 
 func _get_party_pending_invites() -> Array:
-	return _party_applications.filter(func(item_variant: Variant) -> bool:
-		if not (item_variant is Dictionary):
-			return false
-		var item: Dictionary = item_variant as Dictionary
-		return _is_party_invite_type(int(item.get("applicationType", 0))) and int(item.get("status", 0)) == 0
-	)
+	return _party_applications.filter(Callable(self, "_is_pending_party_invite"))
+
+
+func _is_pending_party_review(item_variant: Variant) -> bool:
+	return item_variant is Dictionary and _is_party_player_apply_type(int((item_variant as Dictionary).get("applicationType", 0)))
+
+
+func _is_pending_party_invite(item_variant: Variant) -> bool:
+	if not (item_variant is Dictionary):
+		return false
+	var item: Dictionary = item_variant as Dictionary
+	return _is_party_invite_type(int(item.get("applicationType", 0))) and int(item.get("status", 0)) == 0
 
 
 func _load_party_applications() -> void:
@@ -1135,14 +1138,14 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 		right_box.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.add_child(right_box)
 
-		var status_label: Label = Label.new()
-		status_label.text = "\u5f85\u5c0d\u65b9\u56de\u61c9"
-		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_configure_party_pending_info_label(status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
-		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		right_box.add_child(status_label)
+		var overlay_status_label: Label = Label.new()
+		overlay_status_label.text = "\u5f85\u5c0d\u65b9\u56de\u61c9"
+		overlay_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		overlay_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_configure_party_pending_info_label(overlay_status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		overlay_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		overlay_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		right_box.add_child(overlay_status_label)
 
 		var stage_row_label: Label = Label.new()
 		stage_row_label.text = _party_application_progress_line(item)
@@ -1201,16 +1204,12 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
 	_style_party_overlay_button(accept_button, PARTY_ACTION_BUTTON_SIZE)
 	RedDotService.refresh_dot(accept_button, true)
-	accept_button.pressed.connect(func() -> void:
-		_accept_party_application(int(item.get("applicationId", 0)), str(item.get("applicantDisplayName", "")))
-	)
+	accept_button.pressed.connect(Callable(self, "_accept_party_application").bind(int(item.get("applicationId", 0)), str(item.get("applicantDisplayName", ""))))
 	row.add_child(accept_button)
 
 	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
 	_style_party_overlay_button(reject_button, PARTY_ACTION_BUTTON_SIZE)
-	reject_button.pressed.connect(func() -> void:
-		_confirm_reject_party_application(int(item.get("applicationId", 0)), str(item.get("applicantDisplayName", "")))
-	)
+	reject_button.pressed.connect(Callable(self, "_confirm_reject_party_application").bind(int(item.get("applicationId", 0)), str(item.get("applicantDisplayName", ""))))
 	row.add_child(reject_button)
 
 	return root
@@ -1253,16 +1252,12 @@ func _build_my_party_invite_row(item_variant: Variant) -> Control:
 
 	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
 	_style_party_overlay_button(accept_button, PARTY_ACTION_BUTTON_SIZE)
-	accept_button.pressed.connect(func() -> void:
-		_accept_party_invite(int(item.get("applicationId", 0)), str(item.get("partyName", "")))
-	)
+	accept_button.pressed.connect(Callable(self, "_accept_party_invite").bind(int(item.get("applicationId", 0)), str(item.get("partyName", ""))))
 	row.add_child(accept_button)
 
 	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
 	_style_party_overlay_button(reject_button, PARTY_ACTION_BUTTON_SIZE)
-	reject_button.pressed.connect(func() -> void:
-		_confirm_reject_party_invite(int(item.get("applicationId", 0)), str(item.get("partyName", "")))
-	)
+	reject_button.pressed.connect(Callable(self, "_confirm_reject_party_invite").bind(int(item.get("applicationId", 0)), str(item.get("partyName", ""))))
 	row.add_child(reject_button)
 
 	return root
@@ -1302,9 +1297,7 @@ func _build_my_party_review_row(item_variant: Variant) -> Control:
 
 	var cancel_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_CANCEL, "secondary")
 	_style_party_overlay_button(cancel_button, PARTY_ACTION_BUTTON_SIZE)
-	cancel_button.pressed.connect(func() -> void:
-		_cancel_party_application(int(item.get("applicationId", 0)), str(item.get("partyName", "")))
-	)
+	cancel_button.pressed.connect(Callable(self, "_cancel_party_application").bind(int(item.get("applicationId", 0)), str(item.get("partyName", ""))))
 	row.add_child(cancel_button)
 
 	return root
@@ -1437,12 +1430,10 @@ func _build_friend_row(item_variant: Variant) -> Control:
 	var root: Control = shell.get("root") as Control
 
 	if _is_overlay_panel_mode():
-		var remove_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REMOVE, "danger")
-		_style_party_overlay_button(remove_button, Vector2(72.0, 30.0))
-		remove_button.pressed.connect(func() -> void:
-			_confirm_remove_friend(int(item.get("friendUserId", 0)), str(item.get("displayName", "")))
-		)
-		row.add_child(remove_button)
+		var overlay_remove_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REMOVE, "danger")
+		_style_party_overlay_button(overlay_remove_button, Vector2(72.0, 30.0))
+		overlay_remove_button.pressed.connect(Callable(self, "_confirm_remove_friend").bind(int(item.get("friendUserId", 0)), str(item.get("displayName", ""))))
+		row.add_child(overlay_remove_button)
 
 	var avatar_id: String = str(item.get("avatarId", "")).strip_edges()
 	var avatar_rect: TextureRect = AssetResolver.create_icon_rect(
@@ -1452,27 +1443,27 @@ func _build_friend_row(item_variant: Variant) -> Control:
 	row.add_child(avatar_rect)
 
 	if _is_overlay_panel_mode():
-		var info_box: VBoxContainer = VBoxContainer.new()
-		info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		info_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		info_box.alignment = BoxContainer.ALIGNMENT_CENTER
-		info_box.add_theme_constant_override("separation", 4)
-		row.add_child(info_box)
+		var overlay_info_box: VBoxContainer = VBoxContainer.new()
+		overlay_info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		overlay_info_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		overlay_info_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		overlay_info_box.add_theme_constant_override("separation", 4)
+		row.add_child(overlay_info_box)
 
-		var name_label: Label = Label.new()
-		name_label.text = str(item.get("displayName", "")).strip_edges()
-		if name_label.text == "":
-			name_label.text = "\u672a\u547d\u540d\u73a9\u5bb6"
-		_configure_party_pending_info_label(name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
-		info_box.add_child(name_label)
+		var overlay_name_label: Label = Label.new()
+		overlay_name_label.text = str(item.get("displayName", "")).strip_edges()
+		if overlay_name_label.text == "":
+			overlay_name_label.text = "\u672a\u547d\u540d\u73a9\u5bb6"
+		_configure_party_pending_info_label(overlay_name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		overlay_info_box.add_child(overlay_name_label)
 
-		var meta_label: Label = Label.new()
-		meta_label.text = "\u93df\u5c4e\u5b98 Lv.%d | %s" % [
+		var overlay_meta_label: Label = Label.new()
+		overlay_meta_label.text = "\u93df\u5c4e\u5b98 Lv.%d | %s" % [
 			int(item.get("scooperLevel", 0)),
 			_format_friend_stage_text(item.get("currentStage", 1))
 		]
-		_configure_party_pending_info_label(meta_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
-		info_box.add_child(meta_label)
+		_configure_party_pending_info_label(overlay_meta_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		overlay_info_box.add_child(overlay_meta_label)
 
 		var right_box: VBoxContainer = VBoxContainer.new()
 		right_box.custom_minimum_size = Vector2(150.0, 0.0)
@@ -1481,22 +1472,22 @@ func _build_friend_row(item_variant: Variant) -> Control:
 		right_box.add_theme_constant_override("separation", 4)
 		row.add_child(right_box)
 
-		var last_login_label: Label = Label.new()
-		last_login_label.text = "\u6700\u5f8c\u4e0a\u7dda\uff1a%s" % _format_last_login_text(item.get("lastLoginAtUtc", null))
-		_configure_party_pending_info_label(last_login_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
-		last_login_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		right_box.add_child(last_login_label)
+		var overlay_last_login_label: Label = Label.new()
+		overlay_last_login_label.text = "\u6700\u5f8c\u4e0a\u7dda\uff1a%s" % _format_last_login_text(item.get("lastLoginAtUtc", null))
+		_configure_party_pending_info_label(overlay_last_login_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		overlay_last_login_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		right_box.add_child(overlay_last_login_label)
 
-		var gift_status_label: Label = Label.new()
-		var gift_sent_today: bool = bool(item.get("giftSentToday", false))
-		gift_status_label.text = UiText.SOCIAL_FRIEND_GIFT_STATUS_SENT if gift_sent_today else UiText.SOCIAL_FRIEND_GIFT_STATUS_UNSENT
+		var overlay_gift_status_label: Label = Label.new()
+		var overlay_gift_sent_today: bool = bool(item.get("giftSentToday", false))
+		overlay_gift_status_label.text = UiText.SOCIAL_FRIEND_GIFT_STATUS_SENT if overlay_gift_sent_today else UiText.SOCIAL_FRIEND_GIFT_STATUS_UNSENT
 		_configure_party_pending_info_label(
-			gift_status_label,
+			overlay_gift_status_label,
 			UiPalette.FONT_SIZE_LABEL,
-			OverlaySceneChrome.MUTED_TEXT_COLOR if gift_sent_today else UiPalette.BUTTON_PRIMARY_BG
+			OverlaySceneChrome.MUTED_TEXT_COLOR if overlay_gift_sent_today else UiPalette.BUTTON_PRIMARY_BG
 		)
-		gift_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		right_box.add_child(gift_status_label)
+		overlay_gift_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		right_box.add_child(overlay_gift_status_label)
 
 		return root
 
@@ -1546,9 +1537,7 @@ func _build_friend_row(item_variant: Variant) -> Control:
 
 	var remove_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REMOVE, "secondary")
 	_style_party_overlay_button(remove_button, PARTY_ACTION_BUTTON_SIZE)
-	remove_button.pressed.connect(func() -> void:
-		_confirm_remove_friend(int(item.get("friendUserId", 0)), str(item.get("displayName", "")))
-	)
+	remove_button.pressed.connect(Callable(self, "_confirm_remove_friend").bind(int(item.get("friendUserId", 0)), str(item.get("displayName", ""))))
 	row.add_child(remove_button)
 
 	return root
@@ -1585,18 +1574,18 @@ func _build_friend_inbox_row(item_variant: Variant) -> Control:
 		left_box.add_theme_constant_override("separation", 4)
 		row.add_child(left_box)
 
-		var sender_name: String = _friend_request_sender_name(item)
-		var sender_uid: String = _friend_request_sender_uid(item)
+		var overlay_sender_name: String = _friend_request_sender_name(item)
+		var overlay_sender_uid: String = _friend_request_sender_uid(item)
 
-		var name_label: Label = Label.new()
-		name_label.text = sender_name if sender_name != "" else sender_uid
-		_configure_party_pending_info_label(name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
-		left_box.add_child(name_label)
+		var overlay_name_label: Label = Label.new()
+		overlay_name_label.text = overlay_sender_name if overlay_sender_name != "" else overlay_sender_uid
+		_configure_party_pending_info_label(overlay_name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		left_box.add_child(overlay_name_label)
 
-		var uid_label: Label = Label.new()
-		uid_label.text = "UID %s" % sender_uid
-		_configure_party_pending_info_label(uid_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
-		left_box.add_child(uid_label)
+		var overlay_uid_label: Label = Label.new()
+		overlay_uid_label.text = "UID %s" % overlay_sender_uid
+		_configure_party_pending_info_label(overlay_uid_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		left_box.add_child(overlay_uid_label)
 
 		var middle_box: VBoxContainer = VBoxContainer.new()
 		middle_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1605,10 +1594,10 @@ func _build_friend_inbox_row(item_variant: Variant) -> Control:
 		middle_box.add_theme_constant_override("separation", 4)
 		row.add_child(middle_box)
 
-		var time_label: Label = Label.new()
-		time_label.text = "申請時間：%s" % _format_relative_datetime(_friend_request_created_at(item))
-		_configure_party_pending_info_label(time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
-		middle_box.add_child(time_label)
+		var overlay_time_label: Label = Label.new()
+		overlay_time_label.text = "申請時間：%s" % _format_relative_datetime(_friend_request_created_at(item))
+		_configure_party_pending_info_label(overlay_time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		middle_box.add_child(overlay_time_label)
 
 		var pending_label: Label = Label.new()
 		pending_label.text = "待你回應"
@@ -1621,22 +1610,15 @@ func _build_friend_inbox_row(item_variant: Variant) -> Control:
 		action_box.add_theme_constant_override("separation", 8)
 		row.add_child(action_box)
 
-		var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
-		_style_party_overlay_button(accept_button, PARTY_ACTION_BUTTON_SIZE)
-		accept_button.pressed.connect(func() -> void:
-			_accept_friend_request(_friend_request_id(item))
-		)
-		action_box.add_child(accept_button)
+		var overlay_accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
+		_style_party_overlay_button(overlay_accept_button, PARTY_ACTION_BUTTON_SIZE)
+		overlay_accept_button.pressed.connect(Callable(self, "_accept_friend_request").bind(_friend_request_id(item)))
+		action_box.add_child(overlay_accept_button)
 
-		var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
-		_style_party_overlay_button(reject_button, PARTY_ACTION_BUTTON_SIZE)
-		reject_button.pressed.connect(func() -> void:
-			_confirm_reject_friend_request(
-				_friend_request_id(item),
-				sender_name
-			)
-		)
-		action_box.add_child(reject_button)
+		var overlay_reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
+		_style_party_overlay_button(overlay_reject_button, PARTY_ACTION_BUTTON_SIZE)
+		overlay_reject_button.pressed.connect(Callable(self, "_confirm_reject_friend_request").bind(_friend_request_id(item), overlay_sender_name))
+		action_box.add_child(overlay_reject_button)
 
 		return root
 
@@ -1668,19 +1650,12 @@ func _build_friend_inbox_row(item_variant: Variant) -> Control:
 
 	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
 	_style_party_overlay_button(accept_button, PARTY_ACTION_BUTTON_SIZE)
-	accept_button.pressed.connect(func() -> void:
-		_accept_friend_request(_friend_request_id(item))
-	)
+	accept_button.pressed.connect(Callable(self, "_accept_friend_request").bind(_friend_request_id(item)))
 	row.add_child(accept_button)
 
 	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
 	_style_party_overlay_button(reject_button, PARTY_ACTION_BUTTON_SIZE)
-	reject_button.pressed.connect(func() -> void:
-		_confirm_reject_friend_request(
-			_friend_request_id(item),
-			sender_name
-		)
-	)
+	reject_button.pressed.connect(Callable(self, "_confirm_reject_friend_request").bind(_friend_request_id(item), sender_name))
 	row.add_child(reject_button)
 
 	return root
@@ -1717,18 +1692,18 @@ func _build_friend_outbox_row(item_variant: Variant) -> Control:
 		left_box.add_theme_constant_override("separation", 4)
 		row.add_child(left_box)
 
-		var receiver_name: String = _friend_request_receiver_name(item)
-		var receiver_uid: String = _friend_request_receiver_uid(item)
+		var overlay_receiver_name: String = _friend_request_receiver_name(item)
+		var overlay_receiver_uid: String = _friend_request_receiver_uid(item)
 
-		var name_label: Label = Label.new()
-		name_label.text = receiver_name if receiver_name != "" else receiver_uid
-		_configure_party_pending_info_label(name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
-		left_box.add_child(name_label)
+		var overlay_name_label: Label = Label.new()
+		overlay_name_label.text = overlay_receiver_name if overlay_receiver_name != "" else overlay_receiver_uid
+		_configure_party_pending_info_label(overlay_name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		left_box.add_child(overlay_name_label)
 
-		var uid_label: Label = Label.new()
-		uid_label.text = "UID %s" % receiver_uid
-		_configure_party_pending_info_label(uid_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
-		left_box.add_child(uid_label)
+		var overlay_uid_label: Label = Label.new()
+		overlay_uid_label.text = "UID %s" % overlay_receiver_uid
+		_configure_party_pending_info_label(overlay_uid_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		left_box.add_child(overlay_uid_label)
 
 		var middle_box: VBoxContainer = VBoxContainer.new()
 		middle_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1737,22 +1712,20 @@ func _build_friend_outbox_row(item_variant: Variant) -> Control:
 		middle_box.add_theme_constant_override("separation", 4)
 		row.add_child(middle_box)
 
-		var time_label: Label = Label.new()
-		time_label.text = "申請時間：%s" % _format_relative_datetime(_friend_request_created_at(item))
-		_configure_party_pending_info_label(time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
-		middle_box.add_child(time_label)
+		var overlay_time_label: Label = Label.new()
+		overlay_time_label.text = "申請時間：%s" % _format_relative_datetime(_friend_request_created_at(item))
+		_configure_party_pending_info_label(overlay_time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		middle_box.add_child(overlay_time_label)
 
-		var status_label: Label = Label.new()
-		status_label.text = "狀態：%s" % _friend_request_status_text(int(item.get("status", 0)))
-		_configure_party_pending_info_label(status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
-		middle_box.add_child(status_label)
+		var overlay_status_label: Label = Label.new()
+		overlay_status_label.text = "狀態：%s" % _friend_request_status_text(int(item.get("status", 0)))
+		_configure_party_pending_info_label(overlay_status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		middle_box.add_child(overlay_status_label)
 
 		if int(item.get("status", 0)) == 0:
 			var cancel_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_CANCEL, "secondary")
 			_style_party_overlay_button(cancel_button, PARTY_ACTION_BUTTON_SIZE)
-			cancel_button.pressed.connect(func() -> void:
-				_cancel_friend_request(_friend_request_id(item))
-			)
+			cancel_button.pressed.connect(Callable(self, "_cancel_friend_request").bind(_friend_request_id(item)))
 			row.add_child(cancel_button)
 
 		return root
@@ -1792,9 +1765,7 @@ func _build_friend_outbox_row(item_variant: Variant) -> Control:
 	if int(item.get("status", 0)) == 0:
 		var cancel_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_CANCEL, "secondary")
 		_style_party_overlay_button(cancel_button, PARTY_ACTION_BUTTON_SIZE)
-		cancel_button.pressed.connect(func() -> void:
-			_cancel_friend_request(_friend_request_id(item))
-		)
+		cancel_button.pressed.connect(Callable(self, "_cancel_friend_request").bind(_friend_request_id(item)))
 		row.add_child(cancel_button)
 
 	return root
@@ -1841,20 +1812,8 @@ func _build_party_input_card(
 	var button: Button = _make_action_button(button_text, button_kind)
 	button.custom_minimum_size = Vector2(132.0, 52.0)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_END
-	var submit := func() -> void:
-		if button.disabled:
-			return
-		var value: String = input.text.strip_edges()
-		if value == "":
-			ToastManager.hint(title_text, UiText.SOCIAL_INPUT_EMPTY)
-			return
-		button.disabled = true
-		input.editable = false
-		submit_handler.call(value, input, button)
-	button.pressed.connect(submit)
-	input.text_submitted.connect(func(_text: String) -> void:
-		submit.call()
-	)
+	button.pressed.connect(Callable(self, "_submit_party_inline_input").bind(title_text, input, button, submit_handler))
+	input.text_submitted.connect(Callable(self, "_on_party_inline_input_text_submitted").bind(title_text, input, button, submit_handler))
 	input_row.add_child(button)
 
 	return card
@@ -1866,6 +1825,30 @@ func _restore_party_inline_input(input: LineEdit, button: Button) -> void:
 		input.grab_focus()
 	if is_instance_valid(button):
 		button.disabled = false
+
+
+func _submit_party_inline_input(title_text: String, input: LineEdit, button: Button, submit_handler: Callable) -> void:
+	if not is_instance_valid(input) or not is_instance_valid(button):
+		return
+	if button.disabled:
+		return
+	var value: String = input.text.strip_edges()
+	if value == "":
+		ToastManager.hint(title_text, UiText.SOCIAL_INPUT_EMPTY)
+		return
+	button.disabled = true
+	input.editable = false
+	submit_handler.call(value, input, button)
+
+
+func _on_party_inline_input_text_submitted(
+	_text: String,
+	title_text: String,
+	input: LineEdit,
+	button: Button,
+	submit_handler: Callable
+) -> void:
+	_submit_party_inline_input(title_text, input, button, submit_handler)
 
 
 func _submit_create_party_inline(value: String, input: LineEdit, button: Button) -> void:
@@ -1985,16 +1968,12 @@ func _build_party_member_row(member_variant: Variant) -> Control:
 	if _is_party_leader() and not _is_current_player_member(member):
 		var transfer_button: Button = _make_action_button(UiText.SOCIAL_PARTY_TRANSFER, "rank")
 		transfer_button.custom_minimum_size = Vector2(132.0, 46.0)
-		transfer_button.pressed.connect(func() -> void:
-			_confirm_transfer_party(int(member.get("userId", 0)), member_name)
-		)
+		transfer_button.pressed.connect(Callable(self, "_confirm_transfer_party").bind(int(member.get("userId", 0)), member_name))
 		row.add_child(transfer_button)
 
 		var kick_button: Button = _make_action_button(UiText.SOCIAL_PARTY_KICK, "danger")
 		kick_button.custom_minimum_size = Vector2(96.0, 46.0)
-		kick_button.pressed.connect(func() -> void:
-			_confirm_kick_party_member(int(member.get("userId", 0)), member_name)
-		)
+		kick_button.pressed.connect(Callable(self, "_confirm_kick_party_member").bind(int(member.get("userId", 0)), member_name))
 		row.add_child(kick_button)
 
 	return root
@@ -2077,16 +2056,12 @@ func _build_party_member_slot_row(slot_label: String, member: Dictionary) -> Con
 
 		var transfer_button: Button = _make_action_button(UiText.SOCIAL_PARTY_TRANSFER, "secondary")
 		_style_party_overlay_button(transfer_button, PARTY_ACTION_BUTTON_SIZE)
-		transfer_button.pressed.connect(func() -> void:
-			_confirm_transfer_party(int(member.get("userId", 0)), member_name)
-		)
+		transfer_button.pressed.connect(Callable(self, "_confirm_transfer_party").bind(int(member.get("userId", 0)), member_name))
 		action_box.add_child(transfer_button)
 
 		var kick_button: Button = _make_action_button(UiText.SOCIAL_PARTY_KICK, "secondary")
 		_style_party_overlay_button(kick_button, PARTY_ACTION_BUTTON_SIZE)
-		kick_button.pressed.connect(func() -> void:
-			_confirm_kick_party_member(int(member.get("userId", 0)), member_name)
-		)
+		kick_button.pressed.connect(Callable(self, "_confirm_kick_party_member").bind(int(member.get("userId", 0)), member_name))
 		action_box.add_child(kick_button)
 
 	return root
@@ -2175,7 +2150,7 @@ func _create_party_item_shell(
 	min_height: float = PARTY_ROW_MIN_HEIGHT,
 	accent: Color = OverlaySceneChrome.CARD_BORDER,
 	texture: Texture2D = BUTTON_BAR_TEXTURE,
-	texture_stretch_mode: int = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	texture_stretch_mode: TextureRect.StretchMode = TextureRect.STRETCH_KEEP_ASPECT_COVERED as TextureRect.StretchMode
 ) -> Dictionary:
 	if _is_overlay_panel_mode():
 		var shell: Control = Control.new()
@@ -2219,7 +2194,7 @@ func _create_party_row_shell(
 	min_height: float = PARTY_ROW_MIN_HEIGHT,
 	accent: Color = OverlaySceneChrome.CARD_BORDER,
 	texture: Texture2D = BUTTON_BAR_TEXTURE,
-	texture_stretch_mode: int = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	texture_stretch_mode: TextureRect.StretchMode = TextureRect.STRETCH_KEEP_ASPECT_COVERED as TextureRect.StretchMode
 ) -> Dictionary:
 	var shell: Dictionary = _create_party_item_shell(min_height, accent, texture, texture_stretch_mode)
 	var content: Control = shell.get("content") as Control
@@ -2267,8 +2242,8 @@ func _make_action_button(text_value: String, kind: String) -> Button:
 	return button
 
 
-func _style_party_overlay_button(button: Button, size: Vector2, font_size: int = UiPalette.FONT_SIZE_SMALL) -> void:
-	button.custom_minimum_size = size
+func _style_party_overlay_button(button: Button, button_size: Vector2, font_size: int = UiPalette.FONT_SIZE_SMALL) -> void:
+	button.custom_minimum_size = button_size
 	button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.add_theme_font_size_override("font_size", font_size)
@@ -2290,7 +2265,7 @@ func _make_vertical_spacer(height: float) -> Control:
 
 
 func _party_application_counterpart_name(item: Dictionary) -> String:
-	var name: String = _first_nonempty_string([
+	var counterpart_name: String = _first_nonempty_string([
 		item.get("applicantDisplayName", ""),
 		item.get("applicantPlayerName", ""),
 		item.get("displayName", ""),
@@ -2300,7 +2275,7 @@ func _party_application_counterpart_name(item: Dictionary) -> String:
 		item.get("receiverDisplayName", ""),
 		item.get("receiverPlayerName", ""),
 	])
-	return name if name != "" else "未命名玩家"
+	return counterpart_name if counterpart_name != "" else "未命名玩家"
 
 
 func _party_application_inviter_name(item: Dictionary) -> String:
@@ -2385,20 +2360,22 @@ func _confirm_friend_gift() -> void:
 	if _friend_gift_in_flight:
 		return
 	_friend_gift_in_flight = true
-	var callback := func(success: bool, data: Variant, error: Dictionary) -> void:
-		_friend_gift_in_flight = false
-		if not success:
-			ToastManager.error(UiText.SOCIAL_FRIEND_GIFT_ALL, _error_message(error))
-			return
-		var payload: Dictionary = data if data is Dictionary else {}
-		var recipient_count: int = int(payload.get("recipientCount", 0))
-		if recipient_count <= 0:
-			ToastManager.hint(UiText.SOCIAL_FRIEND_GIFT_ALL, "\u76ee\u524d\u6c92\u6709\u53ef\u9001\u79ae\u7684\u597d\u53cb")
-			_refresh_friend()
-			return
-		ToastManager.success(UiText.SOCIAL_FRIEND_GIFT_ALL, UiText.SOCIAL_FRIEND_GIFT_SUCCESS % recipient_count)
+	ApiClient.send_friend_gifts(Callable(self, "_on_friend_gift_completed"))
+
+
+func _on_friend_gift_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	_friend_gift_in_flight = false
+	if not success:
+		ToastManager.error(UiText.SOCIAL_FRIEND_GIFT_ALL, _error_message(error))
+		return
+	var payload: Dictionary = data if data is Dictionary else {}
+	var recipient_count: int = int(payload.get("recipientCount", 0))
+	if recipient_count <= 0:
+		ToastManager.hint(UiText.SOCIAL_FRIEND_GIFT_ALL, "\u76ee\u524d\u6c92\u6709\u53ef\u9001\u79ae\u7684\u597d\u53cb")
 		_refresh_friend()
-	ApiClient.send_friend_gifts(callback)
+		return
+	ToastManager.success(UiText.SOCIAL_FRIEND_GIFT_ALL, UiText.SOCIAL_FRIEND_GIFT_SUCCESS % recipient_count)
+	_refresh_friend()
 
 
 func _get_unsent_friend_rows() -> Array:
@@ -2421,19 +2398,20 @@ func _confirm_remove_friend(friend_user_id: int, friend_name: String) -> void:
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_REMOVE,
 		"\u78ba\u5b9a\u8981\u79fb\u9664 %s \u55ce\uff1f" % target_label,
-		func() -> void:
-			_remove_friend(friend_user_id)
+		Callable(self, "_remove_friend").bind(friend_user_id)
 	)
 
 
 func _remove_friend(friend_user_id: int) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_FRIEND_REMOVE, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_FRIEND_REMOVE, UiText.SOCIAL_FRIEND_REMOVE_SUCCESS)
-		_refresh_friend()
-	ApiClient.remove_friend(friend_user_id, callback)
+	ApiClient.remove_friend(friend_user_id, Callable(self, "_on_remove_friend_completed"))
+
+
+func _on_remove_friend_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_FRIEND_REMOVE, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_FRIEND_REMOVE, UiText.SOCIAL_FRIEND_REMOVE_SUCCESS)
+	_refresh_friend()
 
 
 func _open_showcase_dialog() -> void:
@@ -2444,9 +2422,7 @@ func _open_showcase_dialog() -> void:
 			continue
 		var cat: Dictionary = cat_variant
 		var button: Button = _make_action_button(str(cat.get("displayName", cat.get("catDisplayName", ""))), "info")
-		button.pressed.connect(func() -> void:
-			_set_showcase_cat(int(cat.get("playerCatId", 0)))
-		)
+		button.pressed.connect(Callable(self, "_set_showcase_cat_from_variant").bind(cat))
 		content.add_child(button)
 
 	var clear_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_SHOWCASE_CLEAR, "secondary")
@@ -2457,23 +2433,31 @@ func _open_showcase_dialog() -> void:
 
 
 func _set_showcase_cat(player_cat_id: int) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_FRIEND_SHOWCASE, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_FRIEND_SHOWCASE, UiText.SOCIAL_FRIEND_SHOWCASE_SUCCESS)
-		_refresh_friend()
-	ApiClient.set_friend_showcase_cat(player_cat_id, callback)
+	ApiClient.set_friend_showcase_cat(player_cat_id, Callable(self, "_on_set_showcase_cat_completed"))
+
+
+func _set_showcase_cat_from_variant(cat_variant: Dictionary) -> void:
+	_set_showcase_cat(int(cat_variant.get("playerCatId", 0)))
+
+
+func _on_set_showcase_cat_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_FRIEND_SHOWCASE, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_FRIEND_SHOWCASE, UiText.SOCIAL_FRIEND_SHOWCASE_SUCCESS)
+	_refresh_friend()
 
 
 func _clear_showcase_cat() -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_FRIEND_SHOWCASE, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_FRIEND_SHOWCASE, UiText.SOCIAL_FRIEND_SHOWCASE_CLEARED)
-		_refresh_friend()
-	ApiClient.clear_friend_showcase_cat(callback)
+	ApiClient.clear_friend_showcase_cat(Callable(self, "_on_clear_showcase_cat_completed"))
+
+
+func _on_clear_showcase_cat_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_FRIEND_SHOWCASE, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_FRIEND_SHOWCASE, UiText.SOCIAL_FRIEND_SHOWCASE_CLEARED)
+	_refresh_friend()
 
 
 func _open_text_input(title: String, placeholder: String, on_confirm: Callable, close_on_submit: bool = true) -> Dictionary:
@@ -2493,24 +2477,9 @@ func _open_text_input(title: String, placeholder: String, on_confirm: Callable, 
 		"input": input,
 		"is_submitting": false,
 	}
-	var submit_input := func() -> void:
-		if bool(dialog_state.get("is_submitting", false)):
-			return
-		var value: String = input.text.strip_edges()
-		if value == "":
-			ToastManager.hint(title, UiText.SOCIAL_INPUT_EMPTY)
-			return
-		_set_text_input_dialog_submitting(dialog_state, true)
-		if close_dialog.is_valid():
-			dialog_state["close"] = close_dialog
-			if close_on_submit:
-				close_dialog.call()
-		on_confirm.call(value)
-	confirm_button.pressed.connect(submit_input)
+	confirm_button.pressed.connect(Callable(self, "_submit_text_input_dialog").bind(dialog_state, title, close_on_submit, on_confirm))
 	box.add_child(confirm_button)
-	input.text_submitted.connect(func(_text: String) -> void:
-		submit_input.call()
-	)
+	input.text_submitted.connect(Callable(self, "_on_text_input_dialog_submitted").bind(dialog_state, title, close_on_submit, on_confirm))
 
 	close_dialog = DialogManager.show_info_node(title, box, Callable(), "medium")
 	dialog_state["close"] = close_dialog
@@ -2526,6 +2495,39 @@ func _set_text_input_dialog_submitting(dialog_state: Dictionary, is_submitting: 
 	var input_variant: Variant = dialog_state.get("input")
 	if input_variant is LineEdit and is_instance_valid(input_variant):
 		(input_variant as LineEdit).editable = not is_submitting
+
+
+func _submit_text_input_dialog(
+	dialog_state: Dictionary,
+	title: String,
+	close_on_submit: bool,
+	on_confirm: Callable
+) -> void:
+	if bool(dialog_state.get("is_submitting", false)):
+		return
+	var input_variant: Variant = dialog_state.get("input")
+	if not (input_variant is LineEdit) or not is_instance_valid(input_variant):
+		return
+	var input: LineEdit = input_variant as LineEdit
+	var value: String = input.text.strip_edges()
+	if value == "":
+		ToastManager.hint(title, UiText.SOCIAL_INPUT_EMPTY)
+		return
+	_set_text_input_dialog_submitting(dialog_state, true)
+	var close_dialog_variant: Variant = dialog_state.get("close", Callable())
+	if close_dialog_variant is Callable and (close_dialog_variant as Callable).is_valid() and close_on_submit:
+		(close_dialog_variant as Callable).call()
+	on_confirm.call(value)
+
+
+func _on_text_input_dialog_submitted(
+	_text: String,
+	dialog_state: Dictionary,
+	title: String,
+	close_on_submit: bool,
+	on_confirm: Callable
+) -> void:
+	_submit_text_input_dialog(dialog_state, title, close_on_submit, on_confirm)
 
 
 func _open_add_friend_dialog() -> void:
@@ -2590,19 +2592,8 @@ func _open_add_friend_dialog() -> void:
 		"is_submitting": false,
 	}
 
-	var submit_search := func() -> void:
-		if bool(dialog_state.get("is_searching", false)) or bool(dialog_state.get("is_submitting", false)):
-			return
-		var query: String = input.text.strip_edges()
-		if query == "":
-			ToastManager.hint(UiText.SOCIAL_FRIEND_ADD, UiText.SOCIAL_INPUT_EMPTY)
-			return
-		_search_friend_candidates(dialog_state, query)
-
-	confirm_button.pressed.connect(submit_search)
-	input.text_submitted.connect(func(_text: String) -> void:
-		submit_search.call()
-	)
+	confirm_button.pressed.connect(Callable(self, "_submit_add_friend_search").bind(dialog_state))
+	input.text_submitted.connect(Callable(self, "_on_add_friend_search_text_submitted").bind(dialog_state))
 
 	close_dialog = DialogManager.show_info_node(UiText.SOCIAL_FRIEND_ADD, box, Callable(), "xlarge")
 	dialog_state["close"] = close_dialog
@@ -2611,6 +2602,23 @@ func _open_add_friend_dialog() -> void:
 
 func _submit_add_friend(value: String) -> void:
 	ApiClient.send_friend_request(value, Callable(self, "_on_submit_add_friend_completed"))
+
+
+func _submit_add_friend_search(dialog_state: Dictionary) -> void:
+	if bool(dialog_state.get("is_searching", false)) or bool(dialog_state.get("is_submitting", false)):
+		return
+	var input_variant: Variant = dialog_state.get("input")
+	if not (input_variant is LineEdit) or not is_instance_valid(input_variant):
+		return
+	var query: String = (input_variant as LineEdit).text.strip_edges()
+	if query == "":
+		ToastManager.hint(UiText.SOCIAL_FRIEND_ADD, UiText.SOCIAL_INPUT_EMPTY)
+		return
+	_search_friend_candidates(dialog_state, query)
+
+
+func _on_add_friend_search_text_submitted(_text: String, dialog_state: Dictionary) -> void:
+	_submit_add_friend_search(dialog_state)
 
 
 func _on_submit_add_friend_completed(success: bool, _data: Variant, error: Dictionary) -> void:
@@ -2731,9 +2739,7 @@ func _build_friend_search_candidate_row(dialog_state: Dictionary, candidate: Dic
 	add_button.custom_minimum_size = Vector2(120.0, 48.0)
 	add_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	add_button.disabled = bool(dialog_state.get("is_submitting", false))
-	add_button.pressed.connect(func() -> void:
-		_submit_friend_request_from_candidate(dialog_state, candidate)
-	)
+	add_button.pressed.connect(Callable(self, "_submit_friend_request_from_candidate").bind(dialog_state, candidate))
 	row.add_child(add_button)
 
 	return panel
@@ -2782,8 +2788,7 @@ func _confirm_reject_friend_request(request_id: int, friend_name: String) -> voi
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_REJECT,
 		"\u78ba\u5b9a\u8981\u62d2\u7d55 %s \u7684\u597d\u53cb\u7533\u8acb\u55ce\uff1f" % target_label,
-		func() -> void:
-			_reject_friend_request(request_id)
+		Callable(self, "_reject_friend_request").bind(request_id)
 	)
 
 
@@ -2914,19 +2919,8 @@ func _open_invite_party_dialog() -> void:
 		"is_inviting": false,
 	}
 
-	var submit_search := func() -> void:
-		if bool(dialog_state.get("is_searching", false)) or bool(dialog_state.get("is_inviting", false)):
-			return
-		var query: String = input.text.strip_edges()
-		if query == "":
-			ToastManager.hint(UiText.SOCIAL_PARTY_INVITE, UiText.SOCIAL_INPUT_EMPTY)
-			return
-		_search_party_invite_candidates(dialog_state, query)
-
-	confirm_button.pressed.connect(submit_search)
-	input.text_submitted.connect(func(_text: String) -> void:
-		submit_search.call()
-	)
+	confirm_button.pressed.connect(Callable(self, "_submit_party_invite_search").bind(dialog_state))
+	input.text_submitted.connect(Callable(self, "_on_party_invite_search_text_submitted").bind(dialog_state))
 
 	close_dialog = DialogManager.show_info_node(UiText.SOCIAL_PARTY_INVITE, box, Callable(), "xlarge")
 	dialog_state["close"] = close_dialog
@@ -2942,6 +2936,23 @@ func _search_party_invite_candidates(dialog_state: Dictionary, query: String) ->
 		query,
 		Callable(self, "_on_party_invite_candidates_searched").bind(dialog_state)
 	)
+
+
+func _submit_party_invite_search(dialog_state: Dictionary) -> void:
+	if bool(dialog_state.get("is_searching", false)) or bool(dialog_state.get("is_inviting", false)):
+		return
+	var input_variant: Variant = dialog_state.get("input")
+	if not (input_variant is LineEdit) or not is_instance_valid(input_variant):
+		return
+	var query: String = (input_variant as LineEdit).text.strip_edges()
+	if query == "":
+		ToastManager.hint(UiText.SOCIAL_PARTY_INVITE, UiText.SOCIAL_INPUT_EMPTY)
+		return
+	_search_party_invite_candidates(dialog_state, query)
+
+
+func _on_party_invite_search_text_submitted(_text: String, dialog_state: Dictionary) -> void:
+	_submit_party_invite_search(dialog_state)
 
 
 func _on_party_invite_candidates_searched(success: bool, data: Variant, error: Dictionary, dialog_state: Dictionary) -> void:
@@ -3042,9 +3053,7 @@ func _build_invite_party_candidate_row(dialog_state: Dictionary, candidate: Dict
 	invite_button.custom_minimum_size = Vector2(118.0, 52.0)
 	invite_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	invite_button.disabled = bool(dialog_state.get("is_searching", false)) or bool(dialog_state.get("is_inviting", false))
-	invite_button.pressed.connect(func() -> void:
-		_invite_party_candidate(dialog_state, candidate)
-	)
+	invite_button.pressed.connect(Callable(self, "_invite_party_candidate").bind(dialog_state, candidate))
 	row.add_child(invite_button)
 
 	return root
@@ -3095,11 +3104,11 @@ func _format_relative_datetime(datetime_variant: Variant) -> String:
 	if diff_seconds < 60:
 		return "\u525b\u525b"
 	if diff_seconds < 3600:
-		return "%d \u5206\u9418\u524d" % maxi(1, diff_seconds / 60)
+		return "%d \u5206\u9418\u524d" % maxi(1, floori(float(diff_seconds) / 60.0))
 	if diff_seconds < 86400:
-		return "%d \u5c0f\u6642\u524d" % maxi(1, diff_seconds / 3600)
+		return "%d \u5c0f\u6642\u524d" % maxi(1, floori(float(diff_seconds) / 3600.0))
 	if diff_seconds < 604800:
-		return "%d \u5929\u524d" % maxi(1, diff_seconds / 86400)
+		return "%d \u5929\u524d" % maxi(1, floori(float(diff_seconds) / 86400.0))
 	return last_login_text.replace("T", " ").substr(0, mini(last_login_text.length(), 19))
 
 
@@ -3124,9 +3133,11 @@ func _format_party_invite_last_login(last_login_variant: Variant) -> String:
 
 
 func _kick_party_member(user_id: int) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_after_party_action(success, error, UiText.SOCIAL_PARTY_KICK, UiText.SOCIAL_PARTY_KICK_SUCCESS)
-	ApiClient.kick_party_member(int(_party_detail.get("partyId", 0)), user_id, callback)
+	ApiClient.kick_party_member(
+		int(_party_detail.get("partyId", 0)),
+		user_id,
+		Callable(self, "_on_party_action_completed").bind(UiText.SOCIAL_PARTY_KICK, UiText.SOCIAL_PARTY_KICK_SUCCESS)
+	)
 
 
 func _confirm_kick_party_member(user_id: int, member_name: String) -> void:
@@ -3136,16 +3147,17 @@ func _confirm_kick_party_member(user_id: int, member_name: String) -> void:
 	DialogManager.show_confirm(
 		UiText.SOCIAL_PARTY_KICK,
 		"\u78ba\u5b9a\u8981\u8acb %s \u96e2\u968a\u4f0d\u55ce\uff1f" % target_label,
-		func() -> void:
-			_kick_party_member(user_id)
+		Callable(self, "_kick_party_member").bind(user_id)
 	)
 
 
 func _cheer_party(is_ad_boost: bool) -> void:
 	var title: String = UiText.SOCIAL_PARTY_AD_CHEER if is_ad_boost else UiText.SOCIAL_PARTY_FREE_CHEER
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_after_party_action(success, error, title, UiText.SOCIAL_PARTY_CHEER_SUCCESS)
-	ApiClient.cheer_party(int(_party_detail.get("partyId", 0)), is_ad_boost, callback)
+	ApiClient.cheer_party(
+		int(_party_detail.get("partyId", 0)),
+		is_ad_boost,
+		Callable(self, "_on_party_action_completed").bind(title, UiText.SOCIAL_PARTY_CHEER_SUCCESS)
+	)
 
 
 func _build_idle_reward_float_entries(rewards: Dictionary) -> Array[Dictionary]:
@@ -3211,19 +3223,21 @@ func _queue_home_reward_floats(entries: Array[Dictionary]) -> void:
 
 
 func _use_party_coupon() -> void:
-	var callback := func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_PARTY_USE_COUPON, _error_message(error))
-			return
-		var payload: Dictionary = data if data is Dictionary else {}
-		var wallet_snapshot: Variant = payload.get("walletSnapshot", {})
-		if wallet_snapshot is Dictionary:
-			GameState.apply_wallet_snapshot(wallet_snapshot)
-		var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(payload.get("rewards", {}))
-		if not reward_entries.is_empty():
-			_queue_home_reward_floats(reward_entries)
-		_refresh_party()
-	ApiClient.use_party_cheer_coupon(callback)
+	ApiClient.use_party_cheer_coupon(Callable(self, "_on_use_party_coupon_completed"))
+
+
+func _on_use_party_coupon_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_PARTY_USE_COUPON, _error_message(error))
+		return
+	var payload: Dictionary = data if data is Dictionary else {}
+	var wallet_snapshot: Variant = payload.get("walletSnapshot", {})
+	if wallet_snapshot is Dictionary:
+		GameState.apply_wallet_snapshot(wallet_snapshot)
+	var reward_entries: Array[Dictionary] = _build_idle_reward_float_entries(payload.get("rewards", {}))
+	if not reward_entries.is_empty():
+		_queue_home_reward_floats(reward_entries)
+	_refresh_party()
 
 
 func _show_party_applications() -> void:
@@ -3237,23 +3251,31 @@ func _open_rename_party_dialog() -> void:
 
 
 func _submit_rename_party(value: String) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			_set_text_input_dialog_submitting(_rename_party_dialog_state, false)
-			_after_party_action(false, error, UiText.SOCIAL_PARTY_RENAME, UiText.SOCIAL_PARTY_RENAME_SUCCESS)
-			return
-		var close_dialog_variant: Variant = _rename_party_dialog_state.get("close", Callable())
-		if close_dialog_variant is Callable and (close_dialog_variant as Callable).is_valid():
-			(close_dialog_variant as Callable).call()
-		_rename_party_dialog_state = {}
-		_after_party_action(success, error, UiText.SOCIAL_PARTY_RENAME, UiText.SOCIAL_PARTY_RENAME_SUCCESS)
-	ApiClient.update_party_name(int(_party_detail.get("partyId", 0)), value, callback)
+	ApiClient.update_party_name(
+		int(_party_detail.get("partyId", 0)),
+		value,
+		Callable(self, "_on_submit_rename_party_completed")
+	)
+
+
+func _on_submit_rename_party_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		_set_text_input_dialog_submitting(_rename_party_dialog_state, false)
+		_after_party_action(false, error, UiText.SOCIAL_PARTY_RENAME, UiText.SOCIAL_PARTY_RENAME_SUCCESS)
+		return
+	var close_dialog_variant: Variant = _rename_party_dialog_state.get("close", Callable())
+	if close_dialog_variant is Callable and (close_dialog_variant as Callable).is_valid():
+		(close_dialog_variant as Callable).call()
+	_rename_party_dialog_state = {}
+	_after_party_action(success, error, UiText.SOCIAL_PARTY_RENAME, UiText.SOCIAL_PARTY_RENAME_SUCCESS)
 
 
 func _transfer_party(target_user_id: int) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_after_party_action(success, error, UiText.SOCIAL_PARTY_TRANSFER, UiText.SOCIAL_PARTY_TRANSFER_SUCCESS)
-	ApiClient.transfer_party_leadership(int(_party_detail.get("partyId", 0)), target_user_id, callback)
+	ApiClient.transfer_party_leadership(
+		int(_party_detail.get("partyId", 0)),
+		target_user_id,
+		Callable(self, "_on_party_action_completed").bind(UiText.SOCIAL_PARTY_TRANSFER, UiText.SOCIAL_PARTY_TRANSFER_SUCCESS)
+	)
 
 
 func _confirm_transfer_party(target_user_id: int, member_name: String) -> void:
@@ -3263,24 +3285,23 @@ func _confirm_transfer_party(target_user_id: int, member_name: String) -> void:
 	DialogManager.show_confirm(
 		UiText.SOCIAL_PARTY_TRANSFER,
 		"\u78ba\u8a8d\u5f8c\u4f60\u6703\u6539\u6210\u4e00\u822c\u968a\u54e1\uff0c\u662f\u5426\u78ba\u5b9a\u8f49\u8b93\u7d66 %s\uff1f" % target_label,
-		func() -> void:
-			_transfer_party(target_user_id)
+		Callable(self, "_transfer_party").bind(target_user_id)
 	)
 
 
 
 func _disband_party() -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_after_party_action(success, error, UiText.SOCIAL_PARTY_DISBAND, UiText.SOCIAL_PARTY_DISBAND_SUCCESS)
-	ApiClient.disband_party(int(_party_detail.get("partyId", 0)), callback)
+	ApiClient.disband_party(
+		int(_party_detail.get("partyId", 0)),
+		Callable(self, "_on_party_action_completed").bind(UiText.SOCIAL_PARTY_DISBAND, UiText.SOCIAL_PARTY_DISBAND_SUCCESS)
+	)
 
 
 func _confirm_disband_party() -> void:
 	DialogManager.show_confirm(
 		UiText.SOCIAL_PARTY_DISBAND,
 		"\u89e3\u6563\u5f8c\u968a\u4f0d\u8207\u6210\u54e1\u8cc7\u6599\u6703\u88ab\u6e05\u9664\uff0c\u662f\u5426\u78ba\u5b9a\u8981\u89e3\u6563\u968a\u4f0d\uff1f",
-		func() -> void:
-			_disband_party()
+		Callable(self, "_disband_party")
 	)
 
 
@@ -3292,9 +3313,10 @@ func _on_party_exit_pressed() -> void:
 
 
 func _usurp_party() -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_after_party_action(success, error, UiText.SOCIAL_PARTY_USURP, UiText.SOCIAL_PARTY_USURP_SUCCESS)
-	ApiClient.usurp_party_leadership(int(_party_detail.get("partyId", 0)), callback)
+	ApiClient.usurp_party_leadership(
+		int(_party_detail.get("partyId", 0)),
+		Callable(self, "_on_party_action_completed").bind(UiText.SOCIAL_PARTY_USURP, UiText.SOCIAL_PARTY_USURP_SUCCESS)
+	)
 
 
 func _leave_party() -> void:
@@ -3302,9 +3324,14 @@ func _leave_party() -> void:
 	if member_variants.size() <= 1:
 		_confirm_disband_party()
 		return
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		_after_party_action(success, error, UiText.SOCIAL_PARTY_LEAVE, UiText.SOCIAL_PARTY_LEAVE_SUCCESS)
-	ApiClient.leave_party(int(_party_detail.get("partyId", 0)), callback)
+	ApiClient.leave_party(
+		int(_party_detail.get("partyId", 0)),
+		Callable(self, "_on_party_action_completed").bind(UiText.SOCIAL_PARTY_LEAVE, UiText.SOCIAL_PARTY_LEAVE_SUCCESS)
+	)
+
+
+func _on_party_action_completed(success: bool, _data: Variant, error: Dictionary, title: String, success_message: String) -> void:
+	_after_party_action(success, error, title, success_message)
 
 
 func _after_party_action(success: bool, error: Dictionary, title: String, success_message: String) -> void:
@@ -3421,14 +3448,10 @@ func _build_party_cheer_button() -> Button:
 	var button: Button
 	if not has_free:
 		button = _make_action_button("%s(1/1)" % UiText.SOCIAL_PARTY_FREE_CHEER, "confirm")
-		button.pressed.connect(func() -> void:
-			_cheer_party(false)
-		)
+		button.pressed.connect(Callable(self, "_cheer_party").bind(false))
 	elif not has_ad:
 		button = _make_action_button("%s(1/1)" % UiText.SOCIAL_PARTY_AD_CHEER, "secondary")
-		button.pressed.connect(func() -> void:
-			_cheer_party(true)
-		)
+		button.pressed.connect(Callable(self, "_cheer_party").bind(true))
 	else:
 		button = _make_action_button("%s(0/1)" % UiText.SOCIAL_PARTY_AD_CHEER, "secondary")
 		button.disabled = true
@@ -3447,14 +3470,19 @@ func _get_party_exit_button_text() -> String:
 
 
 func _accept_party_application(application_id: int, applicant_name: String) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_PARTY_PENDING_REVIEW, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_PARTY_PENDING_REVIEW, UiText.SOCIAL_PARTY_APPLICATION_ACCEPT_SUCCESS % applicant_name)
-		_load_party_applications()
-		_refresh_party()
-	ApiClient.accept_party_application(application_id, callback)
+	ApiClient.accept_party_application(
+		application_id,
+		Callable(self, "_on_accept_party_application_completed").bind(applicant_name)
+	)
+
+
+func _on_accept_party_application_completed(success: bool, _data: Variant, error: Dictionary, applicant_name: String) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_PARTY_PENDING_REVIEW, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_PARTY_PENDING_REVIEW, UiText.SOCIAL_PARTY_APPLICATION_ACCEPT_SUCCESS % applicant_name)
+	_load_party_applications()
+	_refresh_party()
 
 
 func _confirm_reject_party_application(application_id: int, applicant_name: String) -> void:
@@ -3464,30 +3492,36 @@ func _confirm_reject_party_application(application_id: int, applicant_name: Stri
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_REJECT,
 		"\u78ba\u5b9a\u8981\u62d2\u7d55 %s \u7684\u7533\u8acb\u55ce\uff1f" % target_label,
-		func() -> void:
-			_reject_party_application(application_id)
+		Callable(self, "_reject_party_application").bind(application_id)
 	)
 
 
 func _reject_party_application(application_id: int) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_PARTY_PENDING_REVIEW, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_PARTY_PENDING_REVIEW, UiText.SOCIAL_PARTY_APPLICATION_REJECT_SUCCESS)
-		_load_party_applications()
-		_refresh_party()
-	ApiClient.reject_party_application(application_id, callback)
+	ApiClient.reject_party_application(application_id, Callable(self, "_on_reject_party_application_completed"))
+
+
+func _on_reject_party_application_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_PARTY_PENDING_REVIEW, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_PARTY_PENDING_REVIEW, UiText.SOCIAL_PARTY_APPLICATION_REJECT_SUCCESS)
+	_load_party_applications()
+	_refresh_party()
 
 
 func _accept_party_invite(application_id: int, party_name: String) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_PARTY_PENDING_INVITES, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_PARTY_PENDING_INVITES, UiText.SOCIAL_PARTY_INVITE_ACCEPT_SUCCESS % party_name)
-		_refresh_party()
-	ApiClient.accept_party_invite(application_id, callback)
+	ApiClient.accept_party_invite(
+		application_id,
+		Callable(self, "_on_accept_party_invite_completed").bind(party_name)
+	)
+
+
+func _on_accept_party_invite_completed(success: bool, _data: Variant, error: Dictionary, party_name: String) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_PARTY_PENDING_INVITES, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_PARTY_PENDING_INVITES, UiText.SOCIAL_PARTY_INVITE_ACCEPT_SUCCESS % party_name)
+	_refresh_party()
 
 
 func _confirm_reject_party_invite(application_id: int, party_name: String) -> void:
@@ -3497,16 +3531,20 @@ func _confirm_reject_party_invite(application_id: int, party_name: String) -> vo
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_REJECT,
 		"\u78ba\u5b9a\u8981\u62d2\u7d55 %s \u7684\u9080\u8acb\u55ce\uff1f" % target_label,
-		func() -> void:
-			_reject_party_invite(application_id, target_label)
+		Callable(self, "_reject_party_invite").bind(application_id, target_label)
 	)
 
 
 func _reject_party_invite(application_id: int, party_name: String) -> void:
-	var callback := func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SOCIAL_PARTY_PENDING_INVITES, _error_message(error))
-			return
-		ToastManager.success(UiText.SOCIAL_PARTY_PENDING_INVITES, UiText.SOCIAL_PARTY_INVITE_REJECT_SUCCESS % party_name)
-		_refresh_party()
-	ApiClient.reject_party_invite(application_id, callback)
+	ApiClient.reject_party_invite(
+		application_id,
+		Callable(self, "_on_reject_party_invite_completed").bind(party_name)
+	)
+
+
+func _on_reject_party_invite_completed(success: bool, _data: Variant, error: Dictionary, party_name: String) -> void:
+	if not success:
+		ToastManager.error(UiText.SOCIAL_PARTY_PENDING_INVITES, _error_message(error))
+		return
+	ToastManager.success(UiText.SOCIAL_PARTY_PENDING_INVITES, UiText.SOCIAL_PARTY_INVITE_REJECT_SUCCESS % party_name)
+	_refresh_party()

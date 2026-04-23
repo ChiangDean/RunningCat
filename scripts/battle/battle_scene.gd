@@ -9,7 +9,6 @@ const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/home/HomeTopHudEditor.tscn"
 const HOME_BOTTOM_HUD_SCENE := preload("res://scenes/ui/home/HomeBottomHudEditor.tscn")
 const BOSS_WARNING_OVERLAY_SCENE := preload("res://scenes/ui/battle/BossWarningOverlayEditor.tscn")
 const HOME_SCOOP_TEMPLATE_SCENE := preload("res://scenes/ui/home/HomeScoopButtonTemplate.tscn")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v3.png")
 const HOME_LOWER_MENU_BG_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background.png")
 const HOME_LOWER_MENU_BG_SKILL_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background_skill.png")
@@ -209,11 +208,8 @@ var _resource_value_labels: Dictionary = {}
 var _battle_countdown_fill: ColorRect
 var _profile_name_label: Label
 var _profile_level_label: Label
-var _top_area_label: Label
 var _top_exp_bar: ProgressBar
 var _top_progress_value_label: Label
-var _top_poop_value_label: Label
-var _top_heart_labels: Array[Label] = []
 var _top_avatar_rect: TextureRect
 var _cached_team_power: int = 0
 var _reward_fx_layer: Control
@@ -1204,7 +1200,7 @@ func _apply_skill_bar_layout() -> void:
 			if slot_node == null:
 				continue
 			var col: int = i % MAX_CATS_ON_FIELD
-			var row: int = i / MAX_CATS_ON_FIELD
+			var row: int = floori(float(i) / float(MAX_CATS_ON_FIELD))
 			slot_node.scale = Vector2.ONE
 			slot_node.position = Vector2(SKILL_BAR_EDGE_PAD + col * (SKILL_SLOT_W + horizontal_gap), row * (SKILL_SLOT_H + row_gap))
 			slot_node.visible = true
@@ -1445,7 +1441,7 @@ func _build_home_quick_button(txt: String, pos: Vector2, sz: Vector2, is_main_na
 	btn.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	btn.ignore_texture_size = true
-	btn.stretch_mode = 4
+	btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	btn.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	btn.pressed.connect(UiAudio.play_ui_click)
@@ -2040,7 +2036,7 @@ func _refresh_speed_boost_button() -> void:
 
 func _format_countdown_time(total_seconds: int) -> String:
 	var clamped_seconds: int = maxi(total_seconds, 0)
-	var minutes: int = clamped_seconds / 60
+	var minutes: int = floori(float(clamped_seconds) / 60.0)
 	var seconds: int = clamped_seconds % 60
 	return "%02d:%02d" % [minutes, seconds]
 
@@ -2067,17 +2063,17 @@ func _refresh_ui() -> void:
 		_top_avatar_rect.texture = avatar_texture if avatar_texture != null else PROFILE_AVATAR_TEXTURE
 	if _top_exp_bar != null and _top_progress_value_label != null:
 		var top_profile: Dictionary = GameState.scooper_profile_data
-		var top_level: int
+		var top_scooper_level: int
 		var top_exp: int
 		var top_threshold: int
 		if not top_profile.is_empty():
-			top_level = int(top_profile.get("scooperLevel", GameState.player_data.scooper_level))
+			top_scooper_level = int(top_profile.get("scooperLevel", GameState.player_data.scooper_level))
 			top_exp = int(top_profile.get("scooperExp", GameState.player_data.scooper_exp))
-			top_threshold = int(top_profile.get("expThreshold", max((top_level + 1) * 10, 1)))
+			top_threshold = int(top_profile.get("expThreshold", max((top_scooper_level + 1) * 10, 1)))
 		else:
-			top_level = GameState.player_data.scooper_level
+			top_scooper_level = GameState.player_data.scooper_level
 			top_exp = GameState.player_data.scooper_exp
-			top_threshold = max((top_level + 1) * int(GameState.idle_config.get("scooper_exp_per_level", 10)), 1)
+			top_threshold = max((top_scooper_level + 1) * int(GameState.idle_config.get("scooper_exp_per_level", 10)), 1)
 		_top_exp_bar.max_value = top_threshold
 		_top_exp_bar.value = top_exp
 		_top_progress_value_label.text = "EXP %s/%s" % [GameState.format_number(top_exp), GameState.format_number(top_threshold)]
@@ -2096,15 +2092,15 @@ func _refresh_sandbox_btn() -> void:
 		return
 	var overlay_open: bool = not SceneNavigator.get_current_overlay_scene_path().is_empty()
 	var elapsed := GameState.get_idle_elapsed_seconds()
-	var claimable_minutes := elapsed / 60
+	var claimable_minutes: int = floori(float(elapsed) / 60.0)
 	if claimable_minutes < 1:
 		_sandbox_btn.disabled = true
 		_sandbox_btn.text = UiText.HOME_IDLE_NOT_READY
 		UiPalette.apply_button_palette(_sandbox_btn, ENHANCE_APPLY_DISABLED_BG, ENHANCE_APPLY_DISABLED_FG)
 	else:
 		_sandbox_btn.disabled = false
-		var h := elapsed / 3600
-		var m := (elapsed % 3600) / 60
+		var h: int = floori(float(elapsed) / 3600.0)
+		var m: int = floori(float(elapsed % 3600) / 60.0)
 		var s := elapsed % 60
 		_sandbox_btn.text = "%s %02d:%02d:%02d" % [UiText.HOME_IDLE_READY, h, m, s]
 		UiPalette.apply_button_kind(_sandbox_btn, "primary")
@@ -2119,22 +2115,22 @@ func _refresh_home_scoop_panel() -> void:
 
 	var profile: Dictionary = GameState.scooper_profile_data
 	var level: int
-	var exp: int
+	var current_exp: int
 	var threshold: int
 	if not profile.is_empty():
 		level = int(profile.get("scooperLevel", GameState.player_data.scooper_level))
-		exp = int(profile.get("scooperExp", GameState.player_data.scooper_exp))
+		current_exp = int(profile.get("scooperExp", GameState.player_data.scooper_exp))
 		threshold = int(profile.get("expThreshold", max((level + 1) * 10, 1)))
 	else:
 		level = GameState.player_data.scooper_level
-		exp = GameState.player_data.scooper_exp
+		current_exp = GameState.player_data.scooper_exp
 		threshold = max((level + 1) * int(GameState.idle_config.get("scooper_exp_per_level", 10)), 1)
 
 	if _home_exp_bar != null:
 		_home_exp_bar.max_value = threshold
-		_home_exp_bar.value = exp
+		_home_exp_bar.value = current_exp
 	if _home_exp_label != null:
-		_home_exp_label.text = "Lv.%d  EXP %s / %s" % [level, GameState.format_number(exp), GameState.format_number(threshold)]
+		_home_exp_label.text = "Lv.%d  EXP %s / %s" % [level, GameState.format_number(current_exp), GameState.format_number(threshold)]
 
 	var poop_count := GameState.player_data.poop_count
 	_home_scoop_button.disabled = poop_count <= 0 or _home_scoop_request_in_flight or _home_scoop_animation_active
@@ -2392,11 +2388,11 @@ func _refresh_boss_warning_overlay_content() -> void:
 	_set_boss_warning_overlay_content_visible(_result_backdrop != null and _result_backdrop.visible)
 
 
-func _set_boss_warning_overlay_content_visible(visible: bool) -> void:
+func _set_boss_warning_overlay_content_visible(should_show: bool) -> void:
 	if _boss_warning_icon != null:
-		_boss_warning_icon.visible = visible and _boss_warning_icon.texture != null
+		_boss_warning_icon.visible = should_show and _boss_warning_icon.texture != null
 	if _boss_warning_text_label != null:
-		_boss_warning_text_label.visible = visible
+		_boss_warning_text_label.visible = should_show
 
 
 func _start_boss_warning_overlay_fx() -> void:
@@ -2836,7 +2832,7 @@ func _try_finalize_home_scoop_resolution() -> void:
 ## Show the idle rewards and cleanup dialog.
 func _show_sandbox_dialog() -> void:
 	var elapsed_seconds := GameState.get_idle_elapsed_seconds()
-	var complete_minutes := elapsed_seconds / 60
+	var complete_minutes: int = floori(float(elapsed_seconds) / 60.0)
 	var has_rewards := complete_minutes >= 1
 	var rewards := GameState.get_pending_idle_rewards() if has_rewards else {}
 
@@ -2849,7 +2845,7 @@ func _show_sandbox_dialog() -> void:
 	rewards_section.add_theme_constant_override("separation", 6)
 
 	if has_rewards:
-		var h := complete_minutes / 60
+		var h: int = floori(float(complete_minutes) / 60.0)
 		var m := complete_minutes % 60
 		var time_lbl := Label.new()
 		time_lbl.text = UiText.HOME_SANDBOX_TIME_FORMAT % [h, m]

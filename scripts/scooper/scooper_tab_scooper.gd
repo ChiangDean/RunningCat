@@ -1,7 +1,5 @@
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/equipment/ScooperEquipmentCardTemplate.tscn")
 const ACTION_COOLDOWN: float = 0.5
 
@@ -98,13 +96,7 @@ func _refresh_equipment_tab(scene: Control) -> void:
 		return
 
 	var sorted_items: Array = items.duplicate()
-	sorted_items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var a_owned: bool = bool(a.get("isOwned", false))
-		var b_owned: bool = bool(b.get("isOwned", false))
-		if a_owned != b_owned:
-			return a_owned and not b_owned
-		return int(a.get("equipmentId", 0)) < int(b.get("equipmentId", 0))
-	)
+	sorted_items.sort_custom(_sort_scooper_items)
 
 	for item: Dictionary in sorted_items:
 		scene._equip_list.add_child(_make_equip_card(scene, item))
@@ -419,7 +411,7 @@ func _bonus_desc(item: Dictionary, level: int) -> String:
 	return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, stat_str, per_lv * float(level) * 100.0]
 
 
-func _add_unlock_overlay(scene: Control, panel: Control, unlock_cost: int, equip_id: int, item_name: String) -> void:
+func _add_unlock_overlay(_scene: Control, panel: Control, _unlock_cost: int, _equip_id: int, _item_name: String) -> void:
 	var overlay: Control = Control.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -570,3 +562,11 @@ func _prepare_flat_button(button: Button) -> void:
 	button.add_theme_stylebox_override("pressed", empty_style)
 	button.add_theme_stylebox_override("focus", empty_style)
 	button.add_theme_stylebox_override("disabled", empty_style)
+
+
+func _sort_scooper_items(a: Dictionary, b: Dictionary) -> bool:
+	var a_owned: bool = bool(a.get("isOwned", false))
+	var b_owned: bool = bool(b.get("isOwned", false))
+	if a_owned != b_owned:
+		return a_owned and not b_owned
+	return int(a.get("equipmentId", 0)) < int(b.get("equipmentId", 0))

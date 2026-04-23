@@ -46,7 +46,7 @@ func _physics_process(delta: float) -> void:
 
 
 ## Advances the cat each frame; subclasses may override (e.g. assassin speed boost)
-func _move_forward(delta: float) -> void:
+func _move_forward(_delta: float) -> void:
 	velocity.x = data.speed * facing_direction
 	move_and_slide()
 

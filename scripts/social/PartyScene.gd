@@ -1,10 +1,6 @@
 class_name PartyScene
 extends Control
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const SOCIAL_SCENE := preload("res://scenes/social/SocialScene.tscn")
 
 var _social_view

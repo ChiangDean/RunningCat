@@ -5,8 +5,6 @@ extends Node
 const FileUtils = preload("res://scripts/gamestate/GameStateFileUtils.gd")
 const CacheIO   = preload("res://scripts/gamestate/GameStateCacheIO.gd")
 const BossStage = preload("res://scripts/gamestate/GameStateBossStage.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const AUTH_SESSION_PATH := "user://auth_session.json"
 const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
@@ -713,7 +711,7 @@ func _ready() -> void:
 		update_player_teams(cached_teams)
 		apply_active_team_from_config("Boss")
 	if player_data.last_quit_time == 0:
-		player_data.last_quit_time = Time.get_unix_time_from_system()
+		player_data.last_quit_time = int(Time.get_unix_time_from_system())
 		player_data.save()
 	refresh_achievements(false)
 
@@ -1502,7 +1500,7 @@ func get_achievement_progress(item: Dictionary) -> Dictionary:
 
 
 ## DEPRECATED: 成就改由後端管理，但仍保留供 EnhanceScene 呼叫
-func refresh_achievements(show_notifications: bool = true) -> Array[String]:
+func refresh_achievements(_show_notifications: bool = true) -> Array[String]:
 	var newly_completed: Array[String] = []
 	var changed := false
 	for item: Dictionary in get_all_achievements():
@@ -1638,7 +1636,7 @@ func set_delay(slot_index: int, delay: int) -> void:
 func get_idle_elapsed_seconds() -> int:
 	if player_data.last_quit_time == 0:
 		return 0
-	var now: int = Time.get_unix_time_from_system()
+	var now: int = int(Time.get_unix_time_from_system())
 	var idle_summary := get_special_ability_summary()
 	var max_hours: float = float(idle_config.get("max_idle_hours", 8)) \
 			+ float(idle_summary.get("idle_max_hours_bonus", 0))
@@ -1787,7 +1785,7 @@ func apply_chat_summary(summary: Dictionary) -> void:
 	chat_guild_available = bool(summary.get("guildChatAvailable", false))
 	chat_party_channel_key = str(summary.get("partyChatChannelKey", chat_party_channel_key))
 	chat_party_available = bool(summary.get("partyChatAvailable", chat_party_channel_key != ""))
-	chat_last_snapshot_at_unix = Time.get_unix_time_from_system()
+	chat_last_snapshot_at_unix = int(Time.get_unix_time_from_system())
 	var system_messages_variant: Variant = summary.get("systemMessages", [])
 	if system_messages_variant is Array:
 		replace_chat_history("system", system_messages_variant)
@@ -2076,7 +2074,7 @@ func get_treasure_combat_bonuses() -> Array:
 
 func get_treasure_effects() -> Array:
 	if not scooper_treasure_data.is_empty():
-		var result: Array = []
+		var scooper_result: Array = []
 		for item: Dictionary in scooper_treasure_data:
 			var quantity: int = int(item.get("quantity", 0))
 			if quantity <= 0:
@@ -2084,13 +2082,13 @@ func get_treasure_effects() -> Array:
 			var effects: Array = item.get("effects", [])
 			for _i in range(quantity):
 				for effect: Dictionary in effects:
-					result.append({
+					scooper_result.append({
 						"target": str(effect.get("targetElementType", "all")).to_lower(),
 						"stat": str(effect.get("statType", "")),
 						"value": float(effect.get("value", 0.0)),
 					})
-		return result
-	var result: Array = []
+		return scooper_result
+	var treasure_result: Array = []
 	for treasure_id: String in player_data.treasures.keys():
 		var item := _get_treasure_item(treasure_id)
 		if item.is_empty():
@@ -2101,13 +2099,13 @@ func get_treasure_effects() -> Array:
 		var effects: Array = item.get("effects", [])
 		for _i in range(quantity):
 			for effect: Dictionary in effects:
-				result.append({
+				treasure_result.append({
 					"target": effect.get("target", "all"),
 					"stat": effect.get("stat", ""),
 					"value": float(effect.get("value", 0.0)),
 					"treasure_id": treasure_id,
 				})
-	return result
+	return treasure_result
 
 
 ## DEPRECATED: 寶藏改由後端管理（仍保留供 purchase_shop_bundle 使用）
@@ -2243,7 +2241,7 @@ func get_equipment_bonuses() -> Array:
 # ── 公用工具 ──────────────────────────────────
 
 
-static func format_number(value: int) -> String:
+func format_number(value: int) -> String:
 	var negative := value < 0
 	var digits := str(abs(value))
 	var parts: Array[String] = []

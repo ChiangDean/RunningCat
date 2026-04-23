@@ -1,8 +1,5 @@
 extends Control
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSecondarySubmenu = preload("res://scripts/ui/scene_secondary_submenu.gd")
 
 const TAB_ALL := "all"
 const TAB_ABILITY := "ability"
