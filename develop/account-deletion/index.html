@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>喵喵衝撞派對 Account Deletion｜帳號刪除說明</title>
+  <meta name="description" content="了解如何在喵喵衝撞派對（Meow Party Dash!）中刪除帳號、刪除後會發生什麼事，以及哪些資訊仍待補齊後才能達到商店送審標準。">
+  <link rel="stylesheet" href="../assets/legal.css">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="topbar">
+      <div class="brand-block">
+        <span class="eyebrow">Meow Party Dash!</span>
+        <h1 class="brand-title">喵喵衝撞派對</h1>
+        <p class="brand-subtitle">Account Deletion</p>
+      </div>
+      <nav class="nav-pills" aria-label="Legal navigation">
+        <a href="../privacy/">隱私政策</a>
+        <a class="active" href="../account-deletion/">帳號刪除</a>
+        <a href="../support/">支援頁面</a>
+        <a href="../">返回遊戲頁</a>
+      </nav>
+    </div>
+
+    <section class="hero">
+      <div class="hero-content">
+        <span class="hero-kicker">Account Deletion</span>
+        <h1>帳號刪除說明</h1>
+        <p>本頁說明喵喵衝撞派對（Meow Party Dash!）目前的刪帳號流程、刪除後效果，以及正式上架前仍必須補齊的私人刪帳申請管道。</p>
+        <div class="hero-meta">最後更新：2026-04-23</div>
+      </div>
+    </section>
+
+    <div class="page-grid">
+      <main class="stack">
+        <section class="card notice">
+          <h2>目前仍未完成的送審項目</h2>
+          <ul>
+            <li><strong>私人刪帳申請管道：</strong>待補。Google Play 與 App Store 送審前，必須提供不需重新下載 App 也能提出刪除請求的私人渠道，例如正式客服信箱或私密表單。</li>
+            <li><strong>正式客服信箱：</strong>待補。正式上架前，不能只依賴公開 GitHub Issues 處理帳號與個資請求。</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>1. 誰可以申請刪除帳號</h2>
+          <p>只要您建立過喵喵衝撞派對帳號，就可以申請刪除帳號與相關資料。</p>
+          <p>目前 App 內已提供刪除帳號入口；若玩家無法登入 App，正式上架前仍需補齊可在網站上完成請求的私人管道。</p>
+        </section>
+
+        <section class="card">
+          <h2>2. 目前已實作的刪帳號流程</h2>
+          <ol>
+            <li>玩家可在 App 內設定中心發起刪除帳號。</li>
+            <li>後端會撤銷該帳號的 refresh token 與登入 session。</li>
+            <li>帳號會被標記為刪除狀態，並停止再次登入。</li>
+            <li>後續請求會因帳號狀態失效而被擋下。</li>
+          </ol>
+          <p>這部分已對應到目前專案中的 <code>DELETE /api/profile/me</code> 與 active-user session middleware。</p>
+        </section>
+
+        <section class="card">
+          <h2>3. 刪除後通常會處理的資料</h2>
+          <ul>
+            <li>帳號識別資料</li>
+            <li>玩家個人檔案資料</li>
+            <li>登入 session 與 refresh token</li>
+            <li>與該帳號直接關聯的遊戲資料</li>
+          </ul>
+          <p>若資料已進入備份、稽核紀錄或與其他玩家互動內容相關，可能無法立即完全物理刪除；我們會在法律允許與技術可行的範圍內刪除、去識別化，或限制後續使用。</p>
+        </section>
+
+        <section class="card">
+          <h2>4. 可能保留的資料</h2>
+          <ul>
+            <li>資訊安全與防弊調查資料</li>
+            <li>稽核、觀測性與錯誤排查紀錄</li>
+            <li>法律、稅務、會計或爭議處理所需資料</li>
+            <li>備份系統中的短期殘留資料</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>5. 已購買內容與平台訂閱</h2>
+          <p>刪除遊戲帳號不一定會自動取消 Apple 或 Google 的平台訂閱。若未來版本啟用平台內購或訂閱，玩家仍需先到對應平台管理頁面確認訂閱狀態。</p>
+          <p>目前專案 demo 路線下，正式 IAP / Billing 尚未上線；這部分仍屬送審前待補項目。</p>
+        </section>
+      </main>
+
+      <aside class="stack">
+        <section class="card">
+          <h2>目前可公開提供的管道</h2>
+          <div class="meta-list">
+            <div class="meta-row">
+              <span class="meta-label">App 內刪帳入口</span>
+              <p class="meta-value">已實作，位於設定中心帳號區塊。</p>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">正式私人刪帳 Web 管道</span>
+              <p class="meta-value">待補。上架前必須補齊。</p>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">正式客服信箱</span>
+              <p class="meta-value">待補。上架前必須補齊。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card split-callout">
+          <h2>相關頁面</h2>
+          <div class="cta-list">
+            <a class="cta-link" href="../support/">前往支援頁面</a>
+            <a class="cta-link secondary" href="../privacy/">查看隱私政策</a>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <p class="footer-note">這份帳號刪除頁已能作為公開說明頁，但在補上私人刪帳申請渠道前，仍不應視為已完全符合商店送審要求。</p>
+  </div>
+</body>
+</html>
