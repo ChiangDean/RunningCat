@@ -198,6 +198,15 @@ const CAT_BATTLE_LOOPING_ANIMATIONS := {
 	"skill": false,
 	"death_fly": false,
 }
+const CAT_BATTLE_ANIMATION_FALLBACKS := {
+	"idle": ["run"],
+	"run": ["idle"],
+	"collide": ["run", "idle"],
+	"knockback": ["stagger", "collide", "run", "idle"],
+	"stagger": ["knockback", "collide", "run", "idle"],
+	"skill": ["run", "collide", "idle"],
+	"death_fly": ["knockback", "stagger", "collide", "run", "idle"],
+}
 
 const GACHA_FRAMES := {
 	"common": UI_ROOT + "gacha/rarity_common_frame_v1.png",
@@ -398,6 +407,30 @@ static func resolve_cat_battle_idle(cat_id: String) -> Texture2D:
 
 
 static func resolve_cat_battle_animation_path(cat_id: String, animation_name: String) -> String:
+	return _resolve_cat_battle_animation_path_with_fallback(cat_id, animation_name, [])
+
+
+static func _resolve_cat_battle_animation_path_with_fallback(cat_id: String, animation_name: String, visited: Array[String]) -> String:
+	if visited.has(animation_name):
+		return ""
+
+	var direct_path: String = _resolve_cat_battle_animation_path_exact(cat_id, animation_name)
+	if direct_path != "":
+		return direct_path
+
+	var next_visited: Array[String] = visited.duplicate()
+	next_visited.append(animation_name)
+	var fallback_variant: Variant = CAT_BATTLE_ANIMATION_FALLBACKS.get(animation_name, [])
+	var fallback_names: Array = fallback_variant if fallback_variant is Array else []
+	for fallback_name_variant: Variant in fallback_names:
+		var fallback_name: String = str(fallback_name_variant)
+		var fallback_path: String = _resolve_cat_battle_animation_path_with_fallback(cat_id, fallback_name, next_visited)
+		if fallback_path != "":
+			return fallback_path
+	return ""
+
+
+static func _resolve_cat_battle_animation_path_exact(cat_id: String, animation_name: String) -> String:
 	var suffixes: Variant = CAT_BATTLE_ANIMATION_SUFFIXES.get(animation_name, [])
 	if not (suffixes is Array):
 		return ""

@@ -2,6 +2,8 @@
 
 Last updated: 2026-04-23
 
+適用範圍：目前以 `demo / closed test` 上架準備為主。正式收費版在 `Google Play Billing`、`Apple In-App Purchase` 與商店帳號完成前，先不往前推。
+
 ## P0 必做
 
 ### 1. 發版技術

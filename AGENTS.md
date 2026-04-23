@@ -9,6 +9,7 @@
 - Prefer adding small, explicit UI state transitions instead of rewriting whole scene flows when only one stage changes.
 - The home flow now runs through `HomeShellScene` + `SceneNavigator`; keep `BattleScene` persistent there and open home subpages as overlays instead of replacing the battle scene with `change_scene_to_file(...)`.
 - Runtime API config is environment-specific: CI generates `config/runtime_config.json`, while local development may override with ignored `config/runtime_config.local.json`.
+- Deploy-generated `config/runtime_config.json` must include an explicit `environment` value. Runtime gating for unfinished content is allowed only in `Local` / `DEV`; `Sandbox` and `Production` builds must not silently fall back to `Local`.
 - Static support / privacy / account-deletion Pages content lives under `site/`; when deploy workflows export the Web build, they must also copy `site/` into `build/web/` so GitHub Pages keeps the game build and legal pages under the same published site.
 - For catalog-driven item art, shop/backpack reward slots, and feature preview images, prefer `AssetResolver` fallback helpers over raw `load_texture(...)` so release builds degrade to placeholders instead of blank UI when art is missing.
 - Persistent local runtime data such as login session and player save files must use `user://`, not `res://`.

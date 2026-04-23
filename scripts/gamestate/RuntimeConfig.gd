@@ -29,6 +29,20 @@ static func get_api_base_url(default_api_base_url: String) -> String:
 	return str(api_base_url).rstrip("/")
 
 
+static func get_environment_name() -> String:
+	var config: Dictionary = get_config()
+	return _resolve_environment_name(config)
+
+
+static func is_local_or_dev_environment() -> bool:
+	var environment_name: String = get_environment_name()
+	return environment_name == "Local" or environment_name == "DEV"
+
+
+static func should_show_unfinished_content() -> bool:
+	return is_local_or_dev_environment()
+
+
 static func is_oauth_enabled() -> bool:
 	return _get_feature_flag(FEATURE_FLAG_OAUTH_ENABLED, true)
 
@@ -82,12 +96,16 @@ static func _get_config_string(key_name: String, default_value: String = "") -> 
 
 
 static func _get_active_environment_config(config: Dictionary) -> Dictionary:
-	var configured_environment: Variant = config.get("environment", DEFAULT_ENVIRONMENT)
-	var environment_name: String = _normalize_environment_name(str(configured_environment))
+	var environment_name: String = _resolve_environment_name(config)
 	var environments_variant: Variant = config.get("environments", {})
 	var environments: Dictionary = environments_variant if environments_variant is Dictionary else {}
 	var environment_variant: Variant = environments.get(environment_name, {})
 	return environment_variant if environment_variant is Dictionary else {}
+
+
+static func _resolve_environment_name(config: Dictionary) -> String:
+	var configured_environment: Variant = config.get("environment", DEFAULT_ENVIRONMENT)
+	return _normalize_environment_name(str(configured_environment))
 
 
 static func _read_feature_flag(config: Dictionary, flag_name: String) -> Variant:

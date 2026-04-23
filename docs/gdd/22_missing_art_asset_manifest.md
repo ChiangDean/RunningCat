@@ -14,6 +14,7 @@
 
 - 黑貓素材已經開始補齊，故本文件不重複列黑貓。
 - 其餘 5 隻正式貓咪角色，仍缺完整角色定稿、頭像、戰鬥動畫。
+- client runtime 已補戰鬥動畫 fallback；當 `collide / knockback / stagger / skill / death_fly` 缺圖時，會先回退到現有 `run / idle` 類動畫，避免正式流程出現空動畫。
 - 多數功能頁仍為純色背景，缺 UI 背景圖。
 - API / DB 已經定義 `image_path` 的 catalog 圖資，目前前端多數尚未補圖或尚未實際套用。
 - Mail / Chat / Shop / Scooper / Arena Reward / Dungeon Overview 等流程仍偏文字化，缺少對應 icon 或卡面圖。

@@ -331,6 +331,10 @@ Key files:
   - `support_url`
   - `privacy_policy_url`
   - `account_deletion_url`
+- environment behavior:
+  - `RuntimeConfig` normalizes `Local` / `DEV` / `Sandbox` / `Production`
+  - unfinished placeholder content is visible only in `Local` / `DEV`
+  - CI-generated `config/runtime_config.json` must include `environment`, otherwise release builds would fall back to `Local`
 
 ### 6.2 Persistent `user://` Storage
 
