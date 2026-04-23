@@ -1,7 +1,8 @@
 {
   "environment": "Production",
   "feature_flags": {
-    "oauth_enabled": false
+    "oauth_enabled": false,
+    "paid_shop_enabled": false
   },
   "environments": {
     "Production": {

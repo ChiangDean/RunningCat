@@ -1,7 +1,8 @@
 {
   "environment": "Local",
   "feature_flags": {
-    "oauth_enabled": true
+    "oauth_enabled": true,
+    "paid_shop_enabled": true
   },
   "environments": {
     "Local": {

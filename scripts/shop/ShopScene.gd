@@ -1,5 +1,6 @@
 extends Control
 
+const RuntimeConfig = preload("res://scripts/gamestate/RuntimeConfig.gd")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
@@ -15,6 +16,7 @@ const TAB_DAILY := "daily_bundle"
 const TAB_COLLISION_COIN := "collision_coin"
 const TAB_DIAMOND_STORE := "diamond_store"
 const TAB_POINT := "point_bundle"
+const TRAP_POINTS_CURRENCY_ID := 3
 const COLLISION_COIN_ICON_PATH := "res://assets/sprites/ui/rewards/collision_coin.png"
 const ARENA_TICKET_ICON_PATH := "res://assets/sprites/ui/rewards/arena_ticket.png"
 
@@ -66,11 +68,14 @@ var _content_host: Control
 var _diamond_store_quantities: Dictionary = {}
 var _diamond_store_keypad_close: Callable = Callable()
 var _pending_bundle_purchase: Dictionary = {}
+var _paid_shop_enabled: bool = true
 
 @onready var _api_client = get_node("/root/ApiClient")
 
 
 func _ready() -> void:
+	_paid_shop_enabled = RuntimeConfig.is_paid_shop_enabled()
+	_normalize_active_tab()
 	_build_ui()
 	GameState.red_dot_state_changed.connect(_refresh_red_dots)
 	_refresh_content()
@@ -78,7 +83,7 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	var dock_items: Array = []
-	for item: Dictionary in CATEGORY_CONFIGS:
+	for item: Dictionary in _get_visible_category_configs():
 		var tab_key: String = str(item.get("key", ""))
 		var tab_meta: Dictionary = _get_tab_meta(tab_key)
 		dock_items.append({
@@ -127,6 +132,8 @@ func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
 
 
 func _switch_tab(tab_key: String) -> void:
+	if not _is_tab_visible(tab_key):
+		return
 	if _active_tab == tab_key:
 		return
 	_active_tab = tab_key
@@ -139,6 +146,7 @@ func _switch_secondary_item(item_key: String) -> void:
 
 
 func _refresh_content() -> void:
+	_normalize_active_tab()
 	_rebuild_content()
 	SceneSubmenuBar.refresh(_tab_buttons, _active_tab, {
 		"active_color": SceneMenuTheme.ACTIVE_COLOR,
@@ -177,6 +185,8 @@ func _rebuild_content() -> void:
 
 
 func _build_secondary_items(tab_key: String) -> Array:
+	if not _is_tab_visible(tab_key):
+		return []
 	match tab_key:
 		TAB_COLLISION_COIN:
 			return COLLISION_COIN_ITEMS
@@ -987,9 +997,11 @@ func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictiona
 
 
 func _should_redirect_to_collision_coin_store(error: Dictionary) -> bool:
+	if not _paid_shop_enabled:
+		return false
 	if str(error.get("code", "")) != "SHOP.NOT_ENOUGH_PAYMENT_CURRENCY":
 		return false
-	return int(_pending_bundle_purchase.get("priceCurrencyId", 0)) == 3
+	return int(_pending_bundle_purchase.get("priceCurrencyId", 0)) == TRAP_POINTS_CURRENCY_ID
 
 
 func _get_bundles_for_tab(tab_key: String) -> Array:
@@ -999,7 +1011,7 @@ func _get_bundles_for_tab(tab_key: String) -> Array:
 		if not (bundle_variant is Dictionary):
 			continue
 		var bundle: Dictionary = bundle_variant
-		if str(bundle.get("categoryType", "")).to_lower() == category_type:
+		if str(bundle.get("categoryType", "")).to_lower() == category_type and _is_bundle_visible(bundle):
 			result.append(bundle)
 	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var a_sold_out: bool = bool(a.get("isSoldOut", false))
@@ -1022,6 +1034,8 @@ func _get_bundle_groups_for_tab(tab_key: String) -> Array:
 		var group: Dictionary = group_variant
 		if str(group.get("categoryType", "")).to_lower() != category_type:
 			continue
+		if not _has_visible_bundle_for_group(tab_key, str(group.get("groupId", ""))):
+			continue
 		result.append(group)
 	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a.get("sortOrder", 0)) < int(b.get("sortOrder", 0))
@@ -1039,8 +1053,11 @@ func _get_bundles_for_group(tab_key: String, group_id: String) -> Array:
 
 func _get_bundle_by_id(bundle_id: String) -> Dictionary:
 	for bundle_variant: Variant in GameState.shop_data.get("bundles", []):
-		if bundle_variant is Dictionary and str(bundle_variant.get("bundleId", "")) == bundle_id:
-			return bundle_variant
+		if not (bundle_variant is Dictionary):
+			continue
+		var bundle: Dictionary = bundle_variant
+		if str(bundle.get("bundleId", "")) == bundle_id and _is_bundle_visible(bundle):
+			return bundle
 	return {}
 
 
@@ -1169,6 +1186,48 @@ func _get_collision_coin_item(item_key: String) -> Dictionary:
 	return COLLISION_COIN_ITEMS[0]
 
 
+func _get_visible_category_configs() -> Array:
+	var result: Array = []
+	for config: Dictionary in CATEGORY_CONFIGS:
+		var tab_key: String = str(config.get("key", ""))
+		if _is_tab_visible(tab_key):
+			result.append(config)
+	return result
+
+
+func _normalize_active_tab() -> void:
+	if _is_tab_visible(_active_tab):
+		return
+	var visible_tabs: Array = _get_visible_category_configs()
+	if visible_tabs.is_empty():
+		_active_tab = TAB_VALUE
+		return
+	var first_visible_variant: Variant = visible_tabs[0]
+	var first_visible: Dictionary = first_visible_variant if first_visible_variant is Dictionary else {}
+	_active_tab = str(first_visible.get("key", TAB_VALUE))
+
+
+func _is_tab_visible(tab_key: String) -> bool:
+	if _paid_shop_enabled:
+		return true
+	return tab_key != TAB_COLLISION_COIN and tab_key != TAB_POINT
+
+
+func _is_bundle_visible(bundle: Dictionary) -> bool:
+	if _paid_shop_enabled:
+		return true
+	var price_currency_type: String = str(bundle.get("priceCurrencyType", "")).to_lower()
+	var price_currency_id: int = int(bundle.get("priceCurrencyId", 0))
+	return price_currency_type != "trappoints" and price_currency_id != TRAP_POINTS_CURRENCY_ID
+
+
+func _has_visible_bundle_for_group(tab_key: String, group_id: String) -> bool:
+	for bundle_variant: Variant in _get_bundles_for_tab(tab_key):
+		if bundle_variant is Dictionary and str(bundle_variant.get("groupId", "")) == group_id:
+			return true
+	return false
+
+
 func _get_category_type(tab_key: String) -> String:
 	for config: Dictionary in CATEGORY_CONFIGS:
 		if str(config.get("key", "")) == tab_key:
@@ -1213,6 +1272,11 @@ func _get_tab_meta(tab_key: String) -> Dictionary:
 
 
 func _get_shell_summary_left() -> String:
+	if not _paid_shop_enabled:
+		return UiText.SHOP_RESOURCE_FORMAT % [
+			GameState.player_data.diamonds,
+			GameState.player_data.trap_cages,
+		]
 	return UiText.SHOP_RESOURCE_WITH_COLLISION_COIN_FORMAT % [
 		GameState.player_data.diamonds,
 		GameState.player_data.trap_points,
