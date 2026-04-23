@@ -1,3 +1,6 @@
 {
-  "api_base_url": "http://localhost:5000/api"
+  "api_base_url": "http://localhost:5000/api",
+  "feature_flags": {
+    "oauth_enabled": true
+  }
 }

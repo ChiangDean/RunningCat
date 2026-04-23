@@ -2,6 +2,7 @@ extends Control
 
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const InertialScroller = preload("res://scripts/ui/inertial_scroll.gd")
+const RuntimeConfig = preload("res://scripts/gamestate/RuntimeConfig.gd")
 const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 
 const ADMIN_CATALOG_SCENE_PATH := "res://scenes/AdminCatalogScene.tscn"
@@ -655,7 +656,8 @@ func _build_account_section() -> Control:
 	var root: VBoxContainer = VBoxContainer.new()
 	root.add_theme_constant_override("separation", 12)
 	root.add_child(_build_account_identity_card())
-	root.add_child(_build_account_linked_card())
+	if RuntimeConfig.is_oauth_enabled():
+		root.add_child(_build_account_linked_card())
 	root.add_child(_build_redeem_card())
 	root.add_child(_build_account_session_card())
 	return root
@@ -1344,6 +1346,9 @@ func _can_unlink_provider(provider_name: String, linked: Array, password_login_e
 
 func _on_provider_action_pressed(provider_name: String, provider_key: String) -> void:
 	if _account_oauth_busy:
+		return
+	if not RuntimeConfig.is_oauth_enabled():
+		ToastManager.hint(UiText.START_STATUS_OAUTH_DISABLED)
 		return
 	if _is_oauth_provider_disabled(provider_key):
 		ToastManager.hint(ACCOUNT_PROVIDER_DISABLED_HINT_FORMAT % provider_name)

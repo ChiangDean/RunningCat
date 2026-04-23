@@ -42,11 +42,12 @@ Defined in `project.godot`:
 Primary startup logic lives in:
 
 - `scripts/StartScene.gd`
+- `scripts/gamestate/RuntimeConfig.gd`
 
 Responsibilities:
 
 - build the login / register / restore-session UI in code
-- resolve runtime API base URL from config files
+- resolve runtime API base URL and release feature flags from config files
 - load or create local device id
 - restore persisted auth session from `GameState`
 - run authenticated bootstrap if a valid session exists
