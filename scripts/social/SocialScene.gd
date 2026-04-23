@@ -6,6 +6,15 @@ const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const FriendStageFormatter = preload("res://scripts/gamestate/GameStateBossStage.gd")
 const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
+const BUTTON_BAR_TEXTURE = preload("res://assets/sprites/ui/common/button_bar_s_color2.png")
+const BUTTON_BAR_TEXTURE_MEDIUM = preload("res://assets/sprites/ui/common/button_bar_m_color2.png")
+const CONTENT_FULL_TEXTURE = preload("res://assets/sprites/ui/common/content_full_default_v1.png")
+
+const PARTY_ACTION_BUTTON_SIZE := Vector2(92.0, 30.0)
+const PARTY_CHEER_BUTTON_SIZE := Vector2(128.0, 32.0)
+const PARTY_ROW_MIN_HEIGHT := 72.0
+const PARTY_PENDING_INFO_ROW_MIN_HEIGHT := 118.0
+const PARTY_EDIT_ICON := "\u270E"
 
 signal party_navigation_changed(items: Array, active_key: String)
 signal friend_navigation_changed(items: Array, active_key: String)
@@ -28,10 +37,11 @@ var _create_party_dialog_state: Dictionary = {}
 var _invite_party_dialog_state: Dictionary = {}
 var _rename_party_dialog_state: Dictionary = {}
 
-var _root_box: VBoxContainer
+var _root_box: Control
 var _scroll: ScrollContainer
 var _content_box: VBoxContainer
 var _footer_panel: PanelContainer
+var _party_overlay_background: TextureRect
 var _friend_footer_buttons: Dictionary = {}
 var _party_footer_buttons: Dictionary = {}
 
@@ -82,22 +92,34 @@ func _ready() -> void:
 
 func _build_shell() -> void:
 	if _uses_overlay_layout():
-		_root_box = VBoxContainer.new()
+		_root_box = Control.new()
 		_root_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_root_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_root_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		add_child(_root_box)
 
+		_party_overlay_background = TextureRect.new()
+		_party_overlay_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_party_overlay_background.texture = CONTENT_FULL_TEXTURE
+		_party_overlay_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_party_overlay_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_party_overlay_background.stretch_mode = TextureRect.STRETCH_SCALE
+		_root_box.add_child(_party_overlay_background)
+
+		var content_margin: MarginContainer = OverlaySceneChrome.make_content_margin(22)
+		content_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_root_box.add_child(content_margin)
+
 		_scroll = ScrollContainer.new()
+		_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		_root_box.add_child(_scroll)
+		content_margin.add_child(_scroll)
 		InertialScroller.attach(_scroll, "vertical")
 
 		_content_box = VBoxContainer.new()
 		_content_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_content_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_content_box.add_theme_constant_override("separation", 14)
 		_scroll.add_child(_content_box)
 		return
@@ -145,6 +167,14 @@ func _build_shell() -> void:
 
 func _uses_overlay_layout() -> bool:
 	return (_mode == "party" and _party_overlay_mode) or (_mode == "friend" and _friend_overlay_mode)
+
+
+func _is_party_overlay_panel_mode() -> bool:
+	return _mode == "party" and _party_overlay_mode
+
+
+func _is_overlay_panel_mode() -> bool:
+	return _uses_overlay_layout()
 
 
 func _refresh_current() -> void:
@@ -298,6 +328,7 @@ func _clear_content() -> void:
 
 
 func _render_friend() -> void:
+	_refresh_overlay_background_visibility()
 	_clear_content()
 	_ensure_friend_section_valid()
 	_render_friend_footer()
@@ -310,6 +341,10 @@ func _render_friend() -> void:
 			return
 
 	var friend_rows: Array = _friend_list.get("friends", [])
+	if _uses_overlay_layout():
+		_render_friend_overlay_list(_content_box, friend_rows)
+		return
+
 	var friends_card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
 	friends_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	friends_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -366,6 +401,67 @@ func _render_friend() -> void:
 		if not (item_variant is Dictionary):
 			continue
 		friends_box.add_child(_build_friend_row(item_variant))
+
+
+func _render_friend_overlay_list(host: VBoxContainer, friend_rows: Array) -> void:
+	var content_box: VBoxContainer = VBoxContainer.new()
+	content_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content_box.add_theme_constant_override("separation", 0)
+	host.add_child(content_box)
+	content_box.add_child(_make_vertical_spacer(10.0))
+
+	var header_margin: MarginContainer = MarginContainer.new()
+	header_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_margin.add_theme_constant_override("margin_left", 30)
+	header_margin.add_theme_constant_override("margin_right", 30)
+	content_box.add_child(header_margin)
+
+	var header_row: HBoxContainer = HBoxContainer.new()
+	header_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	header_row.add_theme_constant_override("separation", 12)
+	header_margin.add_child(header_row)
+
+	var left_group: HBoxContainer = HBoxContainer.new()
+	left_group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_group.alignment = BoxContainer.ALIGNMENT_BEGIN
+	left_group.add_theme_constant_override("separation", 8)
+	header_row.add_child(left_group)
+
+	var title_label: Label = Label.new()
+	title_label.text = UiText.SOCIAL_FRIEND_LIST
+	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	title_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	left_group.add_child(title_label)
+
+	var add_button: Button = _make_action_button("+", "confirm")
+	_style_party_overlay_button(add_button, Vector2(36.0, 32.0), UiPalette.FONT_SIZE_BODY_LG)
+	add_button.pressed.connect(_open_add_friend_dialog)
+	left_group.add_child(add_button)
+
+	var gift_button: Button = _make_action_button(
+		UiText.SOCIAL_FRIEND_GIFT_SENT if bool(_friend_list.get("hasSentGiftToday", false)) else UiText.SOCIAL_FRIEND_GIFT_ALL,
+		"confirm"
+	)
+	_style_party_overlay_button(gift_button, Vector2(128.0, 48.0))
+	gift_button.disabled = _friend_gift_in_flight or friend_rows.is_empty() or bool(_friend_list.get("hasSentGiftToday", false))
+	RedDotService.refresh_dot(gift_button, not gift_button.disabled and RedDotService.has_friend_send_all_gift_red_dot())
+	gift_button.pressed.connect(_on_friend_gift_pressed)
+	header_row.add_child(gift_button)
+
+	if friend_rows.is_empty():
+		var empty_center: CenterContainer = CenterContainer.new()
+		empty_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		empty_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		empty_center.custom_minimum_size = Vector2(0.0, 220.0)
+		content_box.add_child(empty_center)
+		empty_center.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
+		return
+
+	for item_variant: Variant in friend_rows:
+		if item_variant is Dictionary:
+			content_box.add_child(_build_friend_row(item_variant))
 
 
 func _render_friend_footer() -> void:
@@ -433,29 +529,26 @@ func _notify_friend_navigation_changed() -> void:
 
 
 func _render_friend_inbox(host: VBoxContainer) -> void:
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	host.add_child(card)
+	if _is_overlay_panel_mode():
+		var overlay_box: VBoxContainer = VBoxContainer.new()
+		overlay_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		overlay_box.add_theme_constant_override("separation", 0)
+		host.add_child(overlay_box)
 
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	card.add_child(margin)
+		if _friend_inbox.is_empty():
+			overlay_box.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
+			return
 
-	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
-	margin.add_child(box)
+		for item_variant: Variant in _friend_inbox:
+			if item_variant is Dictionary:
+				overlay_box.add_child(_build_friend_inbox_row(item_variant))
+		return
 
-	var title: Label = Label.new()
-	title.text = UiText.SOCIAL_FRIEND_INBOX
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	box.add_child(title)
-
-	var desc: Label = Label.new()
-	desc.text = UiText.SOCIAL_FRIEND_INBOX_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	box.add_child(desc)
+	var box: VBoxContainer = _make_party_section_box(
+		host,
+		UiText.SOCIAL_FRIEND_INBOX,
+		UiText.SOCIAL_FRIEND_INBOX_DESC
+	)
 
 	if _friend_inbox.is_empty():
 		box.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
@@ -467,29 +560,26 @@ func _render_friend_inbox(host: VBoxContainer) -> void:
 
 
 func _render_friend_outbox(host: VBoxContainer) -> void:
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	host.add_child(card)
+	if _is_overlay_panel_mode():
+		var overlay_box: VBoxContainer = VBoxContainer.new()
+		overlay_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		overlay_box.add_theme_constant_override("separation", 0)
+		host.add_child(overlay_box)
 
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	card.add_child(margin)
+		if _friend_outbox.is_empty():
+			overlay_box.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
+			return
 
-	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
-	margin.add_child(box)
+		for item_variant: Variant in _friend_outbox:
+			if item_variant is Dictionary:
+				overlay_box.add_child(_build_friend_outbox_row(item_variant))
+		return
 
-	var title: Label = Label.new()
-	title.text = UiText.SOCIAL_FRIEND_OUTBOX
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	box.add_child(title)
-
-	var desc: Label = Label.new()
-	desc.text = UiText.SOCIAL_FRIEND_OUTBOX_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	box.add_child(desc)
+	var box: VBoxContainer = _make_party_section_box(
+		host,
+		UiText.SOCIAL_FRIEND_OUTBOX,
+		UiText.SOCIAL_FRIEND_OUTBOX_DESC
+	)
 
 	if _friend_outbox.is_empty():
 		box.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
@@ -501,6 +591,7 @@ func _render_friend_outbox(host: VBoxContainer) -> void:
 
 
 func _render_party() -> void:
+	_refresh_overlay_background_visibility()
 	_clear_content()
 	_ensure_party_section_valid()
 	_render_party_footer()
@@ -517,6 +608,18 @@ func _render_party() -> void:
 			_render_party_reviews(_content_box)
 		return
 	_render_party_overview(_content_box)
+
+
+func _refresh_overlay_background_visibility() -> void:
+	if _party_overlay_background == null:
+		return
+	if _mode == "party" and _party_overlay_mode:
+		_party_overlay_background.visible = _party_section != "invites" and _party_section != "reviews"
+		return
+	if _mode == "friend" and _friend_overlay_mode:
+		_party_overlay_background.visible = _friend_section != "inbox" and _friend_section != "outbox"
+		return
+	_party_overlay_background.visible = true
 
 
 func _render_party_footer() -> void:
@@ -677,29 +780,12 @@ func _render_party_overview(host: VBoxContainer) -> void:
 
 
 func _render_party_empty(host: VBoxContainer) -> void:
-	var summary_card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	summary_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	host.add_child(summary_card)
-
-	var summary_margin: MarginContainer = OverlaySceneChrome.make_content_margin(18)
-	summary_card.add_child(summary_margin)
-
-	var summary_box: VBoxContainer = VBoxContainer.new()
-	summary_box.add_theme_constant_override("separation", 10)
-	summary_margin.add_child(summary_box)
-
-	var title: Label = Label.new()
-	title.text = UiText.SOCIAL_PARTY_EMPTY
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	summary_box.add_child(title)
-
-	var desc: Label = Label.new()
-	desc.text = UiText.SOCIAL_PARTY_EMPTY_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	summary_box.add_child(desc)
+	_make_party_section_box(
+		host,
+		UiText.SOCIAL_PARTY_EMPTY,
+		UiText.SOCIAL_PARTY_EMPTY_DESC,
+		OverlaySceneChrome.PANEL_BORDER
+	)
 
 	host.add_child(_build_party_input_card(
 		UiText.SOCIAL_PARTY_CREATE,
@@ -720,6 +806,10 @@ func _render_party_empty(host: VBoxContainer) -> void:
 
 
 func _render_party_detail(host: VBoxContainer) -> void:
+	if _is_party_overlay_panel_mode():
+		_render_party_detail_overlay(host)
+		return
+
 	var header_card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
 	header_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	host.add_child(header_card)
@@ -800,31 +890,105 @@ func _render_party_detail(host: VBoxContainer) -> void:
 			member_box.add_child(_build_party_member_row(member_variant))
 
 
-func _render_party_reviews(host: VBoxContainer) -> void:
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	host.add_child(card)
+func _render_party_detail_overlay(host: VBoxContainer) -> void:
+	_render_party_detail_overlay_content(host)
+	return
 
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	card.add_child(margin)
+func _render_party_detail_overlay_content(host: VBoxContainer) -> void:
+	var members: Array = _party_detail.get("members", [])
+	var content_box: VBoxContainer = VBoxContainer.new()
+	content_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content_box.add_theme_constant_override("separation", 12)
+	host.add_child(content_box)
 
-	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
-	margin.add_child(box)
+	var title_margin: MarginContainer = MarginContainer.new()
+	title_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_margin.add_theme_constant_override("margin_left", 30)
+	title_margin.add_theme_constant_override("margin_right", 30)
+	content_box.add_child(title_margin)
+
+	var title_row: HBoxContainer = HBoxContainer.new()
+	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_theme_constant_override("separation", 8)
+	title_margin.add_child(title_row)
+
+	var title_left_spacer: Control = Control.new()
+	title_left_spacer.custom_minimum_size = Vector2(36.0, 0.0)
+	title_row.add_child(title_left_spacer)
 
 	var title: Label = Label.new()
-	title.text = UiText.SOCIAL_PARTY_PENDING_REVIEW
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+	title.text = str(_party_detail.get("name", "")).strip_edges()
+	if title.text == "":
+		title.text = UiText.SOCIAL_PARTY_OVERVIEW
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	box.add_child(title)
+	title_row.add_child(title)
 
-	if not _is_party_leader():
-		var hint: Label = Label.new()
-		hint.text = "\u968a\u54e1\u53ef\u4ee5\u6aa2\u8996\u7533\u8acb\uff0c\u4f46\u53ea\u6709\u968a\u9577\u53ef\u4ee5\u5be9\u6838\u3002\u968a\u4f0d\u9080\u8acb\u6703\u7531\u88ab\u9080\u8acb\u8005\u81ea\u884c\u56de\u61c9\u3002"
-		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-		hint.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-		box.add_child(hint)
+	if _is_party_leader():
+		var rename_button: Button = _make_action_button(PARTY_EDIT_ICON, "secondary")
+		_style_party_overlay_button(rename_button, Vector2(36.0, 36.0), 18)
+		rename_button.pressed.connect(_open_rename_party_dialog)
+		title_row.add_child(rename_button)
+	else:
+		var title_right_spacer: Control = Control.new()
+		title_right_spacer.custom_minimum_size = Vector2(36.0, 0.0)
+		title_row.add_child(title_right_spacer)
+
+	var title_separator: ColorRect = ColorRect.new()
+	title_separator.color = OverlaySceneChrome.PANEL_BORDER
+	title_separator.custom_minimum_size = Vector2(0.0, 1.0)
+	title_separator.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content_box.add_child(title_separator)
+
+	var member_header_margin: MarginContainer = MarginContainer.new()
+	member_header_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	member_header_margin.add_theme_constant_override("margin_left", 30)
+	member_header_margin.add_theme_constant_override("margin_right", 30)
+	content_box.add_child(member_header_margin)
+
+	var member_header: HBoxContainer = HBoxContainer.new()
+	member_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	member_header.custom_minimum_size = Vector2(0.0, 34.0)
+	member_header.alignment = BoxContainer.ALIGNMENT_CENTER
+	member_header.add_theme_constant_override("separation", 12)
+	member_header_margin.add_child(member_header)
+
+	var member_title: Label = Label.new()
+	member_title.text = UiText.SOCIAL_PARTY_MEMBER_LIST
+	member_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	member_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	member_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	member_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	member_header.add_child(member_title)
+	member_header.add_child(_build_party_cheer_button())
+
+	for slot_entry: Dictionary in _build_party_member_slots(members):
+		content_box.add_child(_build_party_member_slot_row(
+			str(slot_entry.get("slot_label", "")),
+			slot_entry.get("member", {}) as Dictionary
+		))
+
+
+func _render_party_reviews(host: VBoxContainer) -> void:
+	var box: VBoxContainer
+	if _is_party_overlay_panel_mode():
+		box = VBoxContainer.new()
+		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.add_theme_constant_override("separation", 12)
+		host.add_child(box)
+	else:
+		box = _make_party_section_box(host, UiText.SOCIAL_PARTY_PENDING_REVIEW)
+
+		if not _is_party_leader():
+			var hint: Label = Label.new()
+			hint.text = "\u968a\u54e1\u53ef\u4ee5\u6aa2\u8996\u7533\u8acb\uff0c\u4f46\u53ea\u6709\u968a\u9577\u53ef\u4ee5\u5be9\u6838\u3002\u968a\u4f0d\u9080\u8acb\u6703\u7531\u88ab\u9080\u8acb\u8005\u81ea\u884c\u56de\u61c9\u3002"
+			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+			hint.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+			box.add_child(hint)
 
 	var review_items: Array = _get_party_pending_reviews()
 	if review_items.is_empty():
@@ -837,29 +1001,11 @@ func _render_party_reviews(host: VBoxContainer) -> void:
 
 
 func _render_my_party_invites(host: VBoxContainer) -> void:
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	host.add_child(card)
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	card.add_child(margin)
-
-	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
-	margin.add_child(box)
-
-	var title: Label = Label.new()
-	title.text = UiText.SOCIAL_PARTY_PENDING_INVITES
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	box.add_child(title)
-
-	var desc: Label = Label.new()
-	desc.text = UiText.SOCIAL_PARTY_PENDING_INVITES_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	box.add_child(desc)
+	var box: VBoxContainer = _make_party_section_box(
+		host,
+		UiText.SOCIAL_PARTY_PENDING_INVITES,
+		UiText.SOCIAL_PARTY_PENDING_INVITES_DESC
+	)
 
 	var invite_items: Array = _get_my_pending_party_invites()
 	if invite_items.is_empty():
@@ -872,6 +1018,22 @@ func _render_my_party_invites(host: VBoxContainer) -> void:
 
 
 func _render_party_pending_invites(host: VBoxContainer) -> void:
+	if _is_party_overlay_panel_mode():
+		var overlay_box: VBoxContainer = VBoxContainer.new()
+		overlay_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		overlay_box.add_theme_constant_override("separation", 12)
+		host.add_child(overlay_box)
+
+		var overlay_invite_items: Array = _get_party_pending_invites()
+		if overlay_invite_items.is_empty():
+			overlay_box.add_child(_make_empty_label(UiText.SOCIAL_EMPTY))
+			return
+
+		for item_variant: Variant in overlay_invite_items:
+			if item_variant is Dictionary:
+				overlay_box.add_child(_build_party_pending_invite_overlay_row(item_variant))
+		return
+
 	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	host.add_child(card)
@@ -907,29 +1069,11 @@ func _render_party_pending_invites(host: VBoxContainer) -> void:
 
 
 func _render_my_party_reviews(host: VBoxContainer) -> void:
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel(OverlaySceneChrome.PANEL_BORDER)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	host.add_child(card)
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	card.add_child(margin)
-
-	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
-	margin.add_child(box)
-
-	var title: Label = Label.new()
-	title.text = UiText.SOCIAL_PARTY_PENDING_REVIEW
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
-	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
-	box.add_child(title)
-
-	var desc: Label = Label.new()
-	desc.text = UiText.SOCIAL_PARTY_PENDING_REVIEW_DESC
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	box.add_child(desc)
+	var box: VBoxContainer = _make_party_section_box(
+		host,
+		UiText.SOCIAL_PARTY_PENDING_REVIEW,
+		UiText.SOCIAL_PARTY_PENDING_REVIEW_DESC
+	)
 
 	var review_items: Array = _get_my_pending_party_reviews()
 	if review_items.is_empty():
@@ -943,16 +1087,69 @@ func _render_my_party_reviews(host: VBoxContainer) -> void:
 
 func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> Control:
 	var item: Dictionary = item_variant
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	RedDotService.refresh_dot(panel, not read_only)
+	var shell: Dictionary = _create_party_row_shell(
+		PARTY_PENDING_INFO_ROW_MIN_HEIGHT,
+		OverlaySceneChrome.CARD_BORDER,
+		BUTTON_BAR_TEXTURE_MEDIUM,
+		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
+	RedDotService.refresh_dot(root, not read_only)
 
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
+	if _is_party_overlay_panel_mode():
+		var left_box: VBoxContainer = VBoxContainer.new()
+		left_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		left_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		left_box.size_flags_stretch_ratio = 1.15
+		left_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		left_box.add_theme_constant_override("separation", 4)
+		row.add_child(left_box)
 
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	margin.add_child(row)
+		var counterpart_label: Label = Label.new()
+		counterpart_label.text = _party_application_counterpart_name(item)
+		_configure_party_pending_info_label(counterpart_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		left_box.add_child(counterpart_label)
+
+		var middle_box: VBoxContainer = VBoxContainer.new()
+		middle_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		middle_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		middle_box.size_flags_stretch_ratio = 1.0
+		middle_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		middle_box.add_theme_constant_override("separation", 4)
+		row.add_child(middle_box)
+
+		var inviter_name_label: Label = Label.new()
+		inviter_name_label.text = "邀請人：%s" % _party_application_inviter_name(item)
+		_configure_party_pending_info_label(inviter_name_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		middle_box.add_child(inviter_name_label)
+
+		var inviter_time_label: Label = Label.new()
+		inviter_time_label.text = "邀請時間：%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+		_configure_party_pending_info_label(inviter_time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		middle_box.add_child(inviter_time_label)
+
+		var right_box: VBoxContainer = VBoxContainer.new()
+		right_box.custom_minimum_size = Vector2(110.0, 0.0)
+		right_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		right_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_child(right_box)
+
+		var status_label: Label = Label.new()
+		status_label.text = "\u5f85\u5c0d\u65b9\u56de\u61c9"
+		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_configure_party_pending_info_label(status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		right_box.add_child(status_label)
+
+		var stage_row_label: Label = Label.new()
+		stage_row_label.text = _party_application_progress_line(item)
+		_configure_party_pending_info_label(stage_row_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		left_box.add_child(stage_row_label)
+
+		return root
 
 	var info_box: VBoxContainer = VBoxContainer.new()
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -960,27 +1157,38 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 	row.add_child(info_box)
 
 	var name_label: Label = Label.new()
-	name_label.text = str(item.get("applicantDisplayName", ""))
+	name_label.text = "對方：%s" % _party_application_counterpart_name(item)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(name_label)
 
-	var type_label: Label = Label.new()
-	type_label.text = _party_application_type_text(int(item.get("applicationType", 0)))
-	if str(item.get("inviterDisplayName", "")).strip_edges() != "":
-		type_label.text += "  |  \u9080\u8acb\u4eba %s" % str(item.get("inviterDisplayName", "")).strip_edges()
-	type_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	type_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	type_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	info_box.add_child(type_label)
+	var stage_label: Label = Label.new()
+	stage_label.text = "鏟屎官 %s  |  %s" % [
+		_party_application_scooper_level_text(item),
+		_party_application_stage_text(item),
+	]
+	stage_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stage_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	stage_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	info_box.add_child(stage_label)
 
-	var time_label: Label = Label.new()
-	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(item.get("createdAtUtc", null))
-	time_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	time_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
-	time_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-	info_box.add_child(time_label)
+	var inviter_label: Label = Label.new()
+	inviter_label.text = "邀請人 %s  |  邀請時間：%s" % [
+		_party_application_inviter_name(item),
+		_format_relative_datetime(item.get("createdAtUtc", null)),
+	]
+	inviter_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	inviter_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	inviter_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	info_box.add_child(inviter_label)
+
+	var status_label: Label = Label.new()
+	status_label.text = "待對方回應"
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	status_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	info_box.add_child(status_label)
 
 	if read_only:
 		var readonly_label: Label = Label.new()
@@ -988,37 +1196,31 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 		readonly_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		readonly_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		row.add_child(readonly_label)
-		return panel
+		return root
 
 	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
-	accept_button.custom_minimum_size = Vector2(96.0, 46.0)
+	_style_party_overlay_button(accept_button, PARTY_ACTION_BUTTON_SIZE)
 	RedDotService.refresh_dot(accept_button, true)
 	accept_button.pressed.connect(func() -> void:
 		_accept_party_application(int(item.get("applicationId", 0)), str(item.get("applicantDisplayName", "")))
 	)
 	row.add_child(accept_button)
 
-	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "danger")
-	reject_button.custom_minimum_size = Vector2(96.0, 46.0)
+	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
+	_style_party_overlay_button(reject_button, PARTY_ACTION_BUTTON_SIZE)
 	reject_button.pressed.connect(func() -> void:
 		_confirm_reject_party_application(int(item.get("applicationId", 0)), str(item.get("applicantDisplayName", "")))
 	)
 	row.add_child(reject_button)
 
-	return panel
+	return root
 
 
 func _build_my_party_invite_row(item_variant: Variant) -> Control:
 	var item: Dictionary = item_variant
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	margin.add_child(row)
+	var shell: Dictionary = _create_party_row_shell()
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
 
 	var info_box: VBoxContainer = VBoxContainer.new()
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1050,33 +1252,27 @@ func _build_my_party_invite_row(item_variant: Variant) -> Control:
 	info_box.add_child(time_label)
 
 	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
-	accept_button.custom_minimum_size = Vector2(96.0, 46.0)
+	_style_party_overlay_button(accept_button, PARTY_ACTION_BUTTON_SIZE)
 	accept_button.pressed.connect(func() -> void:
 		_accept_party_invite(int(item.get("applicationId", 0)), str(item.get("partyName", "")))
 	)
 	row.add_child(accept_button)
 
-	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "danger")
-	reject_button.custom_minimum_size = Vector2(96.0, 46.0)
+	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
+	_style_party_overlay_button(reject_button, PARTY_ACTION_BUTTON_SIZE)
 	reject_button.pressed.connect(func() -> void:
 		_confirm_reject_party_invite(int(item.get("applicationId", 0)), str(item.get("partyName", "")))
 	)
 	row.add_child(reject_button)
 
-	return panel
+	return root
 
 
 func _build_my_party_review_row(item_variant: Variant) -> Control:
 	var item: Dictionary = item_variant
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	margin.add_child(row)
+	var shell: Dictionary = _create_party_row_shell()
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
 
 	var info_box: VBoxContainer = VBoxContainer.new()
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1105,26 +1301,20 @@ func _build_my_party_review_row(item_variant: Variant) -> Control:
 	info_box.add_child(time_label)
 
 	var cancel_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_CANCEL, "secondary")
-	cancel_button.custom_minimum_size = Vector2(96.0, 46.0)
+	_style_party_overlay_button(cancel_button, PARTY_ACTION_BUTTON_SIZE)
 	cancel_button.pressed.connect(func() -> void:
 		_cancel_party_application(int(item.get("applicationId", 0)), str(item.get("partyName", "")))
 	)
 	row.add_child(cancel_button)
 
-	return panel
+	return root
 
 
 func _build_party_pending_invite_row(item_variant: Variant) -> Control:
 	var item: Dictionary = item_variant
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	margin.add_child(row)
+	var shell: Dictionary = _create_party_row_shell(PARTY_ROW_MIN_HEIGHT, OverlaySceneChrome.CARD_BORDER, BUTTON_BAR_TEXTURE_MEDIUM)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
 
 	var info_box: VBoxContainer = VBoxContainer.new()
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1163,28 +1353,96 @@ func _build_party_pending_invite_row(item_variant: Variant) -> Control:
 	readonly_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	row.add_child(readonly_label)
 
-	return panel
+	return root
 
 
-func _build_friend_row(item_variant: Variant) -> PanelContainer:
+func _build_party_pending_invite_overlay_row(item_variant: Variant) -> Control:
 	var item: Dictionary = item_variant
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	margin.add_child(row)
-
-	var remove_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REMOVE, "danger")
-	remove_button.custom_minimum_size = Vector2(64.0, 40.0)
-	remove_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	remove_button.pressed.connect(func() -> void:
-		_confirm_remove_friend(int(item.get("friendUserId", 0)), str(item.get("displayName", "")))
+	var shell: Dictionary = _create_party_row_shell(
+		PARTY_PENDING_INFO_ROW_MIN_HEIGHT,
+		OverlaySceneChrome.CARD_BORDER,
+		BUTTON_BAR_TEXTURE_MEDIUM,
+		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	)
-	row.add_child(remove_button)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
+
+	var left_box: VBoxContainer = VBoxContainer.new()
+	left_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	left_box.size_flags_stretch_ratio = 1.15
+	left_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	left_box.add_theme_constant_override("separation", 4)
+	row.add_child(left_box)
+
+	var counterpart_label: Label = Label.new()
+	counterpart_label.text = _party_application_counterpart_name(item)
+	_configure_party_pending_info_label(counterpart_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
+	left_box.add_child(counterpart_label)
+
+	var stage_label: Label = Label.new()
+	stage_label.text = _party_application_progress_line(item)
+	_configure_party_pending_info_label(stage_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+	left_box.add_child(stage_label)
+
+	var middle_box: VBoxContainer = VBoxContainer.new()
+	middle_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	middle_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	middle_box.size_flags_stretch_ratio = 1.0
+	middle_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	middle_box.add_theme_constant_override("separation", 4)
+	row.add_child(middle_box)
+
+	var inviter_name_label: Label = Label.new()
+	inviter_name_label.text = "邀請人：%s" % _party_application_inviter_name(item)
+	_configure_party_pending_info_label(inviter_name_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
+	middle_box.add_child(inviter_name_label)
+
+	var inviter_time_label: Label = Label.new()
+	inviter_time_label.text = "邀請時間：%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+	_configure_party_pending_info_label(inviter_time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+	middle_box.add_child(inviter_time_label)
+
+	var right_box: VBoxContainer = VBoxContainer.new()
+	right_box.custom_minimum_size = Vector2(110.0, 0.0)
+	right_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	right_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_child(right_box)
+
+	var status_label: Label = Label.new()
+	status_label.text = "\u5f85\u5c0d\u65b9\u56de\u61c9"
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_configure_party_pending_info_label(status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	right_box.add_child(status_label)
+
+	return root
+
+
+func _build_friend_row(item_variant: Variant) -> Control:
+	var item: Dictionary = item_variant
+	var shell: Dictionary
+	if _is_overlay_panel_mode():
+		shell = _create_party_row_shell(
+			PARTY_PENDING_INFO_ROW_MIN_HEIGHT,
+			OverlaySceneChrome.CARD_BORDER,
+			BUTTON_BAR_TEXTURE_MEDIUM,
+			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		)
+	else:
+		shell = _create_party_row_shell(92.0)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
+
+	if _is_overlay_panel_mode():
+		var remove_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REMOVE, "danger")
+		_style_party_overlay_button(remove_button, Vector2(72.0, 30.0))
+		remove_button.pressed.connect(func() -> void:
+			_confirm_remove_friend(int(item.get("friendUserId", 0)), str(item.get("displayName", "")))
+		)
+		row.add_child(remove_button)
 
 	var avatar_id: String = str(item.get("avatarId", "")).strip_edges()
 	var avatar_rect: TextureRect = AssetResolver.create_icon_rect(
@@ -1192,6 +1450,55 @@ func _build_friend_row(item_variant: Variant) -> PanelContainer:
 		Vector2(56.0, 56.0)
 	)
 	row.add_child(avatar_rect)
+
+	if _is_overlay_panel_mode():
+		var info_box: VBoxContainer = VBoxContainer.new()
+		info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		info_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		info_box.add_theme_constant_override("separation", 4)
+		row.add_child(info_box)
+
+		var name_label: Label = Label.new()
+		name_label.text = str(item.get("displayName", "")).strip_edges()
+		if name_label.text == "":
+			name_label.text = "\u672a\u547d\u540d\u73a9\u5bb6"
+		_configure_party_pending_info_label(name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		info_box.add_child(name_label)
+
+		var meta_label: Label = Label.new()
+		meta_label.text = "\u93df\u5c4e\u5b98 Lv.%d | %s" % [
+			int(item.get("scooperLevel", 0)),
+			_format_friend_stage_text(item.get("currentStage", 1))
+		]
+		_configure_party_pending_info_label(meta_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		info_box.add_child(meta_label)
+
+		var right_box: VBoxContainer = VBoxContainer.new()
+		right_box.custom_minimum_size = Vector2(150.0, 0.0)
+		right_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		right_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		right_box.add_theme_constant_override("separation", 4)
+		row.add_child(right_box)
+
+		var last_login_label: Label = Label.new()
+		last_login_label.text = "\u6700\u5f8c\u4e0a\u7dda\uff1a%s" % _format_last_login_text(item.get("lastLoginAtUtc", null))
+		_configure_party_pending_info_label(last_login_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		last_login_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		right_box.add_child(last_login_label)
+
+		var gift_status_label: Label = Label.new()
+		var gift_sent_today: bool = bool(item.get("giftSentToday", false))
+		gift_status_label.text = UiText.SOCIAL_FRIEND_GIFT_STATUS_SENT if gift_sent_today else UiText.SOCIAL_FRIEND_GIFT_STATUS_UNSENT
+		_configure_party_pending_info_label(
+			gift_status_label,
+			UiPalette.FONT_SIZE_LABEL,
+			OverlaySceneChrome.MUTED_TEXT_COLOR if gift_sent_today else UiPalette.BUTTON_PRIMARY_BG
+		)
+		gift_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		right_box.add_child(gift_status_label)
+
+		return root
 
 	var info_box: VBoxContainer = VBoxContainer.new()
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1237,20 +1544,30 @@ func _build_friend_row(item_variant: Variant) -> PanelContainer:
 	)
 	row.add_child(gift_status_label)
 
-	return panel
+	var remove_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REMOVE, "secondary")
+	_style_party_overlay_button(remove_button, PARTY_ACTION_BUTTON_SIZE)
+	remove_button.pressed.connect(func() -> void:
+		_confirm_remove_friend(int(item.get("friendUserId", 0)), str(item.get("displayName", "")))
+	)
+	row.add_child(remove_button)
+
+	return root
 
 
-func _build_friend_inbox_row(item_variant: Variant) -> PanelContainer:
+func _build_friend_inbox_row(item_variant: Variant) -> Control:
 	var item: Dictionary = item_variant
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	margin.add_child(row)
+	var shell: Dictionary
+	if _is_overlay_panel_mode():
+		shell = _create_party_row_shell(
+			PARTY_PENDING_INFO_ROW_MIN_HEIGHT,
+			OverlaySceneChrome.CARD_BORDER,
+			BUTTON_BAR_TEXTURE_MEDIUM,
+			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		)
+	else:
+		shell = _create_party_row_shell(92.0)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
 
 	var avatar_id: String = _friend_request_sender_avatar_id(item)
 	var avatar_rect: TextureRect = AssetResolver.create_icon_rect(
@@ -1258,6 +1575,70 @@ func _build_friend_inbox_row(item_variant: Variant) -> PanelContainer:
 		Vector2(56.0, 56.0)
 	)
 	row.add_child(avatar_rect)
+
+	if _is_overlay_panel_mode():
+		var left_box: VBoxContainer = VBoxContainer.new()
+		left_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		left_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		left_box.size_flags_stretch_ratio = 1.1
+		left_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		left_box.add_theme_constant_override("separation", 4)
+		row.add_child(left_box)
+
+		var sender_name: String = _friend_request_sender_name(item)
+		var sender_uid: String = _friend_request_sender_uid(item)
+
+		var name_label: Label = Label.new()
+		name_label.text = sender_name if sender_name != "" else sender_uid
+		_configure_party_pending_info_label(name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		left_box.add_child(name_label)
+
+		var uid_label: Label = Label.new()
+		uid_label.text = "UID %s" % sender_uid
+		_configure_party_pending_info_label(uid_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		left_box.add_child(uid_label)
+
+		var middle_box: VBoxContainer = VBoxContainer.new()
+		middle_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		middle_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		middle_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		middle_box.add_theme_constant_override("separation", 4)
+		row.add_child(middle_box)
+
+		var time_label: Label = Label.new()
+		time_label.text = "申請時間：%s" % _format_relative_datetime(_friend_request_created_at(item))
+		_configure_party_pending_info_label(time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		middle_box.add_child(time_label)
+
+		var pending_label: Label = Label.new()
+		pending_label.text = "待你回應"
+		_configure_party_pending_info_label(pending_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		middle_box.add_child(pending_label)
+
+		var action_box: HBoxContainer = HBoxContainer.new()
+		action_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		action_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		action_box.add_theme_constant_override("separation", 8)
+		row.add_child(action_box)
+
+		var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
+		_style_party_overlay_button(accept_button, PARTY_ACTION_BUTTON_SIZE)
+		accept_button.pressed.connect(func() -> void:
+			_accept_friend_request(_friend_request_id(item))
+		)
+		action_box.add_child(accept_button)
+
+		var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
+		_style_party_overlay_button(reject_button, PARTY_ACTION_BUTTON_SIZE)
+		reject_button.pressed.connect(func() -> void:
+			_confirm_reject_friend_request(
+				_friend_request_id(item),
+				sender_name
+			)
+		)
+		action_box.add_child(reject_button)
+
+		return root
 
 	var info_box: VBoxContainer = VBoxContainer.new()
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1286,14 +1667,14 @@ func _build_friend_inbox_row(item_variant: Variant) -> PanelContainer:
 	info_box.add_child(time_label)
 
 	var accept_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_ACCEPT, "confirm")
-	accept_button.custom_minimum_size = Vector2(96.0, 46.0)
+	_style_party_overlay_button(accept_button, PARTY_ACTION_BUTTON_SIZE)
 	accept_button.pressed.connect(func() -> void:
 		_accept_friend_request(_friend_request_id(item))
 	)
 	row.add_child(accept_button)
 
-	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "danger")
-	reject_button.custom_minimum_size = Vector2(96.0, 46.0)
+	var reject_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_REJECT, "secondary")
+	_style_party_overlay_button(reject_button, PARTY_ACTION_BUTTON_SIZE)
 	reject_button.pressed.connect(func() -> void:
 		_confirm_reject_friend_request(
 			_friend_request_id(item),
@@ -1302,20 +1683,23 @@ func _build_friend_inbox_row(item_variant: Variant) -> PanelContainer:
 	)
 	row.add_child(reject_button)
 
-	return panel
+	return root
 
 
-func _build_friend_outbox_row(item_variant: Variant) -> PanelContainer:
+func _build_friend_outbox_row(item_variant: Variant) -> Control:
 	var item: Dictionary = item_variant
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	margin.add_child(row)
+	var shell: Dictionary
+	if _is_overlay_panel_mode():
+		shell = _create_party_row_shell(
+			PARTY_PENDING_INFO_ROW_MIN_HEIGHT,
+			OverlaySceneChrome.CARD_BORDER,
+			BUTTON_BAR_TEXTURE_MEDIUM,
+			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		)
+	else:
+		shell = _create_party_row_shell(92.0)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
 
 	var avatar_id: String = _friend_request_receiver_avatar_id(item)
 	var avatar_rect: TextureRect = AssetResolver.create_icon_rect(
@@ -1323,6 +1707,55 @@ func _build_friend_outbox_row(item_variant: Variant) -> PanelContainer:
 		Vector2(56.0, 56.0)
 	)
 	row.add_child(avatar_rect)
+
+	if _is_overlay_panel_mode():
+		var left_box: VBoxContainer = VBoxContainer.new()
+		left_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		left_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		left_box.size_flags_stretch_ratio = 1.1
+		left_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		left_box.add_theme_constant_override("separation", 4)
+		row.add_child(left_box)
+
+		var receiver_name: String = _friend_request_receiver_name(item)
+		var receiver_uid: String = _friend_request_receiver_uid(item)
+
+		var name_label: Label = Label.new()
+		name_label.text = receiver_name if receiver_name != "" else receiver_uid
+		_configure_party_pending_info_label(name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		left_box.add_child(name_label)
+
+		var uid_label: Label = Label.new()
+		uid_label.text = "UID %s" % receiver_uid
+		_configure_party_pending_info_label(uid_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		left_box.add_child(uid_label)
+
+		var middle_box: VBoxContainer = VBoxContainer.new()
+		middle_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		middle_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		middle_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		middle_box.add_theme_constant_override("separation", 4)
+		row.add_child(middle_box)
+
+		var time_label: Label = Label.new()
+		time_label.text = "申請時間：%s" % _format_relative_datetime(_friend_request_created_at(item))
+		_configure_party_pending_info_label(time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
+		middle_box.add_child(time_label)
+
+		var status_label: Label = Label.new()
+		status_label.text = "狀態：%s" % _friend_request_status_text(int(item.get("status", 0)))
+		_configure_party_pending_info_label(status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
+		middle_box.add_child(status_label)
+
+		if int(item.get("status", 0)) == 0:
+			var cancel_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_CANCEL, "secondary")
+			_style_party_overlay_button(cancel_button, PARTY_ACTION_BUTTON_SIZE)
+			cancel_button.pressed.connect(func() -> void:
+				_cancel_friend_request(_friend_request_id(item))
+			)
+			row.add_child(cancel_button)
+
+		return root
 
 	var info_box: VBoxContainer = VBoxContainer.new()
 	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1358,13 +1791,13 @@ func _build_friend_outbox_row(item_variant: Variant) -> PanelContainer:
 
 	if int(item.get("status", 0)) == 0:
 		var cancel_button: Button = _make_action_button(UiText.SOCIAL_FRIEND_CANCEL, "secondary")
-		cancel_button.custom_minimum_size = Vector2(96.0, 46.0)
+		_style_party_overlay_button(cancel_button, PARTY_ACTION_BUTTON_SIZE)
 		cancel_button.pressed.connect(func() -> void:
 			_cancel_friend_request(_friend_request_id(item))
 		)
 		row.add_child(cancel_button)
 
-	return panel
+	return root
 
 
 func _build_party_input_card(
@@ -1374,12 +1807,10 @@ func _build_party_input_card(
 	button_text: String,
 	button_kind: String,
 	submit_handler: Callable
-) -> PanelContainer:
-	var card: PanelContainer = OverlaySceneChrome.make_card_panel()
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
-	card.add_child(margin)
+) -> Control:
+	var shell: Dictionary = _create_party_item_shell(168.0)
+	var card: Control = shell.get("root") as Control
+	var margin: Control = shell.get("content") as Control
 
 	var box: VBoxContainer = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
@@ -1523,28 +1954,35 @@ func _party_application_status_text(status: int) -> String:
 			return "\u672a\u77e5"
 
 
-func _build_party_member_row(member_variant: Variant) -> PanelContainer:
+func _build_party_member_row(member_variant: Variant) -> Control:
 	var member: Dictionary = member_variant
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var shell: Dictionary = _create_party_row_shell(PARTY_ROW_MIN_HEIGHT)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
 
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
+	var info_box: VBoxContainer = VBoxContainer.new()
+	info_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info_box.add_theme_constant_override("separation", 4)
+	row.add_child(info_box)
 
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	margin.add_child(row)
-
+	var member_name: String = str(member.get("displayName", "")).strip_edges()
 	var name_label: Label = Label.new()
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.text = "%s / %s" % [
-		str(member.get("displayName", "")),
-		UiText.SOCIAL_PARTY_ROLE_LEADER if bool(member.get("isLeader", false)) else UiText.SOCIAL_PARTY_ROLE_MEMBER
-	]
-	row.add_child(name_label)
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.text = member_name if member_name != "" else "\u672a\u547d\u540d\u73a9\u5bb6"
+	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	info_box.add_child(name_label)
+
+	if _is_current_player_member(member):
+		var current_player_label: Label = Label.new()
+		current_player_label.text = "\u4f60"
+		current_player_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+		current_player_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		info_box.add_child(current_player_label)
 
 	if _is_party_leader() and not _is_current_player_member(member):
-		var member_name: String = str(member.get("displayName", ""))
 		var transfer_button: Button = _make_action_button(UiText.SOCIAL_PARTY_TRANSFER, "rank")
 		transfer_button.custom_minimum_size = Vector2(132.0, 46.0)
 		transfer_button.pressed.connect(func() -> void:
@@ -1559,7 +1997,264 @@ func _build_party_member_row(member_variant: Variant) -> PanelContainer:
 		)
 		row.add_child(kick_button)
 
-	return panel
+	return root
+
+
+func _build_party_member_slots(members: Array) -> Array[Dictionary]:
+	var slots: Array[Dictionary] = []
+	var leader_member: Dictionary = {}
+	var team_members: Array[Dictionary] = []
+
+	for member_variant: Variant in members:
+		if not (member_variant is Dictionary):
+			continue
+		var member: Dictionary = (member_variant as Dictionary).duplicate(true)
+		if bool(member.get("isLeader", false)) and leader_member.is_empty():
+			leader_member = member
+			continue
+		team_members.append(member)
+
+	slots.append({
+		"slot_label": "\u968a\u9577",
+		"member": leader_member,
+	})
+
+	for index: int in range(4):
+		var member: Dictionary = team_members[index] if index < team_members.size() else {}
+		slots.append({
+			"slot_label": "\u968a\u54e1 %d" % [index + 1],
+			"member": member,
+		})
+
+	return slots
+
+
+func _build_party_member_slot_row(slot_label: String, member: Dictionary) -> Control:
+	var shell: Dictionary = _create_party_row_shell(PARTY_ROW_MIN_HEIGHT)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
+	var is_empty: bool = member.is_empty()
+	var is_self: bool = not is_empty and _is_current_player_member(member)
+	var can_manage_member: bool = not is_empty and _is_party_leader() and not is_self and not bool(member.get("isLeader", false))
+	var member_name: String = str(member.get("displayName", "")).strip_edges()
+	var can_invite_into_slot: bool = is_empty and slot_label != "\u968a\u9577"
+
+	var name_label: Label = Label.new()
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.text = "%s：%s" % [
+		slot_label,
+		member_name if member_name != "" else "空位"
+	]
+	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	name_label.add_theme_color_override(
+		"font_color",
+		OverlaySceneChrome.MUTED_TEXT_COLOR if is_empty else OverlaySceneChrome.TITLE_TEXT_COLOR
+	)
+	row.add_child(name_label)
+
+	if is_self:
+		var leave_button: Button = _make_action_button(_get_party_exit_button_text(), "danger")
+		_style_party_overlay_button(leave_button, PARTY_ACTION_BUTTON_SIZE)
+		leave_button.pressed.connect(_on_party_exit_pressed)
+		row.add_child(leave_button)
+		return root
+
+	if can_invite_into_slot:
+		var invite_button: Button = _make_action_button(UiText.SOCIAL_PARTY_INVITE, "confirm")
+		_style_party_overlay_button(invite_button, PARTY_ACTION_BUTTON_SIZE)
+		invite_button.pressed.connect(_open_invite_party_dialog)
+		row.add_child(invite_button)
+		return root
+
+	if can_manage_member:
+		var action_box: HBoxContainer = HBoxContainer.new()
+		action_box.size_flags_horizontal = Control.SIZE_SHRINK_END
+		action_box.alignment = BoxContainer.ALIGNMENT_END
+		action_box.add_theme_constant_override("separation", 6)
+		row.add_child(action_box)
+
+		var transfer_button: Button = _make_action_button(UiText.SOCIAL_PARTY_TRANSFER, "secondary")
+		_style_party_overlay_button(transfer_button, PARTY_ACTION_BUTTON_SIZE)
+		transfer_button.pressed.connect(func() -> void:
+			_confirm_transfer_party(int(member.get("userId", 0)), member_name)
+		)
+		action_box.add_child(transfer_button)
+
+		var kick_button: Button = _make_action_button(UiText.SOCIAL_PARTY_KICK, "secondary")
+		_style_party_overlay_button(kick_button, PARTY_ACTION_BUTTON_SIZE)
+		kick_button.pressed.connect(func() -> void:
+			_confirm_kick_party_member(int(member.get("userId", 0)), member_name)
+		)
+		action_box.add_child(kick_button)
+
+	return root
+
+
+func _make_party_section_box(
+	host: VBoxContainer,
+	title_text: String,
+	desc_text: String = "",
+	accent: Color = OverlaySceneChrome.PANEL_BORDER
+) -> VBoxContainer:
+	var box: VBoxContainer = VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 12)
+	if _is_overlay_panel_mode():
+		host.add_child(box)
+	else:
+		var card: PanelContainer = OverlaySceneChrome.make_card_panel(accent)
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		host.add_child(card)
+
+		var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
+		card.add_child(margin)
+		margin.add_child(box)
+
+	if title_text != "":
+		if _is_overlay_panel_mode():
+			var title_margin: MarginContainer = MarginContainer.new()
+			title_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			title_margin.add_theme_constant_override("margin_left", 30)
+			title_margin.add_theme_constant_override("margin_right", 30)
+			box.add_child(title_margin)
+
+			var title: Label = Label.new()
+			title.text = title_text
+			title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+			title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+			title_margin.add_child(title)
+		else:
+			var title: Label = Label.new()
+			title.text = title_text
+			title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
+			title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+			box.add_child(title)
+
+	if desc_text != "":
+		if _is_overlay_panel_mode():
+			var desc_margin: MarginContainer = MarginContainer.new()
+			desc_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			desc_margin.add_theme_constant_override("margin_left", 30)
+			desc_margin.add_theme_constant_override("margin_right", 30)
+			box.add_child(desc_margin)
+
+			var desc: Label = Label.new()
+			desc.text = desc_text
+			desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+			desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+			desc_margin.add_child(desc)
+		else:
+			var desc: Label = Label.new()
+			desc.text = desc_text
+			desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+			desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+			box.add_child(desc)
+
+	if _is_overlay_panel_mode() and title_text != "":
+		var separator_margin: MarginContainer = MarginContainer.new()
+		separator_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		separator_margin.add_theme_constant_override("margin_left", 30)
+		separator_margin.add_theme_constant_override("margin_right", 30)
+		box.add_child(separator_margin)
+
+		var separator: ColorRect = ColorRect.new()
+		separator.color = OverlaySceneChrome.PANEL_BORDER
+		separator.custom_minimum_size = Vector2(0.0, 1.0)
+		separator.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		separator_margin.add_child(separator)
+
+	return box
+
+
+func _create_party_item_shell(
+	min_height: float = PARTY_ROW_MIN_HEIGHT,
+	accent: Color = OverlaySceneChrome.CARD_BORDER,
+	texture: Texture2D = BUTTON_BAR_TEXTURE,
+	texture_stretch_mode: int = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+) -> Dictionary:
+	if _is_overlay_panel_mode():
+		var shell: Control = Control.new()
+		shell.custom_minimum_size = Vector2(0.0, min_height)
+		shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		var background: TextureRect = TextureRect.new()
+		background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		background.texture = texture
+		background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		background.stretch_mode = texture_stretch_mode
+		shell.add_child(background)
+
+		var margin: MarginContainer = MarginContainer.new()
+		margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		margin.add_theme_constant_override("margin_left", 30)
+		margin.add_theme_constant_override("margin_top", 16)
+		margin.add_theme_constant_override("margin_right", 30)
+		margin.add_theme_constant_override("margin_bottom", 16)
+		shell.add_child(margin)
+
+		return {
+			"root": shell,
+			"content": margin,
+		}
+
+	var panel: PanelContainer = OverlaySceneChrome.make_card_panel(accent)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var panel_margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
+	panel.add_child(panel_margin)
+
+	return {
+		"root": panel,
+		"content": panel_margin,
+	}
+
+
+func _create_party_row_shell(
+	min_height: float = PARTY_ROW_MIN_HEIGHT,
+	accent: Color = OverlaySceneChrome.CARD_BORDER,
+	texture: Texture2D = BUTTON_BAR_TEXTURE,
+	texture_stretch_mode: int = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+) -> Dictionary:
+	var shell: Dictionary = _create_party_item_shell(min_height, accent, texture, texture_stretch_mode)
+	var content: Control = shell.get("content") as Control
+	var row: HBoxContainer = HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	content.add_child(row)
+	shell["row"] = row
+	return shell
+
+
+func _build_party_info_item(label_text: String, value_text: String) -> Control:
+	var shell: Dictionary = _create_party_item_shell(86.0)
+	var content: Control = shell.get("content") as Control
+	var box: VBoxContainer = VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 2)
+	content.add_child(box)
+
+	var label: Label = Label.new()
+	label.text = label_text
+	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	box.add_child(label)
+
+	var value: Label = Label.new()
+	value.text = value_text if value_text.strip_edges() != "" else "-"
+	value.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	value.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	value.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	box.add_child(value)
+
+	return shell.get("root") as Control
 
 
 func _make_action_button(text_value: String, kind: String) -> Button:
@@ -1570,6 +2265,81 @@ func _make_action_button(text_value: String, kind: String) -> Button:
 	button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	UiPalette.apply_button_kind(button, kind)
 	return button
+
+
+func _style_party_overlay_button(button: Button, size: Vector2, font_size: int = UiPalette.FONT_SIZE_SMALL) -> void:
+	button.custom_minimum_size = size
+	button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	button.add_theme_font_size_override("font_size", font_size)
+
+
+func _configure_party_pending_info_label(label: Label, font_size: int, color: Color) -> void:
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+
+
+func _make_vertical_spacer(height: float) -> Control:
+	var spacer: Control = Control.new()
+	spacer.custom_minimum_size = Vector2(0.0, height)
+	return spacer
+
+
+func _party_application_counterpart_name(item: Dictionary) -> String:
+	var name: String = _first_nonempty_string([
+		item.get("applicantDisplayName", ""),
+		item.get("applicantPlayerName", ""),
+		item.get("displayName", ""),
+		item.get("playerName", ""),
+		item.get("targetDisplayName", ""),
+		item.get("targetPlayerName", ""),
+		item.get("receiverDisplayName", ""),
+		item.get("receiverPlayerName", ""),
+	])
+	return name if name != "" else "未命名玩家"
+
+
+func _party_application_inviter_name(item: Dictionary) -> String:
+	var inviter_name: String = _first_nonempty_string([
+		item.get("inviterDisplayName", ""),
+		item.get("leaderDisplayName", ""),
+		item.get("partyLeaderDisplayName", ""),
+	])
+	return inviter_name if inviter_name != "" else "隊伍成員"
+
+
+func _party_application_scooper_level_text(item: Dictionary) -> String:
+	for key: String in ["scooperLevel", "applicantScooperLevel", "targetScooperLevel", "receiverScooperLevel"]:
+		if item.has(key):
+			var level: int = int(item.get(key, 0))
+			if level > 0:
+				return "Lv.%d" % level
+	return "-"
+
+
+func _party_application_stage_text(item: Dictionary) -> String:
+	for key: String in ["currentStage", "applicantCurrentStage", "targetCurrentStage", "receiverCurrentStage"]:
+		if item.has(key):
+			var stage_value: int = int(item.get(key, 0))
+			if stage_value > 0:
+				return _format_friend_stage_text(stage_value)
+	return "推關 -"
+
+
+func _party_application_progress_line(item: Dictionary) -> String:
+	var scooper_level_text: String = _party_application_scooper_level_text(item)
+	var stage_text: String = "關卡 -"
+	for key: String in ["currentStage", "applicantCurrentStage", "targetCurrentStage", "receiverCurrentStage"]:
+		if item.has(key):
+			var stage_value: int = int(item.get(key, 0))
+			if stage_value > 0:
+				stage_text = _format_friend_stage_text(stage_value)
+				break
+	return "鏟屎官%s | %s" % [scooper_level_text, stage_text]
 
 
 func _make_empty_label(text_value: String) -> Label:
@@ -2227,15 +2997,9 @@ func _render_invite_party_candidates(dialog_state: Dictionary, candidates: Array
 
 
 func _build_invite_party_candidate_row(dialog_state: Dictionary, candidate: Dictionary) -> Control:
-	var panel: PanelContainer = OverlaySceneChrome.make_card_panel()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	margin.add_child(row)
+	var shell: Dictionary = _create_party_row_shell(108.0)
+	var row: HBoxContainer = shell.get("row") as HBoxContainer
+	var root: Control = shell.get("root") as Control
 
 	var avatar_id: String = str(candidate.get("avatarId", "")).strip_edges()
 	var avatar_rect: TextureRect = AssetResolver.create_icon_rect(
@@ -2283,7 +3047,7 @@ func _build_invite_party_candidate_row(dialog_state: Dictionary, candidate: Dict
 	)
 	row.add_child(invite_button)
 
-	return panel
+	return root
 
 
 func _invite_party_candidate(dialog_state: Dictionary, candidate: Dictionary) -> void:
@@ -2668,8 +3432,7 @@ func _build_party_cheer_button() -> Button:
 	else:
 		button = _make_action_button("%s(0/1)" % UiText.SOCIAL_PARTY_AD_CHEER, "secondary")
 		button.disabled = true
-	button.custom_minimum_size = Vector2(220.0, 52.0)
-	button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_style_party_overlay_button(button, PARTY_CHEER_BUTTON_SIZE)
 	RedDotService.refresh_dot(button, RedDotService.has_party_free_cheer_red_dot())
 	return button
 
