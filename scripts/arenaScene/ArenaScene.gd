@@ -869,9 +869,7 @@ func _apply_reward_slot(slot: Control, reward_entry: Dictionary) -> void:
 	var name_label: Label = slot.get_node("ItemNameLabel") as Label
 	var qty_label: Label = slot.get_node("CountLabel") as Label
 
-	var texture: Texture2D = AssetResolver.load_texture(
-		AssetResolver.resolve_catalog_path(str(reward_entry.get("path", "")))
-	)
+	var texture: Texture2D = AssetResolver.resolve_catalog_texture(str(reward_entry.get("path", "")))
 	if texture != null:
 		icon.texture = texture
 		icon.visible = true

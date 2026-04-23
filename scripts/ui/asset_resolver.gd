@@ -6,6 +6,9 @@ const BACKGROUND_SHADER := preload("res://scripts/ui/background_desaturate_shade
 const DEFAULT_PROFILE_AVATAR_ID := "black_cat"
 const CAT_CARD_FRAME := UI_ROOT + "cards/cat_card_frame_homey_v1.png"
 const CAT_CARD_EMPTY_SILHOUETTE := UI_ROOT + "cards/cat_card_empty_silhouette_v1.png"
+const DEFAULT_ICON_PLACEHOLDER_PATH := CAT_CARD_EMPTY_SILHOUETTE
+const DEFAULT_BACKGROUND_SLOT := "activity"
+const DEFAULT_GACHA_FRAME_KEY := "common"
 const CAT_CARD_SQUARE_FRAMES := {
 	"common": UI_ROOT + "cards/square/cat_card_square_common.png",
 	"uncommon": UI_ROOT + "cards/square/cat_card_square_common.png",
@@ -253,7 +256,7 @@ const SHOP_BUNDLES := {
 static func make_fullscreen_background(slot: String) -> TextureRect:
 	var background := TextureRect.new()
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	background.texture = load_texture(BACKGROUNDS.get(slot, ""))
+	background.texture = resolve_background_texture(slot)
 	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -276,6 +279,36 @@ static func load_texture(path: String) -> Texture2D:
 		return null
 	var texture := load(path)
 	return texture as Texture2D
+
+
+static func resolve_background_texture(slot: String) -> Texture2D:
+	var resolved_slot: String = slot.strip_edges().to_lower()
+	var texture: Texture2D = load_texture(str(BACKGROUNDS.get(resolved_slot, "")))
+	if texture != null:
+		return texture
+	return load_texture(str(BACKGROUNDS.get(DEFAULT_BACKGROUND_SLOT, "")))
+
+
+static func resolve_placeholder_icon() -> Texture2D:
+	return load_texture(DEFAULT_ICON_PLACEHOLDER_PATH)
+
+
+static func resolve_texture_or_placeholder(path: String) -> Texture2D:
+	var texture: Texture2D = load_texture(path)
+	if texture != null:
+		return texture
+	return resolve_placeholder_icon()
+
+
+static func resolve_catalog_texture(raw_path: Variant) -> Texture2D:
+	return resolve_texture_or_placeholder(resolve_catalog_path(raw_path))
+
+
+static func resolve_preview_texture(path: String, fallback_slot: String = DEFAULT_BACKGROUND_SLOT) -> Texture2D:
+	var texture: Texture2D = load_texture(path)
+	if texture != null:
+		return texture
+	return resolve_background_texture(fallback_slot)
 
 
 static func resolve_catalog_path(raw_path: Variant) -> String:
@@ -317,7 +350,7 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 
 
 static func resolve_cat_icon(cat_id: String) -> Texture2D:
-	return load_texture(CAT_ICONS.get(cat_id, ""))
+	return resolve_texture_or_placeholder(str(CAT_ICONS.get(cat_id, "")))
 
 
 static func get_profile_avatar_ids() -> Array[String]:
@@ -407,19 +440,23 @@ static func resolve_gacha_frame(result: Dictionary) -> Texture2D:
 	var rarity_key := str(result.get("rarityKey", "")).to_lower()
 	if rarity_key == "":
 		rarity_key = str(result.get("rarityType", "")).to_lower()
-	return load_texture(GACHA_FRAMES.get(rarity_key, ""))
+	var frame_path: String = str(GACHA_FRAMES.get(rarity_key, GACHA_FRAMES.get(DEFAULT_GACHA_FRAME_KEY, "")))
+	var frame_texture: Texture2D = load_texture(frame_path)
+	if frame_texture != null:
+		return frame_texture
+	return load_texture(str(GACHA_FRAMES.get(DEFAULT_GACHA_FRAME_KEY, "")))
 
 
 static func resolve_equipment_icon(item: Dictionary) -> Texture2D:
-	return load_texture(SCOOPER_EQUIPMENT.get(int(item.get("equipmentId", 0)), ""))
+	return resolve_texture_or_placeholder(str(SCOOPER_EQUIPMENT.get(int(item.get("equipmentId", 0)), "")))
 
 
 static func resolve_ability_icon(item: Dictionary) -> Texture2D:
-	return load_texture(SCOOPER_ABILITIES.get(int(item.get("abilityId", 0)), ""))
+	return resolve_texture_or_placeholder(str(SCOOPER_ABILITIES.get(int(item.get("abilityId", 0)), "")))
 
 
 static func resolve_bundle_art(bundle: Dictionary) -> Texture2D:
-	return load_texture(SHOP_BUNDLES.get(int(bundle.get("bundleId", 0)), ""))
+	return resolve_texture_or_placeholder(str(SHOP_BUNDLES.get(int(bundle.get("bundleId", 0)), "")))
 
 
 static func resolve_cat_card_frame() -> Texture2D:

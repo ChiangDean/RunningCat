@@ -446,9 +446,7 @@ func _parse_reward_display(value: Variant) -> Dictionary:
 
 
 func _resolve_reward_texture(icon_path: String) -> Texture2D:
-	if icon_path == "":
-		return null
-	return AssetResolver.load_texture(AssetResolver.resolve_catalog_path(icon_path))
+	return AssetResolver.resolve_catalog_texture(icon_path)
 
 
 func _format_achievement_text(value: Variant) -> String:

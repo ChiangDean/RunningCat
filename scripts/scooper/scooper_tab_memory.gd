@@ -93,7 +93,7 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	preview_bg.color = accent
 
 	var photo_path: String = AssetResolver.resolve_catalog_path(item.get("imagePath", ""))
-	var texture: Texture2D = AssetResolver.load_texture(photo_path)
+	var texture: Texture2D = AssetResolver.resolve_preview_texture(photo_path, "scooper")
 	preview_image.texture = texture
 	preview_image.visible = texture != null
 

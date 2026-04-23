@@ -128,9 +128,9 @@ static func resolve_rank_texture(image_path: Variant, rank_key: Variant) -> Text
 		return badge_texture
 
 	var normalized_rank_key: String = str(rank_key if rank_key != null else "").strip_edges().to_lower()
-	if normalized_rank_key == "":
-		return null
-	return AssetResolver.load_texture("res://assets/sprites/ui/arena_ranks/%s.png" % normalized_rank_key)
+	if normalized_rank_key != "":
+		return AssetResolver.resolve_texture_or_placeholder("res://assets/sprites/ui/arena_ranks/%s.png" % normalized_rank_key)
+	return AssetResolver.resolve_placeholder_icon()
 
 
 static func resolve_cat_icon_by_catalog_id(cat_catalog_id: int) -> Texture2D:

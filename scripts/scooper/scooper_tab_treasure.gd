@@ -79,7 +79,7 @@ func _make_treasure_card(scene: Control, item: Dictionary) -> Control:
 	var qty: Label = panel.get_node("Margin/ContentCanvas/QuantityLabel") as Label
 	var desc: Label = panel.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
 	var bonus: Label = panel.get_node("Margin/ContentCanvas/BonusLabel") as Label
-	var treasure_texture: Texture2D = AssetResolver.load_texture(AssetResolver.resolve_catalog_path(item.get("imagePath", "")))
+	var treasure_texture: Texture2D = AssetResolver.resolve_catalog_texture(item.get("imagePath", ""))
 	icon_rect.texture = treasure_texture
 	icon_rect.visible = treasure_texture != null
 	title_lbl.text = str(item.get("displayName", ""))
