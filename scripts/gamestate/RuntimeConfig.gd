@@ -6,6 +6,10 @@ const LOCAL_CONFIG_PATH := "res://config/runtime_config.local.json"
 const DEFAULT_ENVIRONMENT := "Local"
 const FEATURE_FLAG_OAUTH_ENABLED := "oauth_enabled"
 const FEATURE_FLAG_PAID_SHOP_ENABLED := "paid_shop_enabled"
+const SUPPORT_EMAIL_KEY := "support_email"
+const SUPPORT_URL_KEY := "support_url"
+const PRIVACY_POLICY_URL_KEY := "privacy_policy_url"
+const ACCOUNT_DELETION_URL_KEY := "account_deletion_url"
 
 
 static func get_config() -> Dictionary:
@@ -33,6 +37,22 @@ static func is_paid_shop_enabled() -> bool:
 	return _get_feature_flag(FEATURE_FLAG_PAID_SHOP_ENABLED, true)
 
 
+static func get_support_email() -> String:
+	return _get_config_string(SUPPORT_EMAIL_KEY)
+
+
+static func get_support_url() -> String:
+	return _get_config_string(SUPPORT_URL_KEY)
+
+
+static func get_privacy_policy_url() -> String:
+	return _get_config_string(PRIVACY_POLICY_URL_KEY)
+
+
+static func get_account_deletion_url() -> String:
+	return _get_config_string(ACCOUNT_DELETION_URL_KEY)
+
+
 static func _get_feature_flag(flag_name: String, default_value: bool) -> bool:
 	var config: Dictionary = get_config()
 	var top_level_value: Variant = _read_feature_flag(config, flag_name)
@@ -43,6 +63,20 @@ static func _get_feature_flag(flag_name: String, default_value: bool) -> bool:
 	var environment_value: Variant = _read_feature_flag(environment_config, flag_name)
 	if environment_value != null:
 		return bool(environment_value)
+
+	return default_value
+
+
+static func _get_config_string(key_name: String, default_value: String = "") -> String:
+	var config: Dictionary = get_config()
+	var top_level_value: Variant = _read_config_value(config, key_name)
+	if top_level_value != null:
+		return str(top_level_value).strip_edges()
+
+	var environment_config: Dictionary = _get_active_environment_config(config)
+	var environment_value: Variant = _read_config_value(environment_config, key_name)
+	if environment_value != null:
+		return str(environment_value).strip_edges()
 
 	return default_value
 
@@ -65,6 +99,12 @@ static func _read_feature_flag(config: Dictionary, flag_name: String) -> Variant
 	if feature_flags.has(flag_name):
 		return feature_flags.get(flag_name)
 
+	return null
+
+
+static func _read_config_value(config: Dictionary, key_name: String) -> Variant:
+	if config.has(key_name):
+		return config.get(key_name)
 	return null
 
 

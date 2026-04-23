@@ -9,6 +9,7 @@
 - Prefer adding small, explicit UI state transitions instead of rewriting whole scene flows when only one stage changes.
 - The home flow now runs through `HomeShellScene` + `SceneNavigator`; keep `BattleScene` persistent there and open home subpages as overlays instead of replacing the battle scene with `change_scene_to_file(...)`.
 - Runtime API config is environment-specific: CI generates `config/runtime_config.json`, while local development may override with ignored `config/runtime_config.local.json`.
+- Static support / privacy / account-deletion Pages content lives under `site/`; when deploy workflows export the Web build, they must also copy `site/` into `build/web/` so GitHub Pages keeps the game build and legal pages under the same published site.
 - Persistent local runtime data such as login session and player save files must use `user://`, not `res://`.
 - Treat auth/session `roleType`, `role`, and `permissions` as explicit API string contract values. Do not infer frontend authority from numeric enum ordering.
 - Preserve original file encoding when editing client files with Chinese text. Treat repo GDScript/docs as `UTF-8`, and avoid shell rewrite flows that can re-encode text into mojibake such as `é...`, `?��`, or corrupted `%` lines.

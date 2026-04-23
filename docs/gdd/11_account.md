@@ -10,6 +10,8 @@
 | OAuth 建號規則 | 首次第三方登入成功後，必須先輸入 `playerName` 才會建立帳號 |
 | 綁定管理 | 設定中心可顯示目前登入方式、已綁定方式、綁定 / 解除綁定 |
 | 登出入口 | `StartScene` 與 `ConfigScene` 都可安全登出 |
+| 支援 / 法規入口 | `ConfigScene` 提供 `support email`、支援頁面、隱私政策、刪帳頁面入口 |
+| 自助刪帳號 | `ConfigScene` 可直接呼叫 `DELETE /api/profile/me` 停用帳號並撤銷 refresh token |
 
 ## StartScene 流程
 
@@ -63,8 +65,10 @@
 
 - 帳號識別資訊
 - `Google` / `Apple` / `LINE` 三張 provider 卡片
+- `support email`、支援頁面、隱私政策、刪帳頁面入口
 - 目前登入方式
 - 安全登出按鈕
+- 刪除帳號按鈕
 
 provider 卡片規則：
 
@@ -85,6 +89,14 @@ provider 卡片規則：
 - 若解除的是目前 session 使用的登入方式，後端會撤銷當前 refresh token
 - client 收到成功後會立即清除本地 session，並回到登入頁
 - 若解除的不是目前登入方式，只更新 `linkedProviders`
+
+## 帳號刪除流程
+
+- client 會在 `ConfigScene` 顯示危險操作確認 Dialog。
+- 確認後呼叫 `DELETE /api/profile/me`。
+- 後端會把 `account_user` 標記為 `IsDeleted = true`、`StatusType = Deleted`、寫入 `DeletedAtUtc`，並撤銷該帳號所有尚未撤銷的 refresh token。
+- client 收到成功後顯示完成提示，並清除本地 session / 玩家快取後回到登入頁。
+- 若營運另外提供 web 刪帳頁，client 也可以透過 runtime config 顯示外部連結。
 
 ## 多裝置登入行為
 

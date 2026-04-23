@@ -1,5 +1,9 @@
 {
   "api_base_url": "http://localhost:5000/api",
+  "support_email": "",
+  "support_url": "https://chiangdean.github.io/MeowPartyDashClient/support/",
+  "privacy_policy_url": "https://chiangdean.github.io/MeowPartyDashClient/privacy/",
+  "account_deletion_url": "https://chiangdean.github.io/MeowPartyDashClient/account-deletion/",
   "feature_flags": {
     "oauth_enabled": true,
     "paid_shop_enabled": true
