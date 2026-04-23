@@ -42,14 +42,7 @@ var _tab_content: VBoxContainer
 var _resource_label: Label
 
 var _level_label: Label
-var _exp_bar: ProgressBar
 var _exp_label: Label
-var _scoop_button: Button
-var _scoop_overlay: ColorRect
-var _scoop_cd_label: Label
-var _scoop_result_label: Label
-const SCOOP_COOLDOWN := 0.5
-var _scoop_cooldown_remaining: float = 0.0
 var _equipment_upgrade_cooldown_remaining: float = 0.0
 var _equipment_action_cooldown_remaining: float = 0.0
 var _equipment_action_cooldown_duration: float = 0.5
@@ -179,12 +172,7 @@ func _rebuild_tab_content() -> void:
 	for child in _tab_content.get_children():
 		child.queue_free()
 	_level_label = null
-	_exp_bar = null
 	_exp_label = null
-	_scoop_button = null
-	_scoop_overlay = null
-	_scoop_cd_label = null
-	_scoop_result_label = null
 	_equipment_cooldown_nodes.clear()
 	_ability_list = null
 	_equip_list = null
