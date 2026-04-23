@@ -732,7 +732,7 @@ func _get_current_opponent_ids() -> Array:
 
 
 func _purchase_tickets_confirmed() -> void:
-	ApiClient.purchase_arena_tickets(_on_purchase_tickets_completed)
+	ApiClient.purchase_arena_tickets(1, _on_purchase_tickets_completed)
 
 
 func _on_purchase_tickets_completed(success: bool, data: Variant, error: Dictionary) -> void:

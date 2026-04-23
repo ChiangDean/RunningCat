@@ -86,7 +86,7 @@ ItemCard (PanelContainer)                  make_card_panel(accent)
 | 收益券(1小時) | `get_party_cheer_coupon_count()` | `catalog/consumable/party_cheer_coupon` |
 | 各地下城門票 | `dungeon_overview_data[i].remainingTicketCount` | `catalog/dungeon/{key}` |
 
-收益券(1小時) 為固定票券項目，圖示資產解析到 `assets/sprites/ui/rewards/party_cheer_coupon.svg`。
+收益券(1小時) 為固定票券項目，圖示資產解析到 `assets/sprites/ui/rewards/party_cheer_coupon.png`。
 
 地下城門票依 `dungeon_overview_data` 陣列動態產生，displayName 直接取自資料，key 對應圖示（cat_food / diamond / whisker）。
 

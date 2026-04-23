@@ -486,8 +486,8 @@ func get_arena_overview(excluded_opponent_ids: Array, callback: Callable) -> voi
 	_api_get(path, callback)
 
 
-func purchase_arena_tickets(callback: Callable) -> void:
-	_api_post("arena/tickets/purchase", {}, callback)
+func purchase_arena_tickets(quantity: int, callback: Callable) -> void:
+	_api_post("arena/tickets/purchase", {"quantity": quantity}, callback)
 
 
 func claim_arena_rank_reward(rank_id: int, callback: Callable) -> void:
