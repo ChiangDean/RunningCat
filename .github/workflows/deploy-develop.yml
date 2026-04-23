@@ -36,6 +36,7 @@ jobs:
           mkdir -p config
           cat > config/runtime_config.json <<EOF
           {
+            "environment": "DEV",
             "api_base_url": "$FINAL_API_BASE_URL",
             "support_email": "",
             "support_url": "$SITE_BASE_URL/support/",
