@@ -135,10 +135,7 @@ func _apply_season_reset() -> void:
 		score = 300
 	else:
 		score = 0
-	claimed_rank_rewards = claimed_rank_rewards.filter(
-		func(key: String) -> bool:
-			return ArenaRankSystem.rank_key_to_min_score(key) >= score
-	)
+	claimed_rank_rewards = claimed_rank_rewards.filter(Callable(self, "_should_keep_claimed_rank_reward"))
 
 
 func flush_to_leaderboard() -> void:
@@ -200,3 +197,7 @@ func _to_dict() -> Dictionary:
 		"season_end_date": season_end_date,
 		"defense_snapshot": defense_snapshot,
 	}
+
+
+func _should_keep_claimed_rank_reward(key: String) -> bool:
+	return ArenaRankSystem.rank_key_to_min_score(key) >= score

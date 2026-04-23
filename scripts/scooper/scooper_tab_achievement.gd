@@ -1,7 +1,5 @@
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/achievement/ScooperAchievementCardTemplate.tscn")
 
 

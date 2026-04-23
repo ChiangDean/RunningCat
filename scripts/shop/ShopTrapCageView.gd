@@ -91,12 +91,18 @@ func _build_offer_card(offer: Dictionary) -> Control:
 
 func _confirm_purchase(count: int, cost: int) -> void:
 	var message := "\u662f\u5426\u82b1\u8cbb %s \u947d\u77f3\u8cfc\u8cb7\u8a98\u6355\u7c60 x%s\uff1f" % [GameState.format_number(cost), GameState.format_number(count)]
-	DialogManager.show_confirm("\u8cfc\u8cb7\u8a98\u6355\u7c60", message, func() -> void:
-		_api_client.purchase_trap_cages(count, _on_purchase_completed)
+	DialogManager.show_confirm(
+		"\u8cfc\u8cb7\u8a98\u6355\u7c60",
+		message,
+		Callable(self, "_execute_trap_cage_purchase").bind(count)
 	)
 
 
-func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> void:
+func _execute_trap_cage_purchase(count: int) -> void:
+	_api_client.purchase_trap_cages(count, _on_purchase_completed)
+
+
+func _on_purchase_completed(success: bool, _data: Variant, error: Dictionary) -> void:
 	if not success:
 		ToastManager.error("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u8a98\u6355\u7c60\u5931\u6557\u3002"))
 		return

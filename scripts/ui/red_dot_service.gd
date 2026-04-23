@@ -1,7 +1,6 @@
 class_name RedDotService
 extends RefCounted
 
-const BadgeOverlay = preload("res://scripts/ui/badge_overlay.gd")
 const PlayerCatDataRef = preload("res://scripts/data/cats/player_cat_data.gd")
 
 
@@ -197,7 +196,7 @@ static func has_expedition_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null:
 		return false
-	var now_unix: int = Time.get_unix_time_from_system()
+	var now_unix: int = int(Time.get_unix_time_from_system())
 	for item_variant: Variant in game_state.expedition_data:
 		if not (item_variant is Dictionary):
 			continue

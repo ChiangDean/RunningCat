@@ -1,8 +1,6 @@
 class_name OverlaySceneChrome
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const SUBMENU_SHELL_SCENE = preload("res://scenes/ui/overlay/SubmenuShellEditor.tscn")
 
 const BOTTOM_DOCK_H := 112.0
@@ -322,8 +320,8 @@ static func _connect_shell_height_sync(
 
 static func _resolve_shell_content_bottom_offset(
 	content_root: Control,
-	frame: TextureRect,
-	submenu_root: Control,
+	_frame: TextureRect,
+	_submenu_root: Control,
 	content_top: float,
 	default_content_bottom_offset: float,
 	options: Dictionary

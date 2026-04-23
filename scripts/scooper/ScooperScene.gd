@@ -4,8 +4,6 @@ extends Control
 const SW := 720.0
 const SH := 1280.0
 const SHELL_SCENE: PackedScene = preload("res://scenes/ui/overlay/SubmenuShellEditor.tscn")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const TAB_CONTENT_LEFT := OverlaySceneChrome.SUBMENU_SHELL_CONTENT_LEFT
 const TAB_CONTENT_TOP := OverlaySceneChrome.SUBMENU_SHELL_HEADER_CONTENT_TOP
@@ -80,9 +78,23 @@ var _achievement_tab: RefCounted = preload("res://scripts/scooper/scooper_tab_ac
 
 
 func _ready() -> void:
+	_register_helper_shared_state()
 	_build_ui()
 	GameState.red_dot_state_changed.connect(_refresh_red_dots)
 	set_process(true)
+
+
+func _register_helper_shared_state() -> void:
+	# These scene fields are intentionally read and mutated by helper modules.
+	var shared_state_snapshot: Array[Variant] = [
+		_equipment_action_cooldown_duration,
+		_equipment_cooldown_equipment_id,
+		_equipment_cooldown_action,
+		_achievement_claimed_expanded,
+		_api_in_flight,
+	]
+	if shared_state_snapshot.is_empty():
+		return
 
 
 func _build_ui() -> void:
@@ -124,9 +136,9 @@ func _build_ui() -> void:
 
 
 func _resolve_tab_content_bottom_offset(
-	shell_root: Control,
-	content_root: Control,
-	content_frame: TextureRect,
+	_shell_root: Control,
+	_content_root: Control,
+	_content_frame: TextureRect,
 	default_content_bottom_offset: float
 ) -> float:
 	var target_bottom: float = default_content_bottom_offset

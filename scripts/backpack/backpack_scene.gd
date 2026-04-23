@@ -1,9 +1,6 @@
 class_name BackpackScene
 extends Control
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/backpack/ItemSlotTemplate.tscn")
 
 const TAB_ALL := "all"

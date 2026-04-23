@@ -1,10 +1,6 @@
 ﻿class_name EnhanceSceneRefresh
 extends RefCounted
 
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
 
 
 static func refresh_all_labels(scene) -> void:
@@ -248,7 +244,7 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 
 		if rank >= 5:
 			var rank_lbl := Label.new()
-			rank_lbl.text = UiText.ENHANCE_SKILL_RANK_BONUS_FORMAT % [int(rank / 5)]
+			rank_lbl.text = UiText.ENHANCE_SKILL_RANK_BONUS_FORMAT % [floori(float(rank) / 5.0)]
 			rank_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
 			row.add_child(rank_lbl)
@@ -272,7 +268,7 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 
 		if rank >= 5:
 			var rank_lbl := Label.new()
-			rank_lbl.text = UiText.ENHANCE_SKILL_RANK_BONUS_FORMAT % [int(rank / 5)]
+			rank_lbl.text = UiText.ENHANCE_SKILL_RANK_BONUS_FORMAT % [floori(float(rank) / 5.0)]
 			rank_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
 			row.add_child(rank_lbl)

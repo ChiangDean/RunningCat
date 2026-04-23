@@ -105,9 +105,9 @@ func _build_ui() -> void:
 	_ui_layer.add_child(_speed_1x)
 	_ui_layer.add_child(_speed_2x)
 	_ui_layer.add_child(_speed_3x)
-	_speed_1x.pressed.connect(func() -> void: _set_speed(1.0, _speed_1x))
-	_speed_2x.pressed.connect(func() -> void: _set_speed(2.0, _speed_2x))
-	_speed_3x.pressed.connect(func() -> void: _set_speed(3.0, _speed_3x))
+	_speed_1x.pressed.connect(_on_speed_1x_pressed)
+	_speed_2x.pressed.connect(_on_speed_2x_pressed)
+	_speed_3x.pressed.connect(_on_speed_3x_pressed)
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 
@@ -312,6 +312,18 @@ func _set_speed(mult: float, active_btn: Button) -> void:
 	_highlight_speed_btn(active_btn)
 
 
+func _on_speed_1x_pressed() -> void:
+	_set_speed(1.0, _speed_1x)
+
+
+func _on_speed_2x_pressed() -> void:
+	_set_speed(2.0, _speed_2x)
+
+
+func _on_speed_3x_pressed() -> void:
+	_set_speed(3.0, _speed_3x)
+
+
 func _apply_speed_unlocks() -> void:
 	var speed_cap: float = GameState.get_special_ability_speed_cap()
 	_speed_2x.visible = speed_cap >= 2.0
@@ -375,9 +387,7 @@ func _start_battle() -> void:
 		enemy_cats.append(data)
 
 	if player_cats.is_empty() or enemy_cats.is_empty():
-		DialogManager.show_info(UiText.ARENA_DIALOG_TITLE, UiText.ARENA_BATTLE_TEAM_DATA_ERROR, func() -> void:
-			SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
-		)
+		DialogManager.show_info(UiText.ARENA_DIALOG_TITLE, UiText.ARENA_BATTLE_TEAM_DATA_ERROR, Callable(self, "_return_to_arena_scene"))
 		return
 
 	_refresh_skill_bar_names(player_cats)
@@ -400,19 +410,27 @@ func _handle_result(is_win: bool) -> void:
 		return
 	_settling = true
 
-	ApiClient.complete_arena_battle(str(_opponent.get("opponentId", "")), is_win, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_settling = false
-		if not success or not (data is Dictionary):
-			DialogManager.show_info(UiText.ARENA_SETTLE_TITLE, str(error.get("message", UiText.ARENA_SETTLE_FAILED_BODY)), func() -> void:
-				SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
-			)
-			return
-		var response: Dictionary = data
-		var overview: Dictionary = response.get("overview", {})
-		if not overview.is_empty():
-			GameState.update_arena(overview)
-		_show_result_popup(response)
+	ApiClient.complete_arena_battle(
+		str(_opponent.get("opponentId", "")),
+		is_win,
+		Callable(self, "_on_complete_arena_battle").bind(is_win)
 	)
+
+
+func _on_complete_arena_battle(success: bool, data: Variant, error: Dictionary, _is_win: bool) -> void:
+	_settling = false
+	if not success or not (data is Dictionary):
+		DialogManager.show_info(
+			UiText.ARENA_SETTLE_TITLE,
+			str(error.get("message", UiText.ARENA_SETTLE_FAILED_BODY)),
+			Callable(self, "_return_to_arena_scene")
+		)
+		return
+	var response: Dictionary = data
+	var overview: Dictionary = response.get("overview", {})
+	if not overview.is_empty():
+		GameState.update_arena(overview)
+	_show_result_popup(response)
 
 
 func _show_result_popup(response: Dictionary) -> void:
@@ -466,13 +484,20 @@ func _show_result_popup(response: Dictionary) -> void:
 	area.set_anchors_preset(Control.PRESET_FULL_RECT)
 	area.mouse_filter = Control.MOUSE_FILTER_STOP
 	_ui_layer.add_child(area)
-	area.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed:
-			area.queue_free()
-			result_overlay.queue_free()
-			popup.queue_free()
-			SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
-	)
+	area.gui_input.connect(Callable(self, "_on_result_area_gui_input").bind(area, result_overlay, popup))
+
+
+func _on_result_area_gui_input(event: InputEvent, area: ColorRect, result_overlay: Control, popup: PanelContainer) -> void:
+	if not (event is InputEventMouseButton) or not event.pressed:
+		return
+	area.queue_free()
+	result_overlay.queue_free()
+	popup.queue_free()
+	_return_to_arena_scene()
+
+
+func _return_to_arena_scene() -> void:
+	SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
 
 
 func _show_result_overlay(is_win: bool) -> Control:

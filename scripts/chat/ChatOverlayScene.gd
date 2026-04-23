@@ -1,8 +1,6 @@
 class_name ChatOverlayScene
 extends Control
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 const CHAT_SCENE := preload("res://scenes/chat/ChatScene.tscn")
 
 var _chat_view

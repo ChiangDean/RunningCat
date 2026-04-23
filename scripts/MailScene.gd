@@ -3,10 +3,6 @@ extends Control
 
 signal navigation_changed(items: Array, active_key: String)
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/backpack/ItemSlotTemplate.tscn")
 
 const SECTION_UNREAD := "unread"

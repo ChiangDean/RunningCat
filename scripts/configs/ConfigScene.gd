@@ -1,9 +1,5 @@
 extends Control
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const InertialScroller = preload("res://scripts/ui/inertial_scroll.gd")
-const RuntimeConfig = preload("res://scripts/gamestate/RuntimeConfig.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
 
 const ADMIN_CATALOG_SCENE_PATH := "res://scenes/AdminCatalogScene.tscn"
 const START_SCENE_PATH := "res://scenes/StartScene.tscn"
@@ -1481,8 +1477,8 @@ func _on_provider_action_pressed(provider_name: String, provider_key: String) ->
 		DialogManager.show_confirm(
 			"%s %s" % [ACCOUNT_PROVIDER_UNLINK_ACTION, provider_name],
 			UiText.SETTINGS_ACCOUNT_PROVIDER_UNLINK_CONFIRM_BODY_FORMAT % provider_name,
-			func() -> void: _unlink_oauth_provider(provider_name, provider_key),
-			func() -> void: pass
+			Callable(self, "_unlink_oauth_provider").bind(provider_name, provider_key),
+			Callable(self, "_noop")
 		)
 		return
 
@@ -1505,29 +1501,31 @@ func _begin_oauth_link_flow(provider_name: String, provider_key: String) -> void
 		"platformType": _get_oauth_platform_type(),
 		"deviceId": _load_or_create_device_id(),
 		"deviceName": _build_device_name(),
-	}, func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			_stop_oauth_link_flow(true)
-			ToastManager.error(provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
-			return
+	}, Callable(self, "_on_begin_oauth_link_completed").bind(provider_name))
 
-		var payload: Dictionary = data if data is Dictionary else {}
-		_oauth_link_transaction_id = str(payload.get("transactionId", "")).strip_edges()
-		var authorization_url: String = str(payload.get("authorizationUrl", "")).strip_edges()
-		if _oauth_link_transaction_id == "" or authorization_url == "":
-			_stop_oauth_link_flow(true)
-			ToastManager.error(provider_name, ACCOUNT_PROVIDER_CONFLICT)
-			return
 
-		var open_error := OS.shell_open(authorization_url)
-		if open_error != OK:
-			_stop_oauth_link_flow(true)
-			ToastManager.error(provider_name, UiText.START_STATUS_REQUEST_ERROR_FORMAT % open_error)
-			return
+func _on_begin_oauth_link_completed(success: bool, data: Variant, error: Dictionary, provider_name: String) -> void:
+	if not success:
+		_stop_oauth_link_flow(true)
+		ToastManager.error(provider_name, str(error.get("message", ACCOUNT_PROVIDER_CONFLICT)))
+		return
 
-		ToastManager.hint(ACCOUNT_PROVIDER_OAUTH_OPENED)
-		_schedule_next_oauth_link_poll()
-	)
+	var payload: Dictionary = data if data is Dictionary else {}
+	_oauth_link_transaction_id = str(payload.get("transactionId", "")).strip_edges()
+	var authorization_url: String = str(payload.get("authorizationUrl", "")).strip_edges()
+	if _oauth_link_transaction_id == "" or authorization_url == "":
+		_stop_oauth_link_flow(true)
+		ToastManager.error(provider_name, ACCOUNT_PROVIDER_CONFLICT)
+		return
+
+	var open_error: int = OS.shell_open(authorization_url)
+	if open_error != OK:
+		_stop_oauth_link_flow(true)
+		ToastManager.error(provider_name, UiText.START_STATUS_REQUEST_ERROR_FORMAT % open_error)
+		return
+
+	ToastManager.hint(ACCOUNT_PROVIDER_OAUTH_OPENED)
+	_schedule_next_oauth_link_poll()
 
 
 func _schedule_next_oauth_link_poll() -> void:
@@ -1984,8 +1982,7 @@ func _on_logout_pressed() -> void:
 		UiText.START_LOGOUT_CONFIRM_TITLE,
 		UiText.START_LOGOUT_CONFIRM_BODY,
 		Callable(self, "_begin_logout"),
-		func() -> void:
-			pass
+		Callable(self, "_noop")
 	)
 
 
@@ -2026,8 +2023,7 @@ func _on_delete_account_pressed() -> void:
 		ACCOUNT_DELETE_CONFIRM_TITLE,
 		ACCOUNT_DELETE_CONFIRM_BODY,
 		Callable(self, "_begin_delete_account"),
-		func() -> void:
-			pass
+		Callable(self, "_noop")
 	)
 
 
@@ -2058,6 +2054,10 @@ func _on_delete_account_completed(success: bool, _data: Variant, error: Dictiona
 func _finalize_logout() -> void:
 	GameState.clear_auth_and_player_state()
 	get_tree().change_scene_to_file(START_SCENE_PATH)
+
+
+func _noop() -> void:
+	pass
 
 
 func _on_redeem_pressed() -> void:
@@ -2109,12 +2109,12 @@ func _show_redeem_result(response: Dictionary) -> void:
 	DialogManager.show_info(UiText.SETTINGS_REDEEM_RESULT_TITLE, "\n".join(lines))
 
 
-func _on_audio_slider_changed(bus_key: String, value: float) -> void:
+func _on_audio_slider_changed(value: float, bus_key: String) -> void:
 	ClientSettings.set_volume(bus_key, value)
 	_refresh_audio_value_label(bus_key)
 
 
-func _on_audio_mute_toggled(bus_key: String, pressed: bool) -> void:
+func _on_audio_mute_toggled(pressed: bool, bus_key: String) -> void:
 	ClientSettings.set_muted(bus_key, pressed)
 
 

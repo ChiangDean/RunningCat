@@ -1,12 +1,6 @@
 class_name ExpeditionScene
 extends Control
 
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const UiFonts = preload("res://scripts/ui/ui_fonts.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const InertialScroller = preload("res://scripts/ui/inertial_scroll.gd")
 const CARD_TEMPLATE_SCENE = preload("res://scenes/ui/activity/expedition/ExpeditionZoneCardTemplate.tscn")
 const EXPEDITION_SUBMENU_KEY: String = "expedition"
 
@@ -89,19 +83,21 @@ func _fetch_expeditions() -> void:
 	if _is_loading:
 		return
 	_is_loading = true
-	ApiClient.get_expedition(func(ok: bool, data: Variant, err: Dictionary) -> void:
-		_is_loading = false
-		if ok and data is Dictionary:
-			var response: Dictionary = data
-			var expeditions_variant: Variant = response.get("activeExpeditions", [])
-			GameState.apply_expedition_data(expeditions_variant if expeditions_variant is Array else [])
-			_refresh_zone_cards()
-			return
+	ApiClient.get_expedition(_on_fetch_expeditions_completed)
+
+
+func _on_fetch_expeditions_completed(ok: bool, data: Variant, err: Dictionary) -> void:
+	_is_loading = false
+	if ok and data is Dictionary:
+		var response: Dictionary = data
+		var expeditions_variant: Variant = response.get("activeExpeditions", [])
+		GameState.apply_expedition_data(expeditions_variant if expeditions_variant is Array else [])
 		_refresh_zone_cards()
-		DialogManager.show_info(
-			UiText.EXPEDITION_LOAD_FAILED_TITLE,
-			str(err.get("message", UiText.EXPEDITION_LOAD_FAILED_DEFAULT))
-		)
+		return
+	_refresh_zone_cards()
+	DialogManager.show_info(
+		UiText.EXPEDITION_LOAD_FAILED_TITLE,
+		str(err.get("message", UiText.EXPEDITION_LOAD_FAILED_DEFAULT))
 	)
 
 
@@ -245,9 +241,7 @@ func _make_zone_card(zone: Dictionary) -> Control:
 		action_button.text = UiText.EXPEDITION_BTN_DEPLOY
 		action_button.disabled = _is_loading
 		UiPalette.apply_button_kind(action_button, "primary")
-		action_button.pressed.connect(func() -> void:
-			_show_cat_picker(zone)
-		)
+		action_button.pressed.connect(Callable(self, "_on_zone_deploy_pressed").bind(zone))
 		return card
 
 	var cat_id: String = str(expedition.get("catId", "")).strip_edges()
@@ -259,9 +253,7 @@ func _make_zone_card(zone: Dictionary) -> Control:
 		action_button.text = UiText.EXPEDITION_BTN_CLAIM
 		action_button.disabled = _is_loading
 		UiPalette.apply_button_kind(action_button, "primary")
-		action_button.pressed.connect(func() -> void:
-			_claim_expedition(zone_id)
-		)
+		action_button.pressed.connect(Callable(self, "_on_zone_claim_pressed").bind(zone_id))
 		return card
 
 	status_badge_label.text = UiText.EXPEDITION_IN_PROGRESS
@@ -278,6 +270,14 @@ func _make_zone_card(zone: Dictionary) -> Control:
 	action_button.disabled = true
 	UiPalette.apply_button_kind(action_button, "neutral")
 	return card
+
+
+func _on_zone_deploy_pressed(zone: Dictionary) -> void:
+	_show_cat_picker(zone)
+
+
+func _on_zone_claim_pressed(zone_id: int) -> void:
+	_claim_expedition(zone_id)
 
 
 func _make_zone_card_style(accent: Color) -> StyleBoxFlat:
@@ -366,36 +366,39 @@ func _make_cat_picker_row(zone_name: String, zone_id: int, cat_id: String) -> Co
 	action_button.custom_minimum_size = Vector2(110.0, 42.0)
 	UiFonts.apply_noto(action_button, UiPalette.FONT_SIZE_BODY)
 	UiPalette.apply_button_kind(action_button, "primary")
-	action_button.pressed.connect(func() -> void:
-		if not _cat_picker_close.is_null():
-			_cat_picker_close.call()
-			_cat_picker_close = Callable()
-		DialogManager.show_confirm(
-			UiText.EXPEDITION_CONFIRM,
-			UiText.EXPEDITION_DEPLOY_CONFIRM_BODY_FORMAT % [_get_cat_display_name(cat_id), zone_name],
-			func() -> void:
-				_start_expedition(zone_id, cat_id)
-		)
-	)
+	action_button.pressed.connect(Callable(self, "_on_cat_picker_deploy_pressed").bind(zone_name, zone_id, cat_id))
 	layout.add_child(action_button)
 	return row
+
+
+func _on_cat_picker_deploy_pressed(zone_name: String, zone_id: int, cat_id: String) -> void:
+	if not _cat_picker_close.is_null():
+		_cat_picker_close.call()
+		_cat_picker_close = Callable()
+	DialogManager.show_confirm(
+		UiText.EXPEDITION_CONFIRM,
+		UiText.EXPEDITION_DEPLOY_CONFIRM_BODY_FORMAT % [_get_cat_display_name(cat_id), zone_name],
+		Callable(self, "_start_expedition").bind(zone_id, cat_id)
+	)
 
 
 func _start_expedition(zone_id: int, cat_id: String) -> void:
 	if _is_loading:
 		return
 	_is_loading = true
-	ApiClient.start_expedition(zone_id, cat_id, func(ok: bool, _data: Variant, err: Dictionary) -> void:
-		_is_loading = false
-		if not ok:
-			DialogManager.show_info(
-				UiText.EXPEDITION_START_FAILED_TITLE,
-				str(err.get("message", UiText.EXPEDITION_START_FAILED_DEFAULT))
-			)
-			_refresh_zone_cards()
-			return
-		_fetch_expeditions()
-	)
+	ApiClient.start_expedition(zone_id, cat_id, _on_start_expedition_completed)
+
+
+func _on_start_expedition_completed(ok: bool, _data: Variant, err: Dictionary) -> void:
+	_is_loading = false
+	if not ok:
+		DialogManager.show_info(
+			UiText.EXPEDITION_START_FAILED_TITLE,
+			str(err.get("message", UiText.EXPEDITION_START_FAILED_DEFAULT))
+		)
+		_refresh_zone_cards()
+		return
+	_fetch_expeditions()
 
 
 func _claim_expedition(zone_id: int) -> void:
@@ -404,37 +407,39 @@ func _claim_expedition(zone_id: int) -> void:
 	var expedition: Dictionary = GameState.get_expedition_for_zone(zone_id)
 	var cat_id: String = str(expedition.get("catId", "")).strip_edges()
 	_is_loading = true
-	ApiClient.claim_expedition(zone_id, func(ok: bool, data: Variant, err: Dictionary) -> void:
-		_is_loading = false
-		if not ok:
-			DialogManager.show_info(
-				UiText.EXPEDITION_CLAIM_FAILED_TITLE,
-				str(err.get("message", UiText.EXPEDITION_CLAIM_FAILED_DEFAULT))
-			)
-			_refresh_zone_cards()
-			return
+	ApiClient.claim_expedition(zone_id, Callable(self, "_on_claim_expedition_completed").bind(cat_id))
 
-		var result: Dictionary = data if data is Dictionary else {}
-		var wallet_variant: Variant = result.get("walletSnapshot", {})
-		if wallet_variant is Dictionary:
-			GameState.apply_wallet_snapshot(wallet_variant)
 
-		var rewards_variant: Variant = result.get("rewards", [])
-		if rewards_variant is Array:
-			var reward_entries: Array[Dictionary] = []
-			for reward_variant: Variant in rewards_variant:
-				if not (reward_variant is Dictionary):
-					continue
-				var reward: Dictionary = reward_variant
-				var float_entry: Dictionary = _make_reward_float_entry(reward)
-				if not float_entry.is_empty():
-					reward_entries.append(float_entry)
-				if str(reward.get("rewardType", "")).to_lower() == "whiskershard" and cat_id != "":
-					_apply_local_cat_shards(cat_id, int(reward.get("quantity", 0)))
-			if not reward_entries.is_empty():
-				queue_home_reward_floats(reward_entries)
-		_fetch_expeditions()
-	)
+func _on_claim_expedition_completed(ok: bool, data: Variant, err: Dictionary, cat_id: String) -> void:
+	_is_loading = false
+	if not ok:
+		DialogManager.show_info(
+			UiText.EXPEDITION_CLAIM_FAILED_TITLE,
+			str(err.get("message", UiText.EXPEDITION_CLAIM_FAILED_DEFAULT))
+		)
+		_refresh_zone_cards()
+		return
+
+	var result: Dictionary = data if data is Dictionary else {}
+	var wallet_variant: Variant = result.get("walletSnapshot", {})
+	if wallet_variant is Dictionary:
+		GameState.apply_wallet_snapshot(wallet_variant)
+
+	var rewards_variant: Variant = result.get("rewards", [])
+	if rewards_variant is Array:
+		var reward_entries: Array[Dictionary] = []
+		for reward_variant: Variant in rewards_variant:
+			if not (reward_variant is Dictionary):
+				continue
+			var reward: Dictionary = reward_variant
+			var float_entry: Dictionary = _make_reward_float_entry(reward)
+			if not float_entry.is_empty():
+				reward_entries.append(float_entry)
+			if str(reward.get("rewardType", "")).to_lower() == "whiskershard" and cat_id != "":
+				_apply_local_cat_shards(cat_id, int(reward.get("quantity", 0)))
+		if not reward_entries.is_empty():
+			queue_home_reward_floats(reward_entries)
+	_fetch_expeditions()
 
 
 func _apply_local_cat_shards(cat_id: String, quantity: int) -> void:

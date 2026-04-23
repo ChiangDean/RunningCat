@@ -6,7 +6,7 @@ extends BaseCat
 const SPEED_MULTIPLIER: float = 1.2
 
 
-func _move_forward(delta: float) -> void:
+func _move_forward(_delta: float) -> void:
 	velocity.x = data.speed * facing_direction * SPEED_MULTIPLIER
 	move_and_slide()
 

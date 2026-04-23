@@ -1,8 +1,6 @@
 class_name ArenaSceneHelpers
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const ArenaRankSystem = preload("res://scripts/systems/arena_rank_system.gd")
 
 
 static func get_team_member_player_cat_ids(team_type: String, fallback_team_type: String = "") -> Array:

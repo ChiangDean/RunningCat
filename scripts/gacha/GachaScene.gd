@@ -1,10 +1,6 @@
 extends Control
 
 const GachaResultPanel = preload("res://scripts/gacha/GachaResultPanel.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const BUTTON_BAR_TEXTURE = preload("res://assets/sprites/ui/common/button_bar_m_default.png")
 const CONTENT_XL_TEXTURE = preload("res://assets/sprites/ui/common/content_xl_default_v1.png")
 
@@ -74,9 +70,7 @@ func _build_ui() -> void:
 
 	_free_button = Button.new()
 	_free_button.custom_minimum_size = Vector2(0.0, 52.0)
-	_free_button.pressed.connect(func() -> void:
-		_request_pull(1, true)
-	)
+	_free_button.pressed.connect(_on_free_pull_pressed)
 	UiPalette.apply_button_kind(_free_button, "confirm")
 	pull_box.add_child(_free_button)
 
@@ -153,14 +147,20 @@ func _build_ui() -> void:
 	technique_nav_row.add_child(_technique_next_button)
 
 func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
-	_api_client.get_authenticated_bootstrap(func(success: bool, data: Variant, error: Dictionary) -> void:
-		if success and data is Dictionary:
-			GameState.apply_player_bootstrap(data)
-			_refresh_view()
-			return
-		if show_error_dialog:
-			ToastManager.error(UiText.GACHA_LOAD_FAILED_TITLE, str(error.get("message", UiText.GACHA_LOAD_FAILED_BODY)))
-	)
+	_api_client.get_authenticated_bootstrap(Callable(self, "_on_gacha_bootstrap_refreshed").bind(show_error_dialog))
+
+
+func _on_free_pull_pressed() -> void:
+	_request_pull(1, true)
+
+
+func _on_gacha_bootstrap_refreshed(success: bool, data: Variant, error: Dictionary, show_error_dialog: bool) -> void:
+	if success and data is Dictionary:
+		GameState.apply_player_bootstrap(data)
+		_refresh_view()
+		return
+	if show_error_dialog:
+		ToastManager.error(UiText.GACHA_LOAD_FAILED_TITLE, str(error.get("message", UiText.GACHA_LOAD_FAILED_BODY)))
 
 
 func _switch_tab(tab_key: String) -> void:
@@ -235,9 +235,7 @@ func _refresh_technique_panel() -> void:
 	for level_variant: Variant in levels:
 		if level_variant is Dictionary:
 			level_items.append(level_variant)
-	level_items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return int(a.get("level", 0)) < int(b.get("level", 0))
-	)
+	level_items.sort_custom(_sort_gacha_technique_levels)
 
 	if _selected_technique_level <= 0:
 		_selected_technique_level = technique_level
@@ -442,13 +440,19 @@ func _request_pull(pull_count: int, use_free_pull: bool) -> void:
 	if use_free_pull:
 		title = UiText.GACHA_FREE_PULL_TITLE
 		message = UiText.GACHA_FREE_PULL_CONFIRM_BODY
-	DialogManager.show_confirm(title, message, func() -> void:
-		_api_client.perform_gacha_pull(pull_count, use_free_pull, true, _on_pull_completed)
+	DialogManager.show_confirm(
+		title,
+		message,
+		Callable(self, "_confirm_gacha_pull").bind(pull_count, use_free_pull)
 	)
 
 
 func _on_pull_button_pressed(pull_count: int) -> void:
 	_request_pull(pull_count, false)
+
+
+func _confirm_gacha_pull(pull_count: int, use_free_pull: bool) -> void:
+	_api_client.perform_gacha_pull(pull_count, use_free_pull, true, _on_pull_completed)
 
 
 func _on_pull_completed(success: bool, data: Variant, error: Dictionary) -> void:
@@ -472,6 +476,10 @@ func _show_results(results: Array) -> void:
 	var panel: GachaResultPanel = GachaResultPanel.new()
 	panel.setup(results)
 	scroll.add_child(panel)
+
+
+func _sort_gacha_technique_levels(a: Dictionary, b: Dictionary) -> bool:
+	return int(a.get("level", 0)) < int(b.get("level", 0))
 
 	DialogManager.show_info_node(UiText.GACHA_RESULT_TITLE, scroll)
 

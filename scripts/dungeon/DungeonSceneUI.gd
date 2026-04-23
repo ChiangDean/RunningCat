@@ -1,12 +1,7 @@
 class_name DungeonSceneUI
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const DUNGEON_CONTENT_EDITOR_SCENE = preload("res://scenes/ui/activity/dungeon/DungeonContentEditor.tscn")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const PlayerDungeonData = preload("res://scripts/data/player_dungeon_data.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const DEFAULT_DUNGEON_ICON_BY_KEY := {
 	"cat_food": "res://assets/sprites/ui/dungeon/cat_food.png",
@@ -89,10 +84,8 @@ static func _build_submenu_items(scene) -> Array:
 			"key": key,
 			"label": str(dungeon.get("displayName", key)),
 			"shell_description": _get_dungeon_description(dungeon),
-			"shell_summary_left": func() -> String:
-				return _build_shell_summary_left(scene, key),
-			"shell_summary_right": func() -> String:
-				return _build_shell_summary_right(scene, key),
+			"shell_summary_left": Callable(DungeonSceneUI, "_build_shell_summary_left").bind(scene, key),
+			"shell_summary_right": Callable(DungeonSceneUI, "_build_shell_summary_right").bind(scene, key),
 		})
 	return items
 
@@ -219,8 +212,8 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> Control:
 		"panel": panel,
 	}
 
-	sweep_button.pressed.connect(func() -> void: scene._on_sweep_pressed(dungeon_id))
-	challenge_button.pressed.connect(func() -> void: scene._on_challenge_pressed(dungeon_id))
+	sweep_button.pressed.connect(Callable(scene, "_on_sweep_pressed").bind(dungeon_id))
+	challenge_button.pressed.connect(Callable(scene, "_on_challenge_pressed").bind(dungeon_id))
 
 	return panel
 

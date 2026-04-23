@@ -183,11 +183,11 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 
 		if p_front == null:
 			events.append(BattleEvent.battle_end(sim_time, "LOSE"))
-			events.sort_custom(func(a, b): return a.timestamp < b.timestamp)
+			events.sort_custom(_sort_battle_events_by_timestamp)
 			return events
 		if e_front == null:
 			events.append(BattleEvent.battle_end(sim_time, "WIN"))
-			events.sort_custom(func(a, b): return a.timestamp < b.timestamp)
+			events.sort_custom(_sort_battle_events_by_timestamp)
 			return events
 
 		# Movement
@@ -214,7 +214,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 		sim_time += SIM_STEP
 
 	events.append(BattleEvent.battle_end(BATTLE_DURATION, "TIMEOUT"))
-	events.sort_custom(func(a, b): return a.timestamp < b.timestamp)
+	events.sort_custom(_sort_battle_events_by_timestamp)
 	return events
 
 
@@ -243,8 +243,16 @@ func _apply_passives_for_team(casters: Array, team_list: Array) -> void:
 func _resolve_passive_targets(caster: SimCat, target: String, team_list: Array) -> Array:
 	match target:
 		"self":   return [caster]
-		"team":   return team_list.filter(func(sc): return sc.is_alive)
+		"team":   return team_list.filter(_is_sim_cat_alive)
 		_:        return [caster]
+
+
+func _sort_battle_events_by_timestamp(a, b) -> bool:
+	return a.timestamp < b.timestamp
+
+
+func _is_sim_cat_alive(sc) -> bool:
+	return sc.is_alive
 
 
 func _apply_passive_effect(sc: SimCat, eff_type: String, stat: String,
@@ -342,7 +350,7 @@ func _are_colliding(a: SimCat, b: SimCat) -> bool:
 
 
 func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
-		p_list: Array, e_list: Array) -> void:
+		_p_list: Array, _e_list: Array) -> void:
 	# ── Damage (including passive damage_reduction and effective defence) ──
 	var dmg_to_e := 0
 	var dmg_to_p := 0
@@ -509,7 +517,7 @@ func _resolve_target(target_str: String, enemy_list: Array,
 
 
 func _resolve_buff_target(target_str: String, caster: SimCat,
-		ally_list: Array) -> SimCat:
+		_ally_list: Array) -> SimCat:
 	match target_str:
 		"self":   return caster
 		"team":   return caster   # team buff is handled at apply time; self is returned as fallback

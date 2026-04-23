@@ -2,11 +2,6 @@ class_name EnhanceSceneUI
 extends RefCounted
 
 const Refresh = preload("res://scripts/enhance/EnhanceSceneRefresh.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const CatRosterCard = preload("res://scripts/ui/cat_roster_card.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 
 const DETAIL_TAB_FILL := Color(0.20, 0.16, 0.18, 0.92)
 const DETAIL_TAB_ACTIVE_FILL := Color(0.43, 0.31, 0.14, 0.98)
@@ -90,19 +85,15 @@ static func build_ui(scene) -> void:
 				"key": "main",
 				"label": UiText.ENHANCE_SUBMENU_MAIN,
 				"shell_description": "\u9078\u64c7\u4e3b\u5b50\u9032\u884c\u7b49\u7d1a\u3001\u6280\u80fd\u8207\u661f\u968e\u57f9\u990a\u3002",
-				"shell_summary_left": func() -> String:
-					return _build_shell_summary_left(scene),
-				"shell_summary_right": func() -> String:
-					return _build_shell_summary_right(scene, "main"),
+				"shell_summary_left": Callable(EnhanceSceneUI, "_build_shell_summary_left").bind(scene),
+				"shell_summary_right": Callable(EnhanceSceneUI, "_build_shell_summary_right").bind(scene, "main"),
 			},
 			{
 				"key": "catalog",
 				"label": UiText.ENHANCE_SUBMENU_CATALOG,
 				"shell_description": "\u700f\u89bd\u6240\u6709\u8c93\u54aa\u7684\u5716\u9451\u8cc7\u6599\u8207\u57fa\u790e\u80fd\u529b\u3002",
-				"shell_summary_left": func() -> String:
-					return _build_shell_summary_left(scene),
-				"shell_summary_right": func() -> String:
-					return _build_shell_summary_right(scene, "catalog"),
+				"shell_summary_left": Callable(EnhanceSceneUI, "_build_shell_summary_left").bind(scene),
+				"shell_summary_right": Callable(EnhanceSceneUI, "_build_shell_summary_right").bind(scene, "catalog"),
 			},
 		],
 		"active_key": scene._active_submenu,
@@ -735,13 +726,16 @@ static func _get_catalog_cat_ids(scene) -> Array[String]:
 	for item: Variant in scene.GameState.cat_catalog:
 		if item is Dictionary:
 			rows.append(item as Dictionary)
-	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return int(a.get("catalog_id", a.get("catalogId", 0))) < int(b.get("catalog_id", b.get("catalogId", 0))))
+	rows.sort_custom(_compare_catalog_rows)
 	for row: Dictionary in rows:
 		var cat_id: String = str(row.get("id", "")).strip_edges()
 		if cat_id != "":
 			result.append(cat_id)
 	return result
+
+
+static func _compare_catalog_rows(a: Dictionary, b: Dictionary) -> bool:
+	return int(a.get("catalog_id", a.get("catalogId", 0))) < int(b.get("catalog_id", b.get("catalogId", 0)))
 
 
 static func _build_catalog_detail_panel(scene, cat_data: CatData, preview_cat: PlayerCatData) -> void:

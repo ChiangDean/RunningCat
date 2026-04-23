@@ -1,6 +1,5 @@
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/ability/ScooperAbilityCardTemplate.tscn")
 
 
@@ -69,7 +68,7 @@ func _refresh_ability_ui(scene: Control) -> void:
 		first_item = false
 
 
-func _make_ability_card(scene: Control, item: Dictionary) -> Control:
+func _make_ability_card(_scene: Control, item: Dictionary) -> Control:
 	var panel: Panel = CARD_TEMPLATE.instantiate() as Panel
 	var icon_rect: TextureRect = panel.get_node("Margin/ContentCanvas/Icon") as TextureRect
 	var title: Label = panel.get_node("Margin/ContentCanvas/TitleLabel") as Label

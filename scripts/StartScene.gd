@@ -1,7 +1,7 @@
 extends Control
 
 const HERO_IMAGE := preload("res://assets/sprites/ui/start_scene_homey_v1.png")
-const RuntimeConfig = preload("res://scripts/gamestate/RuntimeConfig.gd")
+const RuntimeConfigScript = preload("res://scripts/gamestate/RuntimeConfig.gd")
 const TITLE_TEXT := UiText.START_TITLE
 const SUBTITLE_TEXT := UiText.START_SUBTITLE
 const TAP_TO_START_TEXT := UiText.START_TAP_TO_START
@@ -51,6 +51,11 @@ const OAUTH_CONFLICT_STATUS := "This provider already matches another account. S
 const OAUTH_PLAYER_NAME_REQUIRED := "Please enter a player name."
 const OAUTH_BEGIN_FAILED_STATUS := "Unable to start external sign-in."
 const OAUTH_COMPLETE_PROFILE_STATUS := "Creating your player profile..."
+const AUTH_BLOCK_WIDTH := 440.0
+const AUTH_BLOCK_HEIGHT_WITH_OAUTH := 520.0
+const AUTH_BLOCK_HEIGHT_LOGIN_COMPACT := 324.0
+const AUTH_BLOCK_HEIGHT_REGISTER_COMPACT := 392.0
+const AUTH_BLOCK_HEIGHT_OAUTH_PROFILE := 286.0
 enum AuthMode
 {
 	LOGIN,
@@ -97,12 +102,16 @@ var _loading_percent_tween: Tween
 var _loading_animation_finished := false
 var _bootstrap_completed := false
 var _bootstrap_retry_count: int = 0
+var _auth_request_mode: AuthMode = AuthMode.LOGIN
 var _bootstrap_retry_timer: Timer
 var _oauth_poll_timer: Timer
 var _oauth_transaction_id := ""
 var _oauth_provider_key := ""
 var _oauth_provider_name := ""
 var _oauth_poll_elapsed := 0.0
+var _pending_retry_login_active := false
+var _pending_retry_login_account: String = ""
+var _pending_retry_login_password: String = ""
 
 
 func _ready() -> void:
@@ -225,7 +234,7 @@ func _build_auth_block() -> PanelContainer:
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.63
 	panel.position = Vector2(-220, 0)
-	panel.custom_minimum_size = Vector2(440, 520)
+	panel.custom_minimum_size = Vector2(AUTH_BLOCK_WIDTH, _get_auth_block_height())
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
 	var margin := MarginContainer.new()
@@ -290,7 +299,7 @@ func _build_auth_block() -> PanelContainer:
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f"))
 	content.add_child(_status_label)
 
-	if RuntimeConfig.is_oauth_enabled():
+	if RuntimeConfigScript.is_oauth_enabled():
 		_oauth_intro_label = Label.new()
 		_oauth_intro_label.text = OAUTH_DIVIDER_TEXT
 		_oauth_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -304,15 +313,11 @@ func _build_auth_block() -> PanelContainer:
 		content.add_child(_oauth_button_row)
 
 		_oauth_google_button = _build_oauth_button(OAUTH_GOOGLE_BUTTON_TEXTURE)
-		_oauth_google_button.pressed.connect(func() -> void:
-			_begin_oauth_sign_in(OAUTH_PROVIDER_GOOGLE, OAUTH_PROVIDER_NAME_GOOGLE)
-		)
+		_oauth_google_button.pressed.connect(_on_oauth_google_pressed)
 		_oauth_button_row.add_child(_oauth_google_button)
 
 		_oauth_apple_button = _build_oauth_button(OAUTH_APPLE_BUTTON_TEXTURE)
-		_oauth_apple_button.pressed.connect(func() -> void:
-			_begin_oauth_sign_in(OAUTH_PROVIDER_APPLE, OAUTH_PROVIDER_NAME_APPLE)
-		)
+		_oauth_apple_button.pressed.connect(_on_oauth_apple_pressed)
 		_oauth_button_row.add_child(_oauth_apple_button)
 
 		_oauth_line_button = _build_oauth_button(
@@ -320,9 +325,7 @@ func _build_auth_block() -> PanelContainer:
 			OAUTH_LINE_BUTTON_HOVER_TEXTURE,
 			OAUTH_LINE_BUTTON_PRESS_TEXTURE
 		)
-		_oauth_line_button.pressed.connect(func() -> void:
-			_begin_oauth_sign_in(OAUTH_PROVIDER_LINE, OAUTH_PROVIDER_NAME_LINE)
-		)
+		_oauth_line_button.pressed.connect(_on_oauth_line_pressed)
 		_oauth_button_row.add_child(_oauth_line_button)
 
 	return panel
@@ -415,14 +418,18 @@ func _build_logout_button() -> Button:
 	button.anchor_top = 0.0
 	button.anchor_right = 1.0
 	button.anchor_bottom = 0.0
-	button.position = Vector2(-140, 28)
-	button.custom_minimum_size = Vector2(112, 48)
+	button.position = Vector2(-156, 28)
+	button.custom_minimum_size = Vector2(128, 52)
 	button.visible = false
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	UiFonts.apply_noto(button, UiPalette.FONT_SIZE_BODY)
-	button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("d4b593"), 10))
-	button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("ddc19f"), 10))
-	button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("c59f78"), 8))
+	UiFonts.apply_noto(button, UiPalette.FONT_SIZE_BODY_LG)
+	button.add_theme_color_override("font_color", Color("fff8f2"))
+	button.add_theme_color_override("font_hover_color", Color("fff8f2"))
+	button.add_theme_color_override("font_pressed_color", Color("fff8f2"))
+	button.add_theme_color_override("font_disabled_color", Color("f2d8d5"))
+	button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("c4574d"), 10))
+	button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("d4685d"), 10))
+	button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("a6473e"), 8))
 	button.pressed.connect(_on_logout_pressed)
 	return button
 
@@ -463,6 +470,18 @@ func _build_oauth_button(normal_texture: Texture2D, hover_texture: Texture2D = n
 	button.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	return button
+
+
+func _on_oauth_google_pressed() -> void:
+	_begin_oauth_sign_in(OAUTH_PROVIDER_GOOGLE, OAUTH_PROVIDER_NAME_GOOGLE)
+
+
+func _on_oauth_apple_pressed() -> void:
+	_begin_oauth_sign_in(OAUTH_PROVIDER_APPLE, OAUTH_PROVIDER_NAME_APPLE)
+
+
+func _on_oauth_line_pressed() -> void:
+	_begin_oauth_sign_in(OAUTH_PROVIDER_LINE, OAUTH_PROVIDER_NAME_LINE)
 
 
 func _set_oauth_button_enabled(button: TextureButton, enabled: bool) -> void:
@@ -535,6 +554,23 @@ func _apply_mode() -> void:
 	if _oauth_button_row != null:
 		_oauth_button_row.visible = not is_oauth_profile
 	_status_label.text = ""
+	_refresh_auth_block_layout()
+
+
+func _get_auth_block_height() -> float:
+	if _mode == AuthMode.OAUTH_PROFILE:
+		return AUTH_BLOCK_HEIGHT_OAUTH_PROFILE
+	if RuntimeConfigScript.is_oauth_enabled():
+		return AUTH_BLOCK_HEIGHT_WITH_OAUTH
+	if _mode == AuthMode.REGISTER:
+		return AUTH_BLOCK_HEIGHT_REGISTER_COMPACT
+	return AUTH_BLOCK_HEIGHT_LOGIN_COMPACT
+
+
+func _refresh_auth_block_layout() -> void:
+	if _auth_block == null:
+		return
+	_auth_block.custom_minimum_size = Vector2(AUTH_BLOCK_WIDTH, _get_auth_block_height())
 
 
 func _set_auth_interactable(editable: bool) -> void:
@@ -594,6 +630,10 @@ func _submit_login() -> void:
 
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_AUTH
+	_auth_request_mode = AuthMode.LOGIN
+	_pending_retry_login_active = true
+	_pending_retry_login_account = account
+	_pending_retry_login_password = password
 	_set_auth_interactable(false)
 	_set_status(UiText.START_STATUS_CONNECTING_SERVER, false)
 	_retain_network_loading_overlay(UiText.START_STATUS_CONNECTING_SERVER)
@@ -609,6 +649,7 @@ func _submit_login() -> void:
 	if error != OK:
 		_request_in_flight = false
 		_set_auth_interactable(true)
+		_restore_pending_login_inputs()
 		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
 
 
@@ -635,6 +676,7 @@ func _submit_register() -> void:
 
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_AUTH
+	_auth_request_mode = AuthMode.REGISTER
 	_set_auth_interactable(false)
 	_set_status(UiText.START_STATUS_CONNECTING_SERVER, false)
 	_retain_network_loading_overlay(UiText.START_STATUS_CONNECTING_SERVER)
@@ -659,7 +701,7 @@ func _submit_register() -> void:
 func _begin_oauth_sign_in(provider_key: String, provider_name: String) -> void:
 	if _request_in_flight:
 		return
-	if not RuntimeConfig.is_oauth_enabled():
+	if not RuntimeConfigScript.is_oauth_enabled():
 		_set_status(UiText.START_STATUS_OAUTH_DISABLED, true)
 		return
 
@@ -981,6 +1023,8 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 
 	var message = error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED
 	_release_network_loading_overlay()
+	if completed_request_kind == REQUEST_KIND_AUTH and _auth_request_mode == AuthMode.LOGIN:
+		_restore_pending_login_inputs()
 	_set_status(message, true)
 
 
@@ -1003,6 +1047,8 @@ func _handle_request_transport_failure(completed_request_kind: String, result: i
 		return
 	elif completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE or completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 		_set_logout_button_state(true)
+	elif completed_request_kind == REQUEST_KIND_AUTH and _auth_request_mode == AuthMode.LOGIN:
+		_restore_pending_login_inputs()
 	_logout_dialog_open = false if completed_request_kind.begins_with("logout") else _logout_dialog_open
 	_set_status(message, true)
 
@@ -1018,6 +1064,8 @@ func _handle_request_invalid_response(completed_request_kind: String) -> void:
 		return
 	elif completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE or completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 		_set_logout_button_state(true)
+	elif completed_request_kind == REQUEST_KIND_AUTH and _auth_request_mode == AuthMode.LOGIN:
+		_restore_pending_login_inputs()
 	_logout_dialog_open = false if completed_request_kind.begins_with("logout") else _logout_dialog_open
 	_set_status(UiText.START_STATUS_INVALID_RESPONSE, true)
 
@@ -1150,6 +1198,7 @@ func _complete_loading_state() -> void:
 		return
 
 	_cancel_loading_tweens()
+	_clear_pending_login_retry()
 	_input_ready = true
 	_sync_logout_button_visibility()
 	if _loading_label != null:
@@ -1158,10 +1207,7 @@ func _complete_loading_state() -> void:
 	if _loading_block != null:
 		var fade_tween := create_tween()
 		fade_tween.tween_property(_loading_block, "modulate:a", 0.0, 0.3)
-		fade_tween.finished.connect(func():
-			if _loading_block != null:
-				_loading_block.visible = false
-		)
+		fade_tween.finished.connect(_on_loading_block_fade_finished)
 	if _tap_hint != null:
 		_tap_hint.visible = true
 
@@ -1174,6 +1220,11 @@ func _cancel_loading_tweens() -> void:
 	if _loading_percent_tween != null and not shared_tween:
 		_loading_percent_tween.kill()
 	_loading_percent_tween = null
+
+
+func _on_loading_block_fade_finished() -> void:
+	if _loading_block != null:
+		_loading_block.visible = false
 
 
 func _abort_loading_state() -> void:
@@ -1190,6 +1241,22 @@ func _abort_loading_state() -> void:
 	if _tap_hint != null:
 		_tap_hint.visible = false
 	_set_loading_progress_visual(0.0)
+	_restore_pending_login_inputs()
+
+
+func _restore_pending_login_inputs() -> void:
+	if not _pending_retry_login_active:
+		return
+	if _account_input != null:
+		_account_input.text = _pending_retry_login_account
+	if _password_input != null:
+		_password_input.text = _pending_retry_login_password
+
+
+func _clear_pending_login_retry() -> void:
+	_pending_retry_login_active = false
+	_pending_retry_login_account = ""
+	_pending_retry_login_password = ""
 
 
 func _set_loading_progress_visual(value: float) -> void:
@@ -1302,8 +1369,12 @@ func _on_logout_pressed() -> void:
 		UiText.START_LOGOUT_CONFIRM_TITLE,
 		UiText.START_LOGOUT_CONFIRM_BODY,
 		Callable(self, "_begin_logout"),
-		func() -> void: _logout_dialog_open = false
+		Callable(self, "_on_logout_dialog_cancelled")
 	)
+
+
+func _on_logout_dialog_cancelled() -> void:
+	_logout_dialog_open = false
 
 func _begin_logout() -> void:
 	_logout_revoke_retry = false
@@ -1370,6 +1441,7 @@ func _finalize_logout() -> void:
 	_release_network_loading_overlay()
 	_cancel_loading_tweens()
 	_cancel_bootstrap_retry()
+	_clear_pending_login_retry()
 	GameState.clear_auth_and_player_state()
 	_api_base_url = _resolve_api_base_url()
 	_request_in_flight = false
@@ -1413,7 +1485,7 @@ func _build_request_headers(access_token: String = "", include_json_content_type
 	return headers
 
 func _resolve_api_base_url() -> String:
-	return RuntimeConfig.get_api_base_url(DEFAULT_API_BASE_URL)
+	return RuntimeConfigScript.get_api_base_url(DEFAULT_API_BASE_URL)
 
 
 func _build_device_name() -> String:

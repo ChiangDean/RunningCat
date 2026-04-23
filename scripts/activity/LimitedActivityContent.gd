@@ -1,6 +1,5 @@
 extends VBoxContainer
 
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
 
 const CARD_TEMPLATE_SCENE = preload("res://scenes/ui/activity/limited/LimitedActivityCardTemplate.tscn")
 

@@ -1,7 +1,6 @@
 class_name BattleManager
 extends Node
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 const CAT_COLLISION_SFX_1 := preload("res://assets/audio/sfx/battle/cat_collision_v1.mp3")
 const CAT_COLLISION_SFX_2 := preload("res://assets/audio/sfx/battle/cat_collision_v2.mp3")
 const CAT_SKILL_SFX := preload("res://assets/audio/sfx/battle/cat_skill_v1.mp3")
@@ -299,7 +298,7 @@ func _should_play_battle_audio() -> bool:
 	return SceneNavigator.get_current_overlay_scene_path().is_empty()
 
 
-func _find_cat_data(id: int, team: String) -> CatData:
+func _find_cat_data(id: int, _team: String) -> CatData:
 	var cat_data_variant: Variant = _cat_data_by_instance_id.get(id, null)
 	return cat_data_variant as CatData
 

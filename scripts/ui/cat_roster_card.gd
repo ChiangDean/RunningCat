@@ -1,8 +1,6 @@
 class_name CatRosterCard
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const SquareTemplateScene = preload("res://scenes/ui/cats/CatCardSquareTemplate.tscn")
 const LineupTeamTemplateScene = preload("res://scenes/ui/lineup/CatCardLineupTeamTemplate.tscn")
 const LineupOwnedTemplateScene = preload("res://scenes/ui/lineup/CatCardLineupOwnedTemplate.tscn")

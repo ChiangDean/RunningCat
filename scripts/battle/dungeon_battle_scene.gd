@@ -121,9 +121,9 @@ func _build_ui() -> void:
 	_ui_layer.add_child(_speed_1x)
 	_ui_layer.add_child(_speed_2x)
 	_ui_layer.add_child(_speed_3x)
-	_speed_1x.pressed.connect(func(): _set_speed(1.0, _speed_1x))
-	_speed_2x.pressed.connect(func(): _set_speed(2.0, _speed_2x))
-	_speed_3x.pressed.connect(func(): _set_speed(3.0, _speed_3x))
+	_speed_1x.pressed.connect(_on_speed_1x_pressed)
+	_speed_2x.pressed.connect(_on_speed_2x_pressed)
+	_speed_3x.pressed.connect(_on_speed_3x_pressed)
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 
@@ -309,6 +309,18 @@ func _set_speed(mult: float, active_btn: Button) -> void:
 	_highlight_speed_btn(active_btn)
 
 
+func _on_speed_1x_pressed() -> void:
+	_set_speed(1.0, _speed_1x)
+
+
+func _on_speed_2x_pressed() -> void:
+	_set_speed(2.0, _speed_2x)
+
+
+func _on_speed_3x_pressed() -> void:
+	_set_speed(3.0, _speed_3x)
+
+
 func _apply_speed_unlocks() -> void:
 	var speed_cap: float = GameState.get_special_ability_speed_cap()
 	_speed_2x.visible = speed_cap >= 2.0
@@ -423,9 +435,11 @@ func _on_complete_challenge(success: bool, data: Variant, error: Dictionary) -> 
 		return
 
 	var message := str(error.get("message", UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_BODY))
-	DialogManager.show_info(UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_TITLE, message, func():
-		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
-	)
+		DialogManager.show_info(
+			UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_TITLE,
+			message,
+			Callable(self, "_return_to_dungeon_scene")
+		)
 
 
 func _show_reward_popup(level: int, rewards: Dictionary) -> void:
@@ -441,9 +455,15 @@ func _show_reward_popup(level: int, rewards: Dictionary) -> void:
 	if int(rewards.get("whiskerShards", 0)) > 0:
 		lines.append(UiText.DUNGEON_REWARD_WHISKER_FORMAT % int(rewards.get("whiskerShards", 0)))
 
-	DialogManager.show_info(UiText.DUNGEON_CHALLENGE_COMPLETE, "\n".join(lines), func():
-		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
+	DialogManager.show_info(
+		UiText.DUNGEON_CHALLENGE_COMPLETE,
+		"\n".join(lines),
+		Callable(self, "_return_to_dungeon_scene")
 	)
+
+
+func _return_to_dungeon_scene() -> void:
+	SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
 
 
 func _show_result_overlay(is_win: bool) -> void:

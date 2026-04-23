@@ -1,7 +1,6 @@
 class_name ArenaSceneRewardPopup
 extends RefCounted
 
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 
 static func show(scene: Control, overview: Dictionary, claim_callback: Callable) -> void:
@@ -12,7 +11,7 @@ static func show(scene: Control, overview: Dictionary, claim_callback: Callable)
 	list.add_theme_constant_override("separation", 10)
 	scroll.add_child(list)
 
-	var close_dialog: Callable
+	var dialog_state: Dictionary = {"close_dialog": Callable()}
 	for rank_variant: Variant in overview.get("ranks", []):
 		if not (rank_variant is Dictionary):
 			continue
@@ -50,11 +49,11 @@ static func show(scene: Control, overview: Dictionary, claim_callback: Callable)
 			var claim_button: Button = Button.new()
 			claim_button.text = UiText.COMMON_CLAIM
 			claim_button.custom_minimum_size = Vector2(90.0, 36.0)
-			claim_button.pressed.connect(func() -> void:
-				if close_dialog.is_valid():
-					close_dialog.call()
-				claim_callback.call(int(rank.get("rankId", 0)))
-			)
+			claim_button.pressed.connect(Callable(ArenaSceneRewardPopup, "_on_claim_button_pressed").bind(
+				dialog_state,
+				claim_callback,
+				int(rank.get("rankId", 0))
+			))
 			row.add_child(claim_button)
 		else:
 			var requirement_label: Label = Label.new()
@@ -62,4 +61,11 @@ static func show(scene: Control, overview: Dictionary, claim_callback: Callable)
 			requirement_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			row.add_child(requirement_label)
 
-	close_dialog = DialogManager.show_info_node(UiText.ARENA_REWARD_DIALOG_TITLE, scroll)
+	dialog_state["close_dialog"] = DialogManager.show_info_node(UiText.ARENA_REWARD_DIALOG_TITLE, scroll)
+
+
+static func _on_claim_button_pressed(dialog_state: Dictionary, claim_callback: Callable, rank_id: int) -> void:
+	var close_dialog: Callable = dialog_state.get("close_dialog", Callable())
+	if close_dialog.is_valid():
+		close_dialog.call()
+	claim_callback.call(rank_id)

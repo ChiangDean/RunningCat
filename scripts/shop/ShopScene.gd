@@ -1,13 +1,5 @@
 extends Control
 
-const RuntimeConfig = preload("res://scripts/gamestate/RuntimeConfig.gd")
-const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
-const UiPalette = preload("res://scripts/ui/ui_palette.gd")
-const SceneMenuTheme = preload("res://scripts/ui/scene_menu_theme.gd")
-const SceneSubmenuBar = preload("res://scripts/ui/scene_submenu_bar.gd")
-const SceneSecondarySubmenu = preload("res://scripts/ui/scene_secondary_submenu.gd")
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
-const RedDotService = preload("res://scripts/ui/red_dot_service.gd")
 const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/backpack/ItemSlotTemplate.tscn")
 
 const TAB_VALUE := "value_bundle"
@@ -67,6 +59,7 @@ var _secondary_buttons: Dictionary = {}
 var _content_host: Control
 var _diamond_store_quantities: Dictionary = {}
 var _diamond_store_keypad_close: Callable = Callable()
+var _diamond_store_dialog_close: Callable = Callable()
 var _pending_bundle_purchase: Dictionary = {}
 var _paid_shop_enabled: bool = true
 
@@ -121,14 +114,16 @@ func _build_ui() -> void:
 
 
 func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
-	_api_client.get_authenticated_bootstrap(func(success: bool, data: Variant, error: Dictionary) -> void:
-		if success and data is Dictionary:
-			GameState.apply_player_bootstrap(data)
-			_refresh_content()
-			return
-		if show_error_dialog:
-			ToastManager.error(UiText.SHOP_LOAD_FAILED_TITLE, str(error.get("message", UiText.SHOP_LOAD_FAILED_BODY)))
-	)
+	_api_client.get_authenticated_bootstrap(Callable(self, "_on_shop_bootstrap_refreshed").bind(show_error_dialog))
+
+
+func _on_shop_bootstrap_refreshed(success: bool, data: Variant, error: Dictionary, show_error_dialog: bool) -> void:
+	if success and data is Dictionary:
+		GameState.apply_player_bootstrap(data)
+		_refresh_content()
+		return
+	if show_error_dialog:
+		ToastManager.error(UiText.SHOP_LOAD_FAILED_TITLE, str(error.get("message", UiText.SHOP_LOAD_FAILED_BODY)))
 
 
 func _switch_tab(tab_key: String) -> void:
@@ -302,9 +297,7 @@ func _build_bundle_detail_card(bundle: Dictionary) -> Control:
 	else:
 		UiPalette.apply_button_kind(action_button, "confirm")
 		_configure_bundle_action_button(action_button, bundle)
-		action_button.pressed.connect(func() -> void:
-			_confirm_bundle_purchase(bundle)
-		)
+		action_button.pressed.connect(Callable(self, "_confirm_bundle_purchase").bind(bundle))
 	RedDotService.refresh_dot(action_button, RedDotService.has_shop_bundle_red_dot(bundle) and not action_button.disabled)
 	card.add_child(action_button)
 
@@ -404,9 +397,7 @@ func _build_quantity_selector(item_key: String, quantity: int, max_quantity: int
 	minus_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	UiPalette.apply_button_kind(minus_button, "minus")
 	minus_button.disabled = quantity <= 1
-	minus_button.pressed.connect(func() -> void:
-		_adjust_diamond_store_quantity(item_key, -1, max_quantity)
-	)
+	minus_button.pressed.connect(Callable(self, "_adjust_diamond_store_quantity").bind(item_key, -1, max_quantity))
 	row.add_child(minus_button)
 
 	var quantity_button: Button = Button.new()
@@ -416,9 +407,7 @@ func _build_quantity_selector(item_key: String, quantity: int, max_quantity: int
 	quantity_button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiPalette.apply_button_kind(quantity_button, "neutral")
 	quantity_button.disabled = max_quantity <= 0
-	quantity_button.pressed.connect(func() -> void:
-		_open_diamond_store_quantity_keypad(item_key, max_quantity)
-	)
+	quantity_button.pressed.connect(Callable(self, "_open_diamond_store_quantity_keypad").bind(item_key, max_quantity))
 	row.add_child(quantity_button)
 
 	var plus_button: Button = Button.new()
@@ -427,9 +416,7 @@ func _build_quantity_selector(item_key: String, quantity: int, max_quantity: int
 	plus_button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	UiPalette.apply_button_kind(plus_button, "plus")
 	plus_button.disabled = max_quantity <= 0 or quantity >= max_quantity
-	plus_button.pressed.connect(func() -> void:
-		_adjust_diamond_store_quantity(item_key, 1, max_quantity)
-	)
+	plus_button.pressed.connect(Callable(self, "_adjust_diamond_store_quantity").bind(item_key, 1, max_quantity))
 	row.add_child(plus_button)
 
 	return row
@@ -485,6 +472,40 @@ func _close_diamond_store_keypad() -> void:
 		close_callable.call()
 
 
+func _close_quantity_keypad_dialog() -> void:
+	if _diamond_store_dialog_close.is_valid():
+		var dialog_close: Callable = _diamond_store_dialog_close
+		_diamond_store_dialog_close = Callable()
+		dialog_close.call()
+
+
+func _refresh_quantity_keypad_display(state: Dictionary, display: Label) -> void:
+	display.text = state["buffer"] if str(state["buffer"]) != "" else "0"
+
+
+func _on_quantity_keypad_button_pressed(
+	input_key: String,
+	state: Dictionary,
+	display: Label,
+	max_allowed_value: int,
+	on_submit: Callable
+) -> void:
+	match input_key:
+		"C":
+			state["buffer"] = "0"
+		"OK":
+			var value: int = clampi(int(str(state["buffer"])), 0, maxi(0, max_allowed_value))
+			if on_submit.is_valid():
+				on_submit.call(value)
+			return
+		_:
+			var current_buffer: String = str(state["buffer"])
+			var candidate: String = input_key if current_buffer == "0" else current_buffer + input_key
+			if int(candidate) <= DIAMOND_STORE_MAX_QUANTITY:
+				state["buffer"] = candidate
+	_refresh_quantity_keypad_display(state, display)
+
+
 func _open_quantity_keypad(initial_value: int, max_allowed_value: int, on_submit: Callable) -> Callable:
 	var content: VBoxContainer = VBoxContainer.new()
 	content.custom_minimum_size = Vector2(320.0, 0.0)
@@ -513,9 +534,7 @@ func _open_quantity_keypad(initial_value: int, max_allowed_value: int, on_submit
 	content.add_child(grid)
 
 	var state: Dictionary = {"buffer": str(normalized_initial_value)}
-	var close_dialog: Callable = Callable()
-	var refresh_display := func() -> void:
-		display.text = state["buffer"] if str(state["buffer"]) != "" else "0"
+	_refresh_quantity_keypad_display(state, display)
 
 	for key_label: String in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "OK"]:
 		var input_key: String = key_label
@@ -530,38 +549,19 @@ func _open_quantity_keypad(initial_value: int, max_allowed_value: int, on_submit
 		elif input_key == "C":
 			UiPalette.apply_button_kind(button, "neutral")
 		grid.add_child(button)
-		button.pressed.connect(func() -> void:
-			match input_key:
-				"C":
-					state["buffer"] = "0"
-				"OK":
-					var value: int = clampi(int(str(state["buffer"])), 0, maxi(0, max_allowed_value))
-					if on_submit.is_valid():
-						on_submit.call(value)
-					return
-				_:
-					var current_buffer: String = str(state["buffer"])
-					var candidate: String = input_key if current_buffer == "0" else current_buffer + input_key
-					if int(candidate) <= DIAMOND_STORE_MAX_QUANTITY:
-						state["buffer"] = candidate
-			refresh_display.call()
-		)
+		button.pressed.connect(Callable(self, "_on_quantity_keypad_button_pressed").bind(input_key, state, display, max_allowed_value, on_submit))
 
-	refresh_display.call()
-	close_dialog = DialogManager.show_info_node(
+	_diamond_store_dialog_close = DialogManager.show_info_node(
 		UiText.SHOP_TRAP_CAGE_QUANTITY_TITLE,
 		content,
 		Callable(self, "_on_diamond_store_keypad_closed"),
 		"small"
 	)
-	return func() -> void:
-		if close_dialog.is_valid():
-			var dialog_close: Callable = close_dialog
-			close_dialog = Callable()
-			dialog_close.call()
+	return Callable(self, "_close_quantity_keypad_dialog")
 
 
 func _on_diamond_store_keypad_closed() -> void:
+	_diamond_store_dialog_close = Callable()
 	_diamond_store_keypad_close = Callable()
 
 
@@ -755,9 +755,7 @@ func _build_collision_coin_card(item: Dictionary) -> Control:
 		"",
 		_resolve_button_font_color("confirm")
 	)
-	button.pressed.connect(func() -> void:
-		_confirm_collision_coin_purchase(item)
-	)
+	button.pressed.connect(Callable(self, "_confirm_collision_coin_purchase").bind(item))
 	root.add_child(button)
 
 	return panel
@@ -804,12 +802,7 @@ func _build_trap_cage_card() -> Control:
 			AssetResolver.resolve_catalog_path("catalog/currency/diamonds"),
 			font_color
 		)
-		button.pressed.connect(func() -> void:
-			if not is_affordable:
-				_show_currency_shortage(str(purchase_state.get("currencyName", UiText.REWARD_DIAMONDS)))
-				return
-			_purchase_trap_cages(quantity)
-		)
+		button.pressed.connect(Callable(self, "_on_trap_cage_purchase_pressed").bind(quantity, is_affordable, str(purchase_state.get("currencyName", UiText.REWARD_DIAMONDS))))
 	else:
 		UiPalette.apply_button_kind(button, "neutral")
 		_set_bundle_action_button_content(button, "0", AssetResolver.resolve_catalog_path("catalog/currency/diamonds"), UiPalette.BUTTON_DISABLED_FG)
@@ -861,12 +854,7 @@ func _build_arena_ticket_card() -> Control:
 			AssetResolver.resolve_catalog_path("catalog/currency/diamonds"),
 			_resolve_button_font_color("confirm") if is_affordable else SHOP_PRICE_INSUFFICIENT_COLOR
 		)
-		button.pressed.connect(func() -> void:
-			if not is_affordable:
-				_show_currency_shortage(str(purchase_state.get("currencyName", UiText.REWARD_DIAMONDS)))
-				return
-			_purchase_arena_tickets(quantity)
-		)
+		button.pressed.connect(Callable(self, "_on_arena_ticket_purchase_pressed").bind(quantity, is_affordable, str(purchase_state.get("currencyName", UiText.REWARD_DIAMONDS))))
 	else:
 		UiPalette.apply_button_kind(button, "neutral")
 		_set_bundle_action_button_content(button, UiText.SHOP_OUT_OF_STOCK, "", UiPalette.BUTTON_DISABLED_FG)
@@ -874,6 +862,20 @@ func _build_arena_ticket_card() -> Control:
 	root.add_child(button)
 
 	return panel
+
+
+func _on_trap_cage_purchase_pressed(quantity: int, is_affordable: bool, currency_name: String) -> void:
+	if not is_affordable:
+		_show_currency_shortage(currency_name)
+		return
+	_purchase_trap_cages(quantity)
+
+
+func _on_arena_ticket_purchase_pressed(quantity: int, is_affordable: bool, currency_name: String) -> void:
+	if not is_affordable:
+		_show_currency_shortage(currency_name)
+		return
+	_purchase_arena_tickets(quantity)
 
 
 func _build_empty_state(message: String) -> Control:
@@ -899,13 +901,15 @@ func _make_shop_panel(border: Color, radius: int = 14) -> PanelContainer:
 
 
 func _purchase_trap_cages(quantity: int) -> void:
-	_api_client.purchase_trap_cages(quantity, func(success: bool, _data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_TRAP_CAGE_PURCHASE_FAILED_BODY)))
-			return
-		refresh_from_bootstrap(false)
-		ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_TRAP_CAGE_PURCHASE_SUCCESS_BODY)
-	)
+	_api_client.purchase_trap_cages(quantity, _on_purchase_trap_cages_completed)
+
+
+func _on_purchase_trap_cages_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_TRAP_CAGE_PURCHASE_FAILED_BODY)))
+		return
+	refresh_from_bootstrap(false)
+	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_TRAP_CAGE_PURCHASE_SUCCESS_BODY)
 
 
 func _confirm_collision_coin_purchase(item: Dictionary) -> void:
@@ -916,38 +920,41 @@ func _confirm_collision_coin_purchase(item: Dictionary) -> void:
 	DialogManager.show_confirm(
 		UiText.SHOP_COLLISION_COIN_PURCHASE_TITLE,
 		message,
-		func() -> void:
-			_purchase_collision_coin(amount)
+		Callable(self, "_purchase_collision_coin").bind(amount)
 	)
 
 
 func _purchase_collision_coin(amount: int) -> void:
-	_api_client.purchase_trap_points(amount, func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_COLLISION_COIN_PURCHASE_FAILED_BODY)))
-			return
-		var payload: Dictionary = data if data is Dictionary else {}
-		var overview: Dictionary = payload.get("overview", {})
-		if not overview.is_empty():
-			GameState.update_shop(overview)
-		_refresh_content()
-		ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_COLLISION_COIN_PURCHASE_SUCCESS_BODY % amount)
-	)
+	_api_client.purchase_trap_points(amount, Callable(self, "_on_purchase_collision_coin_completed").bind(amount))
+
+
+func _on_purchase_collision_coin_completed(success: bool, data: Variant, error: Dictionary, amount: int) -> void:
+	if not success:
+		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_COLLISION_COIN_PURCHASE_FAILED_BODY)))
+		return
+	var payload: Dictionary = data if data is Dictionary else {}
+	var overview: Dictionary = payload.get("overview", {})
+	if not overview.is_empty():
+		GameState.update_shop(overview)
+	_refresh_content()
+	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_COLLISION_COIN_PURCHASE_SUCCESS_BODY % amount)
 
 
 func _purchase_arena_tickets(quantity: int) -> void:
-	_api_client.purchase_arena_tickets(quantity, func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_ARENA_TICKET_PURCHASE_FAILED_BODY)))
-			return
-		if data is Dictionary:
-			var response: Dictionary = data
-			var overview: Dictionary = response.get("overview", {})
-			if not overview.is_empty():
-				GameState.update_arena(overview)
-		refresh_from_bootstrap(false)
-		ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_ARENA_TICKET_TITLE)
-	)
+	_api_client.purchase_arena_tickets(quantity, _on_purchase_arena_tickets_completed)
+
+
+func _on_purchase_arena_tickets_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_ARENA_TICKET_PURCHASE_FAILED_BODY)))
+		return
+	if data is Dictionary:
+		var response: Dictionary = data
+		var overview: Dictionary = response.get("overview", {})
+		if not overview.is_empty():
+			GameState.update_arena(overview)
+	refresh_from_bootstrap(false)
+	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_ARENA_TICKET_TITLE)
 
 
 func _confirm_bundle_purchase(bundle: Dictionary) -> void:
@@ -956,9 +963,15 @@ func _confirm_bundle_purchase(bundle: Dictionary) -> void:
 	var price_amount: int = int(bundle.get("priceAmount", 0))
 	_pending_bundle_purchase = bundle.duplicate(true)
 	var message: String = UiText.SHOP_BUNDLE_PURCHASE_CONFIRM_BODY % [price_amount, bundle_name]
-	DialogManager.show_confirm(UiText.SHOP_PURCHASE_BUNDLE_TITLE, message, func() -> void:
-		_api_client.purchase_shop_bundle(bundle_id, _on_bundle_purchase_completed)
+	DialogManager.show_confirm(
+		UiText.SHOP_PURCHASE_BUNDLE_TITLE,
+		message,
+		Callable(self, "_execute_bundle_purchase").bind(bundle_id)
 	)
+
+
+func _execute_bundle_purchase(bundle_id: int) -> void:
+	_api_client.purchase_shop_bundle(bundle_id, _on_bundle_purchase_completed)
 
 
 func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictionary) -> void:
@@ -967,11 +980,7 @@ func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictiona
 			DialogManager.show_confirm(
 				UiText.SHOP_COLLISION_COIN_SHORTAGE_TITLE,
 				UiText.SHOP_COLLISION_COIN_SHORTAGE_BODY,
-				func() -> void:
-					_pending_bundle_purchase.clear()
-					_active_tab = TAB_COLLISION_COIN
-					_active_secondary_keys[TAB_COLLISION_COIN] = "coin_33"
-					_refresh_content()
+				Callable(self, "_redirect_to_collision_coin_store")
 			)
 			return
 		_pending_bundle_purchase.clear()
@@ -996,6 +1005,13 @@ func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictiona
 	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, " / ".join(reward_lines))
 
 
+func _redirect_to_collision_coin_store() -> void:
+	_pending_bundle_purchase.clear()
+	_active_tab = TAB_COLLISION_COIN
+	_active_secondary_keys[TAB_COLLISION_COIN] = "coin_33"
+	_refresh_content()
+
+
 func _should_redirect_to_collision_coin_store(error: Dictionary) -> bool:
 	if not _paid_shop_enabled:
 		return false
@@ -1013,13 +1029,7 @@ func _get_bundles_for_tab(tab_key: String) -> Array:
 		var bundle: Dictionary = bundle_variant
 		if str(bundle.get("categoryType", "")).to_lower() == category_type and _is_bundle_visible(bundle):
 			result.append(bundle)
-	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var a_sold_out: bool = bool(a.get("isSoldOut", false))
-		var b_sold_out: bool = bool(b.get("isSoldOut", false))
-		if a_sold_out != b_sold_out:
-			return not a_sold_out
-		return int(a.get("sortOrder", 0)) < int(b.get("sortOrder", 0))
-	)
+	result.sort_custom(_sort_visible_bundles)
 	return result
 
 
@@ -1037,10 +1047,20 @@ func _get_bundle_groups_for_tab(tab_key: String) -> Array:
 		if not _has_visible_bundle_for_group(tab_key, str(group.get("groupId", ""))):
 			continue
 		result.append(group)
-	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return int(a.get("sortOrder", 0)) < int(b.get("sortOrder", 0))
-	)
+	result.sort_custom(_sort_shop_groups)
 	return result
+
+
+func _sort_visible_bundles(a: Dictionary, b: Dictionary) -> bool:
+	var a_sold_out: bool = bool(a.get("isSoldOut", false))
+	var b_sold_out: bool = bool(b.get("isSoldOut", false))
+	if a_sold_out != b_sold_out:
+		return not a_sold_out
+	return int(a.get("sortOrder", 0)) < int(b.get("sortOrder", 0))
+
+
+func _sort_shop_groups(a: Dictionary, b: Dictionary) -> bool:
+	return int(a.get("sortOrder", 0)) < int(b.get("sortOrder", 0))
 
 
 func _get_bundles_for_group(tab_key: String, group_id: String) -> Array:

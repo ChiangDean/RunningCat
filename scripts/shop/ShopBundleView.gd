@@ -4,7 +4,6 @@ signal request_refresh
 
 const CARD_BG := Color(0.16, 0.18, 0.22, 1.0)
 const CARD_BORDER := Color(0.33, 0.45, 0.54, 1.0)
-const AssetResolver = preload("res://scripts/ui/asset_resolver.gd")
 
 var _selected_category_id: String = ""
 
@@ -172,9 +171,15 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 
 func _confirm_purchase(bundle_id: int, bundle_name: String, price_amount: int) -> void:
 	var message := "\u662f\u5426\u82b1\u8cbb %s \u947d\u77f3\u8cfc\u8cb7\u300c%s\u300d\uff1f" % [GameState.format_number(price_amount), bundle_name]
-	DialogManager.show_confirm("\u8cfc\u8cb7\u79ae\u5305", message, func() -> void:
-		_api_client.purchase_shop_bundle(bundle_id, _on_purchase_completed)
+	DialogManager.show_confirm(
+		"\u8cfc\u8cb7\u79ae\u5305",
+		message,
+		Callable(self, "_execute_bundle_purchase").bind(bundle_id)
 	)
+
+
+func _execute_bundle_purchase(bundle_id: int) -> void:
+	_api_client.purchase_shop_bundle(bundle_id, _on_purchase_completed)
 
 
 func _on_category_selected(category_id: String) -> void:
