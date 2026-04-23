@@ -12,30 +12,37 @@ var _content_scroll: ScrollContainer
 var _scroll_box: VBoxContainer
 var _permanent_content: Control
 var _limited_content: Control
+var _show_unfinished_content: bool = true
 
 
 func _ready() -> void:
+	_show_unfinished_content = RuntimeConfig.should_show_unfinished_content()
+	if not _show_unfinished_content and _active_tab == "limited":
+		_active_tab = "permanent"
 	_build_ui()
 	GameState.red_dot_state_changed.connect(_refresh_red_dots)
 
 
 func _build_ui() -> void:
+	var dock_items: Array[Dictionary] = [
+		{
+			"key": "permanent",
+			"label": UiText.ACTIVITY_TAB_PERMANENT,
+			"shell_description": UiText.ACTIVITY_PAGE_DESC,
+			"shell_summary_right": Callable(self, "_build_tab_summary_right").bind("permanent"),
+		},
+	]
+	if _show_unfinished_content:
+		dock_items.append({
+			"key": "limited",
+			"label": UiText.ACTIVITY_TAB_LIMITED,
+			"shell_description": UiText.ACTIVITY_LIMITED_EMPTY_BODY,
+			"shell_summary_right": Callable(self, "_build_tab_summary_right").bind("limited"),
+		})
+
 	var chrome: Dictionary = OverlaySceneChrome.build(self, "activity", Callable(self, "_on_back_pressed"), {
 		"show_dock": true,
-		"dock_items": [
-			{
-				"key": "permanent",
-				"label": UiText.ACTIVITY_TAB_PERMANENT,
-				"shell_description": UiText.ACTIVITY_PAGE_DESC,
-				"shell_summary_right": Callable(self, "_build_tab_summary_right").bind("permanent"),
-			},
-			{
-				"key": "limited",
-				"label": UiText.ACTIVITY_TAB_LIMITED,
-				"shell_description": UiText.ACTIVITY_LIMITED_EMPTY_BODY,
-				"shell_summary_right": Callable(self, "_build_tab_summary_right").bind("limited"),
-			},
-		],
+		"dock_items": dock_items,
 		"active_key": _active_tab,
 		"button_pressed": Callable(self, "_switch_tab"),
 		"button_height": 52.0,
@@ -61,6 +68,8 @@ func _build_ui() -> void:
 
 
 func _switch_tab(tab_key: String) -> void:
+	if tab_key == "limited" and not _show_unfinished_content:
+		return
 	if _active_tab == tab_key:
 		return
 	_active_tab = tab_key
