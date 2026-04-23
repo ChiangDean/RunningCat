@@ -5,9 +5,11 @@ signal navigation_changed(items: Array, active_key: String)
 const ChatTabScript = preload("res://scripts/chat/chat_channel_tab.gd")
 const ChatItemScript = preload("res://scripts/chat/chat_message_item.gd")
 const OverlaySceneChrome = preload("res://scripts/ui/overlay_scene_chrome.gd")
+const CONTENT_FULL_TEXTURE = preload("res://assets/sprites/ui/common/content_full_default_v1.png")
 
 const CHANNEL_WORLD := "world"
 const CHANNEL_PARTY := "party"
+const OVERLAY_CHAT_VISIBLE_EDGE_MARGIN := 32
 
 var _active_channel: String = CHANNEL_WORLD
 var _initial_channel: String = ""
@@ -104,13 +106,33 @@ func _build_ui() -> void:
 		_rebuild_tabs()
 
 	var shell: PanelContainer = OverlaySceneChrome.make_card_panel()
+	if _overlay_mode:
+		shell.add_theme_stylebox_override(
+			"panel",
+			OverlaySceneChrome.make_panel_style(
+				Color(0.0, 0.0, 0.0, 0.0),
+				Color(0.0, 0.0, 0.0, 0.0),
+				14
+			)
+		)
 	shell.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(shell)
 
-	var shell_margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
+	if _overlay_mode:
+		var shell_background: TextureRect = TextureRect.new()
+		shell_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		shell_background.texture = CONTENT_FULL_TEXTURE
+		shell_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		shell_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		shell_background.stretch_mode = TextureRect.STRETCH_SCALE
+		shell.add_child(shell_background)
+
+	var shell_margin_value: int = 0 if _overlay_mode else 16
+	var shell_margin: MarginContainer = OverlaySceneChrome.make_content_margin(shell_margin_value)
 	shell.add_child(shell_margin)
 
 	var shell_box: VBoxContainer = VBoxContainer.new()
+	shell_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shell_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	shell_box.add_theme_constant_override("separation", 12)
 	shell_margin.add_child(shell_box)
@@ -126,11 +148,20 @@ func _build_ui() -> void:
 		_hint_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		shell_box.add_child(_hint_label)
 
+	var message_host: Control = shell_box
+	if _overlay_mode:
+		var message_margin: MarginContainer = OverlaySceneChrome.make_content_margin(OVERLAY_CHAT_VISIBLE_EDGE_MARGIN)
+		message_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		message_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		message_margin.add_theme_constant_override("margin_bottom", 0)
+		shell_box.add_child(message_margin)
+		message_host = message_margin
+
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.clip_contents = true
-	shell_box.add_child(_scroll)
+	message_host.add_child(_scroll)
 	InertialScroller.attach(_scroll, "vertical")
 
 	_list_root = VBoxContainer.new()
@@ -141,7 +172,14 @@ func _build_ui() -> void:
 
 	var input_row: HBoxContainer = HBoxContainer.new()
 	input_row.add_theme_constant_override("separation", 8)
-	shell_box.add_child(input_row)
+	if _overlay_mode:
+		var input_margin: MarginContainer = OverlaySceneChrome.make_content_margin(OVERLAY_CHAT_VISIBLE_EDGE_MARGIN)
+		input_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		input_margin.add_theme_constant_override("margin_top", 0)
+		shell_box.add_child(input_margin)
+		input_margin.add_child(input_row)
+	else:
+		shell_box.add_child(input_row)
 
 	_input = LineEdit.new()
 	_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
