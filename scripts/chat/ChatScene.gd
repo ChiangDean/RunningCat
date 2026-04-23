@@ -231,20 +231,6 @@ func _load_channel_history(channel_key: String, before_seq: int) -> void:
 		_refresh_active_channel_ui()
 		return
 	ApiClient.get_chat_history(resolved_channel_key, before_seq, 50, Callable(self, "_on_chat_history_loaded").bind(channel_key))
-	return
-	ApiClient.get_chat_history(resolved_channel_key, before_seq, 50, func(success: bool, data: Variant, error: Dictionary) -> void:
-		if not success:
-			_status_override = str(error.get("message", "載入聊天訊息失敗"))
-			_refresh_active_channel_ui()
-			return
-		var payload: Dictionary = data if data is Dictionary else {}
-		var messages_variant: Variant = payload.get("messages", [])
-		if messages_variant is Array:
-			GameState.replace_chat_history(channel_key, messages_variant)
-			if channel_key == _active_channel or (_active_channel == CHANNEL_WORLD and channel_key == "system"):
-				_render_messages()
-				_mark_active_channel_read()
-	)
 
 
 func _submit_message() -> void:
@@ -263,24 +249,6 @@ func _submit_message() -> void:
 
 	_send_button.disabled = true
 	ApiClient.post_chat_message(resolved_channel_key, content, Callable(self, "_on_chat_message_posted").bind(content, _active_channel))
-	return
-	ApiClient.post_chat_message(resolved_channel_key, content, func(success: bool, data: Variant, error: Dictionary) -> void:
-		_send_button.disabled = false
-		if success:
-			var payload: Dictionary = data if data is Dictionary else {}
-			var message_variant: Variant = payload.get("message", {})
-			var message: Dictionary = message_variant if message_variant is Dictionary else _build_local_echo_message(content)
-			var ack_sequence: int = int(payload.get("ackSequence", 0))
-			if ack_sequence > 0:
-				GameState.append_chat_message_envelope(_active_channel, ack_sequence, message)
-			_input.text = ""
-			_status_override = ""
-			_mark_active_channel_read()
-			_queue_scroll_to_bottom()
-		else:
-			_status_override = str(error.get("message", "送出聊天訊息失敗"))
-		_refresh_active_channel_ui()
-	)
 
 
 func _on_input_text_submitted(_text: String) -> void:

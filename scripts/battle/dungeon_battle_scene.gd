@@ -30,7 +30,6 @@ var _speed_1x: Button
 var _speed_2x: Button
 var _speed_3x: Button
 var _skip_btn: Button
-var _level_label: Label
 var _result_backdrop: Control
 var _result_display: TextureRect
 var _skill_bar: Control
@@ -138,7 +137,7 @@ func _build_ui() -> void:
 	_skip_btn.visible = GameState.can_skip_battle()
 
 	var dungeon_name: String = _dungeon_cfg.get("name", "地城")
-	_level_label = _make_label(
+	var _level_label := _make_label(
 		"%s  Lv.%d" % [dungeon_name, _dungeon_level],
 		Vector2(0.0, BATTLE_Y + 10.0 + SKILL_SLOT_H + 10.0),
 		Vector2(SW, 40.0),

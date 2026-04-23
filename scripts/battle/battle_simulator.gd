@@ -337,28 +337,6 @@ func _check_all_collisions(p_list: Array, e_list: Array,
 				_handle_collision(p, e, t, events, p_list, e_list)
 
 
-func _enforce_queue(team_list: Array, front_is_leftmost: bool) -> void:
-	var alive: Array = []
-	for sc in team_list:
-		if sc.is_alive:
-			alive.append(sc)
-	if alive.size() <= 1:
-		return
-	var min_dist := CAT_HALF_W * 2.0
-	if front_is_leftmost:
-		alive.sort_custom(func(a, b): return a.pos_x < b.pos_x)
-		for i in range(1, alive.size()):
-			var min_x: float = alive[i - 1].pos_x + min_dist
-			if alive[i].pos_x < min_x:
-				alive[i].pos_x = min_x
-	else:
-		alive.sort_custom(func(a, b): return a.pos_x > b.pos_x)
-		for i in range(1, alive.size()):
-			var max_x: float = alive[i - 1].pos_x - min_dist
-			if alive[i].pos_x > max_x:
-				alive[i].pos_x = max_x
-
-
 func _are_colliding(a: SimCat, b: SimCat) -> bool:
 	return a.pos_x + CAT_HALF_W >= b.pos_x - CAT_HALF_W
 
