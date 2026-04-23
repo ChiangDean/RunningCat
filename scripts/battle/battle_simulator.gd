@@ -1,12 +1,12 @@
 class_name BattleSimulator
 extends RefCounted
 
-## 邏輯層預先模擬整場戰鬥，產生事件序列（決定性結果）
-## 技能系統：被動在戰鬥開始時套用；主動每冷卻結束自動發動；
-## Buff/Debuff 追蹤持續時間（輕量 Dictionary，每 tick 倒數）
+## Logic-layer simulation of an entire battle that produces a deterministic event sequence
+## Skill system: passives applied at battle start; actives triggered automatically each cooldown;
+## Buff/Debuff durations tracked as lightweight Dictionaries, decremented each tick
 
 const BATTLE_DURATION: float = 60.0
-const SIM_STEP: float = 1.0 / 30.0   # 30fps 模擬精度
+const SIM_STEP: float = 1.0 / 30.0   # 30 fps simulation precision
 const WALL_LEFT: float = 20.0
 const WALL_RIGHT: float = 700.0
 const CAT_HALF_W: float = 30.0
@@ -17,7 +17,7 @@ const TEAM_ROW_SPACING: float = 60.0
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
-# ── 模擬用輕量貓咪狀態 ───────────────────────────────
+# ── Lightweight cat state for simulation ──────────────
 class SimCat:
 	var instance_id: int
 	var data: CatData
@@ -26,26 +26,26 @@ class SimCat:
 	var is_alive: bool = true
 	var is_staggered: bool = false
 	var stagger_timer: float = 0.0
-	var facing: int          # 1 = 往右，-1 = 往左
+	var facing: int          # 1 = right, -1 = left
 
-	# 技能冷卻（對應 data.active_skills_data 的索引）
-	var skill_cooldowns: Array = []      # 剩餘冷卻秒數
-	var skill_max_cds: Array = []        # 每次重置用的 max cd（已套用 CDR）
+	# Skill cooldowns (indexed parallel to data.active_skills_data)
+	var skill_cooldowns: Array = []      # remaining cooldown in seconds
+	var skill_max_cds: Array = []        # max cd per reset, already scaled by CDR
 
-	# 有效屬性（套用被動後的基礎值）
+	# Effective stats (base values after passives are applied)
 	var base_hp: int = 0
 	var current_hp: int = 0
 	var base_atk: int = 0
 	var base_def: int = 0
 	var base_speed: float = 0.0
 
-	# 被動 — 永久效果（僅需查詢，不倒數）
-	var passive_damage_reduction: float = 0.0   # 0.08 = 減少 8% 傷害
+	# Passives — permanent effects (queried, not decremented)
+	var passive_damage_reduction: float = 0.0   # 0.08 = reduce incoming damage by 8%
 	var crit_rate: float = 0.0
 	var crit_damage_bonus: float = 0.0
 
-	# 主動 Buff / Debuff（持續時間）
-	# 每個 entry: { "type": String, "stat": String, "value": float,
+	# Active Buff / Debuff (with duration)
+	# Each entry: { "type": String, "stat": String, "value": float,
 	#               "value_type": String, "remaining": float }
 	var active_buffs: Array = []
 
@@ -64,7 +64,7 @@ class SimCat:
 		crit_rate = clampf(float(cat_data.get_meta("crit_rate", 0.0)), 0.0, 1.0)
 		crit_damage_bonus = maxf(0.0, float(cat_data.get_meta("crit_damage_bonus", 0.0)))
 
-	# ── 有效屬性（含 active buff 疊加）───────────────
+	# ── Effective stats (including active buff stacking) ──
 	func get_effective_def() -> int:
 		var val := float(base_def)
 		for b: Dictionary in active_buffs:
@@ -95,14 +95,14 @@ class SimCat:
 					val += b["value"]
 		return val
 
-	## 反彈傷害比例（0 表示沒有 reflect buff）
+	## Reflect damage ratio (0 means no reflect buff active)
 	func get_reflect_value() -> float:
 		for b: Dictionary in active_buffs:
 			if b.get("type", "") == "reflect":
 				return b.get("value", 0.0)
 		return 0.0
 
-	## 施加一個 buff（同類型刷新持續時間）
+	## Applies a buff; refreshes duration if one of the same type already exists
 	func apply_buff(buff_type: String, stat: String, value: float,
 			value_type: String, duration: float) -> void:
 		for b: Dictionary in active_buffs:
@@ -115,7 +115,7 @@ class SimCat:
 			"value_type": value_type, "remaining": duration
 		})
 
-	## 施加 reflect buff（無 stat 欄位，用 type 識別）
+	## Applies a reflect buff (no stat field; identified by type)
 	func apply_reflect(value: float, duration: float) -> void:
 		for b: Dictionary in active_buffs:
 			if b.get("type", "") == "reflect":
@@ -127,7 +127,7 @@ class SimCat:
 			"value_type": "flat", "remaining": duration
 		})
 
-	## 每 tick 更新 buff 倒數
+	## Decrements all buff durations each tick and removes expired ones
 	func tick_buffs(delta: float) -> void:
 		var i := active_buffs.size() - 1
 		while i >= 0:
@@ -137,9 +137,9 @@ class SimCat:
 			i -= 1
 
 
-# ── 模擬主流程 ───────────────────────────────────────
+# ── Main simulation flow ──────────────────────────────
 
-## 傳入雙方 CatData 陣列，回傳 Array[BattleEvent]（依時間排序）
+## Accepts both teams' CatData arrays and returns an Array[BattleEvent] sorted by timestamp
 func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 	_rng.randomize()
 	var events: Array = []
@@ -148,7 +148,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 	var p_list: Array = []
 	var e_list: Array = []
 
-	# Player：前排 x=315，往左排 60px
+	# Player: front at x=315, offset 60px left per row
 	var p_front_x := PLAYER_FRONT_START_X
 	for i in range(player_cats.size()):
 		var sc := SimCat.new(id_counter, player_cats[i], "player",
@@ -158,7 +158,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 				sc.pos_x, sc.current_hp, sc.base_hp))
 		id_counter += 1
 
-	# Enemy：前排 x=405，往右排 60px
+	# Enemy: front at x=405, offset 60px right per row
 	var e_front_x := ENEMY_FRONT_START_X
 	for i in range(enemy_cats.size()):
 		var sc := SimCat.new(id_counter, enemy_cats[i], "enemy",
@@ -168,14 +168,14 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 				sc.pos_x, sc.current_hp, sc.base_hp))
 		id_counter += 1
 
-	# ── 套用被動技能 ──────────────────────────────────
+	# ── Apply passive skills ──────────────────────────────
 	_apply_all_passives(p_list, e_list)
 
-	# ── 初始化主動技能冷卻 ────────────────────────────
+	# ── Initialise active skill cooldowns ─────────────────
 	for sc: SimCat in p_list + e_list:
 		_init_skill_cooldowns(sc)
 
-	# ── 主模擬迴圈 ───────────────────────────────────
+	# ── Main simulation loop ───────────────────────────────
 	var sim_time := 0.0
 	while sim_time < BATTLE_DURATION:
 		var p_front := _get_front(p_list)
@@ -190,7 +190,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 			events.sort_custom(func(a, b): return a.timestamp < b.timestamp)
 			return events
 
-		# 移動
+		# Movement
 		for sc: SimCat in p_list:
 			if sc.is_alive:
 				_move_cat(sc, SIM_STEP)
@@ -198,15 +198,15 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 			if sc.is_alive:
 				_move_cat(sc, SIM_STEP)
 
-		# 碰撞
+		# Collision
 		_check_all_collisions(p_list, e_list, sim_time, events)
 
-		# 技能計時 + 觸發
+		# Skill timing + triggering
 		for sc: SimCat in p_list + e_list:
 			if sc.is_alive:
 				_tick_skills(sc, SIM_STEP, sim_time, events, p_list, e_list)
 
-		# Buff 倒數
+		# Buff countdown
 		for sc: SimCat in p_list + e_list:
 			if sc.is_alive:
 				sc.tick_buffs(SIM_STEP)
@@ -218,7 +218,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 	return events
 
 
-# ── 被動技能套用 ─────────────────────────────────────
+# ── Passive skill application ─────────────────────────
 
 func _apply_all_passives(p_list: Array, e_list: Array) -> void:
 	_apply_passives_for_team(p_list, p_list)
@@ -268,8 +268,8 @@ func _apply_passive_effect(sc: SimCat, eff_type: String, stat: String,
 		"damage_reduction":
 			sc.passive_damage_reduction = minf(sc.passive_damage_reduction + value, 0.9)
 		"cooldown_reduction":
-			# CDR 儲存在 data 層，init_skill_cooldowns 時套用
-			# 這裡暫存於 data 的臨時欄位
+			# CDR is stored on the data layer; applied during init_skill_cooldowns
+			# Temporarily stored in a meta field on data
 			if not sc.data.get_meta("cdr", 0.0) is float:
 				sc.data.set_meta("cdr", 0.0)
 			sc.data.set_meta("cdr", minf(sc.data.get_meta("cdr", 0.0) + value, 0.5))
@@ -288,7 +288,7 @@ func _init_skill_cooldowns(sc: SimCat) -> void:
 		sc.skill_max_cds.append(eff_cd)
 
 
-# ── 移動 ─────────────────────────────────────────────
+# ── Movement ──────────────────────────────────────────
 
 func _move_cat(sc: SimCat, delta: float) -> void:
 	if sc.is_staggered:
@@ -299,7 +299,7 @@ func _move_cat(sc: SimCat, delta: float) -> void:
 	sc.pos_x += sc.get_effective_speed() * sc.facing * delta
 
 
-# ── 碰撞 ─────────────────────────────────────────────
+# ── Collision ─────────────────────────────────────────
 
 func _get_front(team_list: Array) -> SimCat:
 	var best: SimCat = null
@@ -343,7 +343,7 @@ func _are_colliding(a: SimCat, b: SimCat) -> bool:
 
 func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 		p_list: Array, e_list: Array) -> void:
-	# ── 傷害（含被動 damage_reduction 與有效防禦）────
+	# ── Damage (including passive damage_reduction and effective defence) ──
 	var dmg_to_e := 0
 	var dmg_to_p := 0
 	if not p.is_staggered:
@@ -353,7 +353,7 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 		dmg_to_p = _calc_attack_damage(e, p, e.get_effective_atk())
 		p.current_hp = maxi(0, p.current_hp - dmg_to_p)
 
-	# ── Reflect：被攻擊方的 reflect 傷害反彈給攻擊方 ──
+	# ── Reflect: attacker takes reflect damage from the defender ────────
 	if dmg_to_e > 0:
 		var rf := e.get_reflect_value()
 		if rf > 0.0:
@@ -367,7 +367,7 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 			e.current_hp = maxi(0, e.current_hp - ref_dmg)
 			events.append(BattleEvent.hp_update(t, e.instance_id, e.current_hp, e.base_hp))
 
-	# ── 回彈 ──────────────────────────────────────────
+	# ── Knockback ─────────────────────────────────────
 	var kb_p := CatStats.calc_knockback_distance(e.data.weight, p.data.weight)
 	var kb_e := CatStats.calc_knockback_distance(p.data.weight, e.data.weight)
 
@@ -376,7 +376,7 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 	p.pos_x -= kb_p
 	e.pos_x += kb_e
 
-	# ── 撞牆修正 ──────────────────────────────────────
+	# ── Wall correction ───────────────────────────────
 	var p_stagger_t := CatStats.STAGGER_TIME
 	if p.pos_x - CAT_HALF_W <= WALL_LEFT:
 		p.pos_x = WALL_LEFT + CAT_HALF_W
@@ -387,7 +387,7 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 		e.pos_x = WALL_RIGHT - CAT_HALF_W
 		e_stagger_t = CatStats.WALL_STAGGER_TIME
 
-	# ── 硬直 ──────────────────────────────────────────
+	# ── Stagger ───────────────────────────────────────
 	if not p.is_staggered:
 		p.is_staggered = true
 		p.stagger_timer = p_stagger_t
@@ -398,7 +398,7 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 	events.append(BattleEvent.collision(t, p.instance_id, p.pos_x, p.current_hp, -kb_p))
 	events.append(BattleEvent.collision(t, e.instance_id, e.pos_x, e.current_hp, kb_e))
 
-	# ── 死亡判定 ──────────────────────────────────────
+	# ── Death check ───────────────────────────────────
 	_check_death(e, t, events)
 	_check_death(p, t, events)
 
@@ -418,16 +418,16 @@ func _calc_attack_damage(attacker: SimCat, defender: SimCat, raw_atk: float) -> 
 	return int(float(damage) * (1.0 - defender.passive_damage_reduction))
 
 
-# ── 主動技能計時與觸發 ───────────────────────────────
+# ── Active skill timing and triggering ───────────────
 
 func _tick_skills(sc: SimCat, delta: float, t: float, events: Array,
 		p_list: Array, e_list: Array) -> void:
 	for i in range(sc.skill_cooldowns.size()):
 		sc.skill_cooldowns[i] -= delta
 		if sc.skill_cooldowns[i] <= 0.0:
-			# 硬直中：冷卻繼續計時，硬直結束後才發動（延後至下一 tick）
+			# Staggered: cooldown keeps ticking; skill fires after stagger ends (deferred to next tick)
 			if sc.is_staggered:
-				sc.skill_cooldowns[i] = 0.0   # 等硬直結束
+				sc.skill_cooldowns[i] = 0.0   # wait for stagger to end
 				continue
 			var skill_d: Dictionary = sc.data.active_skills_data[i]
 			sc.skill_cooldowns[i] = sc.skill_max_cds[i]
@@ -463,7 +463,7 @@ func _execute_skill(caster: SimCat, skill_d: Dictionary, t: float, events: Array
 					if target.current_hp <= 0:
 						_check_death(target, t, events)
 						break
-				# 額外擊退
+				# Extra knockback
 				var extra_kb: float = eff.get("extra_knockback", 0.0)
 				if extra_kb > 0.0 and target.is_alive:
 					if caster.team == "player":
@@ -512,14 +512,14 @@ func _resolve_buff_target(target_str: String, caster: SimCat,
 		ally_list: Array) -> SimCat:
 	match target_str:
 		"self":   return caster
-		"team":   return caster   # team buff 已在 apply 時處理；此處傳 self 備用
+		"team":   return caster   # team buff is handled at apply time; self is returned as fallback
 		_:        return caster
 
 
-# ── 品階加成計算 ─────────────────────────────────────
+# ── Rank scaling calculation ──────────────────────────
 
-## 取得套用品階加成後的 effect value
-## rank_scaling 中找對應 effect_index 的 per_5_ranks
+## Returns the effect value after applying rank scaling
+## Looks up the per_5_ranks entry for this effect_index in rank_scaling
 func _get_scaled_value(skill_d: Dictionary, eff_idx: int,
 		base_value: float, rank: int) -> float:
 	var rank_scaling: Array = skill_d.get("rank_scaling", [])

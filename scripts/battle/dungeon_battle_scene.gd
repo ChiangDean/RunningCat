@@ -131,12 +131,12 @@ func _build_ui() -> void:
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ui_layer.add_child(_timer_label)
 
-	_skip_btn = _make_button("跳過", Vector2(SW - 100.0, 20.0), Vector2(80.0, 44.0))
+	_skip_btn = _make_button(UiText.HOME_SKIP, Vector2(SW - 100.0, 20.0), Vector2(80.0, 44.0))
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
 	_skip_btn.visible = GameState.can_skip_battle()
 
-	var dungeon_name: String = _dungeon_cfg.get("name", "地城")
+	var dungeon_name: String = _dungeon_cfg.get("name", UiText.DUNGEON_BATTLE_FALLBACK_NAME)
 	var _level_label := _make_label(
 		"%s  Lv.%d" % [dungeon_name, _dungeon_level],
 		Vector2(0.0, BATTLE_Y + 10.0 + SKILL_SLOT_H + 10.0),
@@ -155,7 +155,7 @@ func _build_ui() -> void:
 	nav_bg.size = Vector2(SW, NAV_H)
 	_ui_layer.add_child(nav_bg)
 
-	var retreat_btn := _make_button("撤退", Vector2(10.0, NAV_Y + 10.0), Vector2(SW - 20.0, NAV_H - 20.0))
+	var retreat_btn := _make_button(UiText.DUNGEON_BATTLE_RETREAT, Vector2(10.0, NAV_Y + 10.0), Vector2(SW - 20.0, NAV_H - 20.0))
 	retreat_btn.pressed.connect(_on_retreat_pressed)
 	_ui_layer.add_child(retreat_btn)
 
@@ -422,26 +422,26 @@ func _on_complete_challenge(success: bool, data: Variant, error: Dictionary) -> 
 		_show_reward_popup(_dungeon_level, rewards if rewards is Dictionary else {})
 		return
 
-	var message := str(error.get("message", "挑戰結算失敗。"))
-	DialogManager.show_info("挑戰結算失敗", message, func():
+	var message := str(error.get("message", UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_BODY))
+	DialogManager.show_info(UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_TITLE, message, func():
 		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
 	)
 
 
 func _show_reward_popup(level: int, rewards: Dictionary) -> void:
-	var lines: Array = ["Lv.%d 獲得獎勵：" % level]
+	var lines: Array = [UiText.DUNGEON_REWARD_LEVEL_FORMAT % level]
 	if int(rewards.get("catFood", 0)) > 0:
-		lines.append("  普通乾糧 ×%d" % int(rewards.get("catFood", 0)))
+		lines.append(UiText.DUNGEON_REWARD_CAT_FOOD_FORMAT % int(rewards.get("catFood", 0)))
 	if int(rewards.get("specialCatFood", 0)) > 0:
-		lines.append("  特殊乾糧 ×%d" % int(rewards.get("specialCatFood", 0)))
+		lines.append(UiText.DUNGEON_REWARD_SPECIAL_FOOD_FORMAT % int(rewards.get("specialCatFood", 0)))
 	if int(rewards.get("diamonds", 0)) > 0:
-		lines.append("  鑽石 ×%d" % int(rewards.get("diamonds", 0)))
+		lines.append(UiText.DUNGEON_REWARD_DIAMONDS_FORMAT % int(rewards.get("diamonds", 0)))
 	if int(rewards.get("trapCages", 0)) > 0:
-		lines.append("  誘捕籠 ×%d" % int(rewards.get("trapCages", 0)))
+		lines.append(UiText.DUNGEON_REWARD_TRAP_CAGE_FORMAT % int(rewards.get("trapCages", 0)))
 	if int(rewards.get("whiskerShards", 0)) > 0:
-		lines.append("  鬍鬚碎片 ×%d" % int(rewards.get("whiskerShards", 0)))
+		lines.append(UiText.DUNGEON_REWARD_WHISKER_FORMAT % int(rewards.get("whiskerShards", 0)))
 
-	DialogManager.show_info("挑戰完成", "\n".join(lines), func():
+	DialogManager.show_info(UiText.DUNGEON_CHALLENGE_COMPLETE, "\n".join(lines), func():
 		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
 	)
 

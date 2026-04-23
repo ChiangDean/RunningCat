@@ -153,7 +153,7 @@ const BOSS_WARNING_FLASH_ALPHA := 0.52
 const BOSS_WARNING_FLASH_DURATION := 0.18
 const BOSS_WARNING_PULSE_SCALE := 1.07
 const BOSS_WARNING_PULSE_DURATION := 0.22
-const BOSS_WARNING_TEXT := "今天我一定會吸到你"
+const BOSS_WARNING_TEXT := UiText.BATTLE_BOSS_WARNING
 const REWARD_FLOAT_START_Y := 620.0
 const REWARD_FLOAT_RISE := 168.0
 const REWARD_FLOAT_STEP_DELAY := 0.18
@@ -1288,10 +1288,10 @@ func _layout_sandbox_btn() -> void:
 
 func _refresh_skill_mode_buttons() -> void:
 	if _scoop_mode_btn != null:
-		_scoop_mode_btn.text = "貓砂"
+		_scoop_mode_btn.text = UiText.HOME_SKILL_MODE_SCOOP
 		_apply_skill_filter_button_style(_scoop_mode_btn, _skill_filter_mode == "scoop")
 	if _skill_filter_btn != null:
-		_skill_filter_btn.text = "衝撞"
+		_skill_filter_btn.text = UiText.HOME_SKILL_MODE_DASH
 		_apply_skill_filter_button_style(_skill_filter_btn, _skill_filter_mode == "all")
 
 
@@ -2026,13 +2026,13 @@ func _refresh_speed_boost_button() -> void:
 		return
 	if _is_free_speed_boost_active():
 		var remaining_seconds: int = _free_speed_boost_end_unix - int(Time.get_unix_time_from_system())
-		_speed_1x.text = "%s加速中 %s" % [_format_speed_label(_free_speed_boost_mult), _format_countdown_time(remaining_seconds)]
+		_speed_1x.text = UiText.BATTLE_SPEED_BOOSTING_FORMAT % [_format_speed_label(_free_speed_boost_mult), _format_countdown_time(remaining_seconds)]
 		_speed_1x.disabled = true
 	elif _free_speed_boost_used:
-		_speed_1x.text = "已加速"
+		_speed_1x.text = UiText.BATTLE_SPEED_BOOSTED
 		_speed_1x.disabled = true
 	else:
-		_speed_1x.text = "加速"
+		_speed_1x.text = UiText.HOME_SPEED_BOOST
 		_speed_1x.disabled = false
 	_highlight_speed_btn(_speed_1x if _is_free_speed_boost_active() else null)
 	_apply_skill_speed_button_style(_speed_1x, _is_free_speed_boost_active() or not _speed_1x.disabled)

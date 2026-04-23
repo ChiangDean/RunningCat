@@ -46,7 +46,7 @@ func _build_ui() -> void:
 			{
 				"key": "technique",
 				"label": UiText.GACHA_TAB_TECHNIQUE,
-				"shell_description": "\u67e5\u770b\u8a98\u6355\u6280\u8853\u7b49\u7d1a\u8207\u5404\u968e\u6bb5\u6a5f\u7387\u8abf\u6574\u3002",
+				"shell_description": UiText.GACHA_TECHNIQUE_SHELL_DESC,
 				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
 				"shell_summary_right": Callable(self, "_build_shell_summary_right").bind("technique"),
 			},
@@ -131,7 +131,7 @@ func _build_ui() -> void:
 	technique_box.add_child(technique_nav_row)
 
 	_technique_prev_button = Button.new()
-	_technique_prev_button.text = "前一級"
+	_technique_prev_button.text = UiText.GACHA_TECHNIQUE_PREV
 	_technique_prev_button.custom_minimum_size = Vector2(132.0, 46.0)
 	_technique_prev_button.pressed.connect(_on_technique_prev_pressed)
 	UiPalette.apply_button_kind(_technique_prev_button, "secondary")
@@ -146,7 +146,7 @@ func _build_ui() -> void:
 	technique_nav_row.add_child(_technique_level_status)
 
 	_technique_next_button = Button.new()
-	_technique_next_button.text = "後一級"
+	_technique_next_button.text = UiText.GACHA_TECHNIQUE_NEXT
 	_technique_next_button.custom_minimum_size = Vector2(132.0, 46.0)
 	_technique_next_button.pressed.connect(_on_technique_next_pressed)
 	UiPalette.apply_button_kind(_technique_next_button, "secondary")
@@ -322,7 +322,7 @@ func _build_pull_option_card(option: Dictionary) -> Control:
 	info.add_child(title)
 
 	var button: Button = Button.new()
-	button.text = "誘捕籠 %d" % required_cages
+	button.text = UiText.GACHA_PULL_CAGE_COST_FORMAT % required_cages
 	button.custom_minimum_size = Vector2(196.0, 50.0)
 	button.pressed.connect(_on_pull_button_pressed.bind(count))
 	UiPalette.apply_button_kind(button, "primary")
@@ -340,7 +340,7 @@ func _build_technique_level_card(level_data: Dictionary, _current_level: int, _t
 	var rates: Dictionary = rates_variant if rates_variant is Dictionary else {}
 
 	var rate_title: Label = Label.new()
-	rate_title.text = "機率列表"
+	rate_title.text = UiText.GACHA_RATE_LIST_TITLE
 	rate_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	rate_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	root.add_child(rate_title)
@@ -515,12 +515,12 @@ func _build_shell_summary_right(tab_key: String) -> String:
 	var total_pulls: int = int(overview.get("totalPulls", 0))
 	if tab_key == "technique":
 		var technique_level: int = int(overview.get("techniqueLevel", 0))
-		return "\u6280\u8853 Lv.%d / \u7d2f\u8a08 %d" % [technique_level, total_pulls]
+		return UiText.GACHA_SHELL_TECHNIQUE_SUMMARY_FORMAT % [technique_level, total_pulls]
 
 	var free_pull_count: int = int(overview.get("freePullCount", 0))
 	var has_used_free_pull_today: bool = bool(overview.get("hasUsedFreePullToday", false))
-	var free_text: String = "\u5df2\u4f7f\u7528" if has_used_free_pull_today else str(maxi(free_pull_count, 1))
-	return "\u514d\u8cbb %s / \u7d2f\u8a08 %d" % [free_text, total_pulls]
+	var free_text: String = UiText.GACHA_SHELL_FREE_STATUS_USED if has_used_free_pull_today else str(maxi(free_pull_count, 1))
+	return UiText.GACHA_SHELL_FREE_SUMMARY_FORMAT % [free_text, total_pulls]
 
 
 func _on_back_pressed() -> void:

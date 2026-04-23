@@ -1,45 +1,45 @@
 class_name BattleEvent
 extends RefCounted
 
-## 戰鬥事件資料（模擬器輸出，供視覺層播放用）
+## Battle event data produced by the simulator, consumed by the visual layer
 
 enum Type {
-	SPAWN,          # 貓咪出場
-	COLLISION,      # 碰撞（含傷害+回彈）
-	HP_UPDATE,      # 血量更新（技能傷害）
-	SKILL_ACTIVATE, # 主動技能發動
-	BUFF_APPLY,     # Buff / Debuff 施加（供 UI 顯示持續狀態用）
-	CAT_DIE,        # 貓咪死亡
-	BATTLE_END,     # 戰鬥結束
+	SPAWN,          # Cat enters the field
+	COLLISION,      # Collision (includes damage and knockback)
+	HP_UPDATE,      # HP update (skill damage)
+	SKILL_ACTIVATE, # Active skill triggered
+	BUFF_APPLY,     # Buff / Debuff applied (for UI duration display)
+	CAT_DIE,        # Cat dies
+	BATTLE_END,     # Battle ends
 }
 
 var type: Type
 var timestamp: float = 0.0
 
-# 通用欄位
+# General fields
 var cat_id: int = -1
 var team: String = ""
 
-# SPAWN / COLLISION 位置
+# SPAWN / COLLISION position
 var pos_x: float = 0.0
 
-# 血量相關
+# HP-related
 var current_hp: int = 0
 var max_hp: int = 0
 
-# COLLISION：回彈距離（正 = 往右，負 = 往左）
+# COLLISION: knockback distance (positive = right, negative = left)
 var knockback: float = 0.0
 
 # SKILL_ACTIVATE
 var skill_id: String = ""
 
-# BUFF_APPLY：持續時間（秒），ui 用於顯示外框
+# BUFF_APPLY: duration in seconds, used by UI to display status border
 var buff_duration: float = 0.0
 
-# BATTLE_END 結果："WIN" / "LOSE" / "TIMEOUT"
+# BATTLE_END result: "WIN" / "LOSE" / "TIMEOUT"
 var result: String = ""
 
-# ── 工廠方法 ──────────────────────────────
+# ── Factory methods ───────────────────────────────
 
 static func spawn(time: float, id: int, team_name: String, x: float, hp: int, mhp: int) -> BattleEvent:
 	var e := BattleEvent.new()

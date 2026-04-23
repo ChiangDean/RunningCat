@@ -1,4 +1,4 @@
-extends Control
+﻿extends Control
 
 signal navigation_changed(items: Array, active_key: String)
 
@@ -57,9 +57,9 @@ func get_footer_items() -> Array:
 		var key: String = str(item.get("key", ""))
 		match key:
 			CHANNEL_PARTY:
-				item["shell_description"] = "\u67e5\u770b\u968a\u4f0d\u6210\u54e1\u7684\u5c08\u5c6c\u804a\u5929\u983b\u9053\u3002"
+				item["shell_description"] = UiText.CHAT_PARTY_SHELL_DESC
 			_:
-				item["shell_description"] = "\u67e5\u770b\u4e16\u754c\u8207\u7cfb\u7d71\u983b\u9053\u7684\u6700\u65b0\u8a0a\u606f\u3002"
+				item["shell_description"] = UiText.CHAT_WORLD_SHELL_DESC
 		item["shell_summary_right"] = Callable(self, "_build_channel_summary_right").bind(key)
 		items.append(item)
 	return items
@@ -70,7 +70,7 @@ func get_section() -> String:
 
 
 func _build_channel_summary_right(channel_key: String) -> String:
-	return "\u672a\u8b80 %d" % _get_tab_unread_count(channel_key)
+	return UiText.CHAT_UNREAD_FORMAT % _get_tab_unread_count(channel_key)
 
 
 func set_section(section_key: String) -> void:
@@ -183,12 +183,12 @@ func _build_ui() -> void:
 
 	_input = LineEdit.new()
 	_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_input.placeholder_text = "輸入聊天內容"
+	_input.placeholder_text = UiText.CHAT_INPUT_PLACEHOLDER
 	_input.text_submitted.connect(_on_input_text_submitted)
 	input_row.add_child(_input)
 
 	_send_button = Button.new()
-	_send_button.text = "送出"
+	_send_button.text = UiText.CHAT_SEND_BUTTON
 	_send_button.custom_minimum_size = Vector2(132.0, 48.0)
 	_send_button.pressed.connect(_submit_message)
 	input_row.add_child(_send_button)
@@ -236,7 +236,7 @@ func _load_channel_history(channel_key: String, before_seq: int) -> void:
 func _submit_message() -> void:
 	var content: String = _input.text.strip_edges()
 	if content == "":
-		_status_override = "請先輸入聊天內容"
+		_status_override = UiText.CHAT_INPUT_EMPTY
 		_refresh_active_channel_ui()
 		return
 	if _active_channel != CHANNEL_WORLD and _active_channel != CHANNEL_PARTY:
@@ -313,7 +313,7 @@ func _build_empty_state() -> Control:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var label: Label = Label.new()
-	label.text = "目前沒有聊天訊息"
+	label.text = UiText.CHAT_EMPTY_STATE
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -383,7 +383,7 @@ func _get_tab_unread_count(channel_key: String) -> int:
 
 func _refresh_active_channel_ui() -> void:
 	if _section_label != null:
-		_section_label.text = "全頻聊天" if _active_channel == CHANNEL_WORLD else "隊伍聊天"
+		_section_label.text = UiText.CHAT_SECTION_WORLD if _active_channel == CHANNEL_WORLD else UiText.CHAT_SECTION_PARTY
 	if _hint_label != null:
 		_hint_label.text = _build_hint_text()
 	if _input == null or _send_button == null:
@@ -393,16 +393,16 @@ func _refresh_active_channel_ui() -> void:
 	_input.editable = can_send
 	_send_button.disabled = not can_send
 	if not can_send and _active_channel == CHANNEL_PARTY:
-		_input.placeholder_text = "加入隊伍後即可使用隊伍聊天"
+		_input.placeholder_text = UiText.CHAT_PARTY_INPUT_DISABLED
 	else:
-		_input.placeholder_text = "輸入聊天內容"
+		_input.placeholder_text = UiText.CHAT_INPUT_PLACEHOLDER
 
 
 func _build_hint_text() -> String:
 	if _status_override != "":
 		return _status_override
 	if _active_channel == CHANNEL_PARTY and _resolve_channel_key(CHANNEL_PARTY) == "":
-		return "加入隊伍後即可查看與發送隊伍聊天。"
+		return UiText.CHAT_PARTY_HINT
 	return ""
 
 
@@ -441,8 +441,8 @@ func _on_unread_changed(_channel_key: String, _count: int) -> void:
 
 func _build_channel_defs() -> Array:
 	return [
-		{"key": CHANNEL_WORLD, "label": "全頻"},
-		{"key": CHANNEL_PARTY, "label": "隊伍"},
+		{"key": CHANNEL_WORLD, "label": UiText.CHAT_TAB_WORLD},
+		{"key": CHANNEL_PARTY, "label": UiText.CHAT_TAB_PARTY},
 	]
 
 

@@ -17,44 +17,44 @@ const ENTRY_DEFINITIONS: Array[Dictionary] = [
 	{
 		"key": "gacha",
 		"title": UiText.GACHA_PAGE_TITLE,
-		"category": "招募補強",
-		"status": "常駐",
-		"preview_title": "擴充隊伍來源",
+		"category": UiText.ACTIVITY_CATEGORY_GACHA,
+		"status": UiText.ACTIVITY_STATUS_PERMANENT,
+		"preview_title": UiText.ACTIVITY_PREVIEW_GACHA,
 		"description": UiText.ACTIVITY_GACHA_DESC,
-		"rewards": "誘捕籠消耗、技術成長、稀有新貓",
+		"rewards": UiText.ACTIVITY_REWARDS_GACHA,
 		"button_text": UiText.ACTIVITY_GACHA_BUTTON,
 		"art_path": GACHA_CARD_ART,
 	},
 	{
 		"key": "dungeon",
 		"title": UiText.DUNGEON_PAGE_TITLE,
-		"category": "資源挑戰",
-		"status": "常駐",
-		"preview_title": "層層推進的長線關卡",
+		"category": UiText.ACTIVITY_CATEGORY_DUNGEON,
+		"status": UiText.ACTIVITY_STATUS_PERMANENT,
+		"preview_title": UiText.ACTIVITY_PREVIEW_DUNGEON,
 		"description": UiText.ACTIVITY_DUNGEON_DESC,
-		"rewards": "通關層數、培養資源、推圖節奏",
+		"rewards": UiText.ACTIVITY_REWARDS_DUNGEON,
 		"button_text": UiText.ACTIVITY_DUNGEON_BUTTON,
 		"art_path": DUNGEON_CARD_ART,
 	},
 	{
 		"key": "arena",
 		"title": UiText.ARENA_PAGE_TITLE,
-		"category": "排名對戰",
-		"status": "常駐",
-		"preview_title": "與其他玩家競逐牌位",
+		"category": UiText.ACTIVITY_CATEGORY_ARENA,
+		"status": UiText.ACTIVITY_STATUS_PERMANENT,
+		"preview_title": UiText.ACTIVITY_PREVIEW_ARENA,
 		"description": UiText.ACTIVITY_ARENA_DESC,
-		"rewards": "牌位提升、賽季獎勵、防守配置",
+		"rewards": UiText.ACTIVITY_REWARDS_ARENA,
 		"button_text": UiText.ACTIVITY_ARENA_BUTTON,
 		"art_path": ARENA_CARD_ART,
 	},
 	{
 		"key": "expedition",
 		"title": UiText.EXPEDITION_PAGE_TITLE,
-		"category": "放置收益",
-		"status": "常駐",
-		"preview_title": "安排貓咪持續巡視領地",
+		"category": UiText.ACTIVITY_CATEGORY_EXPEDITION,
+		"status": UiText.ACTIVITY_STATUS_PERMANENT,
+		"preview_title": UiText.ACTIVITY_PREVIEW_EXPEDITION,
 		"description": UiText.ACTIVITY_EXPEDITION_DESC,
-		"rewards": "定時收成、碎片素材、長線養成",
+		"rewards": UiText.ACTIVITY_REWARDS_EXPEDITION,
 		"button_text": UiText.ACTIVITY_EXPEDITION_BUTTON,
 		"art_path": EXPEDITION_CARD_ART,
 	},
@@ -114,11 +114,11 @@ func _make_entry_card(entry_data: Dictionary) -> Control:
 
 	title_label.text = str(entry_data.get("title", ""))
 	category_label.text = str(entry_data.get("category", ""))
-	status_label.text = str(entry_data.get("status", "常駐"))
+	status_label.text = str(entry_data.get("status", UiText.ACTIVITY_STATUS_PERMANENT))
 	preview_label.text = str(entry_data.get("preview_title", ""))
 	description_label.text = str(entry_data.get("description", ""))
-	reward_label.text = "重點內容：" + str(entry_data.get("rewards", ""))
-	action_button.text = str(entry_data.get("button_text", "前往活動"))
+	reward_label.text = UiText.ACTIVITY_REWARDS_LABEL_PREFIX + str(entry_data.get("rewards", ""))
+	action_button.text = str(entry_data.get("button_text", UiText.ACTIVITY_DEFAULT_BUTTON))
 	UiPalette.apply_button_kind(action_button, "primary")
 
 	var art_path: String = str(entry_data.get("art_path", ""))

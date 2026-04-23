@@ -1,8 +1,8 @@
 class_name SkillData
 extends Resource
 
-## 技能資料基底類別
-## PassiveSkillData 與 ActiveSkillData 皆繼承此類
+## Base class for skill data
+## Both PassiveSkillData and ActiveSkillData extend this class
 
 var id: String = ""
 var display_name: String = ""
@@ -13,7 +13,7 @@ var icon_path: String = ""
 
 static func _load_json(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
-		push_error("SkillData: 找不到檔案：" + path)
+		push_error("SkillData: file not found: " + path)
 		return {}
 	var file := FileAccess.open(path, FileAccess.READ)
 	var json := JSON.new()

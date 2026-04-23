@@ -1,7 +1,7 @@
 class_name SpeedCat
 extends BaseCat
 
-## 高速貓：極高速度，先手衝撞，短距離穿透
+## Speed cat: extremely fast, charges first, short-range penetration
 
 const SPEED_MULTIPLIER: float = 1.5
 
@@ -14,5 +14,5 @@ func _move_forward(delta: float) -> void:
 func _trigger_active_skill(skill: ActiveSkillData) -> void:
 	match skill.effect_type:
 		"penetrate":
-			# 穿透衝刺：短距離穿過前排（戰鬥系統完成後實作）
+			# Penetrate dash: pass through the front rank at short range (implement once combat system is complete)
 			pass

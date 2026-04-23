@@ -1,10 +1,10 @@
 class_name FlyingCat
 extends BaseCat
 
-## 飛行貓：可跳過敵方前排，直接撞後排
+## Flying cat: leaps over the enemy front rank to strike the back row
 
 func _trigger_active_skill(skill: ActiveSkillData) -> void:
 	match skill.effect_type:
 		"jump":
-			# 跳躍：飛越前排，直接命中後排（戰鬥系統完成後實作）
+			# Jump: leap over the front rank to hit back-row enemies (implement once combat system is complete)
 			pass

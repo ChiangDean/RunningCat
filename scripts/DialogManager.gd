@@ -1,12 +1,12 @@
-## DialogManager.gd — 全域對話框管理（Autoload）
+## DialogManager.gd — Global dialog manager (Autoload)
 ##
-## 一般資訊框：右上 ✕ 按鈕 + 點擊任意處可關閉
+## Info dialog: top-right ✕ button + click anywhere to close
 ##   DialogManager.show_info(title, text)
 ##   DialogManager.show_info(title, text, on_close_callable)
 ##   DialogManager.show_info_node(title, content_node)
 ##   DialogManager.show_info_node(title, content_node, on_close_callable)
 ##
-## 二次確認框：確定 / 取消，overlay 不可點擊關閉
+## Confirm dialog: OK / Cancel, overlay click does not close
 ##   DialogManager.show_confirm(title, text, on_confirm_callable)
 ##   DialogManager.show_confirm(title, text, on_confirm_callable, on_cancel_callable)
 
@@ -25,17 +25,17 @@ const _FONT_HINT    := 16
 const _INERTIAL_SCROLL := preload("res://scripts/ui/inertial_scroll.gd")
 
 
-# ── 公開 API ────────────────────────────────────────────
+# ── Public API ────────────────────────────────────────────
 
 func show_info(title: String, text: String, on_close: Callable = Callable(), width_size: String = "small") -> Callable:
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.add_theme_font_size_override("font_size", _FONT_CONTENT)
-	return _build(title, lbl, false, on_close, Callable(), "確定", "取消", width_size)
+	return _build(title, lbl, false, on_close, Callable(), UiText.COMMON_CONFIRM, UiText.COMMON_CANCEL, width_size)
 
 
-## 回傳一個 Callable，呼叫它可從外部主動關閉這個 dialog
+## Returns a Callable that can be called externally to close this dialog
 func show_info_node(title: String, content: Control, on_close: Callable = Callable(), width_size: String = "small") -> Callable:
 	# If the content is a ScrollContainer, attach the inertial scroller helper so touch drag has inertia/bounce
 	if content is ScrollContainer:
@@ -44,7 +44,7 @@ func show_info_node(title: String, content: Control, on_close: Callable = Callab
 			InertialScroller.attach(content)
 		elif _INERTIAL_SCROLL != null:
 			_INERTIAL_SCROLL.attach(content)
-	return _build(title, content, false, on_close, Callable(), "確定", "取消", width_size)
+	return _build(title, content, false, on_close, Callable(), UiText.COMMON_CONFIRM, UiText.COMMON_CANCEL, width_size)
 
 
 func show_confirm(
@@ -101,9 +101,9 @@ func _get_content_min_size(content: Control, content_width: float) -> Vector2:
 	return min_size
 
 
-# ── 內部建構 ────────────────────────────────────────────
+# ── Internal construction ────────────────────────────────────────────
 
-## 回傳 close callable（供呼叫者主動關閉）
+## Returns a close callable (for the caller to close the dialog)
 func _build(
 		title: String,
 		content: Control,
@@ -126,18 +126,18 @@ func _build(
 	add_child(canvas)
 	var canvas_ref: WeakRef = weakref(canvas)
 
-	# 半透明底層 overlay
+	# Semi-transparent background overlay
 	var overlay := ColorRect.new()
 	overlay.color = Color(0.0, 0.0, 0.0, 0.68)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	canvas.add_child(overlay)
 
 	if not is_confirm:
-		# 點擊 overlay（panel 外側）即關閉
+		# Click overlay (outside panel) to close
 		overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 		overlay.gui_input.connect(Callable(self, "_on_dialog_overlay_gui_input").bind(canvas_ref, on_ok))
 	else:
-		# Confirm 框：overlay 不可點擊關閉
+		# Confirm dialog: overlay click is disabled
 		overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var center := CenterContainer.new()
@@ -152,7 +152,7 @@ func _build(
 	dialog_stack.size_flags_vertical = 0
 	center.add_child(dialog_stack)
 
-	# 主面板（吸收點擊，避免穿透到 overlay）
+	# Main panel (absorbs clicks to prevent pass-through to overlay)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(panel_width, _PANEL_MIN_H)
 	panel.size_flags_vertical = 0
@@ -184,7 +184,7 @@ func _build(
 	var hint_lbl: Label = null
 	var btn_row: HBoxContainer = null
 
-	# 標題列
+	# Title row
 	var title_row := HBoxContainer.new()
 	title_row.add_theme_constant_override("separation", 8)
 	title_row.size_flags_vertical = 0
@@ -198,18 +198,18 @@ func _build(
 
 	if not is_confirm:
 		var close_btn := Button.new()
-		close_btn.text = "✕"
+		close_btn.text = UiText.COMMON_CLOSE
 		close_btn.custom_minimum_size = Vector2(36.0, 36.0)
 		close_btn.flat = false
 		close_btn.pressed.connect(Callable(self, "_close_dialog_canvas_and_call").bind(canvas_ref, on_ok))
 		title_row.add_child(close_btn)
 
-	# 內容
+	# Content
 	vbox.add_child(content)
 
 	if not is_confirm:
 		hint_lbl = Label.new()
-		hint_lbl.text = "點擊任意處關閉視窗"
+		hint_lbl.text = UiText.COMMON_CLICK_TO_CLOSE
 		hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		hint_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hint_lbl.add_theme_font_size_override("font_size", _FONT_HINT)

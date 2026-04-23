@@ -43,7 +43,7 @@ func _process(_delta: float) -> void:
 		if remaining <= 0:
 			should_refresh = true
 			continue
-		label.text = "剩餘時間 %s" % _format_remaining_time(remaining)
+		label.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(remaining)
 
 	if should_refresh:
 		_refresh_zone_cards()
@@ -55,7 +55,7 @@ func _build_ui() -> void:
 		"dock_items": [
 			{
 				"key": EXPEDITION_SUBMENU_KEY,
-				"label": "巡視",
+				"label": UiText.EXPEDITION_TAB_LABEL,
 				"shell_title": UiText.EXPEDITION_PAGE_TITLE,
 				"shell_description": UiText.EXPEDITION_PAGE_DESC,
 				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
@@ -139,15 +139,15 @@ func _refresh_shell_state() -> void:
 
 
 func _build_shell_summary_left() -> String:
-	return "已解鎖 %d/%d" % [_get_unlocked_zone_count(), GameState.expedition_zones.size()]
+	return UiText.EXPEDITION_UNLOCKED_FORMAT % [_get_unlocked_zone_count(), GameState.expedition_zones.size()]
 
 
 func _build_shell_summary_right() -> String:
 	var active_count: int = _get_active_expedition_count()
 	var claimable_count: int = _get_claimable_expedition_count()
 	if claimable_count > 0:
-		return "可領取 %d" % claimable_count
-	return "巡視中 %d" % active_count
+		return UiText.EXPEDITION_CLAIMABLE_FORMAT % claimable_count
+	return UiText.EXPEDITION_ACTIVE_FORMAT % active_count
 
 
 func _get_unlocked_zone_count() -> int:
@@ -224,7 +224,7 @@ func _make_zone_card(zone: Dictionary) -> Control:
 	title.text = zone_name
 	duration.text = UiText.EXPEDITION_DURATION_FORMAT % duration_hours
 	description_label.text = UiText.EXPEDITION_PAGE_DESC
-	detail_label.text = "選擇一隻空閒的貓咪開始巡視。"
+	detail_label.text = UiText.EXPEDITION_DETAIL_IDLE
 	countdown_label.visible = false
 	if preview_image != null:
 		preview_image.texture = AssetResolver.load_texture("res://assets/sprites/ui/activity_background_v1.png")
@@ -240,8 +240,8 @@ func _make_zone_card(zone: Dictionary) -> Control:
 
 	if expedition.is_empty():
 		status_badge_label.text = UiText.EXPEDITION_BTN_DEPLOY
-		description_label.text = "選擇一隻空閒貓咪，前往此區域進行巡視。"
-		detail_label.text = "目前狀態：尚未巡視"
+		description_label.text = UiText.EXPEDITION_DETAIL_DEPLOY
+		detail_label.text = UiText.EXPEDITION_STATUS_IDLE
 		action_button.text = UiText.EXPEDITION_BTN_DEPLOY
 		action_button.disabled = _is_loading
 		UiPalette.apply_button_kind(action_button, "primary")
@@ -254,7 +254,7 @@ func _make_zone_card(zone: Dictionary) -> Control:
 	var cat_name: String = _get_cat_display_name(cat_id)
 	if is_claimable:
 		status_badge_label.text = UiText.EXPEDITION_READY
-		description_label.text = "巡視已完成，可以回來領取本次收穫。"
+		description_label.text = UiText.EXPEDITION_DETAIL_CLAIMABLE
 		detail_label.text = "%s：%s" % [UiText.EXPEDITION_IN_PROGRESS, cat_name]
 		action_button.text = UiText.EXPEDITION_BTN_CLAIM
 		action_button.disabled = _is_loading
@@ -266,9 +266,9 @@ func _make_zone_card(zone: Dictionary) -> Control:
 
 	status_badge_label.text = UiText.EXPEDITION_IN_PROGRESS
 	description_label.text = "%s：%s" % [UiText.EXPEDITION_IN_PROGRESS, cat_name]
-	detail_label.text = "巡視進行中，時間到後即可返回領取。"
+	detail_label.text = UiText.EXPEDITION_DETAIL_IN_PROGRESS
 	countdown_label.visible = true
-	countdown_label.text = "剩餘時間 %s" % _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - Time.get_unix_time_from_system(), 0))
+	countdown_label.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - Time.get_unix_time_from_system(), 0))
 	_countdown_labels[zone_id] = {
 		"label": countdown_label,
 		"completesAtUnixSeconds": int(expedition.get("completesAtUnixSeconds", 0)),
@@ -537,7 +537,7 @@ func _get_territory_requirement_name(zone: Dictionary) -> String:
 			var territory_name: String = str(territory_names[territory_index]).strip_edges()
 			if territory_name != "":
 				return territory_name
-	return "領地%d" % territory_index
+	return UiText.EXPEDITION_TERRITORY_FALLBACK_FORMAT % territory_index
 
 
 func _get_cat_display_name(cat_id: String) -> String:

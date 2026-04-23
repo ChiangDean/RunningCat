@@ -1,6 +1,6 @@
 extends Control
 
-## 關卡資訊畫面（目前顯示玩家目前進度，未來可擴充為關卡地圖）
+## Stage info screen (shows current player progress; can be extended to a stage map in the future)
 
 func _ready() -> void:
 	_build_ui()
@@ -23,18 +23,18 @@ func _build_ui() -> void:
 	root_vbox.offset_bottom = -20.0
 	layer.add_child(root_vbox)
 
-	# 頂部列
+	# Top row
 	var top_row := HBoxContainer.new()
 	root_vbox.add_child(top_row)
 
 	var back_btn := Button.new()
-	back_btn.text = "返回"
+	back_btn.text = UiText.COMMON_BACK
 	back_btn.custom_minimum_size = Vector2(100.0, 50.0)
 	back_btn.pressed.connect(_on_back_pressed)
 	top_row.add_child(back_btn)
 
 	var title := Label.new()
-	title.text = "關卡進度"
+	title.text = UiText.LEVEL_PAGE_TITLE
 	title.add_theme_font_size_override("font_size", 36)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -46,15 +46,15 @@ func _build_ui() -> void:
 
 	root_vbox.add_child(_make_separator())
 
-	# 目前關卡資訊
+	# Current stage info
 	var info_lbl := Label.new()
-	info_lbl.text = "目前關卡：%s" % GameState.get_level_display()
+	info_lbl.text = UiText.LEVEL_CURRENT_FORMAT % GameState.get_level_display()
 	info_lbl.add_theme_font_size_override("font_size", 26)
 	info_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root_vbox.add_child(info_lbl)
 
 	var global_lbl := Label.new()
-	global_lbl.text = "全局關卡編號：%d" % GameState.current_global_stage
+	global_lbl.text = UiText.LEVEL_GLOBAL_STAGE_FORMAT % GameState.current_global_stage
 	global_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	global_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	global_lbl.modulate = Color(0.7, 0.7, 0.7, 1.0)

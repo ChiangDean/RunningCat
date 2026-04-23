@@ -1,7 +1,7 @@
 class_name AssassinCat
 extends BaseCat
 
-## 刺客貓：高 ATK & 高 Speed，先手衝刺
+## Assassin cat: high ATK & high Speed, charges ahead first
 
 const SPEED_MULTIPLIER: float = 1.2
 
@@ -14,5 +14,5 @@ func _move_forward(delta: float) -> void:
 func _trigger_active_skill(skill: ActiveSkillData) -> void:
 	match skill.effect_type:
 		"dash":
-			# 衝刺：瞬間加速衝向前排（戰鬥系統完成後實作）
+			# Dash: instantly rush toward the front rank (implement once combat system is complete)
 			pass

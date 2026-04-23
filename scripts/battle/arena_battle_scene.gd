@@ -115,7 +115,7 @@ func _build_ui() -> void:
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ui_layer.add_child(_timer_label)
 
-	_skip_btn = _make_button("跳過", Vector2(SW - 100.0, 20.0), Vector2(80.0, 44.0))
+	_skip_btn = _make_button(UiText.HOME_SKIP, Vector2(SW - 100.0, 20.0), Vector2(80.0, 44.0))
 	_ui_layer.add_child(_skip_btn)
 	_skip_btn.pressed.connect(_on_skip_pressed)
 	_skip_btn.visible = GameState.can_skip_battle()
@@ -135,7 +135,7 @@ func _build_ui() -> void:
 	_ui_layer.add_child(my_name_lbl)
 
 	var my_rank_lbl := _make_label(
-		"%s  %d" % [str(my_overview.get("rankName", "青銅 III")), int(my_overview.get("score", 0))],
+		"%s  %d" % [str(my_overview.get("rankName", UiText.ARENA_DEFAULT_RANK)), int(my_overview.get("score", 0))],
 		Vector2(10.0, HEADER_Y + 28.0),
 		Vector2(HALF - 30.0, 22.0),
 		14
@@ -150,7 +150,7 @@ func _build_ui() -> void:
 	_ui_layer.add_child(vs_lbl)
 
 	var opp_name_lbl := _make_label(
-		str(_opponent.get("playerName", "未知對手")),
+		str(_opponent.get("playerName", UiText.ARENA_UNKNOWN_OPPONENT)),
 		Vector2(HALF + 20.0, HEADER_Y),
 		Vector2(HALF - 30.0, 26.0),
 		18
@@ -159,7 +159,7 @@ func _build_ui() -> void:
 	_ui_layer.add_child(opp_name_lbl)
 
 	var opp_rank_lbl := _make_label(
-		"%s  %d" % [str(_opponent.get("rankName", "青銅 III")), opp_score],
+		"%s  %d" % [str(_opponent.get("rankName", UiText.ARENA_DEFAULT_RANK)), opp_score],
 		Vector2(HALF + 20.0, HEADER_Y + 28.0),
 		Vector2(HALF - 30.0, 22.0),
 		14
@@ -177,7 +177,7 @@ func _build_ui() -> void:
 	nav_bg.size = Vector2(SW, NAV_H)
 	_ui_layer.add_child(nav_bg)
 
-	var retreat_btn := _make_button("返回競技場", Vector2(10.0, NAV_Y + 10.0), Vector2(SW - 20.0, NAV_H - 20.0))
+	var retreat_btn := _make_button(UiText.ARENA_BATTLE_RETURN_BUTTON, Vector2(10.0, NAV_Y + 10.0), Vector2(SW - 20.0, NAV_H - 20.0))
 	retreat_btn.pressed.connect(_on_retreat_pressed)
 	_ui_layer.add_child(retreat_btn)
 
@@ -375,7 +375,7 @@ func _start_battle() -> void:
 		enemy_cats.append(data)
 
 	if player_cats.is_empty() or enemy_cats.is_empty():
-		DialogManager.show_info("競技場", "隊伍資料不足，無法開始對戰。", func() -> void:
+		DialogManager.show_info(UiText.ARENA_DIALOG_TITLE, UiText.ARENA_BATTLE_TEAM_DATA_ERROR, func() -> void:
 			SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
 		)
 		return
@@ -403,7 +403,7 @@ func _handle_result(is_win: bool) -> void:
 	ApiClient.complete_arena_battle(str(_opponent.get("opponentId", "")), is_win, func(success: bool, data: Variant, error: Dictionary) -> void:
 		_settling = false
 		if not success or not (data is Dictionary):
-			DialogManager.show_info("競技場結算", str(error.get("message", "競技場結算失敗。")), func() -> void:
+			DialogManager.show_info(UiText.ARENA_SETTLE_TITLE, str(error.get("message", UiText.ARENA_SETTLE_FAILED_BODY)), func() -> void:
 				SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
 			)
 			return
@@ -419,7 +419,7 @@ func _show_result_popup(response: Dictionary) -> void:
 	var is_win := bool(response.get("isWin", false))
 	var delta := int(response.get("scoreDelta", 0))
 	var new_score := int(response.get("newScore", 0))
-	var rank_name := str(response.get("rankName", "青銅 III"))
+	var rank_name := str(response.get("rankName", UiText.ARENA_DEFAULT_RANK))
 	var delta_str := ("+%d" % delta) if delta >= 0 else "%d" % delta
 	var result_overlay: Control = _show_result_overlay(is_win)
 
@@ -442,20 +442,20 @@ func _show_result_popup(response: Dictionary) -> void:
 	vbox.add_child(rank_lbl)
 
 	var delta_lbl := Label.new()
-	delta_lbl.text = "分數變化：%s" % delta_str
+	delta_lbl.text = UiText.ARENA_SCORE_DELTA_FORMAT % delta_str
 	delta_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	delta_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	delta_lbl.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5) if delta >= 0 else Color(1.0, 0.4, 0.4))
 	vbox.add_child(delta_lbl)
 
 	var score_lbl := Label.new()
-	score_lbl.text = "目前積分：%s" % GameState.format_number(new_score)
+	score_lbl.text = UiText.ARENA_CURRENT_SCORE_FORMAT % GameState.format_number(new_score)
 	score_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	score_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(score_lbl)
 
 	var hint_lbl := Label.new()
-	hint_lbl.text = "點擊任意處返回競技場"
+	hint_lbl.text = UiText.ARENA_BATTLE_CLICK_RETURN
 	hint_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))

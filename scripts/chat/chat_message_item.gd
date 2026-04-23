@@ -57,9 +57,9 @@ func setup(channel_key: String, message: Dictionary) -> void:
 
 func _resolve_sender_name(channel_key: String, message: Dictionary) -> String:
 	if channel_key == "system":
-		return "系統"
+		return UiText.CHAT_SENDER_SYSTEM
 	var sender_name: String = str(message.get("senderDisplayName", "")).strip_edges()
-	return sender_name if sender_name != "" else "鏟屎官"
+	return sender_name if sender_name != "" else UiText.CHAT_SENDER_DEFAULT
 
 
 func _format_time(sent_at: String) -> String:

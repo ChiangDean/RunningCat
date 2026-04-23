@@ -1,15 +1,15 @@
 class_name PassiveSkillData
 extends SkillData
 
-## 被動技能資料
-## 戰鬥開始即生效，可對全隊 buff 或對敵方 debuff
+## Passive skill data
+## Takes effect at battle start; can buff allies or debuff enemies
 
-# 作用範圍："team"（我方全體）或 "enemy"（敵方全體）
+# Scope: "team" (all allies) or "enemy" (all enemies)
 var scope: String = "team"
 
-## effects 格式：
+## effects format:
 ## [{ "stat": "cooldown", "modifier_type": "percent", "value": -10 }]
-## modifier_type 可為 "flat"（固定值）或 "percent"（百分比）
+## modifier_type is either "flat" (fixed amount) or "percent" (percentage)
 var effects: Array = []
 
 

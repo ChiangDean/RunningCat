@@ -1,13 +1,13 @@
 class_name ActiveSkillData
 extends SkillData
 
-## 主動技能資料
-## 每隔 cooldown 秒自動發動，玩家可設定首次發動時間（0~9 秒）
+## Active skill data
+## Activates automatically every cooldown seconds; the player can set the initial activation delay (0–9 s)
 
 var cooldown: float = 5.0
 var effect_type: String = ""   # "damage", "buff", "debuff", "knockback" ...
 var effect_value: float = 0.0
-# 作用目標："enemy_front"（敵方前排）、"team"（我方全體）、"self" 等
+# Target: "enemy_front" (enemy front rank), "team" (all allies), "self", etc.
 var target_scope: String = "enemy_front"
 
 
