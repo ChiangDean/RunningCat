@@ -22,6 +22,8 @@ const REQUEST_KIND_LOGOUT_REFRESH := "logout_refresh"
 const REQUEST_KIND_OAUTH_BEGIN := "oauth_begin"
 const REQUEST_KIND_OAUTH_EXCHANGE := "oauth_exchange"
 const REQUEST_KIND_OAUTH_COMPLETE_PROFILE := "oauth_complete_profile"
+const REQUEST_KIND_GUEST_LOGIN := "guest_login"
+const REQUEST_KIND_GUEST_REGISTER := "guest_register"
 const OAUTH_POLL_INTERVAL_SECONDS := 1.5
 const OAUTH_POLL_TIMEOUT_SECONDS := 90.0
 const OAUTH_PROVIDER_GOOGLE := "google"
@@ -44,6 +46,10 @@ const OAUTH_PROFILE_SECONDARY := "Back"
 const OAUTH_GOOGLE_BUTTON := "Google"
 const OAUTH_APPLE_BUTTON := "Apple"
 const OAUTH_LINE_BUTTON := "LINE"
+const GUEST_ACCOUNT_PREFIX := "guest_"
+const GUEST_PASSWORD_PREFIX := "guest:"
+const GUEST_PASSWORD_SUFFIX := ":meow-party-dash"
+const GUEST_DISPLAY_NAME_PREFIX := "遊客"
 const OAUTH_OPENED_STATUS := "Browser opened. Finish authorization, then come back here."
 const OAUTH_PENDING_STATUS := "Waiting for authorization to finish..."
 const OAUTH_TIMEOUT_STATUS := "Authorization was not completed in time. Please try again."
@@ -53,9 +59,9 @@ const OAUTH_PLAYER_NAME_REQUIRED := "Please enter a player name."
 const OAUTH_BEGIN_FAILED_STATUS := "Unable to start external sign-in."
 const OAUTH_COMPLETE_PROFILE_STATUS := "Creating your player profile..."
 const AUTH_BLOCK_WIDTH := 440.0
-const AUTH_BLOCK_HEIGHT_WITH_OAUTH := 520.0
-const AUTH_BLOCK_HEIGHT_LOGIN_COMPACT := 324.0
-const AUTH_BLOCK_HEIGHT_REGISTER_COMPACT := 392.0
+const AUTH_BLOCK_HEIGHT_WITH_OAUTH := 584.0
+const AUTH_BLOCK_HEIGHT_LOGIN_COMPACT := 388.0
+const AUTH_BLOCK_HEIGHT_REGISTER_COMPACT := 456.0
 const AUTH_BLOCK_HEIGHT_OAUTH_PROFILE := 286.0
 enum AuthMode
 {
@@ -90,6 +96,7 @@ var _password_input: LineEdit
 var _confirm_password_input: LineEdit
 var _primary_button: Button
 var _secondary_button: Button
+var _guest_button: Button
 var _status_label: Label
 var _oauth_intro_label: Label
 var _oauth_button_row: VBoxContainer
@@ -293,6 +300,17 @@ func _build_auth_block() -> PanelContainer:
 	_secondary_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("c59f78"), 8))
 	_secondary_button.pressed.connect(_on_secondary_pressed)
 	button_row.add_child(_secondary_button)
+
+	_guest_button = Button.new()
+	_guest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_guest_button.custom_minimum_size = Vector2(0, 50)
+	_guest_button.text = UiText.START_BUTTON_GUEST_LOGIN
+	UiFonts.apply_noto(_guest_button, UiPalette.FONT_SIZE_BODY_LG)
+	_guest_button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("88a9bb"), 10))
+	_guest_button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("96b6c7"), 10))
+	_guest_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("7698aa"), 8))
+	_guest_button.pressed.connect(_on_guest_pressed)
+	content.add_child(_guest_button)
 
 	_status_label = Label.new()
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -557,6 +575,8 @@ func _apply_mode() -> void:
 	_confirm_password_input.visible = is_register
 	_primary_button.text = OAUTH_PROFILE_PRIMARY if is_oauth_profile else (UiText.START_BUTTON_REGISTER if is_register else UiText.START_BUTTON_LOGIN)
 	_secondary_button.text = OAUTH_PROFILE_SECONDARY if is_oauth_profile else (UiText.START_BUTTON_BACK_TO_LOGIN if is_register else UiText.START_BUTTON_REGISTER)
+	if _guest_button != null:
+		_guest_button.visible = not is_oauth_profile
 	if _oauth_intro_label != null:
 		_oauth_intro_label.visible = not is_oauth_profile
 	if _oauth_button_row != null:
@@ -588,6 +608,8 @@ func _set_auth_interactable(editable: bool) -> void:
 	_confirm_password_input.editable = editable
 	_primary_button.disabled = not editable
 	_secondary_button.disabled = not editable
+	if _guest_button != null:
+		_guest_button.disabled = not editable
 	if _oauth_google_button != null:
 		_set_oauth_button_enabled(_oauth_google_button, editable and _is_oauth_provider_enabled(OAUTH_PROVIDER_GOOGLE))
 	if _oauth_apple_button != null:
@@ -626,6 +648,10 @@ func _on_secondary_pressed() -> void:
 	_apply_mode()
 
 
+func _on_guest_pressed() -> void:
+	_submit_guest_login()
+
+
 func _submit_login() -> void:
 	if _request_in_flight:
 		return
@@ -658,6 +684,64 @@ func _submit_login() -> void:
 		_request_in_flight = false
 		_set_auth_interactable(true)
 		_restore_pending_login_inputs()
+		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
+
+
+func _submit_guest_login() -> void:
+	if _request_in_flight:
+		return
+
+	_mode = AuthMode.LOGIN
+	_apply_mode()
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_GUEST_LOGIN
+	_auth_request_mode = AuthMode.LOGIN
+	_set_auth_interactable(false)
+	_set_status(UiText.START_STATUS_GUEST_LOGIN, false)
+	_retain_network_loading_overlay(UiText.START_STATUS_GUEST_LOGIN)
+
+	var headers: PackedStringArray = _build_request_headers("", true)
+	var body: String = JSON.stringify({
+		"account": _build_guest_account(),
+		"password": _build_guest_password(),
+		"deviceId": _device_id,
+		"deviceName": _build_device_name()
+	})
+	var error: int = _http_request.request("%s/auth/login" % _api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_release_network_loading_overlay()
+		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
+
+
+func _submit_guest_register() -> void:
+	if _request_in_flight:
+		return
+
+	_request_in_flight = true
+	_request_kind = REQUEST_KIND_GUEST_REGISTER
+	_auth_request_mode = AuthMode.REGISTER
+	_set_auth_interactable(false)
+	_set_status(UiText.START_STATUS_GUEST_REGISTER, false)
+	_retain_network_loading_overlay(UiText.START_STATUS_GUEST_REGISTER)
+
+	var headers: PackedStringArray = _build_request_headers("", true)
+	var body: String = JSON.stringify({
+		"displayName": _build_guest_display_name(),
+		"account": _build_guest_account(),
+		"password": _build_guest_password(),
+		"confirmPassword": _build_guest_password(),
+		"deviceId": _device_id,
+		"deviceName": _build_device_name()
+	})
+	var error: int = _http_request.request("%s/auth/register" % _api_base_url, headers, HTTPClient.METHOD_POST, body)
+	if error != OK:
+		_request_in_flight = false
+		_request_kind = ""
+		_set_auth_interactable(true)
+		_release_network_loading_overlay()
 		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
 
 
@@ -924,11 +1008,19 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	var error_payload: Dictionary = error_variant if error_variant is Dictionary else {}
 
 	if response_code >= 200 and response_code < 300 and success:
-		if completed_request_kind == REQUEST_KIND_AUTH or completed_request_kind == REQUEST_KIND_REFRESH or completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
+		if completed_request_kind == REQUEST_KIND_AUTH \
+			or completed_request_kind == REQUEST_KIND_GUEST_LOGIN \
+			or completed_request_kind == REQUEST_KIND_GUEST_REGISTER \
+			or completed_request_kind == REQUEST_KIND_REFRESH \
+			or completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
 			GameState.set_auth_session(_api_base_url, data)
 			_api_base_url = GameState.api_base_url
 			_sync_logout_button_visibility()
-			if completed_request_kind == REQUEST_KIND_AUTH or _loading_block == null or not _loading_block.visible:
+			if completed_request_kind == REQUEST_KIND_AUTH \
+				or completed_request_kind == REQUEST_KIND_GUEST_LOGIN \
+				or completed_request_kind == REQUEST_KIND_GUEST_REGISTER \
+				or _loading_block == null \
+				or not _loading_block.visible:
 				_show_loading_state()
 			if completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
 				_reset_oauth_state()
@@ -978,6 +1070,21 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		_api_base_url = _resolve_api_base_url()
 		_sync_logout_button_visibility()
 		_set_status(UiText.START_STATUS_LOGIN_EXPIRED, true)
+		return
+
+	if completed_request_kind == REQUEST_KIND_GUEST_LOGIN:
+		_release_network_loading_overlay()
+		if response_code == 401:
+			_submit_guest_register()
+			return
+		var guest_login_message: String = str(error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED)
+		_set_status(guest_login_message, true)
+		return
+
+	if completed_request_kind == REQUEST_KIND_GUEST_REGISTER:
+		_release_network_loading_overlay()
+		var guest_register_message: String = str(error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED)
+		_set_status(guest_register_message, true)
 		return
 
 	if completed_request_kind == REQUEST_KIND_OAUTH_BEGIN:
@@ -1055,7 +1162,7 @@ func _handle_request_transport_failure(completed_request_kind: String, result: i
 		return
 	elif completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE or completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 		_set_logout_button_state(true)
-	elif completed_request_kind == REQUEST_KIND_AUTH and _auth_request_mode == AuthMode.LOGIN:
+	elif (completed_request_kind == REQUEST_KIND_AUTH or completed_request_kind == REQUEST_KIND_GUEST_LOGIN) and _auth_request_mode == AuthMode.LOGIN:
 		_restore_pending_login_inputs()
 	_logout_dialog_open = false if completed_request_kind.begins_with("logout") else _logout_dialog_open
 	_set_status(message, true)
@@ -1072,7 +1179,7 @@ func _handle_request_invalid_response(completed_request_kind: String) -> void:
 		return
 	elif completed_request_kind == REQUEST_KIND_LOGOUT_REVOKE or completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 		_set_logout_button_state(true)
-	elif completed_request_kind == REQUEST_KIND_AUTH and _auth_request_mode == AuthMode.LOGIN:
+	elif (completed_request_kind == REQUEST_KIND_AUTH or completed_request_kind == REQUEST_KIND_GUEST_LOGIN) and _auth_request_mode == AuthMode.LOGIN:
 		_restore_pending_login_inputs()
 	_logout_dialog_open = false if completed_request_kind.begins_with("logout") else _logout_dialog_open
 	_set_status(UiText.START_STATUS_INVALID_RESPONSE, true)
@@ -1498,6 +1605,21 @@ func _resolve_api_base_url() -> String:
 
 func _build_device_name() -> String:
 	return "%s-%s" % [OS.get_name(), Engine.get_architecture_name()]
+
+
+func _build_guest_account() -> String:
+	var device_hash: String = _device_id.strip_edges().sha256_text().substr(0, 24)
+	return "%s%s" % [GUEST_ACCOUNT_PREFIX, device_hash]
+
+
+func _build_guest_password() -> String:
+	var device_hash: String = _device_id.strip_edges().sha256_text()
+	return "%s%s%s" % [GUEST_PASSWORD_PREFIX, device_hash, GUEST_PASSWORD_SUFFIX]
+
+
+func _build_guest_display_name() -> String:
+	var device_hash: String = _device_id.strip_edges().sha256_text().substr(0, 6).to_upper()
+	return "%s%s" % [GUEST_DISPLAY_NAME_PREFIX, device_hash]
 
 
 func _load_or_create_device_id() -> String:

@@ -8,4 +8,4 @@
 | 平台 | 手機（直向 720×1280） |
 | 引擎 | Godot 4.6.2（GDScript） |
 | 後端 MVP | 本地 JSON；未來：Firebase |
-| 登入 | OAuth（訪客模式可本地遊玩） |
+| 登入 | 帳密 / OAuth / 遊客登入 |
