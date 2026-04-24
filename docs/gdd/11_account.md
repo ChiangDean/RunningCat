@@ -3,6 +3,7 @@
 | 項目 | 說明 |
 | --- | --- |
 | 帳密登入 | `account + password` |
+| 遊客登入 | 以本機 `deviceId` 產生固定 guest 帳密，自動登入或建立裝置專屬遊客帳號 |
 | 第三方登入 | `Google` / `Apple` / `LINE` |
 | 登入入口 | `StartScene` |
 | 設定中心入口 | 首頁左上角角色卡片，開啟 `ConfigScene` |
@@ -16,15 +17,16 @@
 ## StartScene 流程
 
 1. 預設顯示帳號密碼登入表單。
-2. 畫面同時提供 `Google` / `Apple` / `LINE` 三個 OAuth 按鈕。
-3. 帳密登入會呼叫 `/api/auth/login`，註冊會呼叫 `/api/auth/register`。
-4. OAuth 登入會先呼叫 `POST /api/auth/oauth/{provider}/begin`，取得 `transactionId` 與 `authorizationUrl`。
-5. Client 開啟瀏覽器後，持續輪詢 `POST /api/auth/oauth/exchange`。
-6. 若狀態為 `authenticated`，直接保存 `authTokens` 並進入 bootstrap。
-7. 若狀態為 `needs_profile_name`，切換成首次命名模式，送出 `POST /api/auth/oauth/complete-profile`。
-8. 若狀態為 `conflict_existing_account_requires_bind`，提示玩家先登入既有帳號，再到設定中心進行綁定。
-9. 若狀態為 `cancelled` 或 `failed`，畫面保留原登入頁並顯示對應訊息。
-10. 任何登入成功後，都會呼叫 `/api/auth/bootstrap` 取得玩家啟動快照。
+2. 畫面提供 `遊客登入` 按鈕；Client 以本機 `deviceId` 產生固定 guest 帳密，先呼叫 `/api/auth/login`，若帳號尚未存在再自動呼叫 `/api/auth/register`。
+3. 畫面同時提供 `Google` / `Apple` / `LINE` 三個 OAuth 按鈕。
+4. 帳密登入會呼叫 `/api/auth/login`，註冊會呼叫 `/api/auth/register`。
+5. OAuth 登入會先呼叫 `POST /api/auth/oauth/{provider}/begin`，取得 `transactionId` 與 `authorizationUrl`。
+6. Client 開啟瀏覽器後，持續輪詢 `POST /api/auth/oauth/exchange`。
+7. 若狀態為 `authenticated`，直接保存 `authTokens` 並進入 bootstrap。
+8. 若狀態為 `needs_profile_name`，切換成首次命名模式，送出 `POST /api/auth/oauth/complete-profile`。
+9. 若狀態為 `conflict_existing_account_requires_bind`，提示玩家先登入既有帳號，再到設定中心進行綁定。
+10. 若狀態為 `cancelled` 或 `failed`，畫面保留原登入頁並顯示對應訊息。
+11. 任何登入成功後，都會呼叫 `/api/auth/bootstrap` 取得玩家啟動快照。
 
 ## OAuth 狀態與 UX
 
