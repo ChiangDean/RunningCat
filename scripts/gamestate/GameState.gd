@@ -68,6 +68,7 @@ func clear_persisted_player_state() -> void:
 	mail_summary_data = {}
 	mail_list_data = []
 	selected_mail_data = {}
+	announcement_catalog = []
 	current_global_stage = 1
 	boss_available = false
 	dungeon_battle_id = ""
@@ -383,6 +384,9 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	scooper_ability_catalog = ab_cat if ab_cat is Array else []
 	CacheIO.save_catalog("ability_catalog", scooper_ability_catalog)
 
+	var announcement_cat: Variant = data.get("announcementCatalog", [])
+	update_announcements(announcement_cat if announcement_cat is Array else [])
+
 	# ── Parse and cache live scooper data ──
 	var s_profile: Variant = data.get("scooperProfile", {})
 	if s_profile is Dictionary and not (s_profile as Dictionary).is_empty():
@@ -480,6 +484,11 @@ func apply_profile_response(data: Dictionary) -> void:
 	player_data.save()
 	player_profile_changed.emit()
 	_emit_red_dot_state_changed()
+
+
+func update_announcements(data: Array) -> void:
+	announcement_catalog = _normalize_image_fields_variant(data)
+	CacheIO.save_catalog("announcement_catalog", announcement_catalog)
 
 
 func get_profile_avatar_id() -> String:
@@ -637,6 +646,7 @@ var scooper_memory_catalog: Array = []
 var scooper_treasure_catalog: Array = []
 var scooper_achievement_catalog: Array = []
 var scooper_ability_catalog: Array = []
+var announcement_catalog: Array = []
 
 # ── Live API data (stored after scene fetch) ──────────────────
 var scooper_profile_data: Dictionary = {}
@@ -691,6 +701,7 @@ func _ready() -> void:
 	scooper_treasure_catalog = CacheIO.load_catalog("treasure_catalog")
 	scooper_achievement_catalog = CacheIO.load_catalog("achievement_catalog")
 	scooper_ability_catalog = CacheIO.load_catalog("ability_catalog")
+	announcement_catalog = CacheIO.load_catalog("announcement_catalog")
 	_rebuild_cached_static_configs()
 	scooper_profile_data = CacheIO.load_scooper_dict("profile")
 	scooper_equipment_data = CacheIO.load_scooper_array("equipment")

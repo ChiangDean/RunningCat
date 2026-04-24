@@ -260,6 +260,7 @@ var _home_more_buttons: Dictionary = {}
 var _home_more_button_order: Array[String] = []
 var _home_more_menu_expanded: bool = false
 var _last_overlay_scene_path: String = ""
+var _announcement_btn: TextureButton
 var _stats_btn: TextureButton
 var _bottom_hud_layout: Control
 var _skill_filter_mode: String = "scoop"
@@ -1539,6 +1540,13 @@ func _get_main_nav_label_paths() -> Array[String]:
 func _get_home_more_button_defs() -> Array[Dictionary]:
 	return [
 		{
+			"key": "announcements",
+			"text": UiText.HOME_ANNOUNCEMENTS,
+			"callback": Callable(self, "_on_nav_announcements"),
+			"button_path": "QuickButtons/AnnouncementsButton",
+			"label_path": "QuickButtons/AnnouncementsButton/Label",
+		},
+		{
 			"key": "backpack",
 			"text": UiText.NAV_BACKPACK,
 			"callback": Callable(self, "_on_nav_backpack"),
@@ -1602,6 +1610,8 @@ func _assign_home_more_button_reference(key: String, button: TextureButton) -> v
 			_chat_btn = button
 		"stats":
 			_stats_btn = button
+		"announcements":
+			_announcement_btn = button
 		"backpack":
 			_backpack_btn = button
 		"lineup":
@@ -3043,6 +3053,135 @@ func _on_nav_backpack() -> void:
 func _on_nav_mail() -> void:
 	_close_home_more_menu()
 	_toggle_overlay_scene(MAIL_SCENE_PATH)
+
+
+func _on_nav_announcements() -> void:
+	_close_home_more_menu()
+	ApiClient.get_announcements(Callable(self, "_on_announcements_loaded"))
+
+
+func _on_announcements_loaded(ok: bool, data: Variant, err: Dictionary) -> void:
+	if ok and data is Array:
+		GameState.update_announcements(data as Array)
+		_show_announcements_dialog()
+		return
+
+	if not GameState.announcement_catalog.is_empty():
+		ToastManager.error(UiText.HOME_ANNOUNCEMENTS_TITLE, str(err.get("message", UiText.HOME_ANNOUNCEMENTS_LOAD_FAILED)))
+		_show_announcements_dialog()
+		return
+
+	ToastManager.error(UiText.HOME_ANNOUNCEMENTS_TITLE, str(err.get("message", UiText.HOME_ANNOUNCEMENTS_LOAD_FAILED)))
+
+
+func _show_announcements_dialog() -> void:
+	var announcements: Array = GameState.announcement_catalog
+	if announcements.is_empty():
+		DialogManager.show_info(UiText.HOME_ANNOUNCEMENTS_TITLE, UiText.HOME_ANNOUNCEMENTS_EMPTY, Callable(), "medium")
+		return
+
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(640.0, 720.0)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var list: VBoxContainer = VBoxContainer.new()
+	list.add_theme_constant_override("separation", 12)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+
+	for item_variant: Variant in announcements:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		list.add_child(_build_announcement_card(item))
+
+	if list.get_child_count() == 0:
+		var empty_label: Label = _make_label(UiText.HOME_ANNOUNCEMENTS_EMPTY, Vector2.ZERO, Vector2(620.0, 40.0), UiPalette.FONT_SIZE_BODY)
+		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		list.add_child(empty_label)
+
+	DialogManager.show_info_node(UiText.HOME_ANNOUNCEMENTS_TITLE, scroll, Callable(), "xlarge")
+
+
+func _build_announcement_card(item: Dictionary) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.16, 0.12, 0.09, 0.96)
+	style.border_color = Color(0.76, 0.58, 0.30, 0.78)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	panel.add_theme_stylebox_override("panel", style)
+
+	var margin: MarginContainer = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	panel.add_child(margin)
+
+	var stack: VBoxContainer = VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 8)
+	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.add_child(stack)
+
+	var title: Label = Label.new()
+	title.text = str(item.get("title", "")).strip_edges()
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
+	title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.72, 1.0))
+	stack.add_child(title)
+
+	var meta_parts: Array[String] = []
+	var category: String = str(item.get("category", "")).strip_edges()
+	if category.is_empty():
+		category = UiText.HOME_ANNOUNCEMENTS_CATEGORY_UPDATE
+	meta_parts.append(category)
+	var starts_at: String = _format_announcement_date(str(item.get("startsAtUtc", "")).strip_edges())
+	if not starts_at.is_empty():
+		meta_parts.append(starts_at)
+	var meta: Label = Label.new()
+	meta.text = " / ".join(meta_parts)
+	meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	meta.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	meta.add_theme_color_override("font_color", Color(0.80, 0.72, 0.62, 1.0))
+	stack.add_child(meta)
+
+	var summary: String = str(item.get("summary", "")).strip_edges()
+	if not summary.is_empty():
+		var summary_label: Label = Label.new()
+		summary_label.text = summary
+		summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		summary_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		summary_label.add_theme_color_override("font_color", Color(0.98, 0.90, 0.78, 1.0))
+		stack.add_child(summary_label)
+
+	var content: Label = Label.new()
+	content.text = str(item.get("content", "")).strip_edges()
+	content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	content.add_theme_color_override("font_color", Color(0.94, 0.90, 0.84, 1.0))
+	stack.add_child(content)
+
+	return panel
+
+
+func _format_announcement_date(value: String) -> String:
+	if value.is_empty():
+		return ""
+	var normalized: String = value.replace("Z", "")
+	var parts: PackedStringArray = normalized.split("T")
+	if parts.size() == 0:
+		return value
+	return parts[0]
+
 
 func _open_chat() -> void:
 	_close_home_more_menu()

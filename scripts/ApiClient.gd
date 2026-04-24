@@ -148,6 +148,10 @@ func get_authenticated_bootstrap(callback: Callable) -> void:
 	_api_get("auth/bootstrap", callback)
 
 
+func get_announcements(callback: Callable) -> void:
+	_api_get("announcements", callback)
+
+
 func admin_get_catalog_access(callback: Callable) -> void:
 	_api_get("admin/catalog/access", callback)
 
