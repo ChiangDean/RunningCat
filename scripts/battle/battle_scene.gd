@@ -280,6 +280,7 @@ func _ready() -> void:
 	_build_home_scoop_frames()
 	GameState.player_profile_changed.connect(_on_player_profile_changed)
 	GameState.player_wallet_changed.connect(_on_player_wallet_changed)
+	GameState.combat_trial_score_changed.connect(_on_combat_trial_score_changed)
 	GameState.red_dot_state_changed.connect(_on_red_dot_state_changed)
 	_build_scene()
 	_refresh_home_red_dots()
@@ -702,6 +703,16 @@ func _build_ui() -> void:
 	_resource_value_labels["diamonds"] = top_bar_root.get_node("DiamondsPanel/Value") as Label
 	_resource_value_labels["trap_points"] = top_bar_root.get_node("GoldPanel/Value") as Label
 	_resource_value_labels["power"] = top_bar_root.get_node("PowerPanel/Value") as Label
+	var combat_trial_button: Button = Button.new()
+	combat_trial_button.flat = true
+	combat_trial_button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	combat_trial_button.focus_mode = Control.FOCUS_NONE
+	combat_trial_button.position = Vector2(452.0, 128.0)
+	combat_trial_button.size = Vector2(210.0, 58.0)
+	combat_trial_button.modulate = Color(1.0, 1.0, 1.0, 0.01)
+	combat_trial_button.pressed.connect(UiAudio.play_ui_click)
+	combat_trial_button.pressed.connect(_open_combat_trial_scene)
+	top_bar_root.add_child(combat_trial_button)
 	_apply_home_hud_fonts()
 	var stage_panel := _make_panel(
 		Vector2(188.0, 244.0),
@@ -1854,7 +1865,7 @@ func _refresh_resource_strip() -> void:
 	if _resource_value_labels.has("trap_points"):
 		_resource_value_labels["trap_points"].text = _format_resource_count(GameState.player_data.trap_points)
 	if _resource_value_labels.has("power"):
-		_resource_value_labels["power"].text = _format_resource_count(_cached_team_power)
+		_resource_value_labels["power"].text = _format_resource_count(GameState.player_data.combat_score)
 
 
 func _get_home_reward_defs() -> Array[Array]:
@@ -3590,6 +3601,14 @@ func _on_player_profile_changed() -> void:
 
 func _on_player_wallet_changed() -> void:
 	_refresh_ui()
+
+
+func _on_combat_trial_score_changed() -> void:
+	_refresh_ui()
+
+
+func _open_combat_trial_scene() -> void:
+	SceneNavigator.open_overlay_scene("res://scenes/CombatTrialScene.tscn")
 
 
 func _on_red_dot_state_changed() -> void:

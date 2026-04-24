@@ -37,6 +37,7 @@ const BACKGROUNDS := {
 	"activity": UI_ROOT + "activity_background_v1.png",
 	"arena": UI_ROOT + "arena_background_v1.png",
 	"chat": UI_ROOT + "chat_background_v1.png",
+	"combat_trial": UI_ROOT + "combat_trial/bath_trial_bg.svg",
 	"config": UI_ROOT + "config_background_v1.png",
 	"dungeon": UI_ROOT + "dungeon_background_v1.png",
 	"enhance": UI_ROOT + "enhance_background_v1.png",

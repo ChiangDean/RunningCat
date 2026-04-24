@@ -20,6 +20,7 @@ signal mail_state_changed
 signal party_cheer_coupon_count_changed(count: int)
 signal player_profile_changed
 signal player_wallet_changed
+signal combat_trial_score_changed
 signal social_state_changed(domain_key: String)
 signal red_dot_state_changed
 
@@ -307,6 +308,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	player_data.last_quit_time = int(data.get("lastQuitTimeUnixSeconds", player_data.last_quit_time))
 	player_data.poop_count = int(data.get("poopCount", player_data.poop_count))
 	player_data.party_cheer_coupon_count = int(data.get("partyCheerCouponCount", player_data.party_cheer_coupon_count))
+	_apply_combat_trial_scores(data, false)
 	player_data.memory_shards = int(data.get("memoryShards", player_data.memory_shards))
 	player_data.scooper_level = int(data.get("scooperLevel", player_data.scooper_level))
 	player_data.scooper_exp = int(data.get("scooperExp", player_data.scooper_exp))
@@ -1028,6 +1030,23 @@ func apply_wallet_snapshot(data: Dictionary) -> void:
 		party_cheer_coupon_count_changed.emit(player_data.party_cheer_coupon_count)
 	player_wallet_changed.emit()
 	_emit_red_dot_state_changed()
+
+
+func apply_combat_trial_scores(data: Dictionary) -> void:
+	_apply_combat_trial_scores(data, true)
+
+
+func _apply_combat_trial_scores(data: Dictionary, emit_changed: bool) -> void:
+	if player_data == null:
+		player_data = PlayerData.load_or_default()
+	var old_combat_score: int = player_data.combat_score
+	player_data.sofa_score = int(data.get("sofaScore", player_data.sofa_score))
+	player_data.bath_score = int(data.get("bathScore", player_data.bath_score))
+	player_data.combat_score = int(data.get("combatScore", player_data.combat_score))
+	player_data.combat_trial_version = int(data.get("combatTrialVersion", data.get("trialVersion", player_data.combat_trial_version)))
+	player_data.save()
+	if emit_changed and old_combat_score != player_data.combat_score:
+		combat_trial_score_changed.emit()
 
 
 func apply_idle_claim_response(data: Dictionary) -> void:

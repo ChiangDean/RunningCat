@@ -31,6 +31,10 @@ var current_stage: int = 1
 var last_quit_time: int = 0
 var poop_count: int = 0
 var party_cheer_coupon_count: int = 0
+var sofa_score: int = 0
+var bath_score: int = 0
+var combat_score: int = 0
+var combat_trial_version: int = 1
 
 var memory_shards: int = 0
 var unlocked_memory_ids: Array = []
@@ -103,6 +107,10 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.last_quit_time = data.get("last_quit_time", 0)
 	p.poop_count = data.get("poop_count", 0)
 	p.party_cheer_coupon_count = data.get("party_cheer_coupon_count", 0)
+	p.sofa_score = data.get("sofa_score", 0)
+	p.bath_score = data.get("bath_score", 0)
+	p.combat_score = data.get("combat_score", 0)
+	p.combat_trial_version = data.get("combat_trial_version", 1)
 	p.memory_shards = data.get("memory_shards", 0)
 	p.unlocked_memory_ids = data.get("unlocked_memory_ids", [])
 	p.treasures = data.get("treasures", {})
@@ -161,6 +169,10 @@ func _to_dict() -> Dictionary:
 		"last_quit_time": last_quit_time,
 		"poop_count": poop_count,
 		"party_cheer_coupon_count": party_cheer_coupon_count,
+		"sofa_score": sofa_score,
+		"bath_score": bath_score,
+		"combat_score": combat_score,
+		"combat_trial_version": combat_trial_version,
 		"memory_shards": memory_shards,
 		"unlocked_memory_ids": unlocked_memory_ids,
 		"treasures": treasures,

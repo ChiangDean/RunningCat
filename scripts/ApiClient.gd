@@ -148,6 +148,18 @@ func get_authenticated_bootstrap(callback: Callable) -> void:
 	_api_get("auth/bootstrap", callback)
 
 
+func get_combat_trial_scores(callback: Callable) -> void:
+	_api_get("combat-trial", callback)
+
+
+func submit_combat_trial_score(trial_type: String, score: int, trial_version: int, callback: Callable) -> void:
+	_api_post("combat-trial/score", {
+		"trialType": trial_type,
+		"score": score,
+		"trialVersion": trial_version,
+	}, callback)
+
+
 func get_announcements(callback: Callable) -> void:
 	_api_get("announcements", callback)
 
