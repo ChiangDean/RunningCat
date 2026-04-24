@@ -9,9 +9,6 @@ const DEFAULT_DUNGEON_ICON_BY_KEY := {
 	"whisker": "res://assets/sprites/ui/dungeon/whisker.png",
 }
 
-const REWARD_EMPTY_TEXT := "\u672c\u95dc\u66ab\u7121\u984d\u5916\u734e\u52f5\u3002"
-const LAYER_LABEL := "\u5c64\u6578"
-const AD_TICKET_BUTTON_TEXT := "\u770b\u5ee3\u544a\u7372\u5f97\u9580\u7968"
 const DUNGEON_REWARD_KEYS: Array[String] = [
 	"cat_food",
 	"special_cat_food",
@@ -174,7 +171,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> Control:
 	var sweep_button: Button = _ensure_card_hit_button(panel.get_node("SweepCard") as Control)
 	var sweep_action_text: String
 	if ticket_count <= 0 and ad_count > 0 and max_floor > 0:
-		sweep_action_text = AD_TICKET_BUTTON_TEXT
+		sweep_action_text = UiText.DUNGEON_AD_TICKET_BUTTON
 	else:
 		sweep_action_text = UiText.DUNGEON_SWEEP_BUTTON_LEVEL_FORMAT % max_floor if max_floor > 0 else UiText.DUNGEON_SWEEP_BUTTON
 	sweep_button.text = ""
@@ -183,7 +180,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> Control:
 		panel.get_node("SweepCard") as Control,
 		UiText.DUNGEON_REWARD_LEVEL_FORMAT % display_level,
 		sweep_rewards,
-		REWARD_EMPTY_TEXT,
+		UiText.DUNGEON_REWARD_EMPTY,
 		sweep_action_text,
 		sweep_button.disabled
 	)
@@ -193,7 +190,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> Control:
 	var challenge_button: Button = _ensure_card_hit_button(panel.get_node("ChallengeCard") as Control)
 	var challenge_action_text: String
 	if ticket_count <= 0 and ad_count > 0:
-		challenge_action_text = AD_TICKET_BUTTON_TEXT
+		challenge_action_text = UiText.DUNGEON_AD_TICKET_BUTTON
 	else:
 		challenge_action_text = UiText.DUNGEON_CHALLENGE_BUTTON_LEVEL_FORMAT % next_floor
 	challenge_button.text = ""
@@ -202,7 +199,7 @@ static func _build_dungeon_detail_panel(scene, dungeon: Dictionary) -> Control:
 		panel.get_node("ChallengeCard") as Control,
 		UiText.DUNGEON_REWARD_LEVEL_FORMAT % next_floor,
 		challenge_rewards,
-		REWARD_EMPTY_TEXT,
+		UiText.DUNGEON_REWARD_EMPTY,
 		challenge_action_text,
 		challenge_button.disabled
 	)
@@ -293,7 +290,7 @@ static func _bind_dungeon_template_header(panel: Control, dungeon: Dictionary, d
 	else:
 		preview_icon.visible = false
 
-	name_label.text = "%s %s %d" % [str(dungeon.get("displayName", UiText.DUNGEON_PAGE_TITLE)), LAYER_LABEL, display_level]
+	name_label.text = "%s %s %d" % [str(dungeon.get("displayName", UiText.DUNGEON_PAGE_TITLE)), UiText.DUNGEON_LAYER_LABEL, display_level]
 	desc_label.text = _get_dungeon_description(dungeon)
 	desc_label.visible = desc_label.text != ""
 	ticket_label.text = UiText.DUNGEON_TICKET_FORMAT % [str(dungeon.get("displayName", UiText.DUNGEON_PAGE_TITLE)), ticket_count]
@@ -498,7 +495,7 @@ static func _build_shell_summary_right(scene, dungeon_key: String) -> String:
 	var dungeon: Dictionary = scene.GameState.get_dungeon_entry_by_key(dungeon_key)
 	if dungeon.is_empty():
 		return ""
-	return "\u5c64\u6578 %d / \u9580\u7968 %d" % [
+	return UiText.DUNGEON_LAYER_TICKET_FORMAT % [
 		maxi(int(dungeon.get("maxClearedFloor", 0)), 1),
 		int(dungeon.get("remainingTicketCount", 0)),
 	]

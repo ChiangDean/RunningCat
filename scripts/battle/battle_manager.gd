@@ -32,6 +32,7 @@ var _cat_nodes: Dictionary = {}
 var _cat_data_by_instance_id: Dictionary = {}
 var _cat_speeds: Dictionary = {}
 var _cat_stagger_timers: Dictionary = {}
+var _cat_accel_timers: Dictionary = {}
 
 var _player_team_node: Node2D
 var _enemy_team_node: Node2D
@@ -60,6 +61,7 @@ func setup(events: Array, player_cats: Array, enemy_cats: Array,
 	_cat_data_by_instance_id.clear()
 	_cat_speeds.clear()
 	_cat_stagger_timers.clear()
+	_cat_accel_timers.clear()
 	_player_skill_slots.clear()
 	_enemy_skill_slots.clear()
 	_event_idx = 0
@@ -173,6 +175,7 @@ func _spawn_cat_node(ev: BattleEvent) -> void:
 	_cat_nodes[ev.cat_id] = node
 	_cat_speeds[ev.cat_id] = cat_data.speed
 	_cat_stagger_timers[ev.cat_id] = 0.0
+	_cat_accel_timers[ev.cat_id] = 0.0
 	_update_skill_slot_spawn_state(ev.cat_id, ev.current_hp, ev.max_hp)
 
 
@@ -192,6 +195,7 @@ func _on_collision(ev: BattleEvent) -> void:
 	var is_near_wall: bool = (ev.pos_x <= 50.0 or ev.pos_x >= 670.0)
 	_cat_stagger_timers[ev.cat_id] = \
 		CatStats.WALL_STAGGER_TIME if is_near_wall else CatStats.STAGGER_TIME
+	_cat_accel_timers[ev.cat_id] = 0.0
 	node.play_stagger()
 
 
@@ -247,13 +251,25 @@ func _update_cat_movement(delta: float) -> void:
 		if node == null:
 			continue
 		if _cat_stagger_timers.has(id):
+			var previous_stagger_timer: float = float(_cat_stagger_timers[id])
 			_cat_stagger_timers[id] -= scaled_delta
 			if float(_cat_stagger_timers[id]) > 0.0:
 				node.play_stagger()
 				continue
+			if previous_stagger_timer > 0.0:
+				_cat_accel_timers[id] = CatStats.KNOCKBACK_RECOVERY_ACCEL_TIME
 		var speed: float = float(_cat_speeds.get(id, 80.0))
+		var speed_scale: float = 1.0
+		if _cat_accel_timers.has(id) and float(_cat_accel_timers[id]) > 0.0:
+			speed_scale = clampf(
+				(CatStats.KNOCKBACK_RECOVERY_ACCEL_TIME - float(_cat_accel_timers[id])) /
+						CatStats.KNOCKBACK_RECOVERY_ACCEL_TIME,
+				0.0,
+				1.0
+			)
+			_cat_accel_timers[id] = maxf(0.0, float(_cat_accel_timers[id]) - scaled_delta)
 		var dir: float = 1.0 if node.team == "player" else -1.0
-		node.position.x = clampf(node.position.x + dir * speed * scaled_delta, 20.0, 700.0)
+		node.position.x = clampf(node.position.x + dir * speed * speed_scale * scaled_delta, 20.0, 700.0)
 		node.play_run()
 
 
@@ -275,6 +291,7 @@ func _remove_cat_runtime_state(cat_id: int) -> void:
 	_cat_nodes.erase(cat_id)
 	_cat_speeds.erase(cat_id)
 	_cat_stagger_timers.erase(cat_id)
+	_cat_accel_timers.erase(cat_id)
 
 
 func _play_collision_sfx(event_time: float) -> void:

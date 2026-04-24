@@ -7,7 +7,7 @@ const DEFAULT_FRICTION      := 5.0
 const DEFAULT_MIN_VELOCITY  := 0.5
 const DEFAULT_DRAG_THRESHOLD := 8.0
 
-# 手感調整（你可以之後自己微調）
+# Feel tweaks (adjust these to taste)
 const MAX_VELOCITY := 4000.0
 const RESISTANCE_FACTOR := 0.25
 const SPRING_BACK_SPEED := 15.0
@@ -79,7 +79,7 @@ func _init_attach() -> void:
 	set_process(true)
 	target.mouse_filter = Control.MOUSE_FILTER_STOP
 
-	# ❗重點：預設不顯示，但在互動時顯示（auto）
+	# Key: hidden by default, shown automatically during interaction (auto mode)
 	target.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	target.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	
@@ -176,10 +176,10 @@ func _input(event: InputEvent) -> void:
 	if _drag_accum > drag_threshold:
 		moved = true
 	else:
-		# 尚未超過拖曳門檻時，不攔截按鈕點擊，也不移動 scroll。
+		# Below drag threshold: do not intercept button taps or move the scroll position.
 		return
 
-	# 使用 desired-scroll 計算 overscroll，以避免方向或 max_scroll 推論錯誤
+	# Use desired-scroll to compute overscroll, avoiding direction / max_scroll inference errors
 	var cur_scroll := _get_scroll()
 	var max_s = max(_get_max_scroll(), 0.0)
 	var desired = cur_scroll - delta
@@ -193,10 +193,10 @@ func _input(event: InputEvent) -> void:
 	else:
 		_set_scroll(desired)
 
-	# 顯示 scrollbar（互動期間顯示）
+	# Show scrollbar during active interaction
 	_show_scrollbar()
 
-	# ✨ velocity 計算（升級版）
+	# Velocity sampling (improved)
 	if dt > 0.0005:
 		var v_sample = -delta / dt
 		_last_velocity_sample = v_sample
@@ -205,19 +205,19 @@ func _input(event: InputEvent) -> void:
 
 	get_viewport().set_input_as_handled()
 
-# ── Process（核心手感）────────────────────────────────
+# ── Process (core feel) ─────────────────────────────────
 
 func _process(delta: float) -> void:
 	if target == null:
 		queue_free()
 		return
 
-	# ── 拖曳中 ──────────────────────────────────────────
+	# ── Dragging ──────────────────────────────────────────
 	if dragging:
 		_show_scrollbar()
 		return
 
-	# ── 正常慣性滑動 ─────────────────────────────────────
+	# ── Normal inertial scroll ─────────────────────────────────────
 	_last_boundary_state = 0
 
 	if abs(velocity) <= min_velocity:
@@ -309,7 +309,7 @@ func _do_haptic_feedback(_direction: int) -> void:
 		return
 	_last_haptic_us = now_us
 
-	# 📳 真機震動（手機才有效）
+	# Haptic feedback (only works on real devices)
 	if Input.has_method("vibrate_handheld"):
 		Input.callv("vibrate_handheld", [HAPTIC_DURATION_MS])
 	elif OS.has_method("vibrate_handheld"):

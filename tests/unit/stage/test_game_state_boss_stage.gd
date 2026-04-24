@@ -69,6 +69,33 @@ func test_is_boss_false_on_stage_after_boss() -> void:
 	assert_false(GameStateBossStage.is_current_boss(6, _cfg))
 
 
+# ── boss challenge hold / jump helpers ────────────────────────────
+
+func test_last_encounter_stage_for_boss_stage_1_is_stage_4() -> void:
+	assert_eq(GameStateBossStage.get_last_encounter_stage_for_boss_stage(1, _cfg), 4)
+
+func test_boss_global_stage_for_boss_stage_1_is_stage_5() -> void:
+	assert_eq(GameStateBossStage.get_boss_global_stage_for_boss_stage(1, _cfg), 5)
+
+func test_boss_available_last_encounter_win_holds_stage() -> void:
+	assert_true(GameStateBossStage.should_hold_after_last_encounter_win(4, true, _cfg))
+
+func test_boss_unavailable_last_encounter_win_can_advance() -> void:
+	assert_false(GameStateBossStage.should_hold_after_last_encounter_win(4, false, _cfg))
+
+func test_boss_available_non_last_encounter_win_can_advance() -> void:
+	assert_false(GameStateBossStage.should_hold_after_last_encounter_win(3, true, _cfg))
+
+func test_boss_available_boss_stage_win_can_advance() -> void:
+	assert_false(GameStateBossStage.should_hold_after_last_encounter_win(5, true, _cfg))
+
+func test_custom_encounter_count_hold_and_jump_helpers() -> void:
+	var cfg: Dictionary = BossCfgBuilder.standard().with_encounters(2).build()
+	assert_eq(GameStateBossStage.get_last_encounter_stage_for_boss_stage(2, cfg), 5)
+	assert_eq(GameStateBossStage.get_boss_global_stage_for_boss_stage(2, cfg), 6)
+	assert_true(GameStateBossStage.should_hold_after_last_encounter_win(5, true, cfg))
+
+
 # ── get_difficulty_multiplier ─────────────────────────────────────
 
 func test_difficulty_stage_1_is_1() -> void:

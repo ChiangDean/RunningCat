@@ -256,7 +256,7 @@ func _on_input_text_submitted(_text: String) -> void:
 
 func _on_chat_history_loaded(success: bool, data: Variant, error: Dictionary, channel_key: String) -> void:
 	if not success:
-		_status_override = str(error.get("message", "頛?予閮憭望?"))
+		_status_override = str(error.get("message", UiText.CHAT_SEND_FAILED))
 		_refresh_active_channel_ui()
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
@@ -282,7 +282,7 @@ func _on_chat_message_posted(success: bool, data: Variant, error: Dictionary, co
 		_mark_active_channel_read()
 		_queue_scroll_to_bottom()
 	else:
-		_status_override = str(error.get("message", "??予閮憭望?"))
+		_status_override = str(error.get("message", UiText.CHAT_SEND_FAILED))
 	_refresh_active_channel_ui()
 
 

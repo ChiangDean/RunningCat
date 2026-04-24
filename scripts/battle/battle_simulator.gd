@@ -26,6 +26,7 @@ class SimCat:
 	var is_alive: bool = true
 	var is_staggered: bool = false
 	var stagger_timer: float = 0.0
+	var recovery_accel_timer: float = 0.0
 	var facing: int          # 1 = right, -1 = left
 
 	# Skill cooldowns (indexed parallel to data.active_skills_data)
@@ -303,8 +304,18 @@ func _move_cat(sc: SimCat, delta: float) -> void:
 		sc.stagger_timer -= delta
 		if sc.stagger_timer <= 0.0:
 			sc.is_staggered = false
+			sc.recovery_accel_timer = CatStats.KNOCKBACK_RECOVERY_ACCEL_TIME
 		return
-	sc.pos_x += sc.get_effective_speed() * sc.facing * delta
+	var speed_scale: float = 1.0
+	if sc.recovery_accel_timer > 0.0:
+		speed_scale = clampf(
+			(CatStats.KNOCKBACK_RECOVERY_ACCEL_TIME - sc.recovery_accel_timer) /
+					CatStats.KNOCKBACK_RECOVERY_ACCEL_TIME,
+			0.0,
+			1.0
+		)
+		sc.recovery_accel_timer = maxf(0.0, sc.recovery_accel_timer - delta)
+	sc.pos_x += sc.get_effective_speed() * speed_scale * sc.facing * delta
 
 
 # ── Collision ─────────────────────────────────────────

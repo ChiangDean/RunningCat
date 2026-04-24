@@ -118,8 +118,8 @@ func _refresh_red_dots() -> void:
 
 func _build_tab_summary_right(tab_key: String) -> String:
 	if tab_key == "limited":
-		return "\u76ee\u524d 0"
-	return "\u53ef\u9032\u5165 4"
+		return UiText.ACTIVITY_LIMITED_CURRENT
+	return UiText.ACTIVITY_PERMANENT_ENTER
 
 
 func _on_dungeon_pressed() -> void:

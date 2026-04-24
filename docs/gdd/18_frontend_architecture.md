@@ -15,8 +15,11 @@ This document describes the current frontend architecture of `MeowPartyDashClien
 - Main entry scene: `res://scenes/StartScene.tscn`
 - Home shell scene: `res://scenes/HomeShellScene.tscn`
 - Runtime viewport baseline: `720 x 1280`
+- Tablet and wide-screen policy: keep the playable UI inside the centered `720 x 1280` safe frame, scale it evenly through project stretch settings, and use the extra side space only for decorative background.
 
 Important rule: many UI surfaces are built directly in GDScript at runtime. A `.tscn` file is often only a root node plus a script attachment.
+
+Important tablet rule: do not widen core buttons, battle coordinates, or overlay interaction areas just because the device is wider. Use `scripts/ui/adaptive_viewport.gd` to center fixed-coordinate `Node2D` scenes and CanvasLayer UI inside the `720 x 1280` safe frame. Decorative side space may extend or tint background art, but it must not contain required gameplay actions.
 
 ---
 

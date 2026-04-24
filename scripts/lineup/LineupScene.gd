@@ -263,7 +263,7 @@ func _mark_current_team_dirty() -> void:
 
 func _update_team_title() -> void:
 	if _team_title_label != null:
-		_team_title_label.text = "編隊陣容"
+		_team_title_label.text = UiText.LINEUP_TEAM_TITLE
 	if _team_summary_label != null:
 		_team_summary_label.text = UiText.CONFIG_TEAM_SUMMARY_WITH_DELAY
 func _refresh_team() -> void:
@@ -716,7 +716,7 @@ func _get_next_delay_value(current_delay: float) -> float:
 
 func _format_delay_label(delay_seconds: float) -> String:
 	var seconds: int = maxi(0, int(round(delay_seconds)))
-	return str(seconds) + "秒"
+	return str(seconds) + UiText.COMMON_SECONDS
 func _get_cat_visual_fallback(cat_name: String) -> String:
 	var trimmed: String = cat_name.strip_edges()
 	if trimmed == "":
@@ -738,13 +738,13 @@ func _get_max_team_size() -> int:
 func _get_team_type_description(type_key: String) -> String:
 	match type_key:
 		"boss":
-			return "調整 BOSS 推圖隊伍與初始出手延遲。"
+			return UiText.LINEUP_DESC_BOSS
 		"dungeon":
-			return "調整地下城挑戰隊伍與關卡用貓編排。"
+			return UiText.LINEUP_DESC_DUNGEON
 		"arena_attack":
-			return "調整競技場進攻隊伍與出手順序。"
+			return UiText.LINEUP_DESC_ARENA_ATTACK
 		"arena_defense":
-			return "調整競技場防守隊伍與防禦編成。"
+			return UiText.LINEUP_DESC_ARENA_DEFENSE
 		_:
 			return UiText.CONFIG_PAGE_DESC
 func _build_team_type_summary(type_key: String) -> String:
@@ -756,7 +756,7 @@ func _build_team_type_summary(type_key: String) -> String:
 	for member_variant: Variant in members:
 		if member_variant is Dictionary and not (member_variant as Dictionary).is_empty():
 			filled_count += 1
-	return "已編隊 %d/%d" % [filled_count, _get_max_team_size_for(type_key)]
+	return UiText.LINEUP_TEAM_STATUS_FORMAT % [filled_count, _get_max_team_size_for(type_key)]
 func _on_back_pressed() -> void:
 	var boss_team: Dictionary = GameState.get_team("Boss")
 	var boss_members: Array = boss_team.get("members", [])

@@ -101,12 +101,12 @@ static func on_challenge_pressed(scene, dungeon_id: int) -> void:
 static func _prompt_ad_ticket(scene, dungeon: Dictionary) -> void:
 	var ad_count: int = int(dungeon.get("remainingAdTicketCount", 0))
 	if ad_count <= 0:
-		ToastManager.error(UiText.DUNGEON_ACTION_FAILED_TITLE, "\u4eca\u65e5\u88dc\u7968\u6b21\u6578\u5df2\u7528\u5b8c\u3002")
+		ToastManager.error(UiText.DUNGEON_ACTION_FAILED_TITLE, UiText.DUNGEON_AD_TICKET_EXHAUSTED)
 		return
 
 	DialogManager.show_confirm(
-		"\u9580\u7968\u4e0d\u8db3",
-		"\u76ee\u524d\u6c92\u6709\u9580\u7968\uff0c\u662f\u5426\u89c0\u770b\u5ee3\u544a\u88dc\u5145 1 \u5f35\u9580\u7968\u4e26\u7e7c\u7e8c\uff1f",
+		UiText.DUNGEON_NO_TICKET_TITLE,
+		UiText.DUNGEON_NO_TICKET_AD_BODY,
 		Callable(DungeonSceneActions, "_confirm_prompt_ad_ticket").bind(scene, int(dungeon.get("dungeonId", 0)))
 	)
 

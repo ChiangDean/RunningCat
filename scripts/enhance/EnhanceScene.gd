@@ -90,7 +90,7 @@ func _build_feedback_layers() -> void:
 	_loading_overlay.add_child(loading_center)
 
 	_loading_label = Label.new()
-	_loading_label.text = "載入中..."
+	_loading_label.text = UiText.ADMIN_STATUS_LOADING
 	_loading_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	loading_center.add_child(_loading_label)
 
@@ -272,13 +272,13 @@ func _play_action_feedback() -> void:
 	match _pending_action_type:
 		"upgrade":
 			var level_gain: int = maxi(0, player_cat.cat_food_level - _pending_level_before)
-			_show_action_float("等級提升", maxi(1, level_gain), ACTION_FLOAT_COLOR)
+			_show_action_float(UiText.ENHANCE_LEVEL_UP, maxi(1, level_gain), ACTION_FLOAT_COLOR)
 		"upgrade_max":
 			var max_level_gain: int = maxi(0, player_cat.cat_food_level - _pending_level_before)
-			_show_action_float("等級提升", maxi(1, max_level_gain), ACTION_FLOAT_COLOR)
+			_show_action_float(UiText.ENHANCE_LEVEL_UP, maxi(1, max_level_gain), ACTION_FLOAT_COLOR)
 		"rank":
 			var rank_gain: int = maxi(0, player_cat.rank - _pending_rank_before)
-			_show_action_float("品階提升", maxi(1, rank_gain), ACTION_FLOAT_RANK_COLOR)
+			_show_action_float(UiText.ENHANCE_RANK_UP, maxi(1, rank_gain), ACTION_FLOAT_RANK_COLOR)
 
 	_pending_action_type = ""
 	_pending_level_before = 0

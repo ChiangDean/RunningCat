@@ -2,6 +2,7 @@ class_name DungeonBattleScene
 extends Node2D
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+const AdaptiveViewportScript = preload("res://scripts/ui/adaptive_viewport.gd")
 const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
 const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
 
@@ -39,11 +40,16 @@ var _dungeon_key: String = ""
 var _dungeon_level: int = 1
 var _dungeon_cfg: Dictionary = {}
 var _result_submit_inflight := false
+var _tablet_decor_canvas: CanvasLayer
+var _tablet_decor: TextureRect
 
 @onready var ApiClient = get_node("/root/ApiClient")
 
 
 func _ready() -> void:
+	_build_tablet_decor()
+	_sync_adaptive_layout()
+	get_viewport().size_changed.connect(_sync_adaptive_layout)
 	_dungeon_id = GameState.dungeon_battle_id
 	_dungeon_key = GameState.dungeon_battle_key
 	_dungeon_level = GameState.dungeon_battle_level
@@ -113,6 +119,7 @@ func _build_battle_area() -> void:
 
 func _build_ui() -> void:
 	_ui_layer = CanvasLayer.new()
+	AdaptiveViewportScript.apply_canvas_layer_origin(_ui_layer, self)
 	add_child(_ui_layer)
 
 	_speed_1x = _make_button("1x", Vector2(20.0, 20.0), Vector2(70.0, 44.0))
@@ -354,7 +361,7 @@ func _start_battle() -> void:
 		var player_cat_id: int = GameState.player_team[i]
 		var cat_id: String = GameState.get_cat_file_id(player_cat_id)
 		if cat_id.is_empty():
-			push_error("DungeonBattleScene: 找不到 playerCatId %d 對應的貓咪資料。" % player_cat_id)
+			push_error("DungeonBattleScene: " + UiText.DUNGEON_BATTLE_ERROR_CAT_NOT_FOUND_FORMAT % player_cat_id)
 			continue
 
 		var path := cat_id + ".json"
@@ -371,7 +378,7 @@ func _start_battle() -> void:
 				data.active_skills_data[0]["initial_delay"] = GameState.get_delay(i)
 			player_cats.append(data)
 		else:
-			push_error("DungeonBattleScene: 無法載入玩家貓咪 %s。" % cat_id)
+			push_error("DungeonBattleScene: " + UiText.DUNGEON_BATTLE_ERROR_CAT_LOAD_FAILED_FORMAT % cat_id)
 
 	var enemy_cats: Array = []
 	var mult: float = pow(_dungeon_cfg.get("difficulty_multiplier", 1.03), _dungeon_level - 1)
@@ -386,10 +393,10 @@ func _start_battle() -> void:
 		enemy.defense = roundi(base_def * mult)
 		enemy_cats.append(enemy)
 	else:
-		push_error("DungeonBattleScene: 無法載入 test_enemy。")
+		push_error("DungeonBattleScene: " + UiText.DUNGEON_BATTLE_ERROR_ENEMY_LOAD_FAILED)
 
 	if player_cats.is_empty() or enemy_cats.is_empty():
-		push_error("DungeonBattleScene: 戰鬥資料不足。")
+		push_error("DungeonBattleScene: " + UiText.DUNGEON_BATTLE_ERROR_INSUFFICIENT_DATA)
 		return
 
 	_refresh_skill_bar_names(player_cats)
@@ -434,12 +441,12 @@ func _on_complete_challenge(success: bool, data: Variant, error: Dictionary) -> 
 		_show_reward_popup(_dungeon_level, rewards if rewards is Dictionary else {})
 		return
 
-	var message := str(error.get("message", UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_BODY))
-		DialogManager.show_info(
-			UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_TITLE,
-			message,
-			Callable(self, "_return_to_dungeon_scene")
-		)
+	var message: String = str(error.get("message", UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_BODY))
+	DialogManager.show_info(
+		UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_TITLE,
+		message,
+		Callable(self, "_return_to_dungeon_scene")
+	)
 
 
 func _show_reward_popup(level: int, rewards: Dictionary) -> void:
@@ -486,3 +493,24 @@ func _show_result_overlay(is_win: bool) -> void:
 
 func _on_retreat_pressed() -> void:
 	SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
+
+
+func _build_tablet_decor() -> void:
+	_tablet_decor_canvas = CanvasLayer.new()
+	_tablet_decor_canvas.layer = -100
+	add_child(_tablet_decor_canvas)
+
+	_tablet_decor = TextureRect.new()
+	_tablet_decor.name = "TabletDecorBackground"
+	_tablet_decor.texture = BATTLE_BG_TEXTURE
+	_tablet_decor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_tablet_decor.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_tablet_decor.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_tablet_decor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tablet_decor_canvas.add_child(_tablet_decor)
+
+
+func _sync_adaptive_layout() -> void:
+	AdaptiveViewportScript.apply_centered_node2d(self)
+	AdaptiveViewportScript.apply_full_viewport(_tablet_decor, self)
+	AdaptiveViewportScript.apply_canvas_layer_origin(_ui_layer, self)

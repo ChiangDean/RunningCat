@@ -443,7 +443,7 @@ func _build_section_items() -> Array:
 		items.append({
 			"key": "admin",
 			"label": "Admin Catalog",
-			"shell_description": "\u7ba1\u7406\u54e1\u76ee\u9304\u8207\u904a\u6232\u8cc7\u6599\u8abf\u6574\u5165\u53e3\u3002",
+			"shell_description": UiText.CONFIG_ADMIN_SECTION_DESC,
 		})
 	return items
 

@@ -723,27 +723,27 @@ func _is_pending_my_party_review(item_variant: Variant) -> bool:
 func _build_friend_footer_summary(section_key: String) -> String:
 	match section_key:
 		"inbox":
-			return "\u7533\u8acb %d" % _friend_inbox.size()
+			return UiText.SOCIAL_FRIEND_APPLY_COUNT_FORMAT % _friend_inbox.size()
 		"outbox":
-			return "\u9001\u51fa %d" % _friend_outbox.size()
+			return UiText.SOCIAL_FRIEND_SENT_COUNT_FORMAT % _friend_outbox.size()
 		_:
 			var friends: Array = _friend_list.get("friends", [])
-			return "\u597d\u53cb %d/30" % friends.size()
+			return UiText.SOCIAL_FRIEND_LIST_COUNT_FORMAT % friends.size()
 
 
 func _build_party_footer_summary(section_key: String) -> String:
 	match section_key:
 		"invites":
 			var invite_count: int = _get_my_pending_party_invites().size() if _party_detail.is_empty() else _get_party_pending_invites().size()
-			return "\u5f85\u8655\u7406 %d" % invite_count
+			return UiText.SOCIAL_PARTY_PENDING_COUNT_FORMAT % invite_count
 		"reviews":
 			var review_count: int = _get_my_pending_party_reviews().size() if _party_detail.is_empty() else _get_party_pending_reviews().size()
-			return "\u5f85\u8655\u7406 %d" % review_count
+			return UiText.SOCIAL_PARTY_PENDING_COUNT_FORMAT % review_count
 		_:
 			if _party_detail.is_empty():
-				return "\u672a\u52a0\u5165\u968a\u4f0d"
+				return UiText.SOCIAL_PARTY_NOT_IN_PARTY
 			var members: Array = _party_detail.get("members", [])
-			return "\u6210\u54e1 %d/5" % members.size()
+			return UiText.SOCIAL_PARTY_MEMBER_COUNT_FORMAT % members.size()
 
 
 func _get_party_pending_reviews() -> Array:
@@ -987,7 +987,7 @@ func _render_party_reviews(host: VBoxContainer) -> void:
 
 		if not _is_party_leader():
 			var hint: Label = Label.new()
-			hint.text = "\u968a\u54e1\u53ef\u4ee5\u6aa2\u8996\u7533\u8acb\uff0c\u4f46\u53ea\u6709\u968a\u9577\u53ef\u4ee5\u5be9\u6838\u3002\u968a\u4f0d\u9080\u8acb\u6703\u7531\u88ab\u9080\u8acb\u8005\u81ea\u884c\u56de\u61c9\u3002"
+			hint.text = UiText.SOCIAL_PARTY_REVIEW_HINT
 			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			hint.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -1055,7 +1055,7 @@ func _render_party_pending_invites(host: VBoxContainer) -> void:
 	box.add_child(title)
 
 	var desc: Label = Label.new()
-	desc.text = "檢視隊伍已送出、正在等待對方回應的邀請。"
+	desc.text = UiText.SOCIAL_PARTY_SENT_INVITE_DESC
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -1123,12 +1123,12 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 		row.add_child(middle_box)
 
 		var inviter_name_label: Label = Label.new()
-		inviter_name_label.text = "邀請人：%s" % _party_application_inviter_name(item)
+		inviter_name_label.text = UiText.SOCIAL_PARTY_INVITER_FORMAT % _party_application_inviter_name(item)
 		_configure_party_pending_info_label(inviter_name_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
 		middle_box.add_child(inviter_name_label)
 
 		var inviter_time_label: Label = Label.new()
-		inviter_time_label.text = "邀請時間：%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+		inviter_time_label.text = UiText.SOCIAL_PARTY_INVITE_TIME_FORMAT % _format_relative_datetime(item.get("createdAtUtc", null))
 		_configure_party_pending_info_label(inviter_time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
 		middle_box.add_child(inviter_time_label)
 
@@ -1139,7 +1139,7 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 		row.add_child(right_box)
 
 		var overlay_status_label: Label = Label.new()
-		overlay_status_label.text = "\u5f85\u5c0d\u65b9\u56de\u61c9"
+		overlay_status_label.text = UiText.SOCIAL_PARTY_WAITING_RESPONSE
 		overlay_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		overlay_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_configure_party_pending_info_label(overlay_status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -1160,14 +1160,14 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 	row.add_child(info_box)
 
 	var name_label: Label = Label.new()
-	name_label.text = "對方：%s" % _party_application_counterpart_name(item)
+	name_label.text = UiText.SOCIAL_PARTY_COUNTERPART_FORMAT % _party_application_counterpart_name(item)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(name_label)
 
 	var stage_label: Label = Label.new()
-	stage_label.text = "鏟屎官 %s  |  %s" % [
+	stage_label.text = UiText.SOCIAL_PARTY_SCOOPER_STAGE_FORMAT % [
 		_party_application_scooper_level_text(item),
 		_party_application_stage_text(item),
 	]
@@ -1177,7 +1177,7 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 	info_box.add_child(stage_label)
 
 	var inviter_label: Label = Label.new()
-	inviter_label.text = "邀請人 %s  |  邀請時間：%s" % [
+	inviter_label.text = UiText.SOCIAL_PARTY_INVITER_TIME_FORMAT % [
 		_party_application_inviter_name(item),
 		_format_relative_datetime(item.get("createdAtUtc", null)),
 	]
@@ -1187,7 +1187,7 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 	info_box.add_child(inviter_label)
 
 	var status_label: Label = Label.new()
-	status_label.text = "待對方回應"
+	status_label.text = UiText.SOCIAL_PARTY_WAITING_RESPONSE
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	status_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -1195,7 +1195,7 @@ func _build_party_review_row(item_variant: Variant, read_only: bool = false) -> 
 
 	if read_only:
 		var readonly_label: Label = Label.new()
-		readonly_label.text = "\u50c5\u968a\u9577\u53ef\u5be9\u6838"
+		readonly_label.text = UiText.SOCIAL_PARTY_LEADER_ONLY_REVIEW
 		readonly_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		readonly_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		row.add_child(readonly_label)
@@ -1234,9 +1234,9 @@ func _build_my_party_invite_row(item_variant: Variant) -> Control:
 	info_box.add_child(party_name_label)
 
 	var meta_label: Label = Label.new()
-	meta_label.text = "%s  |  \u9080\u8acb\u4eba %s" % [
+	meta_label.text = UiText.SOCIAL_PARTY_INVITE_META_FORMAT % [
 		_party_application_type_text(int(item.get("applicationType", 0))),
-		str(item.get("inviterDisplayName", "")).strip_edges() if str(item.get("inviterDisplayName", "")).strip_edges() != "" else "\u968a\u4f0d\u6210\u54e1"
+		str(item.get("inviterDisplayName", "")).strip_edges() if str(item.get("inviterDisplayName", "")).strip_edges() != "" else UiText.SOCIAL_PARTY_MEMBER_FALLBACK
 	]
 	meta_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	meta_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
@@ -1244,7 +1244,7 @@ func _build_my_party_invite_row(item_variant: Variant) -> Control:
 	info_box.add_child(meta_label)
 
 	var time_label: Label = Label.new()
-	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+	time_label.text = UiText.SOCIAL_PARTY_APPLICATION_TIME_FORMAT % _format_relative_datetime(item.get("createdAtUtc", null))
 	time_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	time_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	time_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -1289,7 +1289,7 @@ func _build_my_party_review_row(item_variant: Variant) -> Control:
 	info_box.add_child(meta_label)
 
 	var time_label: Label = Label.new()
-	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+	time_label.text = UiText.SOCIAL_PARTY_APPLICATION_TIME_FORMAT % _format_relative_datetime(item.get("createdAtUtc", null))
 	time_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	time_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	time_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -1317,16 +1317,16 @@ func _build_party_pending_invite_row(item_variant: Variant) -> Control:
 	var player_name_label: Label = Label.new()
 	player_name_label.text = str(item.get("applicantDisplayName", "")).strip_edges()
 	if player_name_label.text == "":
-		player_name_label.text = "未命名玩家"
+		player_name_label.text = UiText.SOCIAL_PLAYER_UNNAMED
 	player_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	player_name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	player_name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(player_name_label)
 
 	var meta_label: Label = Label.new()
-	meta_label.text = "%s  |  邀請人 %s" % [
+	meta_label.text = UiText.SOCIAL_PARTY_INVITE_META_FORMAT % [
 		_party_application_type_text(int(item.get("applicationType", 0))),
-		str(item.get("inviterDisplayName", "")).strip_edges() if str(item.get("inviterDisplayName", "")).strip_edges() != "" else "隊伍成員"
+		str(item.get("inviterDisplayName", "")).strip_edges() if str(item.get("inviterDisplayName", "")).strip_edges() != "" else UiText.SOCIAL_PARTY_MEMBER_FALLBACK
 	]
 	meta_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	meta_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
@@ -1334,14 +1334,14 @@ func _build_party_pending_invite_row(item_variant: Variant) -> Control:
 	info_box.add_child(meta_label)
 
 	var time_label: Label = Label.new()
-	time_label.text = "邀請時間：%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+	time_label.text = UiText.SOCIAL_PARTY_INVITE_TIME_FORMAT % _format_relative_datetime(item.get("createdAtUtc", null))
 	time_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	time_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	time_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	info_box.add_child(time_label)
 
 	var readonly_label: Label = Label.new()
-	readonly_label.text = "等待對方回應"
+	readonly_label.text = UiText.SOCIAL_PARTY_WAITING_RESPONSE_ALT
 	readonly_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	readonly_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	row.add_child(readonly_label)
@@ -1387,12 +1387,12 @@ func _build_party_pending_invite_overlay_row(item_variant: Variant) -> Control:
 	row.add_child(middle_box)
 
 	var inviter_name_label: Label = Label.new()
-	inviter_name_label.text = "邀請人：%s" % _party_application_inviter_name(item)
+	inviter_name_label.text = UiText.SOCIAL_PARTY_INVITER_FORMAT % _party_application_inviter_name(item)
 	_configure_party_pending_info_label(inviter_name_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
 	middle_box.add_child(inviter_name_label)
 
 	var inviter_time_label: Label = Label.new()
-	inviter_time_label.text = "邀請時間：%s" % _format_relative_datetime(item.get("createdAtUtc", null))
+	inviter_time_label.text = UiText.SOCIAL_PARTY_INVITE_TIME_FORMAT % _format_relative_datetime(item.get("createdAtUtc", null))
 	_configure_party_pending_info_label(inviter_time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
 	middle_box.add_child(inviter_time_label)
 
@@ -1403,7 +1403,7 @@ func _build_party_pending_invite_overlay_row(item_variant: Variant) -> Control:
 	row.add_child(right_box)
 
 	var status_label: Label = Label.new()
-	status_label.text = "\u5f85\u5c0d\u65b9\u56de\u61c9"
+	status_label.text = UiText.SOCIAL_PARTY_WAITING_RESPONSE
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_configure_party_pending_info_label(status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -1453,12 +1453,12 @@ func _build_friend_row(item_variant: Variant) -> Control:
 		var overlay_name_label: Label = Label.new()
 		overlay_name_label.text = str(item.get("displayName", "")).strip_edges()
 		if overlay_name_label.text == "":
-			overlay_name_label.text = "\u672a\u547d\u540d\u73a9\u5bb6"
+			overlay_name_label.text = UiText.SOCIAL_PLAYER_UNNAMED
 		_configure_party_pending_info_label(overlay_name_label, UiPalette.FONT_SIZE_BODY_LG, OverlaySceneChrome.TITLE_TEXT_COLOR)
 		overlay_info_box.add_child(overlay_name_label)
 
 		var overlay_meta_label: Label = Label.new()
-		overlay_meta_label.text = "\u93df\u5c4e\u5b98 Lv.%d | %s" % [
+		overlay_meta_label.text = UiText.SOCIAL_SCOOPER_LEVEL_FORMAT % [
 			int(item.get("scooperLevel", 0)),
 			_format_friend_stage_text(item.get("currentStage", 1))
 		]
@@ -1473,7 +1473,7 @@ func _build_friend_row(item_variant: Variant) -> Control:
 		row.add_child(right_box)
 
 		var overlay_last_login_label: Label = Label.new()
-		overlay_last_login_label.text = "\u6700\u5f8c\u4e0a\u7dda\uff1a%s" % _format_last_login_text(item.get("lastLoginAtUtc", null))
+		overlay_last_login_label.text = UiText.SOCIAL_LAST_LOGIN_FORMAT % _format_last_login_text(item.get("lastLoginAtUtc", null))
 		_configure_party_pending_info_label(overlay_last_login_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
 		overlay_last_login_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		right_box.add_child(overlay_last_login_label)
@@ -1499,14 +1499,14 @@ func _build_friend_row(item_variant: Variant) -> Control:
 	var name_label: Label = Label.new()
 	name_label.text = str(item.get("displayName", "")).strip_edges()
 	if name_label.text == "":
-		name_label.text = "\u672a\u547d\u540d\u73a9\u5bb6"
+		name_label.text = UiText.SOCIAL_PLAYER_UNNAMED
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(name_label)
 
 	var meta_label: Label = Label.new()
-	meta_label.text = "\u93df\u5c4e\u5b98 Lv.%d  |  %s" % [
+	meta_label.text = UiText.SOCIAL_SCOOPER_LEVEL_FORMAT_ALT % [
 		int(item.get("scooperLevel", 0)),
 		_format_friend_stage_text(item.get("currentStage", 1))
 	]
@@ -1516,7 +1516,7 @@ func _build_friend_row(item_variant: Variant) -> Control:
 	info_box.add_child(meta_label)
 
 	var last_login_label: Label = Label.new()
-	last_login_label.text = "\u6700\u5f8c\u4e0a\u7dda\uff1a%s" % _format_last_login_text(item.get("lastLoginAtUtc", null))
+	last_login_label.text = UiText.SOCIAL_LAST_LOGIN_FORMAT % _format_last_login_text(item.get("lastLoginAtUtc", null))
 	last_login_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	last_login_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	last_login_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -1595,12 +1595,12 @@ func _build_friend_inbox_row(item_variant: Variant) -> Control:
 		row.add_child(middle_box)
 
 		var overlay_time_label: Label = Label.new()
-		overlay_time_label.text = "申請時間：%s" % _format_relative_datetime(_friend_request_created_at(item))
+		overlay_time_label.text = UiText.SOCIAL_PARTY_APPLICATION_TIME_FORMAT % _format_relative_datetime(_friend_request_created_at(item))
 		_configure_party_pending_info_label(overlay_time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
 		middle_box.add_child(overlay_time_label)
 
 		var pending_label: Label = Label.new()
-		pending_label.text = "待你回應"
+		pending_label.text = UiText.SOCIAL_PENDING_RESPONSE
 		_configure_party_pending_info_label(pending_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
 		middle_box.add_child(pending_label)
 
@@ -1643,7 +1643,7 @@ func _build_friend_inbox_row(item_variant: Variant) -> Control:
 	info_box.add_child(uid_label)
 
 	var time_label: Label = Label.new()
-	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(_friend_request_created_at(item))
+	time_label.text = UiText.SOCIAL_PARTY_APPLICATION_TIME_FORMAT % _format_relative_datetime(_friend_request_created_at(item))
 	time_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	time_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	info_box.add_child(time_label)
@@ -1713,12 +1713,12 @@ func _build_friend_outbox_row(item_variant: Variant) -> Control:
 		row.add_child(middle_box)
 
 		var overlay_time_label: Label = Label.new()
-		overlay_time_label.text = "申請時間：%s" % _format_relative_datetime(_friend_request_created_at(item))
+		overlay_time_label.text = UiText.SOCIAL_PARTY_APPLICATION_TIME_FORMAT % _format_relative_datetime(_friend_request_created_at(item))
 		_configure_party_pending_info_label(overlay_time_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.TITLE_TEXT_COLOR)
 		middle_box.add_child(overlay_time_label)
 
 		var overlay_status_label: Label = Label.new()
-		overlay_status_label.text = "狀態：%s" % _friend_request_status_text(int(item.get("status", 0)))
+		overlay_status_label.text = UiText.SOCIAL_STATUS_FORMAT % _friend_request_status_text(int(item.get("status", 0)))
 		_configure_party_pending_info_label(overlay_status_label, UiPalette.FONT_SIZE_LABEL, OverlaySceneChrome.MUTED_TEXT_COLOR)
 		middle_box.add_child(overlay_status_label)
 
@@ -1757,7 +1757,7 @@ func _build_friend_outbox_row(item_variant: Variant) -> Control:
 	info_box.add_child(status_label)
 
 	var time_label: Label = Label.new()
-	time_label.text = "\u7533\u8acb\u6642\u9593\uff1a%s" % _format_relative_datetime(_friend_request_created_at(item))
+	time_label.text = UiText.SOCIAL_PARTY_APPLICATION_TIME_FORMAT % _format_relative_datetime(_friend_request_created_at(item))
 	time_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	time_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 	info_box.add_child(time_label)
@@ -1865,10 +1865,10 @@ func _submit_apply_party_inline(value: String, input: LineEdit, button: Button) 
 func _cancel_party_application(application_id: int, party_name: String) -> void:
 	var target_label: String = party_name.strip_edges()
 	if target_label == "":
-		target_label = "\u9019\u500b\u968a\u4f0d"
+		target_label = UiText.SOCIAL_PARTY_THIS
 	DialogManager.show_confirm(
 		UiText.SOCIAL_PARTY_MY_APPLICATIONS,
-		"\u78ba\u5b9a\u8981\u53d6\u6d88\u5c0d %s \u7684\u7533\u8acb\u55ce\uff1f" % target_label,
+		UiText.SOCIAL_PARTY_CANCEL_APPLICATION_CONFIRM_FORMAT % target_label,
 		Callable(self, "_confirm_cancel_party_application").bind(application_id)
 	)
 
@@ -1914,27 +1914,27 @@ func _is_party_player_apply_type(application_type: int) -> bool:
 func _party_application_type_text(application_type: int) -> String:
 	match application_type:
 		1:
-			return "\u73a9\u5bb6\u7533\u8acb"
+			return UiText.SOCIAL_PARTY_TYPE_PLAYER_APPLY
 		2:
-			return "\u968a\u54e1\u9080\u8acb"
+			return UiText.SOCIAL_PARTY_TYPE_MEMBER_INVITE
 		3:
-			return "\u968a\u9577\u9080\u8acb"
+			return UiText.SOCIAL_PARTY_TYPE_LEADER_INVITE
 		_:
-			return "\u5176\u4ed6"
+			return UiText.SOCIAL_PARTY_TYPE_OTHER
 
 
 func _party_application_status_text(status: int) -> String:
 	match status:
 		0:
-			return "\u5f85\u5be9\u6838"
+			return UiText.SOCIAL_PARTY_STATUS_PENDING
 		1:
-			return "\u5df2\u63a5\u53d7"
+			return UiText.SOCIAL_PARTY_STATUS_ACCEPTED
 		2:
-			return "\u5df2\u62d2\u7d55"
+			return UiText.SOCIAL_PARTY_STATUS_REJECTED
 		3:
-			return "\u5df2\u53d6\u6d88"
+			return UiText.SOCIAL_PARTY_STATUS_CANCELLED
 		_:
-			return "\u672a\u77e5"
+			return UiText.SOCIAL_PARTY_STATUS_UNKNOWN
 
 
 func _build_party_member_row(member_variant: Variant) -> Control:
@@ -1953,14 +1953,14 @@ func _build_party_member_row(member_variant: Variant) -> Control:
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.text = member_name if member_name != "" else "\u672a\u547d\u540d\u73a9\u5bb6"
+	name_label.text = member_name if member_name != "" else UiText.SOCIAL_PLAYER_UNNAMED
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(name_label)
 
 	if _is_current_player_member(member):
 		var current_player_label: Label = Label.new()
-		current_player_label.text = "\u4f60"
+		current_player_label.text = UiText.SOCIAL_PLAYER_SELF
 		current_player_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 		current_player_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
 		info_box.add_child(current_player_label)
@@ -1994,14 +1994,14 @@ func _build_party_member_slots(members: Array) -> Array[Dictionary]:
 		team_members.append(member)
 
 	slots.append({
-		"slot_label": "\u968a\u9577",
+		"slot_label": UiText.SOCIAL_PARTY_SLOT_LEADER,
 		"member": leader_member,
 	})
 
 	for index: int in range(4):
 		var member: Dictionary = team_members[index] if index < team_members.size() else {}
 		slots.append({
-			"slot_label": "\u968a\u54e1 %d" % [index + 1],
+			"slot_label": UiText.SOCIAL_PARTY_SLOT_MEMBER_FORMAT % [index + 1],
 			"member": member,
 		})
 
@@ -2016,7 +2016,7 @@ func _build_party_member_slot_row(slot_label: String, member: Dictionary) -> Con
 	var is_self: bool = not is_empty and _is_current_player_member(member)
 	var can_manage_member: bool = not is_empty and _is_party_leader() and not is_self and not bool(member.get("isLeader", false))
 	var member_name: String = str(member.get("displayName", "")).strip_edges()
-	var can_invite_into_slot: bool = is_empty and slot_label != "\u968a\u9577"
+	var can_invite_into_slot: bool = is_empty and slot_label != UiText.SOCIAL_PARTY_SLOT_LEADER
 
 	var name_label: Label = Label.new()
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2024,7 +2024,7 @@ func _build_party_member_slot_row(slot_label: String, member: Dictionary) -> Con
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_label.text = "%s：%s" % [
 		slot_label,
-		member_name if member_name != "" else "空位"
+		member_name if member_name != "" else UiText.SOCIAL_PARTY_SLOT_EMPTY
 	]
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override(
@@ -2275,7 +2275,7 @@ func _party_application_counterpart_name(item: Dictionary) -> String:
 		item.get("receiverDisplayName", ""),
 		item.get("receiverPlayerName", ""),
 	])
-	return counterpart_name if counterpart_name != "" else "未命名玩家"
+	return counterpart_name if counterpart_name != "" else UiText.SOCIAL_PLAYER_UNNAMED
 
 
 func _party_application_inviter_name(item: Dictionary) -> String:
@@ -2284,7 +2284,7 @@ func _party_application_inviter_name(item: Dictionary) -> String:
 		item.get("leaderDisplayName", ""),
 		item.get("partyLeaderDisplayName", ""),
 	])
-	return inviter_name if inviter_name != "" else "隊伍成員"
+	return inviter_name if inviter_name != "" else UiText.SOCIAL_PARTY_MEMBER_FALLBACK
 
 
 func _party_application_scooper_level_text(item: Dictionary) -> String:
@@ -2302,19 +2302,19 @@ func _party_application_stage_text(item: Dictionary) -> String:
 			var stage_value: int = int(item.get(key, 0))
 			if stage_value > 0:
 				return _format_friend_stage_text(stage_value)
-	return "推關 -"
+	return UiText.SOCIAL_STAGE_FALLBACK
 
 
 func _party_application_progress_line(item: Dictionary) -> String:
 	var scooper_level_text: String = _party_application_scooper_level_text(item)
-	var stage_text: String = "關卡 -"
+	var stage_text: String = UiText.SOCIAL_STAGE_LABEL_FALLBACK
 	for key: String in ["currentStage", "applicantCurrentStage", "targetCurrentStage", "receiverCurrentStage"]:
 		if item.has(key):
 			var stage_value: int = int(item.get(key, 0))
 			if stage_value > 0:
 				stage_text = _format_friend_stage_text(stage_value)
 				break
-	return "鏟屎官%s | %s" % [scooper_level_text, stage_text]
+	return UiText.SOCIAL_SCOOPER_STAGE_COMPACT_FORMAT % [scooper_level_text, stage_text]
 
 
 func _make_empty_label(text_value: String) -> Label:
@@ -2331,15 +2331,15 @@ func _make_empty_label(text_value: String) -> Label:
 func _friend_request_status_text(status: int) -> String:
 	match status:
 		0:
-			return "\u5f85\u56de\u61c9"
+			return UiText.SOCIAL_FRIEND_STATUS_PENDING
 		1:
-			return "\u5df2\u63a5\u53d7"
+			return UiText.SOCIAL_FRIEND_STATUS_ACCEPTED
 		2:
-			return "\u5df2\u62d2\u7d55"
+			return UiText.SOCIAL_FRIEND_STATUS_REJECTED
 		3:
-			return "\u5df2\u53d6\u6d88"
+			return UiText.SOCIAL_FRIEND_STATUS_CANCELLED
 		_:
-			return "\u672a\u77e5"
+			return UiText.SOCIAL_FRIEND_STATUS_UNKNOWN
 
 
 func _on_friend_gift_pressed() -> void:
@@ -2371,7 +2371,7 @@ func _on_friend_gift_completed(success: bool, data: Variant, error: Dictionary) 
 	var payload: Dictionary = data if data is Dictionary else {}
 	var recipient_count: int = int(payload.get("recipientCount", 0))
 	if recipient_count <= 0:
-		ToastManager.hint(UiText.SOCIAL_FRIEND_GIFT_ALL, "\u76ee\u524d\u6c92\u6709\u53ef\u9001\u79ae\u7684\u597d\u53cb")
+		ToastManager.hint(UiText.SOCIAL_FRIEND_GIFT_ALL, UiText.SOCIAL_FRIEND_NO_GIFT_TARGETS)
 		_refresh_friend()
 		return
 	ToastManager.success(UiText.SOCIAL_FRIEND_GIFT_ALL, UiText.SOCIAL_FRIEND_GIFT_SUCCESS % recipient_count)
@@ -2394,10 +2394,10 @@ func _get_unsent_friend_rows() -> Array:
 func _confirm_remove_friend(friend_user_id: int, friend_name: String) -> void:
 	var target_label: String = friend_name.strip_edges()
 	if target_label == "":
-		target_label = "\u9019\u4f4d\u597d\u53cb"
+		target_label = UiText.SOCIAL_FRIEND_UNNAMED
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_REMOVE,
-		"\u78ba\u5b9a\u8981\u79fb\u9664 %s \u55ce\uff1f" % target_label,
+		UiText.SOCIAL_FRIEND_REMOVE_CONFIRM_FORMAT % target_label,
 		Callable(self, "_remove_friend").bind(friend_user_id)
 	)
 
@@ -2538,7 +2538,7 @@ func _open_add_friend_dialog() -> void:
 	box.add_theme_constant_override("separation", 12)
 
 	var intro_label: Label = Label.new()
-	intro_label.text = "\u8f38\u5165\u5c0d\u65b9\u904a\u6232\u540d\u7a31\uff0c\u6309\u78ba\u5b9a\u5f8c\u6703\u5217\u51fa\u53ef\u52a0\u597d\u53cb\u7684\u73a9\u5bb6\u3002"
+	intro_label.text = UiText.SOCIAL_FRIEND_ADD_INTRO
 	intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	intro_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -2559,7 +2559,7 @@ func _open_add_friend_dialog() -> void:
 	search_row.add_child(confirm_button)
 
 	var status_label: Label = Label.new()
-	status_label.text = "\u8f38\u5165\u540d\u7a31\u5f8c\u6309\u78ba\u5b9a\u9032\u884c\u641c\u5c0b\u3002"
+	status_label.text = UiText.SOCIAL_FRIEND_ADD_SEARCH_HINT
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	status_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -2631,7 +2631,7 @@ func _on_submit_add_friend_completed(success: bool, _data: Variant, error: Dicti
 
 func _search_friend_candidates(dialog_state: Dictionary, query: String) -> void:
 	_set_friend_search_dialog_busy(dialog_state, true, false)
-	_set_friend_search_dialog_status(dialog_state, "\u641c\u5c0b\u4e2d...", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	_set_friend_search_dialog_status(dialog_state, UiText.SOCIAL_FRIEND_SEARCHING, OverlaySceneChrome.MUTED_TEXT_COLOR)
 	ApiClient.search_friend_candidates(query, Callable(self, "_on_friend_candidates_searched").bind(dialog_state))
 
 
@@ -2644,9 +2644,9 @@ func _on_friend_candidates_searched(success: bool, data: Variant, error: Diction
 	var candidates: Array = data if data is Array else []
 	dialog_state["candidates"] = candidates
 	if candidates.is_empty():
-		_set_friend_search_dialog_status(dialog_state, "\u627e\u4e0d\u5230\u7b26\u5408\u7684\u73a9\u5bb6\u3002", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		_set_friend_search_dialog_status(dialog_state, UiText.SOCIAL_FRIEND_SEARCH_NO_RESULT, OverlaySceneChrome.MUTED_TEXT_COLOR)
 	else:
-		_set_friend_search_dialog_status(dialog_state, "\u627e\u5230 %d \u4f4d\u73a9\u5bb6\uff0c\u53ef\u76f4\u63a5\u9001\u51fa\u597d\u53cb\u7533\u8acb\u3002" % candidates.size(), OverlaySceneChrome.MUTED_TEXT_COLOR)
+		_set_friend_search_dialog_status(dialog_state, UiText.SOCIAL_FRIEND_SEARCH_RESULT_FORMAT % candidates.size(), OverlaySceneChrome.MUTED_TEXT_COLOR)
 	_render_friend_search_candidates(dialog_state, candidates)
 
 
@@ -2712,14 +2712,14 @@ func _build_friend_search_candidate_row(dialog_state: Dictionary, candidate: Dic
 
 	var player_name: String = str(candidate.get("playerName", "")).strip_edges()
 	var name_label: Label = Label.new()
-	name_label.text = player_name if player_name != "" else "\u672a\u547d\u540d\u73a9\u5bb6"
+	name_label.text = player_name if player_name != "" else UiText.SOCIAL_PLAYER_UNNAMED
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(name_label)
 
 	var uid_label: Label = Label.new()
-	uid_label.text = "\u93df\u5c4e\u5b98 Lv.%d  |  UID %s" % [
+	uid_label.text = UiText.SOCIAL_SCOOPER_LEVEL_UID_FORMAT % [
 		int(candidate.get("scooperLevel", 0)),
 		str(candidate.get("playerUid", "")).strip_edges()
 	]
@@ -2729,7 +2729,7 @@ func _build_friend_search_candidate_row(dialog_state: Dictionary, candidate: Dic
 	info_box.add_child(uid_label)
 
 	var last_login_label: Label = Label.new()
-	last_login_label.text = "\u6700\u5f8c\u4e0a\u7dda\uff1a%s" % _format_last_login_text(candidate.get("lastLoginAtUtc", null))
+	last_login_label.text = UiText.SOCIAL_LAST_LOGIN_FORMAT % _format_last_login_text(candidate.get("lastLoginAtUtc", null))
 	last_login_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	last_login_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	last_login_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -2753,7 +2753,7 @@ func _submit_friend_request_from_candidate(dialog_state: Dictionary, candidate: 
 	if player_uid == "":
 		return
 	_set_friend_search_dialog_busy(dialog_state, false, true)
-	_set_friend_search_dialog_status(dialog_state, "\u6b63\u5728\u9001\u51fa %s \u7684\u597d\u53cb\u7533\u8acb..." % (player_name if player_name != "" else player_uid), OverlaySceneChrome.MUTED_TEXT_COLOR)
+	_set_friend_search_dialog_status(dialog_state, UiText.SOCIAL_FRIEND_SENDING_REQUEST_FORMAT % (player_name if player_name != "" else player_uid), OverlaySceneChrome.MUTED_TEXT_COLOR)
 	ApiClient.send_friend_request(player_uid, Callable(self, "_on_friend_request_from_candidate_completed").bind(dialog_state))
 
 
@@ -2784,10 +2784,10 @@ func _on_accept_friend_request_completed(success: bool, _data: Variant, error: D
 func _confirm_reject_friend_request(request_id: int, friend_name: String) -> void:
 	var target_label: String = friend_name.strip_edges()
 	if target_label == "":
-		target_label = "\u9019\u4f4d\u73a9\u5bb6"
+		target_label = UiText.SOCIAL_PLAYER_THIS
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_REJECT,
-		"\u78ba\u5b9a\u8981\u62d2\u7d55 %s \u7684\u597d\u53cb\u7533\u8acb\u55ce\uff1f" % target_label,
+		UiText.SOCIAL_FRIEND_REJECT_CONFIRM_FORMAT % target_label,
 		Callable(self, "_reject_friend_request").bind(request_id)
 	)
 
@@ -2865,7 +2865,7 @@ func _open_invite_party_dialog() -> void:
 	box.add_theme_constant_override("separation", 12)
 
 	var intro_label: Label = Label.new()
-	intro_label.text = "\u8f38\u5165\u5c0d\u65b9\u904a\u6232\u540d\u7a31\uff0c\u6309\u78ba\u5b9a\u5f8c\u6703\u5217\u51fa\u53ef\u9080\u8acb\u7684\u73a9\u5bb6\u3002"
+	intro_label.text = UiText.SOCIAL_PARTY_INVITE_INTRO
 	intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	intro_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -2876,7 +2876,7 @@ func _open_invite_party_dialog() -> void:
 	box.add_child(search_row)
 
 	var input: LineEdit = LineEdit.new()
-	input.placeholder_text = "\u8f38\u5165\u5c0d\u65b9\u904a\u6232\u540d\u7a31"
+	input.placeholder_text = UiText.SOCIAL_FRIEND_SEARCH_PLACEHOLDER
 	input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search_row.add_child(input)
 
@@ -2886,7 +2886,7 @@ func _open_invite_party_dialog() -> void:
 	search_row.add_child(confirm_button)
 
 	var status_label: Label = Label.new()
-	status_label.text = "\u8f38\u5165\u540d\u7a31\u5f8c\u6309\u78ba\u5b9a\u9032\u884c\u641c\u5c0b\u3002"
+	status_label.text = UiText.SOCIAL_FRIEND_ADD_SEARCH_HINT
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	status_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -2930,7 +2930,7 @@ func _open_invite_party_dialog() -> void:
 
 func _search_party_invite_candidates(dialog_state: Dictionary, query: String) -> void:
 	_set_invite_party_dialog_busy(dialog_state, true, false)
-	_set_invite_party_dialog_status(dialog_state, "\u641c\u5c0b\u4e2d...", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	_set_invite_party_dialog_status(dialog_state, UiText.SOCIAL_FRIEND_SEARCHING, OverlaySceneChrome.MUTED_TEXT_COLOR)
 	ApiClient.search_party_invite_candidates(
 		int(_party_detail.get("partyId", 0)),
 		query,
@@ -2964,9 +2964,9 @@ func _on_party_invite_candidates_searched(success: bool, data: Variant, error: D
 	var candidates: Array = data if data is Array else []
 	dialog_state["candidates"] = candidates
 	if candidates.is_empty():
-		_set_invite_party_dialog_status(dialog_state, "\u627e\u4e0d\u5230\u7b26\u5408\u7684\u73a9\u5bb6\u3002", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		_set_invite_party_dialog_status(dialog_state, UiText.SOCIAL_FRIEND_SEARCH_NO_RESULT, OverlaySceneChrome.MUTED_TEXT_COLOR)
 	else:
-		_set_invite_party_dialog_status(dialog_state, "\u627e\u5230 %d \u4f4d\u73a9\u5bb6\uff0c\u53ef\u76f4\u63a5\u9001\u51fa\u9080\u8acb\u3002" % candidates.size(), OverlaySceneChrome.MUTED_TEXT_COLOR)
+		_set_invite_party_dialog_status(dialog_state, UiText.SOCIAL_PARTY_INVITE_SEARCH_RESULT_FORMAT % candidates.size(), OverlaySceneChrome.MUTED_TEXT_COLOR)
 	_render_invite_party_candidates(dialog_state, candidates)
 
 
@@ -3026,14 +3026,14 @@ func _build_invite_party_candidate_row(dialog_state: Dictionary, candidate: Dict
 
 	var player_name: String = str(candidate.get("playerName", "")).strip_edges()
 	var name_label: Label = Label.new()
-	name_label.text = player_name if player_name != "" else "\u672a\u547d\u540d\u73a9\u5bb6"
+	name_label.text = player_name if player_name != "" else UiText.SOCIAL_PLAYER_UNNAMED
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	name_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	info_box.add_child(name_label)
 
 	var uid_label: Label = Label.new()
-	uid_label.text = "\u93df\u5c4e\u5b98 Lv.%d  |  UID %s" % [
+	uid_label.text = UiText.SOCIAL_SCOOPER_LEVEL_UID_FORMAT % [
 		int(candidate.get("scooperLevel", 0)),
 		str(candidate.get("playerUid", "")).strip_edges()
 	]
@@ -3043,7 +3043,7 @@ func _build_invite_party_candidate_row(dialog_state: Dictionary, candidate: Dict
 	info_box.add_child(uid_label)
 
 	var last_login_label: Label = Label.new()
-	last_login_label.text = "\u6700\u5f8c\u4e0a\u7dda\uff1a%s" % _format_party_invite_last_login(candidate.get("lastLoginAtUtc", null))
+	last_login_label.text = UiText.SOCIAL_LAST_LOGIN_FORMAT % _format_party_invite_last_login(candidate.get("lastLoginAtUtc", null))
 	last_login_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	last_login_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	last_login_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -3064,11 +3064,11 @@ func _invite_party_candidate(dialog_state: Dictionary, candidate: Dictionary) ->
 		return
 	var player_uid: String = str(candidate.get("playerUid", "")).strip_edges()
 	if player_uid == "":
-		ToastManager.error(UiText.SOCIAL_PARTY_INVITE, "\u9080\u8acb\u76ee\u6a19\u7f3a\u5c11 UID\u3002")
+		ToastManager.error(UiText.SOCIAL_PARTY_INVITE, UiText.SOCIAL_PARTY_INVITE_MISSING_UID)
 		return
 	var player_name: String = str(candidate.get("playerName", "")).strip_edges()
 	_set_invite_party_dialog_busy(dialog_state, false, true)
-	_set_invite_party_dialog_status(dialog_state, "\u6b63\u5728\u9080\u8acb %s..." % (player_name if player_name != "" else player_uid), OverlaySceneChrome.MUTED_TEXT_COLOR)
+	_set_invite_party_dialog_status(dialog_state, UiText.SOCIAL_PARTY_INVITING_FORMAT % (player_name if player_name != "" else player_uid), OverlaySceneChrome.MUTED_TEXT_COLOR)
 	ApiClient.invite_player_to_party(
 		int(_party_detail.get("partyId", 0)),
 		player_uid,
@@ -3092,23 +3092,23 @@ func _on_invite_party_candidate_completed(success: bool, _data: Variant, error: 
 
 func _format_relative_datetime(datetime_variant: Variant) -> String:
 	if datetime_variant == null:
-		return "\u672a\u77e5"
+		return UiText.SOCIAL_TIME_UNKNOWN
 	var last_login_text: String = str(datetime_variant).strip_edges()
 	if last_login_text == "":
-		return "\u672a\u77e5"
+		return UiText.SOCIAL_TIME_UNKNOWN
 	var unix_time: int = int(Time.get_unix_time_from_datetime_string(last_login_text))
 	if unix_time <= 0:
 		return last_login_text.replace("T", " ").substr(0, mini(last_login_text.length(), 19))
 	var now_unix: int = int(Time.get_unix_time_from_system())
 	var diff_seconds: int = maxi(0, now_unix - unix_time)
 	if diff_seconds < 60:
-		return "\u525b\u525b"
+		return UiText.SOCIAL_TIME_JUST_NOW
 	if diff_seconds < 3600:
-		return "%d \u5206\u9418\u524d" % maxi(1, floori(float(diff_seconds) / 60.0))
+		return UiText.SOCIAL_TIME_MINUTES_FORMAT % maxi(1, floori(float(diff_seconds) / 60.0))
 	if diff_seconds < 86400:
-		return "%d \u5c0f\u6642\u524d" % maxi(1, floori(float(diff_seconds) / 3600.0))
+		return UiText.SOCIAL_TIME_HOURS_FORMAT % maxi(1, floori(float(diff_seconds) / 3600.0))
 	if diff_seconds < 604800:
-		return "%d \u5929\u524d" % maxi(1, floori(float(diff_seconds) / 86400.0))
+		return UiText.SOCIAL_TIME_DAYS_FORMAT % maxi(1, floori(float(diff_seconds) / 86400.0))
 	return last_login_text.replace("T", " ").substr(0, mini(last_login_text.length(), 19))
 
 
@@ -3120,7 +3120,7 @@ func _format_friend_stage_text(stage_variant: Variant) -> String:
 	var current_stage: int = max(1, int(stage_variant))
 	var boss_cfg: Dictionary = GameState.boss_config if GameState.boss_config is Dictionary else {}
 	if boss_cfg.is_empty():
-		return "\u95dc\u5361 %d" % current_stage
+		return UiText.SOCIAL_STAGE_FORMAT % current_stage
 
 	var stage_text: String = FriendStageFormatter.get_level_display(current_stage, boss_cfg).strip_edges()
 	while stage_text.contains("  "):
@@ -3143,10 +3143,10 @@ func _kick_party_member(user_id: int) -> void:
 func _confirm_kick_party_member(user_id: int, member_name: String) -> void:
 	var target_label: String = member_name.strip_edges()
 	if target_label == "":
-		target_label = "\u9019\u4f4d\u968a\u54e1"
+		target_label = UiText.SOCIAL_PARTY_MEMBER_THIS
 	DialogManager.show_confirm(
 		UiText.SOCIAL_PARTY_KICK,
-		"\u78ba\u5b9a\u8981\u8acb %s \u96e2\u968a\u4f0d\u55ce\uff1f" % target_label,
+		UiText.SOCIAL_PARTY_KICK_CONFIRM_FORMAT % target_label,
 		Callable(self, "_kick_party_member").bind(user_id)
 	)
 
@@ -3281,10 +3281,10 @@ func _transfer_party(target_user_id: int) -> void:
 func _confirm_transfer_party(target_user_id: int, member_name: String) -> void:
 	var target_label: String = member_name.strip_edges()
 	if target_label == "":
-		target_label = "\u9019\u4f4d\u968a\u54e1"
+		target_label = UiText.SOCIAL_PARTY_MEMBER_THIS
 	DialogManager.show_confirm(
 		UiText.SOCIAL_PARTY_TRANSFER,
-		"\u78ba\u8a8d\u5f8c\u4f60\u6703\u6539\u6210\u4e00\u822c\u968a\u54e1\uff0c\u662f\u5426\u78ba\u5b9a\u8f49\u8b93\u7d66 %s\uff1f" % target_label,
+		UiText.SOCIAL_PARTY_TRANSFER_CONFIRM_FORMAT % target_label,
 		Callable(self, "_transfer_party").bind(target_user_id)
 	)
 
@@ -3300,7 +3300,7 @@ func _disband_party() -> void:
 func _confirm_disband_party() -> void:
 	DialogManager.show_confirm(
 		UiText.SOCIAL_PARTY_DISBAND,
-		"\u89e3\u6563\u5f8c\u968a\u4f0d\u8207\u6210\u54e1\u8cc7\u6599\u6703\u88ab\u6e05\u9664\uff0c\u662f\u5426\u78ba\u5b9a\u8981\u89e3\u6563\u968a\u4f0d\uff1f",
+		UiText.SOCIAL_PARTY_DISBAND_CONFIRM,
 		Callable(self, "_disband_party")
 	)
 
@@ -3488,10 +3488,10 @@ func _on_accept_party_application_completed(success: bool, _data: Variant, error
 func _confirm_reject_party_application(application_id: int, applicant_name: String) -> void:
 	var target_label: String = applicant_name.strip_edges()
 	if target_label == "":
-		target_label = "\u9019\u4f4d\u73a9\u5bb6"
+		target_label = UiText.SOCIAL_PLAYER_THIS
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_REJECT,
-		"\u78ba\u5b9a\u8981\u62d2\u7d55 %s \u7684\u7533\u8acb\u55ce\uff1f" % target_label,
+		UiText.SOCIAL_PARTY_REJECT_APPLICATION_CONFIRM_FORMAT % target_label,
 		Callable(self, "_reject_party_application").bind(application_id)
 	)
 
@@ -3527,10 +3527,10 @@ func _on_accept_party_invite_completed(success: bool, _data: Variant, error: Dic
 func _confirm_reject_party_invite(application_id: int, party_name: String) -> void:
 	var target_label: String = party_name.strip_edges()
 	if target_label == "":
-		target_label = "\u9019\u500b\u968a\u4f0d"
+		target_label = UiText.SOCIAL_PARTY_THIS
 	DialogManager.show_confirm(
 		UiText.SOCIAL_FRIEND_REJECT,
-		"\u78ba\u5b9a\u8981\u62d2\u7d55 %s \u7684\u9080\u8acb\u55ce\uff1f" % target_label,
+		UiText.SOCIAL_PARTY_REJECT_INVITE_CONFIRM_FORMAT % target_label,
 		Callable(self, "_reject_party_invite").bind(application_id, target_label)
 	)
 

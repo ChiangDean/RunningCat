@@ -97,13 +97,13 @@ static func get_rank_display_name(rank_key: String, fallback_name: String = "") 
 		return UiText.ARENA_REWARD_UNKNOWN_RANK
 
 	var replacements: Dictionary = {
-		"Bronze": "銅牌",
-		"Silver": "銀牌",
-		"Gold": "金牌",
-		"Platinum": "白金",
-		"Diamond": "鑽石",
-		"Master": "大師",
-		"Elite": "菁英",
+		"Bronze": UiText.ARENA_RANK_BRONZE,
+		"Silver": UiText.ARENA_RANK_SILVER,
+		"Gold": UiText.ARENA_RANK_GOLD,
+		"Platinum": UiText.ARENA_RANK_PLATINUM,
+		"Diamond": UiText.ARENA_RANK_DIAMOND,
+		"Master": UiText.ARENA_RANK_MASTER,
+		"Elite": UiText.ARENA_RANK_ELITE,
 	}
 	for english_name: String in replacements.keys():
 		if trimmed_name.begins_with(english_name):

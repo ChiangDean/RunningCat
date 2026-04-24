@@ -52,8 +52,8 @@ func show_confirm(
 		text: String,
 		on_confirm: Callable,
 		on_cancel: Callable = Callable(),
-		ok_text: String = "確定",
-		cancel_text: String = "取消",
+		ok_text: String = UiText.DIALOG_OK,
+		cancel_text: String = UiText.DIALOG_CANCEL,
 		width_size: String = "small"
 ) -> Callable:
 	var lbl := Label.new()
@@ -110,8 +110,8 @@ func _build(
 		is_confirm: bool,
 		on_ok: Callable,
 		on_cancel: Callable,
-		ok_text: String = "確定",
-		cancel_text: String = "取消",
+		ok_text: String = UiText.DIALOG_OK,
+		cancel_text: String = UiText.DIALOG_CANCEL,
 		width_size: String = "small"
 ) -> Callable:
 	var panel_width := _resolve_panel_width(width_size)

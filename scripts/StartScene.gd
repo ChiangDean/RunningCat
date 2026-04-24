@@ -1,6 +1,7 @@
 extends Control
 
 const HERO_IMAGE := preload("res://assets/sprites/ui/start_scene_homey_v1.png")
+const AdaptiveViewportScript = preload("res://scripts/ui/adaptive_viewport.gd")
 const RuntimeConfigScript = preload("res://scripts/gamestate/RuntimeConfig.gd")
 const TITLE_TEXT := UiText.START_TITLE
 const SUBTITLE_TEXT := UiText.START_SUBTITLE
@@ -120,6 +121,8 @@ func _ready() -> void:
 	_api_base_url = _resolve_api_base_url()
 	_device_id = _load_or_create_device_id()
 	_build_ui()
+	_sync_adaptive_layout()
+	get_viewport().size_changed.connect(_sync_adaptive_layout)
 	_attach_http_request()
 	_play_idle_animation()
 	_apply_mode()
@@ -414,11 +417,11 @@ func _build_tap_hint() -> Label:
 func _build_logout_button() -> Button:
 	var button := Button.new()
 	button.text = UiText.START_LOGOUT_BUTTON
-	button.anchor_left = 1.0
+	button.anchor_left = 0.0
 	button.anchor_top = 0.0
-	button.anchor_right = 1.0
+	button.anchor_right = 0.0
 	button.anchor_bottom = 0.0
-	button.position = Vector2(-156, 28)
+	button.position = Vector2(720.0 - 156.0, 28.0)
 	button.custom_minimum_size = Vector2(128, 52)
 	button.visible = false
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -432,6 +435,11 @@ func _build_logout_button() -> Button:
 	button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("a6473e"), 8))
 	button.pressed.connect(_on_logout_pressed)
 	return button
+
+
+func _sync_adaptive_layout() -> void:
+	if _logout_button != null:
+		_logout_button.position = AdaptiveViewportScript.get_content_origin(self) + Vector2(720.0 - 156.0, 28.0)
 
 
 func _build_paw_row() -> HBoxContainer:

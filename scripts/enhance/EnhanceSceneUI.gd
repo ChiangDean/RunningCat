@@ -84,14 +84,14 @@ static func build_ui(scene) -> void:
 			{
 				"key": "main",
 				"label": UiText.ENHANCE_SUBMENU_MAIN,
-				"shell_description": "\u9078\u64c7\u4e3b\u5b50\u9032\u884c\u7b49\u7d1a\u3001\u6280\u80fd\u8207\u661f\u968e\u57f9\u990a\u3002",
+				"shell_description": UiText.ENHANCE_CAT_DESC,
 				"shell_summary_left": Callable(EnhanceSceneUI, "_build_shell_summary_left").bind(scene),
 				"shell_summary_right": Callable(EnhanceSceneUI, "_build_shell_summary_right").bind(scene, "main"),
 			},
 			{
 				"key": "catalog",
 				"label": UiText.ENHANCE_SUBMENU_CATALOG,
-				"shell_description": "\u700f\u89bd\u6240\u6709\u8c93\u54aa\u7684\u5716\u9451\u8cc7\u6599\u8207\u57fa\u790e\u80fd\u529b\u3002",
+				"shell_description": UiText.ENHANCE_CATALOG_DESC,
 				"shell_summary_left": Callable(EnhanceSceneUI, "_build_shell_summary_left").bind(scene),
 				"shell_summary_right": Callable(EnhanceSceneUI, "_build_shell_summary_right").bind(scene, "catalog"),
 			},
@@ -208,7 +208,7 @@ static func populate_catalog_buttons(scene) -> void:
 
 	if cat_ids.is_empty():
 		var empty_label := Label.new()
-		empty_label.text = "\u5c1a\u7121\u5716\u9451\u8cc7\u6599\u3002"
+		empty_label.text = UiText.ENHANCE_CATALOG_EMPTY
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		empty_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
@@ -751,7 +751,7 @@ static func _build_catalog_detail_panel(scene, cat_data: CatData, preview_cat: P
 	summary_margin.add_child(summary_stack)
 
 	var catalog_hint := Label.new()
-	catalog_hint.text = "\u5716\u9451\u9810\u89bd\uff1a\u986f\u793a\u7b49\u7d1a 1\u3001\u54c1\u968e 0 \u7684\u6280\u80fd\u8207\u57fa\u790e\u5c6c\u6027\u3002"
+	catalog_hint.text = UiText.ENHANCE_CATALOG_HINT
 	catalog_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	catalog_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	catalog_hint.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
@@ -947,5 +947,5 @@ static func _build_shell_summary_left(scene) -> String:
 static func _build_shell_summary_right(scene, submenu_key: String) -> String:
 	var owned_count: int = scene.GameState.get_owned_cats().size()
 	if submenu_key == "catalog":
-		return "\u5716\u9451 %d \u7a2e" % _get_catalog_cat_ids(scene).size()
-	return "\u5df2\u64c1\u6709 %d \u96bb" % owned_count
+		return UiText.ENHANCE_CATALOG_COUNT_FORMAT % _get_catalog_cat_ids(scene).size()
+	return UiText.ENHANCE_OWNED_COUNT_FORMAT % owned_count

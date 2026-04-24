@@ -37,22 +37,22 @@ const EXP_BAR_MAX_EMPTY := Color(0.20, 0.29, 0.21, 0.96)
 const EXP_BAR_MAX_TEXT := Color(0.98, 1.0, 0.98, 1.0)
 
 
-## 按鈕種類對照表（語意別名 → 顏色名稱）
-## 顏色名稱:   confirm   cancel    neutral  info     destruct  remove   add
-## 語意別名:   primary   secondary rank     info     danger    minus    plus
-## ─── 字型大小常數 ───────────────────────────────────────────────
-## 修改這裡可以一次調整全遊戲同一層級的所有文字大小。
+## Button type reference (semantic alias → colour name)
+## Colour names:  confirm   cancel    neutral  info     destruct  remove   add
+## Semantic alias: primary   secondary rank     info     danger    minus    plus
+## ─── Font size constants ───────────────────────────────────────────────
+## Change these values to adjust every text element at a given level game-wide.
 ##
-## 層級對照：
-##   DISPLAY    → 超大展示數字（戰力值、大型倒數）
-##   HEADING    → 場景主標題、大型標頭
-##   TITLE      → 次要標頭、對話框標題
-##   SUBHEADING → 分頁標籤、副標題
-##   BODY_LG    → 主要按鈕文字、稍大的說明
-##   BODY       → 主要內文、一般按鈕（最常用）
-##   LABEL      → 標籤、次要說明
-##   SMALL      → 附屬資訊、chip 文字
-##   TINY       → 角標、最小資訊文字
+## Level reference:
+##   DISPLAY    → oversized display numbers (power value, large countdown)
+##   HEADING    → scene main title, large header
+##   TITLE      → secondary heading, dialog title
+##   SUBHEADING → tab labels, sub-headings
+##   BODY_LG    → primary button text, slightly larger body copy
+##   BODY       → main body copy, standard buttons (most common)
+##   LABEL      → labels, secondary descriptions
+##   SMALL      → supplementary info, chip text
+##   TINY       → badges, minimum-size info text
 const FONT_SIZE_DISPLAY    := 34
 const FONT_SIZE_HEADING    := 28
 const FONT_SIZE_TITLE      := 24

@@ -1,7 +1,7 @@
 class_name GameConstants
 extends RefCounted
 
-## 稀有度等級
+## Rarity tiers
 enum Rarity {
 	COMMON,
 	RARE,
@@ -9,7 +9,7 @@ enum Rarity {
 	LEGENDARY,
 }
 
-## 稀有度對應顏色
+## Color for each rarity
 const RARITY_COLORS := {
 	Rarity.COMMON: Color(0.78, 0.78, 0.78, 1.0),
 	Rarity.RARE: Color(0.43, 0.73, 1.0, 1.0),
@@ -17,7 +17,7 @@ const RARITY_COLORS := {
 	Rarity.LEGENDARY: Color(1.0, 0.78, 0.36, 1.0),
 }
 
-## 稀有度字串名稱 → enum 對應（來自 API rarityType 欄位）
+## Maps API rarityType string to the Rarity enum
 const RARITY_NAME_MAP := {
 	"Common": Rarity.COMMON,
 	"Rare": Rarity.RARE,

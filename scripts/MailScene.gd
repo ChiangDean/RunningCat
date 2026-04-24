@@ -8,34 +8,6 @@ const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/backpack/ItemSlotTemplate.ts
 const SECTION_UNREAD := "unread"
 const SECTION_READ := "read"
 
-const LABEL_UNREAD_MAIL := "\u672a\u8b80\u90f5\u4ef6"
-const LABEL_READ_MAIL := "\u5df2\u8b80\u90f5\u4ef6"
-const LABEL_SELECT_MAIL := "\u8acb\u5148\u9078\u64c7\u4e00\u5c01\u90f5\u4ef6"
-const LABEL_ATTACHMENT := "\u9644\u4ef6"
-const LABEL_CLAIM_ATTACHMENT := "\u9818\u53d6\u9644\u4ef6"
-const LABEL_CLAIM_ALL := "\u4e00\u4ef6\u9818\u6536"
-const LABEL_DELETE_READ := "\u522a\u9664\u5df2\u8b80\u90f5\u4ef6"
-const LABEL_MAIL_LOADING := "\u8f09\u5165\u4fe1\u4ef6\u4e2d..."
-const LABEL_MAIL_LOAD_FAILED := "\u8f09\u5165\u4fe1\u4ef6\u5931\u6557"
-const LABEL_MAIL_CONTENT_LOADING := "\u8f09\u5165\u90f5\u4ef6\u5167\u5bb9\u4e2d..."
-const LABEL_MAIL_CONTENT_FAILED := "\u8f09\u5165\u90f5\u4ef6\u5167\u5bb9\u5931\u6557"
-const LABEL_NO_MAIL := "\u76ee\u524d\u6c92\u6709\u90f5\u4ef6"
-const LABEL_NO_ATTACHMENT := "\u76ee\u524d\u6c92\u6709\u9644\u4ef6"
-const LABEL_UNTITLED := "\u672a\u547d\u540d\u90f5\u4ef6"
-const LABEL_CLAIM_FAILED := "\u9818\u53d6\u9644\u4ef6\u5931\u6557"
-const LABEL_CLAIM_SUCCESS := "\u9644\u4ef6\u5df2\u9818\u53d6"
-const LABEL_CLAIM_ALL_FAILED := "\u4e00\u4ef6\u9818\u6536\u5931\u6557"
-const LABEL_CLAIM_ALL_SUCCESS := "\u9644\u4ef6\u5df2\u5168\u90e8\u9818\u53d6"
-const LABEL_DELETE_READ_FAILED := "\u522a\u9664\u5df2\u8b80\u90f5\u4ef6\u5931\u6557"
-const LABEL_DELETE_READ_SUCCESS := "\u5df2\u6e05\u9664\u5df2\u8b80\u90f5\u4ef6"
-const LABEL_NO_CLAIMABLE := "\u76ee\u524d\u6c92\u6709\u53ef\u9818\u53d6\u9644\u4ef6\u7684\u90f5\u4ef6"
-const LABEL_NO_DELETABLE := "\u76ee\u524d\u6c92\u6709\u53ef\u6e05\u9664\u7684\u5df2\u8b80\u90f5\u4ef6"
-const LABEL_REWARD_EMPTY := "\u6c92\u6709\u53ef\u986f\u793a\u7684\u734e\u52f5"
-const LABEL_EXPIRE_DAYS := "\u5269\u9918%d\u5929\u904e\u671f"
-const LABEL_CONFIRM_CLAIM_ALL_TITLE := "\u4e00\u4ef6\u9818\u6536"
-const LABEL_CONFIRM_CLAIM_ALL_BODY := "\u78ba\u5b9a\u8981\u9818\u53d6\u76ee\u524d\u53ef\u9818\u53d6\u7684\u5168\u90e8\u9644\u4ef6\u55ce\uff1f"
-const LABEL_CONFIRM_DELETE_READ_TITLE := "\u522a\u9664\u5df2\u8b80\u90f5\u4ef6"
-const LABEL_CONFIRM_DELETE_READ_BODY := "\u78ba\u5b9a\u8981\u6e05\u9664\u5168\u90e8\u5df2\u9818\u53d6\u8207\u5df2\u8b80\u90f5\u4ef6\u55ce\uff1f"
 
 const LIST_ITEM_FILL := Color(0.17, 0.16, 0.19, 0.96)
 const LIST_ITEM_FILL_SELECTED := Color(0.24, 0.21, 0.16, 0.98)
@@ -92,14 +64,14 @@ func get_footer_items() -> Array:
 	return [
 		{
 			"key": SECTION_UNREAD,
-			"label": LABEL_UNREAD_MAIL,
-			"shell_description": "\u67e5\u770b\u5c1a\u672a\u95b1\u8b80\u7684\u4fe1\u4ef6\u8207\u5f85\u9818\u53d6\u9644\u4ef6\u3002",
+			"label": UiText.MAIL_UNREAD,
+			"shell_description": UiText.MAIL_UNREAD_SECTION_DESC,
 			"shell_summary_right": Callable(self, "_build_footer_summary_right").bind(SECTION_UNREAD),
 		},
 		{
 			"key": SECTION_READ,
-			"label": LABEL_READ_MAIL,
-			"shell_description": "\u67e5\u770b\u5df2\u95b1\u8b80\u4fe1\u4ef6\u8207\u5df2\u9818\u53d6\u7d00\u9304\u3002",
+			"label": UiText.MAIL_READ,
+			"shell_description": UiText.MAIL_READ_SECTION_DESC,
 			"shell_summary_right": Callable(self, "_build_footer_summary_right").bind(SECTION_READ),
 		},
 	]
@@ -114,8 +86,8 @@ func _build_footer_summary_right(section_key: String) -> String:
 	var claimable_count: int = int(GameState.mail_summary_data.get("claimableCount", 0))
 	var total_count: int = int(GameState.mail_summary_data.get("totalCount", 0))
 	if section_key == SECTION_READ:
-		return "\u5df2\u8b80 %d" % maxi(0, total_count - unread_count)
-	return "\u672a\u8b80 %d / \u53ef\u9818 %d" % [unread_count, claimable_count]
+		return UiText.MAIL_READ_COUNT_FORMAT % maxi(0, total_count - unread_count)
+	return UiText.MAIL_UNREAD_CLAIMABLE_FORMAT % [unread_count, claimable_count]
 
 
 func set_section(section_key: String) -> void:
@@ -153,7 +125,7 @@ func _build_ui() -> void:
 	action_row.add_child(action_spacer)
 
 	_claim_all_btn = Button.new()
-	_claim_all_btn.text = LABEL_CLAIM_ALL
+	_claim_all_btn.text = UiText.MAIL_CLAIM_ALL
 	_claim_all_btn.custom_minimum_size = Vector2(132.0, 46.0)
 	UiPalette.apply_button_kind(_claim_all_btn, "confirm")
 	_claim_all_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
@@ -161,7 +133,7 @@ func _build_ui() -> void:
 	action_row.add_child(_claim_all_btn)
 
 	_delete_read_btn = Button.new()
-	_delete_read_btn.text = LABEL_DELETE_READ
+	_delete_read_btn.text = UiText.MAIL_DELETE_READ
 	_delete_read_btn.custom_minimum_size = Vector2(172.0, 46.0)
 	UiPalette.apply_button_kind(_delete_read_btn, "danger")
 	_delete_read_btn.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
@@ -207,7 +179,7 @@ func _build_ui() -> void:
 	left_box.add_child(_mail_empty_state)
 
 	_empty_mail_label = Label.new()
-	_empty_mail_label.text = LABEL_NO_MAIL
+	_empty_mail_label.text = UiText.MAIL_EMPTY
 	_empty_mail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_empty_mail_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_empty_mail_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -255,7 +227,7 @@ func _build_ui() -> void:
 	right_box.add_child(_detail_empty_state)
 
 	_empty_detail_label = Label.new()
-	_empty_detail_label.text = LABEL_SELECT_MAIL
+	_empty_detail_label.text = UiText.MAIL_SELECT_PROMPT
 	_empty_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_empty_detail_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	_empty_detail_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -286,7 +258,7 @@ func _build_ui() -> void:
 	right_box.add_child(_attachment_section)
 
 	_attachment_title = Label.new()
-	_attachment_title.text = LABEL_ATTACHMENT
+	_attachment_title.text = UiText.MAIL_ATTACHMENT
 	_attachment_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	_attachment_title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	_attachment_section.add_child(_attachment_title)
@@ -298,7 +270,7 @@ func _build_ui() -> void:
 	_attachment_section.add_child(_attachment_box)
 
 	_claim_btn = Button.new()
-	_claim_btn.text = LABEL_CLAIM_ATTACHMENT
+	_claim_btn.text = UiText.MAIL_CLAIM_ATTACHMENT
 	_claim_btn.custom_minimum_size = Vector2(0.0, 50.0)
 	UiPalette.apply_button_kind(_claim_btn, "confirm")
 	_claim_btn.pressed.connect(_on_claim_pressed)
@@ -370,7 +342,7 @@ func _build_mail_list_item(item: Dictionary) -> PanelContainer:
 	title_label.clip_text = true
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	title_label.text = str(item.get("title", LABEL_UNTITLED))
+	title_label.text = str(item.get("title", UiText.MAIL_UNTITLED))
 	title_label.add_theme_font_size_override("font_size", SceneMenuTheme.SECONDARY_SUBMENU_INACTIVE_FONT_SIZE)
 	title_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	row.add_child(title_label)
@@ -447,13 +419,13 @@ func _load_mail_detail(mail_id: int) -> void:
 	var detail: Dictionary = _get_mail_detail_from_cache(mail_id)
 	if detail.is_empty():
 		GameState.update_selected_mail({})
-		_render_detail_placeholder({}, LABEL_MAIL_CONTENT_LOADING)
+		_render_detail_placeholder({}, UiText.MAIL_CONTENT_LOADING)
 		_refresh_action_buttons()
 		_recover_mail_detail_silent(mail_id)
 		return
 	if not _mail_item_has_detail(detail):
 		GameState.update_selected_mail(detail)
-		_render_detail_placeholder(detail, LABEL_MAIL_CONTENT_LOADING)
+		_render_detail_placeholder(detail, UiText.MAIL_CONTENT_LOADING)
 		_refresh_action_buttons()
 		_recover_mail_detail_silent(mail_id)
 		return
@@ -508,7 +480,7 @@ func _render_detail(detail: Dictionary) -> void:
 	_attachment_section.visible = has_detail
 
 	if not has_detail:
-		_empty_detail_label.text = LABEL_SELECT_MAIL
+		_empty_detail_label.text = UiText.MAIL_SELECT_PROMPT
 		_detail_title.text = ""
 		_detail_content.text = ""
 		_expire_label.text = ""
@@ -517,7 +489,7 @@ func _render_detail(detail: Dictionary) -> void:
 		_claim_btn.visible = false
 		return
 
-	_detail_title.text = str(detail.get("title", LABEL_UNTITLED))
+	_detail_title.text = str(detail.get("title", UiText.MAIL_UNTITLED))
 	_detail_content.text = str(detail.get("content", "")).strip_edges()
 	_expire_label.text = _format_expire_days(detail.get("expireAtUtc", null))
 	_detail_meta_row.visible = _expire_label.text != ""
@@ -542,7 +514,7 @@ func _render_detail(detail: Dictionary) -> void:
 	var is_claimed: bool = bool(detail.get("isClaimed", false))
 	_claim_btn.visible = not is_claimed
 	_claim_btn.disabled = _api_in_flight or not can_claim
-	_claim_btn.text = LABEL_CLAIM_ATTACHMENT
+	_claim_btn.text = UiText.MAIL_CLAIM_ATTACHMENT
 
 
 func _format_expire_days(expire_at_value: Variant) -> String:
@@ -561,7 +533,7 @@ func _format_expire_days(expire_at_value: Variant) -> String:
 	var remaining_days: int = int(ceil(float(remaining_seconds) / 86400.0))
 	if remaining_days <= 0:
 		remaining_days = 1
-	return LABEL_EXPIRE_DAYS % remaining_days
+	return UiText.MAIL_EXPIRE_DAYS_FORMAT % remaining_days
 
 
 func _render_detail_placeholder(detail: Dictionary, message: String) -> void:
@@ -576,7 +548,7 @@ func _render_detail_placeholder(detail: Dictionary, message: String) -> void:
 	_expire_label.visible = false
 	_attachment_section.visible = false
 	_claim_btn.visible = false
-	_detail_title.text = str(detail.get("title", LABEL_UNTITLED)) if not detail.is_empty() else LABEL_UNTITLED
+	_detail_title.text = str(detail.get("title", UiText.MAIL_UNTITLED)) if not detail.is_empty() else UiText.MAIL_UNTITLED
 	_detail_content.text = message
 	_expire_label.text = ""
 
@@ -637,20 +609,20 @@ func _on_claim_all_pressed() -> void:
 	if _api_in_flight:
 		return
 	if int(GameState.mail_summary_data.get("claimableCount", 0)) <= 0:
-		ToastManager.hint(LABEL_NO_CLAIMABLE)
+		ToastManager.hint(UiText.MAIL_NO_CLAIMABLE)
 		return
 
-	DialogManager.show_confirm(LABEL_CONFIRM_CLAIM_ALL_TITLE, LABEL_CONFIRM_CLAIM_ALL_BODY, Callable(self, "_confirm_claim_all_mails"))
+	DialogManager.show_confirm(UiText.MAIL_CONFIRM_CLAIM_ALL_TITLE, UiText.MAIL_CONFIRM_CLAIM_ALL_BODY, Callable(self, "_confirm_claim_all_mails"))
 
 
 func _on_delete_read_pressed() -> void:
 	if _api_in_flight:
 		return
 	if _count_deletable_mails() <= 0:
-		ToastManager.hint(LABEL_NO_DELETABLE)
+		ToastManager.hint(UiText.MAIL_NO_DELETABLE)
 		return
 
-	DialogManager.show_confirm(LABEL_CONFIRM_DELETE_READ_TITLE, LABEL_CONFIRM_DELETE_READ_BODY, Callable(self, "_confirm_delete_read_mails"))
+	DialogManager.show_confirm(UiText.MAIL_CONFIRM_DELETE_READ_TITLE, UiText.MAIL_CONFIRM_DELETE_READ_BODY, Callable(self, "_confirm_delete_read_mails"))
 
 
 func _on_mark_mail_read_completed(mark_success: bool, mark_data: Variant, _mark_error: Dictionary) -> void:
@@ -671,12 +643,12 @@ func _on_mail_list_recovered(success: bool, data: Variant, _error: Dictionary) -
 func _on_mail_detail_recovered(success: bool, data: Variant, error: Dictionary, mail_id: int) -> void:
 	_mail_detail_recovery_ids.erase(mail_id)
 	if not success or not (data is Dictionary):
-		var error_message: String = str(error.get("message", LABEL_MAIL_CONTENT_FAILED))
+		var error_message: String = str(error.get("message", UiText.MAIL_CONTENT_FAILED))
 		var cached_detail: Dictionary = _get_mail_detail_from_cache(mail_id)
 		GameState.update_selected_mail(cached_detail)
 		_render_detail_placeholder(cached_detail, error_message)
 		_refresh_action_buttons()
-		_show_error_toast(LABEL_MAIL_CONTENT_FAILED, error_message)
+		_show_error_toast(UiText.MAIL_CONTENT_FAILED, error_message)
 		return
 	GameState.update_selected_mail(data)
 	_render_detail(GameState.selected_mail_data)
@@ -687,7 +659,7 @@ func _on_claim_mail_completed(success: bool, data: Variant, error: Dictionary, m
 	_api_in_flight = false
 	if not success:
 		_refresh_action_buttons()
-		_show_error_toast(LABEL_CLAIM_FAILED, str(error.get("message", LABEL_CLAIM_FAILED)))
+		_show_error_toast(UiText.MAIL_CLAIM_FAILED, str(error.get("message", UiText.MAIL_CLAIM_FAILED)))
 		return
 
 	var payload: Dictionary = data if data is Dictionary else {}
@@ -697,7 +669,7 @@ func _on_claim_mail_completed(success: bool, data: Variant, error: Dictionary, m
 	_rebuild_mail_buttons()
 	_ensure_selected_mail_visible()
 	_refresh_action_buttons()
-	_render_reward_dialog(payload.get("grantedRewards", []), LABEL_CLAIM_SUCCESS)
+	_render_reward_dialog(payload.get("grantedRewards", []), UiText.MAIL_CLAIM_SUCCESS)
 
 
 func _confirm_claim_all_mails() -> void:
@@ -710,7 +682,7 @@ func _on_claim_all_mails_completed(success: bool, data: Variant, error: Dictiona
 	_api_in_flight = false
 	if not success:
 		_refresh_action_buttons()
-		_show_error_toast(LABEL_CLAIM_ALL_FAILED, str(error.get("message", LABEL_CLAIM_ALL_FAILED)))
+		_show_error_toast(UiText.MAIL_CLAIM_ALL_FAILED, str(error.get("message", UiText.MAIL_CLAIM_ALL_FAILED)))
 		return
 
 	var payload: Dictionary = data if data is Dictionary else {}
@@ -720,7 +692,7 @@ func _on_claim_all_mails_completed(success: bool, data: Variant, error: Dictiona
 	_rebuild_mail_buttons()
 	_ensure_selected_mail_visible()
 	_refresh_action_buttons()
-	_render_reward_dialog(payload.get("grantedRewards", []), LABEL_CLAIM_ALL_SUCCESS)
+	_render_reward_dialog(payload.get("grantedRewards", []), UiText.MAIL_CLAIM_ALL_SUCCESS)
 
 
 func _confirm_delete_read_mails() -> void:
@@ -733,7 +705,7 @@ func _on_delete_read_mails_completed(success: bool, data: Variant, error: Dictio
 	_api_in_flight = false
 	if not success:
 		_refresh_action_buttons()
-		_show_error_toast(LABEL_DELETE_READ_FAILED, str(error.get("message", LABEL_DELETE_READ_FAILED)))
+		_show_error_toast(UiText.MAIL_DELETE_READ_FAILED, str(error.get("message", UiText.MAIL_DELETE_READ_FAILED)))
 		return
 
 	if data is Dictionary:
@@ -742,7 +714,7 @@ func _on_delete_read_mails_completed(success: bool, data: Variant, error: Dictio
 	GameState.update_selected_mail({})
 	_selected_mail_id = 0
 	_apply_mail_cache()
-	ToastManager.success(LABEL_DELETE_READ_SUCCESS)
+	ToastManager.success(UiText.MAIL_DELETE_READ_SUCCESS)
 
 
 func _render_reward_dialog(rewards: Variant, title: String) -> void:
@@ -757,7 +729,7 @@ func _render_reward_dialog(rewards: Variant, title: String) -> void:
 				int(reward.get("quantity", 0))
 			])
 	if lines.is_empty():
-		lines.append(LABEL_REWARD_EMPTY)
+		lines.append(UiText.MAIL_REWARD_EMPTY)
 	DialogManager.show_info(title, "\n".join(lines), Callable(), "large")
 
 

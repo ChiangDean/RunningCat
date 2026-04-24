@@ -43,7 +43,7 @@ func _rebuild() -> void:
 		var category: Dictionary = category_variant
 		var category_id := str(category.get("categoryId", ""))
 		var button := Button.new()
-		button.text = str(category.get("displayName", category.get("categoryType", "\u5206\u985e")))
+		button.text = str(category.get("displayName", category.get("categoryType", UiText.SHOP_BUNDLE_CATEGORY_FALLBACK)))
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size = Vector2(0.0, 48.0)
 		if category_id != _selected_category_id:
@@ -52,7 +52,7 @@ func _rebuild() -> void:
 		category_row.add_child(button)
 
 	var intro := Label.new()
-	intro.text = "\u5546\u57ce\u79ae\u5305\u6703\u76f4\u63a5\u900f\u904e\u5f8c\u7aef\u6263\u6b3e\u8207\u767c\u734e\uff0c\u5167\u5bb9\u4ee5\u76ee\u524d\u4f3a\u670d\u5668\u8cc7\u6599\u70ba\u6e96\u3002"
+	intro.text = UiText.SHOP_BUNDLE_INTRO
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	add_child(intro)
@@ -69,7 +69,7 @@ func _rebuild() -> void:
 	var bundles := GameState.get_shop_bundles_by_category(_selected_category_id)
 	if bundles.is_empty():
 		var empty_label := Label.new()
-		empty_label.text = "\u9019\u500b\u5206\u985e\u76ee\u524d\u6c92\u6709\u79ae\u5305\u3002"
+		empty_label.text = UiText.SHOP_BUNDLE_EMPTY_CATEGORY
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		list.add_child(empty_label)
@@ -111,7 +111,7 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 	card.add_child(header)
 
 	var title := Label.new()
-	title.text = str(bundle.get("displayName", "\u5546\u57ce\u79ae\u5305"))
+	title.text = str(bundle.get("displayName", UiText.SHOP_BUNDLE_CITY_DEFAULT_NAME))
 	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
@@ -129,7 +129,7 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 	card.add_child(desc)
 
 	var reward_title := Label.new()
-	reward_title.text = "\u5167\u5bb9\u7269"
+	reward_title.text = UiText.SHOP_REWARD_TITLE
 	reward_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	card.add_child(reward_title)
 
@@ -145,7 +145,7 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 	card.add_child(action_row)
 
 	var cost_label := Label.new()
-	cost_label.text = "\u947d\u77f3 %s" % GameState.format_number(int(bundle.get("priceAmount", 0)))
+	cost_label.text = UiText.SHOP_DIAMOND_COST_S_FORMAT % GameState.format_number(int(bundle.get("priceAmount", 0)))
 	cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	action_row.add_child(cost_label)
 
@@ -153,15 +153,15 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.custom_minimum_size = Vector2(0.0, 46.0)
 	if bool(bundle.get("isSoldOut", false)):
-		button.text = "\u5df2\u552e\u5b8c"
+		button.text = UiText.SHOP_SOLD_OUT
 		button.disabled = true
 		UiPalette.apply_button_kind(button, "neutral")
 	else:
-		button.text = "\u8cfc\u8cb7"
+		button.text = UiText.SHOP_ACTION_BUY
 		UiPalette.apply_button_kind(button, "confirm")
 		button.pressed.connect(_confirm_purchase.bind(
 			int(bundle.get("bundleId", 0)),
-			str(bundle.get("displayName", "\u5546\u57ce\u79ae\u5305")),
+			str(bundle.get("displayName", UiText.SHOP_BUNDLE_CITY_DEFAULT_NAME)),
 			int(bundle.get("priceAmount", 0))
 		))
 	action_row.add_child(button)
@@ -170,9 +170,9 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 
 
 func _confirm_purchase(bundle_id: int, bundle_name: String, price_amount: int) -> void:
-	var message := "\u662f\u5426\u82b1\u8cbb %s \u947d\u77f3\u8cfc\u8cb7\u300c%s\u300d\uff1f" % [GameState.format_number(price_amount), bundle_name]
+	var message := UiText.SHOP_BUNDLE_PURCHASE_CONFIRM_DIAMOND_BODY % [GameState.format_number(price_amount), bundle_name]
 	DialogManager.show_confirm(
-		"\u8cfc\u8cb7\u79ae\u5305",
+		UiText.SHOP_PURCHASE_BUNDLE_TITLE,
 		message,
 		Callable(self, "_execute_bundle_purchase").bind(bundle_id)
 	)
@@ -189,7 +189,7 @@ func _on_category_selected(category_id: String) -> void:
 
 func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success:
-		ToastManager.error("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u79ae\u5305\u5931\u6557\u3002"))
+		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, _extract_error_message(error, UiText.SHOP_BUNDLE_PURCHASE_FAILED_BODY))
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
 	emit_signal("request_refresh")
@@ -205,22 +205,22 @@ func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> 
 			if reward_variant is Dictionary:
 				var reward: Dictionary = reward_variant
 				reward_lines.append("%s x%s" % [
-					str(reward.get("rewardDisplayName", reward.get("rewardType", "\u734e\u52f5"))),
+					str(reward.get("rewardDisplayName", reward.get("rewardType", UiText.SHOP_REWARD_FALLBACK_NAME))),
 					GameState.format_number(int(reward.get("quantity", 0))),
 				])
 	if reward_lines.is_empty():
-		reward_lines.append("\u734e\u52f5\u5df2\u767c\u9001\u5b8c\u6210\u3002")
-	ToastManager.success("\u8cfc\u8cb7\u6210\u529f", " / ".join(reward_lines))
+		reward_lines.append(UiText.SHOP_REWARD_SENT)
+	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, " / ".join(reward_lines))
 
 
 func _build_limit_text(bundle: Dictionary) -> String:
 	var purchase_count := int(bundle.get("purchaseCount", 0))
 	var purchase_limit := int(bundle.get("purchaseLimit", 0))
 	if bool(bundle.get("isSoldOut", false)):
-		return "\u5df2\u552e\u5b8c"
+		return UiText.SHOP_SOLD_OUT
 	if purchase_limit < 0:
-		return "\u5df2\u8cfc\u8cb7 %s \u6b21" % GameState.format_number(purchase_count)
-	return "\u5df2\u8cfc\u8cb7 %s / %s" % [GameState.format_number(purchase_count), GameState.format_number(purchase_limit)]
+		return UiText.SHOP_PURCHASED_COUNT_S_FORMAT % GameState.format_number(purchase_count)
+	return UiText.SHOP_PURCHASED_LIMIT_S_FORMAT % [GameState.format_number(purchase_count), GameState.format_number(purchase_limit)]
 
 
 func _build_reward_lines(bundle: Dictionary) -> Array[String]:
@@ -231,7 +231,7 @@ func _build_reward_lines(bundle: Dictionary) -> Array[String]:
 			if reward_variant is Dictionary:
 				var reward: Dictionary = reward_variant
 				result.append("%s x%s" % [
-					str(reward.get("rewardDisplayName", reward.get("rewardType", "\u734e\u52f5"))),
+					str(reward.get("rewardDisplayName", reward.get("rewardType", UiText.SHOP_REWARD_FALLBACK_NAME))),
 					GameState.format_number(int(reward.get("quantity", 0))),
 				])
 	return result

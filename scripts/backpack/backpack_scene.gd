@@ -84,29 +84,29 @@ func _build_tab_items() -> Array:
 	return [
 		{
 			"key": TAB_ALL,
-			"label": "\u5168\u90e8",
-			"shell_description": "\u67e5\u770b\u80cc\u5305\u5167\u76ee\u524d\u6301\u6709\u7684\u5168\u90e8\u8ca8\u5e63\u3001\u7968\u5238\u8207\u6d88\u8017\u9053\u5177\u3002",
+			"label": UiText.BACKPACK_TAB_ALL,
+			"shell_description": UiText.BACKPACK_ALL_DESC,
 			"shell_summary_left": Callable(self, "_build_shell_summary_left").bind(TAB_ALL),
 			"shell_summary_right": Callable(self, "_build_shell_summary_right").bind(TAB_ALL),
 		},
 		{
 			"key": TAB_CURRENCY,
 			"label": UiText.BACKPACK_SECTION_CURRENCY,
-			"shell_description": "\u67e5\u770b\u76ee\u524d\u6301\u6709\u7684\u91d1\u5e63\u3001\u947d\u77f3\u8207\u885d\u649e\u5e63\u3002",
+			"shell_description": UiText.BACKPACK_CURRENCY_DESC,
 			"shell_summary_left": Callable(self, "_build_shell_summary_left").bind(TAB_CURRENCY),
 			"shell_summary_right": Callable(self, "_build_shell_summary_right").bind(TAB_CURRENCY),
 		},
 		{
 			"key": TAB_TICKET,
 			"label": UiText.BACKPACK_SECTION_TICKET,
-			"shell_description": "\u67e5\u770b\u7af6\u6280\u5834\u5238\u3001\u5730\u4e0b\u57ce\u5238\u8207\u7d44\u968a\u6536\u76ca\u5238\u7b49\u7968\u5238\u6578\u91cf\u3002",
+			"shell_description": UiText.BACKPACK_TICKET_DESC,
 			"shell_summary_left": Callable(self, "_build_shell_summary_left").bind(TAB_TICKET),
 			"shell_summary_right": Callable(self, "_build_shell_summary_right").bind(TAB_TICKET),
 		},
 		{
 			"key": TAB_CONSUMABLE,
 			"label": UiText.BACKPACK_SECTION_CONSUMABLE,
-			"shell_description": "\u67e5\u770b\u8c93\u7ce7\u3001\u7279\u7d1a\u8c93\u7ce7\u3001\u8a98\u6355\u7c60\u8207\u5404\u985e\u788e\u7247\u5b58\u91cf\u3002",
+			"shell_description": UiText.BACKPACK_CONSUMABLE_DESC,
 			"shell_summary_left": Callable(self, "_build_shell_summary_left").bind(TAB_CONSUMABLE),
 			"shell_summary_right": Callable(self, "_build_shell_summary_right").bind(TAB_CONSUMABLE),
 		},
@@ -297,4 +297,4 @@ func _build_shell_summary_right(tab_key: String) -> String:
 	for item_variant: Variant in items:
 		if item_variant is Dictionary and int((item_variant as Dictionary).get("qty", 0)) > 0:
 			owned_count += 1
-	return "\u5df2\u64c1\u6709 %d \u9805" % owned_count
+	return UiText.BACKPACK_OWNED_COUNT_FORMAT % owned_count

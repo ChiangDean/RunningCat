@@ -1,8 +1,8 @@
-## 全域 Toast 通知系統
-## 使用方式：
-##   ToastManager.success("購買成功")
-##   ToastManager.error("網路錯誤，請稍後再試")
-##   ToastManager.hint("已複製到剪貼簿")
+## Global toast notification system
+## Usage:
+##   ToastManager.success("Purchase succeeded")
+##   ToastManager.error("Network error, please try again later")
+##   ToastManager.hint("Copied to clipboard")
 extends Node
 
 enum ToastType { SUCCESS, ERROR, HINT }
@@ -45,17 +45,17 @@ func _ready() -> void:
 	add_child(_canvas)
 
 
-## 顯示成功 Toast（綠色）
+## Show a success toast (green)
 func success(message: String, sub_text: String = "") -> void:
 	_enqueue(ToastType.SUCCESS, message, sub_text)
 
 
-## 顯示錯誤 Toast（紅色）
+## Show an error toast (red)
 func error(message: String, sub_text: String = "") -> void:
 	_enqueue(ToastType.ERROR, message, sub_text)
 
 
-## 顯示提示 Toast（黃色）
+## Show a hint toast (yellow)
 func hint(message: String, sub_text: String = "") -> void:
 	_enqueue(ToastType.HINT, message, sub_text)
 
@@ -79,7 +79,7 @@ func _show_next() -> void:
 func _spawn_toast(type: ToastType, message: String, sub_text: String) -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 
-	# --- 外框 Panel ---
+	# --- Outer panel ---
 	var panel := PanelContainer.new()
 	var style := StyleBoxFlat.new()
 	style.bg_color = _TYPE_COLORS[type]
@@ -97,7 +97,7 @@ func _spawn_toast(type: ToastType, message: String, sub_text: String) -> void:
 	panel.custom_minimum_size = Vector2(viewport_size.x - TOAST_SIDE_MARGIN * 2.0, TOAST_MIN_HEIGHT)
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
-	# --- 內層 Margin ---
+	# --- Inner margin ---
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 20)
 	margin.add_theme_constant_override("margin_right", 20)
@@ -109,7 +109,7 @@ func _spawn_toast(type: ToastType, message: String, sub_text: String) -> void:
 	row.add_theme_constant_override("separation", 14)
 	margin.add_child(row)
 
-	# --- 圖示 ---
+	# --- Icon ---
 	var icon_label := Label.new()
 	icon_label.text = _TYPE_ICONS[type]
 	icon_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
@@ -117,7 +117,7 @@ func _spawn_toast(type: ToastType, message: String, sub_text: String) -> void:
 	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(icon_label)
 
-	# --- 文字區塊 ---
+	# --- Text block ---
 	var text_col := VBoxContainer.new()
 	text_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_col.add_theme_constant_override("separation", 2)
@@ -138,7 +138,7 @@ func _spawn_toast(type: ToastType, message: String, sub_text: String) -> void:
 		sub_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		text_col.add_child(sub_label)
 
-	# --- 定位：從畫面頂部滑入 ---
+	# --- Position: slide in from the top ---
 	var control_root := Control.new()
 	control_root.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	control_root.offset_bottom = TOAST_MIN_HEIGHT + TOAST_TOP_OFFSET + 40.0
@@ -148,14 +148,14 @@ func _spawn_toast(type: ToastType, message: String, sub_text: String) -> void:
 	panel.position = Vector2(TOAST_SIDE_MARGIN, -TOAST_MIN_HEIGHT - 20.0)
 	control_root.add_child(panel)
 
-	# --- 動畫：滑入 ---
+	# --- Animation: slide in ---
 	var target_y := TOAST_TOP_OFFSET
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tween.tween_property(panel, "position:y", target_y, TOAST_ANIM_IN)
 	tween.tween_interval(TOAST_DURATION)
 
-	# --- 動畫：淡出 ---
+	# --- Animation: fade out ---
 	tween.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
 	tween.tween_property(panel, "modulate:a", 0.0, TOAST_ANIM_OUT)
 	tween.tween_callback(Callable(self, "_finish_toast").bind(control_root_ref))

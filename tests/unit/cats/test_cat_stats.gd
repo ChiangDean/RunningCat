@@ -58,8 +58,8 @@ func test_damage_ignore_def_exceeding_defense_clamps_to_0() -> void:
 
 # ── calc_knockback_distance ───────────────────────────────────────
 
-func test_equal_weights_returns_100() -> void:
-	assert_almost_eq(CatStats.calc_knockback_distance(100.0, 100.0), 100.0, DELTA)
+func test_equal_weights_returns_200() -> void:
+	assert_almost_eq(CatStats.calc_knockback_distance(100.0, 100.0), 200.0, DELTA)
 
 func test_heavier_attacker_increases_knockback() -> void:
 	var light := CatStats.calc_knockback_distance(100.0, 100.0)

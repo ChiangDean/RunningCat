@@ -1,11 +1,11 @@
 class_name LineupConstants
 
-## ConfigScene 共用常數：尺寸、隊伍類型、標籤、貓咪檔案對映
+## Shared constants for ConfigScene: sizes, team types, labels, cat file mapping
 
 const SW := 720.0
 const SH := 1280.0
 
-## 前端路由用 team type 字串（snake_case）→ 後端 TeamSceneType 名稱（PascalCase）
+## Maps frontend route team-type strings (snake_case) to backend TeamSceneType names (PascalCase)
 const TEAM_TYPE_MAP: Dictionary = {
 	"boss":          "Boss",
 	"dungeon":       "Dungeon",
@@ -14,13 +14,13 @@ const TEAM_TYPE_MAP: Dictionary = {
 }
 
 const TEAM_LABELS: Dictionary = {
-	"boss":          "BOSS 推關",
-	"dungeon":       "地下城",
-	"arena_attack":  "競技場攻擊",
-	"arena_defense": "競技場防禦",
+	"boss":          UiText.LINEUP_TEAM_LABEL_BOSS,
+	"dungeon":       UiText.LINEUP_TEAM_LABEL_DUNGEON,
+	"arena_attack":  UiText.LINEUP_TEAM_LABEL_ARENA_ATTACK,
+	"arena_defense": UiText.LINEUP_TEAM_LABEL_ARENA_DEFENSE,
 }
 
-## 本地 cat catalog ID → 本地 JSON 檔名（用於技能 popup）
+## Maps local cat catalog ID to local JSON filename (used for skill popups)
 const CAT_FILE_MAP: Dictionary = {
 	1: "black_cat",
 	2: "calico_cat",

@@ -20,18 +20,18 @@ const CATEGORY_CONFIGS := [
 ]
 
 const COLLISION_COIN_ITEMS := [
-	{"key": "coin_33", "label": "33衝撞幣", "amount": 33},
-	{"key": "coin_170", "label": "170衝撞幣", "amount": 170},
-	{"key": "coin_330", "label": "330衝撞幣", "amount": 330},
-	{"key": "coin_490", "label": "490衝撞幣", "amount": 490},
-	{"key": "coin_990", "label": "990衝撞幣", "amount": 990},
-	{"key": "coin_1690", "label": "1690衝撞幣", "amount": 1690},
-	{"key": "coin_3290", "label": "3290衝撞幣", "amount": 3290},
+	{"key": "coin_33", "label": "33" + UiText.SHOP_SUBMENU_COLLISION_COIN, "amount": 33},
+	{"key": "coin_170", "label": "170" + UiText.SHOP_SUBMENU_COLLISION_COIN, "amount": 170},
+	{"key": "coin_330", "label": "330" + UiText.SHOP_SUBMENU_COLLISION_COIN, "amount": 330},
+	{"key": "coin_490", "label": "490" + UiText.SHOP_SUBMENU_COLLISION_COIN, "amount": 490},
+	{"key": "coin_990", "label": "990" + UiText.SHOP_SUBMENU_COLLISION_COIN, "amount": 990},
+	{"key": "coin_1690", "label": "1690" + UiText.SHOP_SUBMENU_COLLISION_COIN, "amount": 1690},
+	{"key": "coin_3290", "label": "3290" + UiText.SHOP_SUBMENU_COLLISION_COIN, "amount": 3290},
 ]
 
 const DIAMOND_STORE_ITEMS := [
-	{"key": "trap_cage", "label": "誘捕籠"},
-	{"key": "arena_ticket", "label": "競技券"},
+	{"key": "trap_cage", "label": UiText.SHOP_DIAMOND_STORE_TRAP_CAGE},
+	{"key": "arena_ticket", "label": UiText.SHOP_DIAMOND_STORE_ARENA_TICKET},
 ]
 
 const TRAP_CAGE_DIAMOND_COST := 100
@@ -48,7 +48,6 @@ const SHOP_DISCOUNT_FILL := Color(0.88, 0.27, 0.25, 0.96)
 const SHOP_DISCOUNT_BORDER := Color(1.0, 0.87, 0.72, 0.98)
 const SHOP_DISCOUNT_TEXT := Color(1.0, 0.97, 0.92, 1.0)
 const SHOP_PRICE_LABEL_NTD := "NTD"
-const SHOP_FREE_CLAIM_LABEL := "免費領取"
 const SHOP_BUTTON_ICON_SIZE := Vector2(36.0, 36.0)
 const DIAMOND_STORE_MAX_QUANTITY := 999999
 const SHOP_PRICE_INSUFFICIENT_COLOR := Color(0.95, 0.36, 0.36, 1.0)
@@ -513,7 +512,7 @@ func _open_quantity_keypad(initial_value: int, max_allowed_value: int, on_submit
 	var normalized_initial_value: int = clampi(initial_value, 0, DIAMOND_STORE_MAX_QUANTITY)
 
 	var max_label: Label = Label.new()
-	max_label.text = "最大可輸入數量：%s" % GameState.format_number(maxi(0, max_allowed_value))
+	max_label.text = UiText.SHOP_MAX_INPUT_FORMAT % GameState.format_number(maxi(0, max_allowed_value))
 	max_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	max_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	max_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
@@ -626,14 +625,14 @@ func _is_diamond_store_cost_affordable(purchase_state: Dictionary) -> bool:
 
 
 func _show_currency_shortage(currency_name: String) -> void:
-	ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, "%s不足" % currency_name)
+	ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, UiText.SHOP_CURRENCY_SHORTAGE_FORMAT % currency_name)
 
 func _resolve_bundle_price_info(bundle: Dictionary) -> Dictionary:
 	var currency_type: String = str(bundle.get("priceCurrencyType", "")).to_lower()
 	var price_amount: int = int(bundle.get("priceAmount", 0))
 	if price_amount <= 0:
 		return {
-			"text": SHOP_FREE_CLAIM_LABEL,
+			"text": UiText.SHOP_FREE_CLAIM,
 			"amount": 0,
 		}
 	if currency_type == "diamonds":
@@ -1306,7 +1305,7 @@ func _get_shell_summary_left() -> String:
 
 func _build_tab_summary_right(tab_key: String) -> String:
 	var item_count: int = _build_secondary_items(tab_key).size()
-	return "\u9805\u76ee %d" % item_count
+	return UiText.SHOP_ITEM_COUNT_FORMAT % item_count
 
 
 func _on_back_pressed() -> void:

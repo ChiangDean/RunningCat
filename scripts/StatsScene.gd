@@ -8,11 +8,11 @@ const TAB_MEMORY := "memory"
 const TAB_TREASURE := "treasure"
 const TAB_LEVEL := "level"
 
-const STATUS_ACTIVE := "已生效"
-const STATUS_INACTIVE := "未生效"
-const STATUS_OWNED := "已持有"
-const STATUS_LOCKED := "未解鎖"
-const STATUS_BROKEN := "已損壞"
+
+
+
+
+
 
 var _close_action: Callable = Callable()
 var _active_tab: String = TAB_ALL
@@ -129,7 +129,7 @@ func _build_all_tab() -> Control:
 	lines.append_array(_build_ability_summary_lines())
 
 	if lines.is_empty():
-		root.add_child(_make_empty_card("目前沒有已生效的數值加成。", "你仍然可以切到左側分類，查看各系統目前的持有與解鎖狀態。"))
+		root.add_child(_make_empty_card(UiText.STATS_ALL_NO_ACTIVE_BONUSES, UiText.STATS_ALL_NO_ACTIVE_BONUSES_DESC))
 		return root
 
 	root.add_child(_make_lines_card(UiText.STATS_PANEL_TITLE, lines, Color(0.92, 0.78, 0.50, 0.95)))
@@ -142,7 +142,7 @@ func _build_ability_tab() -> Control:
 
 	var lines: Array[String] = _build_ability_effect_lines()
 	if lines.is_empty():
-		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, "目前沒有可顯示的能力資料。"))
+		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, UiText.STATS_ABILITY_EMPTY_DESC))
 		return root
 
 	root.add_child(_make_lines_card(UiText.STATS_SECTION_ABILITY, lines, Color(0.54, 0.76, 0.92, 0.95)))
@@ -155,7 +155,7 @@ func _build_equipment_tab() -> Control:
 
 	var lines: Array[String] = _format_aggregate_lines(_collect_equipment_bonuses())
 	if lines.is_empty():
-		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, "目前沒有可顯示的裝備效果。"))
+		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, UiText.STATS_EQUIPMENT_EMPTY_DESC))
 		return root
 	root.add_child(_make_lines_card(UiText.STATS_SECTION_EQUIPMENT, lines, Color(0.70, 0.88, 0.72, 0.95)))
 	return root
@@ -167,7 +167,7 @@ func _build_memory_tab() -> Control:
 
 	var lines: Array[String] = _format_aggregate_lines(_collect_memory_bonuses())
 	if lines.is_empty():
-		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, "目前沒有可顯示的回憶效果。"))
+		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, UiText.STATS_MEMORY_EMPTY_DESC))
 		return root
 	root.add_child(_make_lines_card(UiText.STATS_SECTION_MEMORY, lines, Color(0.87, 0.72, 1.0, 0.95)))
 	return root
@@ -181,7 +181,7 @@ func _build_treasure_tab() -> Control:
 	var poop_lines: Array[String] = _format_aggregate_lines(_collect_treasure_poop_bonuses())
 
 	if treasure_lines.is_empty() and poop_lines.is_empty():
-		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, "目前沒有可顯示的寶藏效果。"))
+		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, UiText.STATS_TREASURE_EMPTY_DESC))
 		return root
 	if not treasure_lines.is_empty():
 		root.add_child(_make_lines_card(UiText.STATS_SECTION_TREASURE, treasure_lines, Color(0.94, 0.78, 0.48, 0.95)))
@@ -197,17 +197,17 @@ func _build_level_tab() -> Control:
 
 	var passive_lines: Array[String] = _build_team_passive_summary_lines()
 	if passive_lines.is_empty():
-		root.add_child(_make_empty_card("目前沒有上陣中的貓咪被動。", "請先在配置隊伍中放入角色，這裡才會顯示實際生效的被動。"))
+		root.add_child(_make_empty_card(UiText.STATS_PASSIVE_EMPTY, UiText.STATS_PASSIVE_EMPTY_DESC))
 	else:
-		root.add_child(_make_lines_card("角色被動加成", passive_lines, Color(0.92, 0.72, 0.72, 0.95)))
+		root.add_child(_make_lines_card(UiText.STATS_PASSIVE_TITLE, passive_lines, Color(0.92, 0.72, 0.72, 0.95)))
 	return root
 
 
 func _build_level_summary_lines() -> Array[String]:
 	var lines: Array[String] = []
-	lines.append("鏟屎官等級：Lv.%d" % int(_game_state.player_data.scooper_level))
-	lines.append("鏟屎官經驗：%d" % int(_game_state.player_data.scooper_exp))
-	lines.append("裝備等級上限會跟隨鏟屎官等級成長。")
+	lines.append(UiText.STATS_SCOOPER_LEVEL_FORMAT % int(_game_state.player_data.scooper_level))
+	lines.append(UiText.STATS_SCOOPER_EXP_FORMAT % int(_game_state.player_data.scooper_exp))
+	lines.append(UiText.STATS_EQUIP_LEVEL_NOTE)
 	return lines
 
 
@@ -265,18 +265,18 @@ func _build_ability_lines_from_summary(summary: Dictionary) -> Array[String]:
 
 	var reward_multiplier: float = float(summary.get("idle_reward_multiplier", 1.0)) - 1.0
 	if reward_multiplier > 0.0001:
-		lines.append("離線收益 +%.0f%%" % (reward_multiplier * 100.0))
+		lines.append(UiText.STATS_IDLE_REWARD_FORMAT % (reward_multiplier * 100.0))
 
 	var idle_hours: int = int(summary.get("idle_max_hours_bonus", 0))
 	if idle_hours > 0:
-		lines.append("離線收益上限 +%d 小時" % idle_hours)
+		lines.append(UiText.STATS_IDLE_CAP_FORMAT % idle_hours)
 
 	var speed_cap: float = float(summary.get("battle_speed_cap", 1.0))
 	if speed_cap > 1.0001:
-		lines.append("解鎖戰鬥 %.0fx 速度" % speed_cap)
+		lines.append(UiText.STATS_SPEED_UNLOCK_FORMAT % speed_cap)
 
 	if bool(summary.get("battle_skip_unlocked", false)):
-		lines.append("解鎖戰鬥跳過")
+		lines.append(UiText.STATS_BATTLE_SKIP_UNLOCKED)
 
 	return lines
 
@@ -601,7 +601,7 @@ func _format_passive_effect(effect_type: String, stat: String, value: float, val
 	var suffix: String = ""
 	var normalized_target: String = _normalize_key(target)
 	if normalized_target == "self":
-		suffix = "（自身）"
+		suffix = UiText.STATS_SUFFIX_SELF
 	elif normalized_target != "" and normalized_target != "team":
 		suffix = "（%s）" % _target_label(normalized_target)
 
@@ -611,9 +611,9 @@ func _format_passive_effect(effect_type: String, stat: String, value: float, val
 				return "%s %+.0f%%%s" % [_passive_stat_label(_canonicalize_stat_key(stat)), value * 100.0, suffix]
 			return "%s %+d%s" % [_passive_stat_label(_canonicalize_stat_key(stat)), int(value), suffix]
 		"damage_reduction":
-			return "傷害減免 %+.0f%%%s" % [value * 100.0, suffix]
+			return UiText.STATS_DAMAGE_REDUCTION_FORMAT % [value * 100.0, suffix]
 		"cooldown_reduction":
-			return "冷卻縮減 %+.0f%%%s" % [value * 100.0, suffix]
+			return UiText.STATS_COOLDOWN_REDUCTION_FORMAT % [value * 100.0, suffix]
 		_:
 			return ""
 
@@ -700,27 +700,27 @@ func _to_percent_stat_key(stat: String) -> String:
 func _stat_label(stat: String) -> String:
 	match stat:
 		"atk":
-			return "攻擊力"
+			return UiText.STATS_STAT_ATK
 		"atk_percent":
-			return "攻擊力"
+			return UiText.STATS_STAT_ATK
 		"defense":
-			return "防禦力"
+			return UiText.STATS_STAT_DEF
 		"def_percent":
-			return "防禦力"
+			return UiText.STATS_STAT_DEF
 		"max_hp":
 			return "HP"
 		"max_hp_percent":
 			return "HP"
 		"crit_rate":
-			return "暴擊率"
+			return UiText.STATS_STAT_CRIT_RATE
 		"crit_damage":
-			return "暴擊傷害"
+			return UiText.STATS_STAT_CRIT_DMG
 		"damage_reduction":
-			return "傷害減免"
+			return UiText.STATS_STAT_DMG_REDUCTION
 		"cooldown_reduction":
-			return "冷卻縮減"
+			return UiText.STATS_STAT_COOLDOWN
 		"idle_poop_percent":
-			return "便便收益"
+			return UiText.STATS_STAT_POOP
 		_:
 			return stat
 
@@ -728,13 +728,13 @@ func _stat_label(stat: String) -> String:
 func _passive_stat_label(stat: String) -> String:
 	match stat:
 		"atk":
-			return "攻擊力"
+			return UiText.STATS_STAT_ATK
 		"defense":
-			return "防禦力"
+			return UiText.STATS_STAT_DEF
 		"max_hp":
 			return "HP"
 		"speed":
-			return "速度"
+			return UiText.STATS_STAT_SPEED
 		_:
 			return _stat_label(stat)
 
@@ -742,19 +742,19 @@ func _passive_stat_label(stat: String) -> String:
 func _target_label(target: String) -> String:
 	match target:
 		"all":
-			return "全體"
+			return UiText.STATS_TARGET_ALL
 		"team":
-			return "隊伍"
+			return UiText.STATS_TARGET_TEAM
 		"self":
-			return "自身"
+			return UiText.STATS_TARGET_SELF
 		"tank":
-			return "坦克"
+			return UiText.STATS_TARGET_TANK
 		"speed":
-			return "速度"
+			return UiText.STATS_STAT_SPEED
 		"assassin":
-			return "刺客"
+			return UiText.STATS_TARGET_ASSASSIN
 		"defensive":
-			return "防禦"
+			return UiText.STATS_TARGET_DEFENSIVE
 		_:
 			return target
 

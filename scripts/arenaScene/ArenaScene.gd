@@ -895,7 +895,7 @@ func _build_shell_summary_left() -> String:
 	return "%s %d / %s %d" % [
 		UiText.REWARD_DIAMONDS,
 		GameState.player_data.diamonds,
-		"\u9580\u7968",
+		UiText.ARENA_TICKET_LABEL,
 		Helpers.get_current_tickets(_overview),
 	]
 
@@ -906,6 +906,6 @@ func _build_shell_summary_right(tab_key: String) -> String:
 		for rank_variant: Variant in _overview.get("ranks", []):
 			if rank_variant is Dictionary and bool((rank_variant as Dictionary).get("isClaimable", false)):
 				claimable_count += 1
-		return "\u53ef\u9818\u53d6 %d" % claimable_count
+		return UiText.ARENA_CLAIMABLE_FORMAT % claimable_count
 
-	return "\u7a4d\u5206 %d" % Helpers.get_current_score(_overview)
+	return UiText.ARENA_SCORE_TAB_FORMAT % Helpers.get_current_score(_overview)

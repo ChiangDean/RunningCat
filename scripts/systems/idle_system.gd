@@ -1,10 +1,10 @@
 class_name IdleSystem
 extends RefCounted
 
-## 掛機系統純邏輯（計算離線產出速率、每分鐘獎勵、鏟屎隨機掉落）
-## 所有方法皆為 static，不持有狀態
+## Pure idle-system logic (offline yield rates, per-minute rewards, random poop drops)
+## All methods are static; no state is held
 
-## 依當前關卡與鏟屎官等級計算每小時產出速率
+## Calculate per-hour yield rates from the current stage and scooper level
 static func calculate_rates(config: Dictionary, current_stage: int, scooper_level: int) -> Dictionary:
 	var stage_interval := float(int(config.get("stage_bonus_interval", 50)))
 	var whisker_interval := float(int(config.get("whisker_stage_bonus_interval", 150)))
@@ -28,8 +28,8 @@ static func calculate_rates(config: Dictionary, current_stage: int, scooper_leve
 				+ whisker_tiers * int(config.get("whisker_stage_bonus_per_interval", 1))),
 	}
 
-## 依完整分鐘數與速率計算獎勵（整數地板除，floor(速率 × 分鐘 / 60)）
-## complete_minutes = elapsed_seconds / 60（整數）
+## Calculate rewards from complete elapsed minutes and rates (integer floor: floor(rate × minutes / 60))
+## complete_minutes = elapsed_seconds / 60 (integer)
 static func calculate_rewards(complete_minutes: int, rates: Dictionary) -> Dictionary:
 	if complete_minutes <= 0:
 		return {"gold": 0, "poop": 0, "cat_food": 0, "diamonds": 0, "whiskers": 0}
@@ -41,8 +41,8 @@ static func calculate_rewards(complete_minutes: int, rates: Dictionary) -> Dicti
 		"whiskers": floori(float(rates.get("whiskers", 0)) * float(complete_minutes) / 60.0),
 	}
 
-## 鏟一次屎的隨機掉落，機率依鏟屎官等級動態計算
-## 回傳欄位：exp, memory_shards, whiskers（均為 int，0 表示未獲得）
+## Random drops from a single poop scoop; probability scales with scooper level
+## Return fields: exp, memory_shards, whiskers (all int; 0 means not obtained)
 static func scoop_once(config: Dictionary, rng: RandomNumberGenerator, scooper_level: int) -> Dictionary:
 	var result := {"exp": 0, "memory_shards": 0, "whiskers": 0}
 
@@ -52,7 +52,7 @@ static func scoop_once(config: Dictionary, rng: RandomNumberGenerator, scooper_l
 	var mem_chance: float = (
 		float(config.get("scoop_memory_shard_base_chance", 0.0001))
 		+ float(config.get("scoop_memory_shard_chance_per_two_scooper_levels", 0.0001))
-		  * floorf(float(scooper_level) / 2.0)   # 整數除法，每兩級才加一次
+		  * floorf(float(scooper_level) / 2.0)   # integer division: one bonus per two levels
 	)
 	if rng.randf() < mem_chance:
 		result["memory_shards"] = 1

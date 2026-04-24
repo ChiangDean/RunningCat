@@ -64,12 +64,12 @@ const PROFILE_AVATAR_IDS := [
 ]
 
 const PROFILE_AVATAR_LABELS := {
-	"black_cat": "黑貓",
-	"calico_cat": "三花貓",
-	"milk_cat": "乳牛貓",
-	"ninja_cat": "忍者貓",
-	"orange_cat": "橘貓",
-	"tuxedo_cat": "燕尾服貓",
+	"black_cat": UiText.AVATAR_BLACK_CAT,
+	"calico_cat": UiText.AVATAR_CALICO_CAT,
+	"milk_cat": UiText.AVATAR_MILK_CAT,
+	"ninja_cat": UiText.AVATAR_NINJA_CAT,
+	"orange_cat": UiText.AVATAR_ORANGE_CAT,
+	"tuxedo_cat": UiText.AVATAR_TUXEDO_CAT,
 }
 
 const CAT_SHOWCASE_TEXTURES := {

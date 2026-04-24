@@ -19,7 +19,7 @@ func _rebuild() -> void:
 		child.queue_free()
 
 	var intro := Label.new()
-	intro.text = "\u4f7f\u7528\u947d\u77f3\u76f4\u63a5\u8cfc\u8cb7\u8a98\u6355\u7c60\uff0c\u8cfc\u8cb7\u6210\u529f\u5f8c\u6703\u540c\u6b65\u66f4\u65b0\u76ee\u524d\u6301\u6709\u6578\u91cf\u3002"
+	intro.text = UiText.SHOP_TRAP_CAGE_INTRO
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	add_child(intro)
@@ -28,7 +28,7 @@ func _rebuild() -> void:
 	var offers: Array = offers_variant if offers_variant is Array else []
 	if offers.is_empty():
 		var empty_label := Label.new()
-		empty_label.text = "\u76ee\u524d\u6c92\u6709\u53ef\u8cfc\u8cb7\u7684\u8a98\u6355\u7c60\u65b9\u6848\u3002"
+		empty_label.text = UiText.SHOP_TRAP_CAGE_EMPTY
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 		add_child(empty_label)
@@ -64,23 +64,23 @@ func _build_offer_card(offer: Dictionary) -> Control:
 	var cost := int(offer.get("diamondCost", 0))
 
 	var title := Label.new()
-	title.text = "\u8a98\u6355\u7c60 x%s" % GameState.format_number(count)
+	title.text = UiText.SHOP_TRAP_CAGE_ITEM_TITLE_COUNT_FORMAT % GameState.format_number(count)
 	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
 	info.add_child(title)
 
 	var desc := Label.new()
-	desc.text = "\u8cfc\u8cb7\u5f8c\u53ef\u76f4\u63a5\u5728\u8a98\u6355\u4e2d\u4f7f\u7528\u3002"
+	desc.text = UiText.SHOP_TRAP_CAGE_ITEM_DESC_SHORT
 	desc.add_theme_font_size_override("font_size", 17)
 	desc.add_theme_color_override("font_color", Color(0.82, 0.82, 0.82, 1.0))
 	info.add_child(desc)
 
 	var cost_label := Label.new()
-	cost_label.text = "\u947d\u77f3 %s" % GameState.format_number(cost)
+	cost_label.text = UiText.SHOP_DIAMOND_COST_S_FORMAT % GameState.format_number(cost)
 	cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 	row.add_child(cost_label)
 
 	var button := Button.new()
-	button.text = "\u8cfc\u8cb7"
+	button.text = UiText.SHOP_ACTION_BUY
 	button.custom_minimum_size = Vector2(140.0, 48.0)
 	UiPalette.apply_button_kind(button, "confirm")
 	button.pressed.connect(_confirm_purchase.bind(count, cost))
@@ -90,9 +90,9 @@ func _build_offer_card(offer: Dictionary) -> Control:
 
 
 func _confirm_purchase(count: int, cost: int) -> void:
-	var message := "\u662f\u5426\u82b1\u8cbb %s \u947d\u77f3\u8cfc\u8cb7\u8a98\u6355\u7c60 x%s\uff1f" % [GameState.format_number(cost), GameState.format_number(count)]
+	var message := UiText.SHOP_TRAP_CAGE_PURCHASE_CONFIRM_S_BODY % [GameState.format_number(cost), GameState.format_number(count)]
 	DialogManager.show_confirm(
-		"\u8cfc\u8cb7\u8a98\u6355\u7c60",
+		UiText.SHOP_TRAP_CAGE_PURCHASE_TITLE,
 		message,
 		Callable(self, "_execute_trap_cage_purchase").bind(count)
 	)
@@ -104,7 +104,7 @@ func _execute_trap_cage_purchase(count: int) -> void:
 
 func _on_purchase_completed(success: bool, _data: Variant, error: Dictionary) -> void:
 	if not success:
-		ToastManager.error("\u8cfc\u8cb7\u5931\u6557", _extract_error_message(error, "\u8cfc\u8cb7\u8a98\u6355\u7c60\u5931\u6557\u3002"))
+		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, _extract_error_message(error, UiText.SHOP_TRAP_CAGE_PURCHASE_FAILED_BODY))
 		return
 	emit_signal("request_refresh")
 	var owner := get_parent()
@@ -112,7 +112,7 @@ func _on_purchase_completed(success: bool, _data: Variant, error: Dictionary) ->
 		var scene := owner.get_parent()
 		if scene != null and scene.has_method("refresh_from_bootstrap"):
 			scene.refresh_from_bootstrap(false)
-	ToastManager.success("\u8cfc\u8cb7\u6210\u529f", "\u5df2\u6210\u529f\u8cfc\u8cb7\u8a98\u6355\u7c60\u3002")
+	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_TRAP_CAGE_PURCHASE_SUCCESS_BODY)
 
 
 func _extract_error_message(error: Dictionary, fallback: String) -> String:

@@ -423,21 +423,21 @@ func _parse_reward_display(value: Variant) -> Dictionary:
 
 	var normalized: String = name_text.to_lower().replace(" ", "").replace("_", "")
 	match normalized:
-		"gold", "金幣":
+		"gold", UiText.REWARD_KEY_ZH_GOLD:
 			return {"label": UiText.REWARD_GOLD, "amount": amount, "icon_path": "catalog/currency/gold"}
-		"diamonds", "diamond", "鑽石":
+		"diamonds", "diamond", UiText.REWARD_KEY_ZH_DIAMONDS:
 			return {"label": UiText.REWARD_DIAMONDS, "amount": amount, "icon_path": "catalog/currency/diamonds"}
-		"catfood", "貓糧":
+		"catfood", UiText.REWARD_KEY_ZH_CAT_FOOD:
 			return {"label": UiText.REWARD_CAT_FOOD, "amount": amount, "icon_path": "catalog/consumable/cat_food"}
-		"specialcatfood", "特殊乾糧":
+		"specialcatfood", UiText.REWARD_KEY_ZH_SPECIAL_CAT_FOOD:
 			return {"label": UiText.REWARD_SPECIAL_CAT_FOOD, "amount": amount, "icon_path": "catalog/consumable/special_cat_food"}
-		"memoryshards", "回憶碎片":
+		"memoryshards", UiText.REWARD_KEY_ZH_MEMORY_SHARDS:
 			return {"label": UiText.REWARD_MEMORY_SHARDS, "amount": amount, "icon_path": "catalog/consumable/memory_shards"}
-		"whiskers", "whiskershards", "鬍鬚", "鬍鬚碎片":
+		"whiskers", "whiskershards", UiText.REWARD_KEY_ZH_WHISKERS, UiText.REWARD_KEY_ZH_WHISKER_SHARDS:
 			return {"label": UiText.REWARD_WHISKERS, "amount": amount, "icon_path": "catalog/consumable/whisker_shards"}
-		"trapcage", "trapcages", "誘捕籠":
+		"trapcage", "trapcages", UiText.REWARD_KEY_ZH_TRAP_CAGE:
 			return {"label": UiText.REWARD_TRAP_CAGE, "amount": amount, "icon_path": "catalog/consumable/trap_cages"}
-		"poop", "poopcount", "屎堆":
+		"poop", "poopcount", UiText.REWARD_KEY_ZH_POOP:
 			return {"label": UiText.REWARD_POOP, "amount": amount, "icon_path": "catalog/consumable/poop_count"}
 		_:
 			return {"label": name_text, "amount": amount, "icon_path": ""}

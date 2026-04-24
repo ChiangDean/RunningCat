@@ -1,11 +1,11 @@
 class_name ArenaRankSystem
 extends RefCounted
 
-## 競技場段位 / 積分 / 賽季 / 段位獎勵邏輯
-## 所有方法皆為 static，無需實例化
+## Arena rank / score / season / rank-reward logic
+## All methods are static; no instantiation required
 
-# ── 段位定義 ──────────────────────────────────────────
-## 每個段位 key 對應的最低積分門檻（大師/菁英以積分+PR決定，此處只管積分門檻）
+# ── Rank definitions ──────────────────────────────────────────
+## Minimum score threshold per rank key (Master/Elite also require PR; this only tracks the score cutoff)
 const RANK_THRESHOLDS: Dictionary = {
 	"bronze_3":   0,
 	"bronze_2":   100,
@@ -28,30 +28,30 @@ const RANK_THRESHOLDS: Dictionary = {
 	"elite":      2000,
 }
 
-## 段位顯示名稱（中文）
+## Rank display names
 const RANK_NAMES: Dictionary = {
-	"bronze_3":   "銅牌 III",
-	"bronze_2":   "銅牌 II",
-	"bronze_1":   "銅牌 I",
-	"silver_3":   "銀牌 III",
-	"silver_2":   "銀牌 II",
-	"silver_1":   "銀牌 I",
-	"gold_3":     "金牌 III",
-	"gold_2":     "金牌 II",
-	"gold_1":     "金牌 I",
-	"platinum_3": "白金 III",
-	"platinum_2": "白金 II",
-	"platinum_1": "白金 I",
-	"diamond_3":  "鑽石 III",
-	"diamond_2":  "鑽石 II",
-	"diamond_1":  "鑽石 I",
-	"master_3":   "大師 III",
-	"master_2":   "大師 II",
-	"master_1":   "大師 I",
-	"elite":      "菁英",
+	"bronze_3":   UiText.ARENA_RANK_BRONZE + " III",
+	"bronze_2":   UiText.ARENA_RANK_BRONZE + " II",
+	"bronze_1":   UiText.ARENA_RANK_BRONZE + " I",
+	"silver_3":   UiText.ARENA_RANK_SILVER + " III",
+	"silver_2":   UiText.ARENA_RANK_SILVER + " II",
+	"silver_1":   UiText.ARENA_RANK_SILVER + " I",
+	"gold_3":     UiText.ARENA_RANK_GOLD + " III",
+	"gold_2":     UiText.ARENA_RANK_GOLD + " II",
+	"gold_1":     UiText.ARENA_RANK_GOLD + " I",
+	"platinum_3": UiText.ARENA_RANK_PLATINUM + " III",
+	"platinum_2": UiText.ARENA_RANK_PLATINUM + " II",
+	"platinum_1": UiText.ARENA_RANK_PLATINUM + " I",
+	"diamond_3":  UiText.ARENA_RANK_DIAMOND + " III",
+	"diamond_2":  UiText.ARENA_RANK_DIAMOND + " II",
+	"diamond_1":  UiText.ARENA_RANK_DIAMOND + " I",
+	"master_3":   UiText.ARENA_RANK_MASTER + " III",
+	"master_2":   UiText.ARENA_RANK_MASTER + " II",
+	"master_1":   UiText.ARENA_RANK_MASTER + " I",
+	"elite":      UiText.ARENA_RANK_ELITE,
 }
 
-## 段位排序（由低到高）
+## Rank order (lowest to highest)
 const RANK_ORDER: Array = [
 	"bronze_3", "bronze_2", "bronze_1",
 	"silver_3", "silver_2", "silver_1",
@@ -62,8 +62,8 @@ const RANK_ORDER: Array = [
 	"elite",
 ]
 
-## 段位獎勵內容
-## 每項格式：{ "diamonds": int, "trap_cages": int, "cat_food": int, "special_cat_food": int }
+## Rank reward contents
+## Each entry format: { "diamonds": int, "trap_cages": int, "cat_food": int, "special_cat_food": int }
 const RANK_REWARDS: Dictionary = {
 	"bronze_3":   { "diamonds": 20 },
 	"bronze_2":   { "diamonds": 30, "trap_cages": 1 },
@@ -87,9 +87,9 @@ const RANK_REWARDS: Dictionary = {
 }
 
 
-# ── 段位查詢 ──────────────────────────────────────────
+# ── Rank queries ──────────────────────────────────────────
 
-## 依積分取得段位 key
+## Get rank key from score
 static func score_to_rank_key(score: int) -> String:
 	var result := "bronze_3"
 	for key: String in RANK_ORDER:
@@ -97,22 +97,22 @@ static func score_to_rank_key(score: int) -> String:
 			result = key
 	return result
 
-## 取得段位顯示名稱
+## Get rank display name from score
 static func score_to_rank_name(score: int) -> String:
-	return RANK_NAMES.get(score_to_rank_key(score), "銅牌 III")
+	return RANK_NAMES.get(score_to_rank_key(score), UiText.ARENA_RANK_BRONZE + " III")
 
-## 取得段位 key 對應的最低積分
+## Get minimum score for a rank key
 static func rank_key_to_min_score(rank_key: String) -> int:
 	return RANK_THRESHOLDS.get(rank_key, 0)
 
-## 取得段位在 RANK_ORDER 中的索引（數值越高段位越高）
+## Get rank index in RANK_ORDER (higher index = higher rank)
 static func rank_key_to_index(rank_key: String) -> int:
 	return RANK_ORDER.find(rank_key)
 
 
-# ── 段位獎勵 ──────────────────────────────────────────
+# ── Rank rewards ──────────────────────────────────────────
 
-## 取得某積分可領取但尚未領取的段位獎勵 key 列表
+## Get rank reward keys claimable at the given score that have not yet been claimed
 static func get_claimable_rewards(score: int, claimed: Array) -> Array:
 	var result: Array = []
 	for key: String in RANK_ORDER:
@@ -120,11 +120,11 @@ static func get_claimable_rewards(score: int, claimed: Array) -> Array:
 			result.append(key)
 	return result
 
-## 取得段位獎勵內容
+## Get reward contents for a rank key
 static func get_reward(rank_key: String) -> Dictionary:
 	return RANK_REWARDS.get(rank_key, {})
 
-## 將段位獎勵套用至 PlayerData
+## Apply rank rewards to PlayerData
 static func apply_reward(rank_key: String, player_data: PlayerData) -> void:
 	var reward := get_reward(rank_key)
 	player_data.diamonds        += reward.get("diamonds",        0)

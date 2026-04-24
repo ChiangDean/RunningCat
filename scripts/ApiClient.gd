@@ -631,7 +631,7 @@ func _dispatch(slot: int, entry: Dictionary) -> void:
 		_pool[slot].remove_meta("entry")
 		_invoke_callback(entry["callback"], false, {}, {
 			"code": "HTTP.REQUEST_ERROR",
-			"message": "無法送出請求，錯誤碼: %s" % error,
+			"message": UiText.API_ERROR_REQUEST_FAILED_FORMAT % error,
 		})
 		_release_loading_overlay_if_tracked(entry)
 
@@ -648,7 +648,7 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 	if response_text == "" or json.parse(response_text) != OK:
 		_invoke_callback(callback, false, {}, {
 			"code": "HTTP.PARSE_ERROR",
-			"message": "伺服器回傳格式無法解析。",
+			"message": UiText.API_ERROR_PARSE_ERROR,
 		})
 		_release_loading_overlay_if_tracked(entry)
 		return
@@ -657,7 +657,7 @@ func _on_request_completed(_result: int, response_code: int, _headers: PackedStr
 	if not (payload is Dictionary):
 		_invoke_callback(callback, false, {}, {
 			"code": "HTTP.PARSE_ERROR",
-			"message": "伺服器回傳格式無法解析。",
+			"message": UiText.API_ERROR_PARSE_ERROR,
 		})
 		_release_loading_overlay_if_tracked(entry)
 		return
@@ -753,7 +753,7 @@ func _on_refresh_failed() -> void:
 	for entry: Dictionary in queued:
 		_invoke_callback(entry.get("callback", Callable()), false, {}, {
 			"code": "AUTH.SESSION_EXPIRED",
-			"message": "登入已過期，請重新登入。",
+			"message": UiText.API_ERROR_SESSION_EXPIRED,
 		})
 		_release_loading_overlay_if_tracked(entry)
 

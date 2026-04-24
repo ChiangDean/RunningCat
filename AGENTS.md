@@ -19,4 +19,5 @@
 - Scooper UI templates should live under `scenes/ui/scooper/<feature>/`; keep equipment, ability, memory, treasure, and achievement card templates grouped by feature instead of adding new Scooper templates to the `scenes/ui/` root.
 - `MailScene`, `ChatScene`, and similar home-overlay social pages that already have bootstrap + realtime cache coverage should open from `GameState` first; do not reintroduce mandatory entry-time loading fetches for data already maintained by bootstrap and websocket sync.
 - For bootstrap-backed social pages such as `MailScene` and `SocialScene`, if summary state says data should exist but the cached detail list is missing, prefer a silent self-heal fetch over restoring visible entry-time loading.
+- Tablet and wide-screen layout must keep the playable UI inside the centered `720 x 1280` safe frame; use extra side space only for decorative background, not required buttons or gameplay controls.
 - When new stable project-specific constraints are discovered during work, record them here so future changes stay consistent.

@@ -17,7 +17,7 @@ var _type_map: Dictionary = {
 func create_cat(cat_id: String, team: String, skill_states: Array = [], player_cat: PlayerCatData = null) -> BaseCat:
 	var data := CatData.from_json_file(cat_id + ".json")
 	if data == null:
-		push_error("CatRegistry: 無法載入貓咪 " + cat_id)
+		push_error("CatRegistry: failed to load cat " + cat_id)
 		return null
 
 	if player_cat != null:
