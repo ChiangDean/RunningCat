@@ -30,14 +30,14 @@ func _process(_delta: float) -> void:
 		if not (entry_variant is Dictionary):
 			continue
 		var entry: Dictionary = entry_variant
-		var label: Label = entry.get("label")
-		if label == null or not is_instance_valid(label):
+		var button: Button = entry.get("button")
+		if button == null or not is_instance_valid(button):
 			continue
 		var remaining: int = maxi(int(entry.get("completesAtUnixSeconds", 0)) - now_unix, 0)
 		if remaining <= 0:
 			should_refresh = true
 			continue
-		label.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(remaining)
+		button.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(remaining)
 
 	if should_refresh:
 		_refresh_zone_cards()
@@ -199,8 +199,6 @@ func _make_zone_card(zone: Dictionary) -> Control:
 		accent = Color(0.38, 0.38, 0.40, 0.90)
 	elif is_claimable:
 		accent = Color(0.92, 0.78, 0.38, 1.0)
-	elif not expedition.is_empty():
-		accent = Color(0.52, 0.66, 0.84, 1.0)
 
 	var card: Panel = CARD_TEMPLATE_SCENE.instantiate() as Panel
 	if card == null:
@@ -210,7 +208,8 @@ func _make_zone_card(zone: Dictionary) -> Control:
 
 	var title: Label = card.get_node("Margin/ContentCanvas/TitleLabel") as Label
 	var duration: Label = card.get_node("Margin/ContentCanvas/DurationLabel") as Label
-	var status_badge_label: Label = card.get_node("Margin/ContentCanvas/PreviewRoot/StatusBadge/Label") as Label
+	var preview_root: Control = card.get_node("Margin/ContentCanvas/PreviewRoot") as Control
+	var status_badge: PanelContainer = card.get_node("Margin/ContentCanvas/PreviewRoot/StatusBadge") as PanelContainer
 	var description_label: Label = card.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
 	var detail_label: Label = card.get_node("Margin/ContentCanvas/DetailLabel") as Label
 	var countdown_label: Label = card.get_node("Margin/ContentCanvas/CountdownLabel") as Label
@@ -222,11 +221,12 @@ func _make_zone_card(zone: Dictionary) -> Control:
 	description_label.text = UiText.EXPEDITION_PAGE_DESC
 	detail_label.text = UiText.EXPEDITION_DETAIL_IDLE
 	countdown_label.visible = false
+	status_badge.visible = false
 	if preview_image != null:
 		preview_image.texture = AssetResolver.load_texture("res://assets/sprites/ui/activity_background_v1.png")
 
 	if not unlocked:
-		status_badge_label.text = UiText.EXPEDITION_BTN_LOCKED
+		_add_preview_locked_overlay(preview_root)
 		description_label.text = UiText.EXPEDITION_ZONE_LOCKED_DESC % _get_territory_requirement_name(zone)
 		detail_label.text = UiText.EXPEDITION_ZONE_LOCKED_DESC % _get_territory_requirement_name(zone)
 		action_button.text = UiText.EXPEDITION_BTN_LOCKED
@@ -235,7 +235,6 @@ func _make_zone_card(zone: Dictionary) -> Control:
 		return card
 
 	if expedition.is_empty():
-		status_badge_label.text = UiText.EXPEDITION_BTN_DEPLOY
 		description_label.text = UiText.EXPEDITION_DETAIL_DEPLOY
 		detail_label.text = UiText.EXPEDITION_STATUS_IDLE
 		action_button.text = UiText.EXPEDITION_BTN_DEPLOY
@@ -247,7 +246,6 @@ func _make_zone_card(zone: Dictionary) -> Control:
 	var cat_id: String = str(expedition.get("catId", "")).strip_edges()
 	var cat_name: String = _get_cat_display_name(cat_id)
 	if is_claimable:
-		status_badge_label.text = UiText.EXPEDITION_READY
 		description_label.text = UiText.EXPEDITION_DETAIL_CLAIMABLE
 		detail_label.text = "%s：%s" % [UiText.EXPEDITION_IN_PROGRESS, cat_name]
 		action_button.text = UiText.EXPEDITION_BTN_CLAIM
@@ -256,17 +254,15 @@ func _make_zone_card(zone: Dictionary) -> Control:
 		action_button.pressed.connect(Callable(self, "_on_zone_claim_pressed").bind(zone_id))
 		return card
 
-	status_badge_label.text = UiText.EXPEDITION_IN_PROGRESS
 	description_label.text = "%s：%s" % [UiText.EXPEDITION_IN_PROGRESS, cat_name]
 	detail_label.text = UiText.EXPEDITION_DETAIL_IN_PROGRESS
-	countdown_label.visible = true
-	countdown_label.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - Time.get_unix_time_from_system(), 0))
+	countdown_label.visible = false
 	_countdown_labels[zone_id] = {
-		"label": countdown_label,
+		"button": action_button,
 		"completesAtUnixSeconds": int(expedition.get("completesAtUnixSeconds", 0)),
 	}
 
-	action_button.text = UiText.EXPEDITION_IN_PROGRESS
+	action_button.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - Time.get_unix_time_from_system(), 0))
 	action_button.disabled = true
 	UiPalette.apply_button_kind(action_button, "neutral")
 	return card
@@ -293,6 +289,29 @@ func _make_zone_card_style(accent: Color) -> StyleBoxFlat:
 	style.corner_radius_bottom_left = 14
 	style.corner_radius_bottom_right = 14
 	return style
+
+
+func _add_preview_locked_overlay(preview_root: Control) -> void:
+	if preview_root == null:
+		return
+
+	var overlay: ColorRect = ColorRect.new()
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.color = Color(0.0, 0.0, 0.0, 0.66)
+	preview_root.add_child(overlay)
+
+	var locked_label: Label = Label.new()
+	locked_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	locked_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	locked_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	locked_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	locked_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	locked_label.add_theme_color_override("font_outline_color", Color(0.16, 0.07, 0.03, 1.0))
+	locked_label.add_theme_constant_override("outline_size", 4)
+	locked_label.add_theme_font_size_override("font_size", 22)
+	locked_label.text = UiText.EXPEDITION_BTN_LOCKED
+	preview_root.add_child(locked_label)
 
 
 func _show_cat_picker(zone: Dictionary) -> void:
@@ -394,9 +413,12 @@ func _on_start_expedition_completed(ok: bool, _data: Variant, err: Dictionary) -
 	if not ok:
 		DialogManager.show_info(
 			UiText.EXPEDITION_START_FAILED_TITLE,
-			str(err.get("message", UiText.EXPEDITION_START_FAILED_DEFAULT))
+			_get_expedition_error_message(err, UiText.EXPEDITION_START_FAILED_DEFAULT)
 		)
-		_refresh_zone_cards()
+		if _should_refresh_after_expedition_error(err):
+			_fetch_expeditions()
+		else:
+			_refresh_zone_cards()
 		return
 	_fetch_expeditions()
 
@@ -415,9 +437,12 @@ func _on_claim_expedition_completed(ok: bool, data: Variant, err: Dictionary, ca
 	if not ok:
 		DialogManager.show_info(
 			UiText.EXPEDITION_CLAIM_FAILED_TITLE,
-			str(err.get("message", UiText.EXPEDITION_CLAIM_FAILED_DEFAULT))
+			_get_expedition_error_message(err, UiText.EXPEDITION_CLAIM_FAILED_DEFAULT)
 		)
-		_refresh_zone_cards()
+		if _should_refresh_after_expedition_error(err):
+			_fetch_expeditions()
+		else:
+			_refresh_zone_cards()
 		return
 
 	var result: Dictionary = data if data is Dictionary else {}
@@ -517,6 +542,37 @@ func queue_home_reward_floats(entries: Array[Dictionary]) -> void:
 	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
 	if battle_scene != null and battle_scene.has_method("queue_home_reward_floats"):
 		battle_scene.queue_home_reward_floats(entries)
+
+
+func _get_expedition_error_message(err: Dictionary, fallback: String) -> String:
+	var code: String = str(err.get("code", "")).strip_edges()
+	match code:
+		"EXPEDITION.ZONE_BUSY":
+			return UiText.EXPEDITION_ERROR_ZONE_BUSY
+		"EXPEDITION.CAT_BUSY":
+			return UiText.EXPEDITION_ERROR_CAT_BUSY
+		"EXPEDITION.NOT_READY":
+			return UiText.EXPEDITION_ERROR_NOT_READY
+		"EXPEDITION.ACTIVE_NOT_FOUND":
+			return UiText.EXPEDITION_ERROR_ACTIVE_NOT_FOUND
+		"EXPEDITION.ZONE_LOCKED":
+			return UiText.EXPEDITION_ERROR_ZONE_LOCKED
+		_:
+			var message: String = str(err.get("message", "")).strip_edges()
+			if message != "" and message != "The request conflicts with the current resource state.":
+				return message
+			return fallback
+
+
+func _should_refresh_after_expedition_error(err: Dictionary) -> bool:
+	var code: String = str(err.get("code", "")).strip_edges()
+	return code in [
+		"COMMON.CONFLICT",
+		"EXPEDITION.ZONE_BUSY",
+		"EXPEDITION.CAT_BUSY",
+		"EXPEDITION.NOT_READY",
+		"EXPEDITION.ACTIVE_NOT_FOUND",
+	]
 
 
 func _get_available_cat_ids() -> Array[String]:
