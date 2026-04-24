@@ -9,11 +9,17 @@ const BATTLE_DURATION: float = 60.0
 const SIM_STEP: float = 1.0 / 30.0   # 30 fps simulation precision
 const WALL_LEFT: float = 20.0
 const WALL_RIGHT: float = 700.0
-const CAT_HALF_W: float = 30.0
+const CAT_HALF_W: float = 48.0
 const BASE_CRIT_DAMAGE_MULT: float = 1.5
-const PLAYER_FRONT_START_X: float = 280.0
-const ENEMY_FRONT_START_X: float = 440.0
+const PLAYER_FRONT_START_X: float = 220.0
+const ENEMY_FRONT_START_X: float = 500.0
 const TEAM_ROW_SPACING: float = 60.0
+const WALL_COUNTER_DISTANCE_MULT: float = 2.0
+const WALL_COUNTER_MIN_RETREAT_X: float = 100.0
+const WALL_COUNTER_HEIGHT_MULT: float = 2.0
+const WALL_COUNTER_MIN_ARC_HEIGHT: float = 200.0
+const WALL_COUNTER_MAX_ARC_HEIGHT: float = 400.0
+const WALL_COUNTER_DURATION: float = 0.6
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -25,7 +31,9 @@ class SimCat:
 	var pos_x: float
 	var is_alive: bool = true
 	var is_staggered: bool = false
+	var skip_recovery_accel_after_stagger: bool = false
 	var stagger_timer: float = 0.0
+	var knockback_timer: float = 0.0
 	var recovery_accel_timer: float = 0.0
 	var facing: int          # 1 = right, -1 = left
 
@@ -149,7 +157,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 	var p_list: Array = []
 	var e_list: Array = []
 
-	# Player: front at x=315, offset 60px left per row
+	# Player: front at PLAYER_FRONT_START_X, offset 60px left per row
 	var p_front_x := PLAYER_FRONT_START_X
 	for i in range(player_cats.size()):
 		var sc := SimCat.new(id_counter, player_cats[i], "player",
@@ -159,7 +167,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 				sc.pos_x, sc.current_hp, sc.base_hp))
 		id_counter += 1
 
-	# Enemy: front at x=405, offset 60px right per row
+	# Enemy: front at ENEMY_FRONT_START_X, offset 60px right per row
 	var e_front_x := ENEMY_FRONT_START_X
 	for i in range(enemy_cats.size()):
 		var sc := SimCat.new(id_counter, enemy_cats[i], "enemy",
@@ -179,18 +187,6 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 	# ── Main simulation loop ───────────────────────────────
 	var sim_time := 0.0
 	while sim_time < BATTLE_DURATION:
-		var p_front := _get_front(p_list)
-		var e_front := _get_front(e_list)
-
-		if p_front == null:
-			events.append(BattleEvent.battle_end(sim_time, "LOSE"))
-			events.sort_custom(_sort_battle_events_by_timestamp)
-			return events
-		if e_front == null:
-			events.append(BattleEvent.battle_end(sim_time, "WIN"))
-			events.sort_custom(_sort_battle_events_by_timestamp)
-			return events
-
 		# Movement
 		for sc: SimCat in p_list:
 			if sc.is_alive:
@@ -200,7 +196,17 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 				_move_cat(sc, SIM_STEP)
 
 		# Collision
-		_check_all_collisions(p_list, e_list, sim_time, events)
+		var p_front: SimCat = _get_front(p_list)
+		var e_front: SimCat = _get_front(e_list)
+		if p_front == null:
+			events.append(BattleEvent.battle_end(sim_time, "LOSE"))
+			events.sort_custom(_sort_battle_events_by_timestamp)
+			return events
+		if e_front == null:
+			events.append(BattleEvent.battle_end(sim_time, "WIN"))
+			events.sort_custom(_sort_battle_events_by_timestamp)
+			return events
+		_check_front_collision(p_front, e_front, sim_time, events)
 
 		# Skill timing + triggering
 		for sc: SimCat in p_list + e_list:
@@ -249,7 +255,37 @@ func _resolve_passive_targets(caster: SimCat, target: String, team_list: Array) 
 
 
 func _sort_battle_events_by_timestamp(a, b) -> bool:
-	return a.timestamp < b.timestamp
+	if not is_equal_approx(a.timestamp, b.timestamp):
+		return a.timestamp < b.timestamp
+	var a_priority: int = _get_event_sort_priority(a)
+	var b_priority: int = _get_event_sort_priority(b)
+	if a_priority != b_priority:
+		return a_priority < b_priority
+	if a.cat_id != b.cat_id:
+		return a.cat_id < b.cat_id
+	return int(a.type) < int(b.type)
+
+
+func _get_event_sort_priority(ev: BattleEvent) -> int:
+	match ev.type:
+		BattleEvent.Type.SPAWN:
+			return 0
+		BattleEvent.Type.SKILL_ACTIVATE:
+			return 10
+		BattleEvent.Type.BUFF_APPLY:
+			return 20
+		BattleEvent.Type.COLLISION:
+			return 30
+		BattleEvent.Type.HP_UPDATE:
+			return 40
+		BattleEvent.Type.WALL_COUNTER:
+			return 45
+		BattleEvent.Type.CAT_DIE:
+			return 50
+		BattleEvent.Type.BATTLE_END:
+			return 60
+		_:
+			return 100
 
 
 func _is_sim_cat_alive(sc) -> bool:
@@ -301,10 +337,13 @@ func _init_skill_cooldowns(sc: SimCat) -> void:
 
 func _move_cat(sc: SimCat, delta: float) -> void:
 	if sc.is_staggered:
-		sc.stagger_timer -= delta
+		sc.stagger_timer = maxf(0.0, sc.stagger_timer - delta)
 		if sc.stagger_timer <= 0.0:
 			sc.is_staggered = false
-			sc.recovery_accel_timer = CatStats.KNOCKBACK_RECOVERY_ACCEL_TIME
+			sc.recovery_accel_timer = 0.0 if sc.skip_recovery_accel_after_stagger else CatStats.KNOCKBACK_RECOVERY_ACCEL_TIME
+			sc.skip_recovery_accel_after_stagger = false
+	if sc.knockback_timer > 0.0:
+		sc.knockback_timer = maxf(0.0, sc.knockback_timer - delta)
 		return
 	var speed_scale: float = 1.0
 	if sc.recovery_accel_timer > 0.0:
@@ -344,27 +383,23 @@ func _get_lowest_hp(team_list: Array) -> SimCat:
 	return best
 
 
-func _check_all_collisions(p_list: Array, e_list: Array,
-		t: float, events: Array) -> void:
-	for p: SimCat in p_list:
-		if not p.is_alive:
-			continue
-		for e: SimCat in e_list:
-			if not e.is_alive:
-				continue
-			if _are_colliding(p, e):
-				_handle_collision(p, e, t, events, p_list, e_list)
+func _check_front_collision(p_front: SimCat, e_front: SimCat, t: float, events: Array) -> void:
+	if p_front == null or e_front == null:
+		return
+	if _are_colliding(p_front, e_front):
+		_handle_collision(p_front, e_front, t, events)
 
 
 func _are_colliding(a: SimCat, b: SimCat) -> bool:
-	return a.pos_x + CAT_HALF_W >= b.pos_x - CAT_HALF_W
+	return absf(a.pos_x - b.pos_x) <= CAT_HALF_W * 2.0
 
 
-func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
-		_p_list: Array, _e_list: Array) -> void:
+func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array) -> void:
 	# ── Damage (including passive damage_reduction and effective defence) ──
-	var dmg_to_e := 0
-	var dmg_to_p := 0
+	var dmg_to_e: int = 0
+	var dmg_to_p: int = 0
+	var p_causes_wall_hit: bool = false
+	var e_causes_wall_hit: bool = false
 	if not p.is_staggered:
 		dmg_to_e = _calc_attack_damage(p, e, p.get_effective_atk())
 		e.current_hp = maxi(0, e.current_hp - dmg_to_e)
@@ -387,52 +422,101 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 			events.append(BattleEvent.hp_update(t, e.instance_id, e.current_hp, e.base_hp))
 
 	# ── Knockback ─────────────────────────────────────
-	var kb_p := CatStats.calc_knockback_distance(e.data.weight, p.data.weight)
-	var kb_e := CatStats.calc_knockback_distance(p.data.weight, e.data.weight)
+	var kb_p: float = CatStats.calc_knockback_distance(e.data.weight, p.data.weight)
+	var kb_e: float = CatStats.calc_knockback_distance(p.data.weight, e.data.weight)
 
 	p.pos_x = e.pos_x - CAT_HALF_W * 2.0 - 2.0
 	e.pos_x = p.pos_x + CAT_HALF_W * 2.0 + 2.0
-	var p_before_knockback_x: float = p.pos_x
-	var e_before_knockback_x: float = e.pos_x
 	p.pos_x -= kb_p
 	e.pos_x += kb_e
+	var p_knockback_duration: float = CatStats.calc_knockback_deceleration_time(
+		kb_p,
+		p.get_effective_speed()
+	)
+	var e_knockback_duration: float = CatStats.calc_knockback_deceleration_time(
+		kb_e,
+		e.get_effective_speed()
+	)
 
 	# ── Wall correction ───────────────────────────────
-	var p_stagger_t := CatStats.STAGGER_TIME
+	var p_stagger_t: float = CatStats.STAGGER_TIME
+	var p_hit_wall: bool = false
 	if p.pos_x - CAT_HALF_W <= WALL_LEFT:
 		p.pos_x = WALL_LEFT + CAT_HALF_W
-		p_stagger_t = CatStats.WALL_STAGGER_TIME
+		p_stagger_t += CatStats.WALL_STAGGER_TIME
+		p_hit_wall = true
+		e_causes_wall_hit = not e.is_staggered
 
-	var e_stagger_t := CatStats.STAGGER_TIME
+	var e_stagger_t: float = CatStats.STAGGER_TIME
+	var e_hit_wall: bool = false
 	if e.pos_x + CAT_HALF_W >= WALL_RIGHT:
 		e.pos_x = WALL_RIGHT - CAT_HALF_W
-		e_stagger_t = CatStats.WALL_STAGGER_TIME
-
-	var p_knockback_distance: float = absf(p.pos_x - p_before_knockback_x)
-	var e_knockback_distance: float = absf(e.pos_x - e_before_knockback_x)
-	p_stagger_t = maxf(p_stagger_t, CatStats.calc_knockback_deceleration_time(
-		p_knockback_distance,
-		p.get_effective_speed()
-	))
-	e_stagger_t = maxf(e_stagger_t, CatStats.calc_knockback_deceleration_time(
-		e_knockback_distance,
-		e.get_effective_speed()
-	))
+		e_stagger_t += CatStats.WALL_STAGGER_TIME
+		e_hit_wall = true
+		p_causes_wall_hit = not p.is_staggered
 
 	# ── Stagger ───────────────────────────────────────
 	if not p.is_staggered:
 		p.is_staggered = true
 		p.stagger_timer = p_stagger_t
+	else:
+		p.stagger_timer = maxf(p.stagger_timer, p_stagger_t)
+	if p_hit_wall:
+		p.skip_recovery_accel_after_stagger = true
+	p.knockback_timer = maxf(p.knockback_timer, p_knockback_duration)
 	if not e.is_staggered:
 		e.is_staggered = true
 		e.stagger_timer = e_stagger_t
+	else:
+		e.stagger_timer = maxf(e.stagger_timer, e_stagger_t)
+	if e_hit_wall:
+		e.skip_recovery_accel_after_stagger = true
+	e.knockback_timer = maxf(e.knockback_timer, e_knockback_duration)
 
-	events.append(BattleEvent.collision(t, p.instance_id, p.pos_x, p.current_hp, -kb_p))
-	events.append(BattleEvent.collision(t, e.instance_id, e.pos_x, e.current_hp, kb_e))
+	if p_causes_wall_hit:
+		var p_counter_retreat: float = _get_wall_counter_retreat_distance(kb_e)
+		var p_counter_height: float = _get_wall_counter_arc_height(kb_e)
+		p.pos_x = _get_wall_counter_target_x(p, p_counter_retreat)
+		p.is_staggered = true
+		p.skip_recovery_accel_after_stagger = false
+		p.stagger_timer = WALL_COUNTER_DURATION
+		p.knockback_timer = WALL_COUNTER_DURATION
+		events.append(BattleEvent.wall_counter(t, p.instance_id, p.pos_x, WALL_COUNTER_DURATION, p_counter_height))
+	else:
+		events.append(BattleEvent.collision(t, p.instance_id, p.pos_x, p.current_hp, -kb_p, p_hit_wall))
+	if e_causes_wall_hit:
+		var e_counter_retreat: float = _get_wall_counter_retreat_distance(kb_p)
+		var e_counter_height: float = _get_wall_counter_arc_height(kb_p)
+		e.pos_x = _get_wall_counter_target_x(e, e_counter_retreat)
+		e.is_staggered = true
+		e.skip_recovery_accel_after_stagger = false
+		e.stagger_timer = WALL_COUNTER_DURATION
+		e.knockback_timer = WALL_COUNTER_DURATION
+		events.append(BattleEvent.wall_counter(t, e.instance_id, e.pos_x, WALL_COUNTER_DURATION, e_counter_height))
+	else:
+		events.append(BattleEvent.collision(t, e.instance_id, e.pos_x, e.current_hp, kb_e, e_hit_wall))
 
 	# ── Death check ───────────────────────────────────
 	_check_death(e, t, events)
 	_check_death(p, t, events)
+
+
+func _get_wall_counter_retreat_distance(target_knockback: float) -> float:
+	return maxf(WALL_COUNTER_MIN_RETREAT_X, target_knockback * WALL_COUNTER_DISTANCE_MULT)
+
+
+func _get_wall_counter_arc_height(target_knockback: float) -> float:
+	return clampf(
+		target_knockback * WALL_COUNTER_HEIGHT_MULT,
+		WALL_COUNTER_MIN_ARC_HEIGHT,
+		WALL_COUNTER_MAX_ARC_HEIGHT
+	)
+
+
+func _get_wall_counter_target_x(sc: SimCat, retreat_distance: float) -> float:
+	if sc.team == "player":
+		return maxf(WALL_LEFT + CAT_HALF_W, sc.pos_x - retreat_distance)
+	return minf(WALL_RIGHT - CAT_HALF_W, sc.pos_x + retreat_distance)
 
 
 func _check_death(sc: SimCat, t: float, events: Array) -> void:

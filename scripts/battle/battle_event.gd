@@ -9,6 +9,7 @@ enum Type {
 	HP_UPDATE,      # HP update (skill damage)
 	SKILL_ACTIVATE, # Active skill triggered
 	BUFF_APPLY,     # Buff / Debuff applied (for UI duration display)
+	WALL_COUNTER,   # Attacker bounces back after hitting a wall-staggered target
 	CAT_DIE,        # Cat dies
 	BATTLE_END,     # Battle ends
 }
@@ -29,12 +30,17 @@ var max_hp: int = 0
 
 # COLLISION: knockback distance (positive = right, negative = left)
 var knockback: float = 0.0
+var skip_recovery_accel: bool = false
 
 # SKILL_ACTIVATE
 var skill_id: String = ""
 
-# BUFF_APPLY: duration in seconds, used by UI to display status border
+# BUFF_APPLY: duration in seconds, used by UI to display status border.
+# WALL_COUNTER: duration for the arc and stagger timer.
 var buff_duration: float = 0.0
+
+# WALL_COUNTER visual arc height
+var arc_height: float = 0.0
 
 # BATTLE_END result: "WIN" / "LOSE" / "TIMEOUT"
 var result: String = ""
@@ -52,7 +58,7 @@ static func spawn(time: float, id: int, team_name: String, x: float, hp: int, mh
 	e.max_hp = mhp
 	return e
 
-static func collision(time: float, id: int, x: float, hp: int, kb: float) -> BattleEvent:
+static func collision(time: float, id: int, x: float, hp: int, kb: float, skip_accel: bool = false) -> BattleEvent:
 	var e := BattleEvent.new()
 	e.type = Type.COLLISION
 	e.timestamp = time
@@ -60,6 +66,7 @@ static func collision(time: float, id: int, x: float, hp: int, kb: float) -> Bat
 	e.pos_x = x
 	e.current_hp = hp
 	e.knockback = kb
+	e.skip_recovery_accel = skip_accel
 	return e
 
 static func hp_update(time: float, id: int, hp: int, mhp: int) -> BattleEvent:
@@ -85,6 +92,16 @@ static func buff_apply(time: float, id: int, duration: float) -> BattleEvent:
 	e.timestamp = time
 	e.cat_id = id
 	e.buff_duration = duration
+	return e
+
+static func wall_counter(time: float, id: int, x: float, duration: float, height: float) -> BattleEvent:
+	var e := BattleEvent.new()
+	e.type = Type.WALL_COUNTER
+	e.timestamp = time
+	e.cat_id = id
+	e.pos_x = x
+	e.buff_duration = duration
+	e.arc_height = height
 	return e
 
 static func cat_die(time: float, id: int, team_name: String, x: float) -> BattleEvent:

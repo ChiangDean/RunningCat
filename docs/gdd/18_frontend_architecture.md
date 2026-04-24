@@ -487,6 +487,7 @@ Current notes:
 - It now owns the top-left settings entry and home BGM playback.
 - It listens to `player_profile_changed` and `player_wallet_changed`.
 - It also owns the home scooper shortcut HUD, including `HomeScoopButtonTemplate.tscn`, scoop animation playback, and the auto-scoop toggle state.
+- `BattleManager` owns the runtime battle loop for visible battles: movement, front-pair collision checks, damage, knockback, active skills, death, timeout, and win/loss are computed from current `CatNode` positions. `BattleSimulator` is development-only and must not be treated as the source of truth for rendered battle results.
 
 ### 9.3 Settings Center
 
