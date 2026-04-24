@@ -162,24 +162,29 @@ func _build_bundle_card(bundle: Dictionary) -> Control:
 		button.pressed.connect(_confirm_purchase.bind(
 			int(bundle.get("bundleId", 0)),
 			str(bundle.get("displayName", UiText.SHOP_BUNDLE_CITY_DEFAULT_NAME)),
-			int(bundle.get("priceAmount", 0))
+			int(bundle.get("priceAmount", 0)),
+			_is_daily_free_bundle(bundle)
 		))
 	action_row.add_child(button)
 
 	return panel
 
 
-func _confirm_purchase(bundle_id: int, bundle_name: String, price_amount: int) -> void:
+func _confirm_purchase(bundle_id: int, bundle_name: String, price_amount: int, is_daily_free_bundle: bool) -> void:
 	var message := UiText.SHOP_BUNDLE_PURCHASE_CONFIRM_DIAMOND_BODY % [GameState.format_number(price_amount), bundle_name]
 	DialogManager.show_confirm(
 		UiText.SHOP_PURCHASE_BUNDLE_TITLE,
 		message,
-		Callable(self, "_execute_bundle_purchase").bind(bundle_id)
+		Callable(self, "_execute_bundle_purchase").bind(bundle_id, is_daily_free_bundle)
 	)
 
 
-func _execute_bundle_purchase(bundle_id: int) -> void:
-	_api_client.purchase_shop_bundle(bundle_id, _on_purchase_completed)
+func _execute_bundle_purchase(bundle_id: int, is_daily_free_bundle: bool) -> void:
+	_api_client.purchase_shop_bundle(bundle_id, _on_purchase_completed, is_daily_free_bundle)
+
+
+func _is_daily_free_bundle(bundle: Dictionary) -> bool:
+	return str(bundle.get("categoryType", "")).to_lower() == "dailypack" and int(bundle.get("priceAmount", -1)) == 0
 
 
 func _on_category_selected(category_id: String) -> void:

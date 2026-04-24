@@ -1547,6 +1547,13 @@ func _get_home_more_button_defs() -> Array[Dictionary]:
 			"label_path": "QuickButtons/AnnouncementsButton/Label",
 		},
 		{
+			"key": "daily_tasks",
+			"text": UiText.HOME_DAILY_TASKS,
+			"callback": Callable(self, "_on_nav_daily_tasks"),
+			"button_path": "QuickButtons/DailyTasksButton",
+			"label_path": "QuickButtons/DailyTasksButton/Label",
+		},
+		{
 			"key": "backpack",
 			"text": UiText.NAV_BACKPACK,
 			"callback": Callable(self, "_on_nav_backpack"),
@@ -3060,6 +3067,11 @@ func _on_nav_announcements() -> void:
 	ApiClient.get_announcements(Callable(self, "_on_announcements_loaded"))
 
 
+func _on_nav_daily_tasks() -> void:
+	_close_home_more_menu()
+	ApiClient.get_daily_tasks(Callable(self, "_on_daily_tasks_loaded"))
+
+
 func _on_announcements_loaded(ok: bool, data: Variant, err: Dictionary) -> void:
 	if ok and data is Array:
 		GameState.update_announcements(data as Array)
@@ -3072,6 +3084,173 @@ func _on_announcements_loaded(ok: bool, data: Variant, err: Dictionary) -> void:
 		return
 
 	ToastManager.error(UiText.HOME_ANNOUNCEMENTS_TITLE, str(err.get("message", UiText.HOME_ANNOUNCEMENTS_LOAD_FAILED)))
+
+
+func _on_daily_tasks_loaded(ok: bool, data: Variant, err: Dictionary) -> void:
+	if ok and data is Dictionary:
+		_show_daily_tasks_dialog(data as Dictionary)
+		return
+	ToastManager.error(UiText.HOME_DAILY_TASKS_TITLE, str(err.get("message", UiText.HOME_DAILY_TASKS_LOAD_FAILED)))
+
+
+func _show_daily_tasks_dialog(data: Dictionary) -> void:
+	var tasks: Array = data.get("tasks", []) if data.get("tasks", []) is Array else []
+	if tasks.is_empty():
+		DialogManager.show_info(UiText.HOME_DAILY_TASKS_TITLE, UiText.HOME_DAILY_TASKS_EMPTY, Callable(), "medium")
+		return
+
+	var root: VBoxContainer = VBoxContainer.new()
+	root.custom_minimum_size = Vector2(650.0, 760.0)
+	root.add_theme_constant_override("separation", 10)
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var header: HBoxContainer = HBoxContainer.new()
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.add_child(header)
+
+	var title: Label = Label.new()
+	title.text = UiText.HOME_DAILY_TASKS_TITLE
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TITLE)
+	title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.72, 1.0))
+	header.add_child(title)
+
+	var reset_label: Label = Label.new()
+	reset_label.text = "%s\n%s" % [
+		UiText.HOME_DAILY_TASKS_RESET_FORMAT % int(data.get("resetHour", 0)),
+		UiText.HOME_DAILY_TASKS_COUNTDOWN_FORMAT % _format_daily_task_reset_countdown(int(data.get("remainingSecondsUntilReset", 0)))
+	]
+	reset_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	reset_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	reset_label.add_theme_color_override("font_color", Color(0.82, 0.74, 0.62, 1.0))
+	header.add_child(reset_label)
+
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(scroll)
+
+	var list: VBoxContainer = VBoxContainer.new()
+	list.add_theme_constant_override("separation", 10)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+
+	var close_ref: Array = [Callable()]
+	for task_variant: Variant in tasks:
+		if task_variant is Dictionary:
+			list.add_child(_build_daily_task_card(task_variant as Dictionary, close_ref))
+
+	close_ref[0] = DialogManager.show_info_node(UiText.HOME_DAILY_TASKS_TITLE, root, Callable(), "xlarge")
+
+
+func _build_daily_task_card(task: Dictionary, close_ref: Array) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.16, 0.12, 0.09, 0.96)
+	style.border_color = Color(0.76, 0.58, 0.30, 0.78)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	panel.add_theme_stylebox_override("panel", style)
+
+	var margin: MarginContainer = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.add_child(row)
+
+	var text_box: VBoxContainer = VBoxContainer.new()
+	text_box.add_theme_constant_override("separation", 4)
+	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(text_box)
+
+	var task_title: Label = Label.new()
+	task_title.text = str(task.get("title", "")).strip_edges()
+	task_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	task_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	task_title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.72, 1.0))
+	text_box.add_child(task_title)
+
+	var progress: Label = Label.new()
+	progress.text = "%s  %s" % [
+		UiText.HOME_DAILY_TASKS_IN_PROGRESS_FORMAT % [int(task.get("progressCount", 0)), int(task.get("requiredCount", 1))],
+		_format_daily_task_rewards(task.get("rewards", []))
+	]
+	progress.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	progress.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	progress.add_theme_color_override("font_color", Color(0.92, 0.86, 0.76, 1.0))
+	text_box.add_child(progress)
+
+	var claim_button: Button = Button.new()
+	claim_button.custom_minimum_size = Vector2(108.0, 44.0)
+	var is_completed: bool = bool(task.get("isCompleted", false))
+	var is_claimed: bool = bool(task.get("isClaimed", false))
+	claim_button.text = UiText.HOME_DAILY_TASKS_CLAIMED if is_claimed else UiText.HOME_DAILY_TASKS_CLAIM
+	claim_button.disabled = not is_completed or is_claimed
+	UiPalette.apply_button_kind(claim_button, "confirm" if is_completed and not is_claimed else "neutral")
+	claim_button.pressed.connect(Callable(self, "_on_daily_task_claim_pressed").bind(str(task.get("taskKey", "")), claim_button, close_ref))
+	row.add_child(claim_button)
+	return panel
+
+
+func _format_daily_task_rewards(rewards_variant: Variant) -> String:
+	if not (rewards_variant is Array):
+		return ""
+	var parts: Array[String] = []
+	for reward_variant: Variant in rewards_variant:
+		if not (reward_variant is Dictionary):
+			continue
+		var reward: Dictionary = reward_variant
+		var display_name: String = str(reward.get("displayName", "")).strip_edges()
+		var quantity: int = int(reward.get("quantity", 0))
+		if display_name.is_empty() or quantity <= 0:
+			continue
+		parts.append("%s x%s" % [display_name, GameState.format_number(quantity)])
+	return " / ".join(parts)
+
+
+func _format_daily_task_reset_countdown(remaining_seconds: int) -> String:
+	var remaining: int = max(0, remaining_seconds)
+	var hours: int = floori(float(remaining) / 3600.0)
+	var minutes: int = floori(float(remaining % 3600) / 60.0)
+	var seconds: int = remaining % 60
+	return "%02d:%02d:%02d" % [hours, minutes, seconds]
+
+
+func _on_daily_task_claim_pressed(task_key: String, claim_button: Button, close_ref: Array) -> void:
+	if task_key.strip_edges().is_empty():
+		return
+	claim_button.disabled = true
+	ApiClient.claim_daily_task(task_key, Callable(self, "_on_daily_task_claim_completed").bind(close_ref))
+
+
+func _on_daily_task_claim_completed(ok: bool, data: Variant, err: Dictionary, close_ref: Array) -> void:
+	if not ok or not (data is Dictionary):
+		ToastManager.error(UiText.HOME_DAILY_TASKS_TITLE, str(err.get("message", UiText.HOME_DAILY_TASKS_CLAIM_FAILED)))
+		return
+	var response: Dictionary = data
+	var wallet_snapshot: Variant = response.get("walletSnapshot", {})
+	if wallet_snapshot is Dictionary:
+		GameState.apply_wallet_snapshot(wallet_snapshot as Dictionary)
+	var close_callable: Callable = close_ref[0] if close_ref.size() > 0 and close_ref[0] is Callable else Callable()
+	if close_callable.is_valid():
+		close_callable.call()
+	var overview: Variant = response.get("overview", {})
+	if overview is Dictionary:
+		_show_daily_tasks_dialog(overview as Dictionary)
 
 
 func _show_announcements_dialog() -> void:

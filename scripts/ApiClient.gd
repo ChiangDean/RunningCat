@@ -65,15 +65,15 @@ func get_scooper_profile_silent(callback: Callable) -> void:
 
 
 func scoop_poop(count: int, callback: Callable) -> void:
-	_api_post("scooper/profile/scoop", {"count": count}, callback)
+	_api_post("scooper/profile/scoop", {"count": count}, _with_daily_task_event(callback, "scoop_poop"))
 
 
 func scoop_poop_silent(count: int, callback: Callable) -> void:
-	_api_post_tracked("scooper/profile/scoop", {"count": count}, callback, false)
+	_api_post_tracked("scooper/profile/scoop", {"count": count}, _with_daily_task_event(callback, "scoop_poop"), false)
 
 
 func claim_idle_rewards(callback: Callable) -> void:
-	_api_post("scooper/profile/claim-idle", {}, callback)
+	_api_post("scooper/profile/claim-idle", {}, _with_daily_task_event(callback, "claim_idle_rewards"))
 
 
 func get_equipment_list(callback: Callable) -> void:
@@ -85,31 +85,31 @@ func get_equipment_list_silent(callback: Callable) -> void:
 
 
 func purchase_equipment(equipment_id: int, callback: Callable) -> void:
-	_api_post("scooper/equipment/purchase", {"equipmentId": equipment_id}, callback)
+	_api_post("scooper/equipment/purchase", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"))
 
 
 func upgrade_equipment(equipment_id: int, callback: Callable) -> void:
-	_api_post("scooper/equipment/upgrade", {"equipmentId": equipment_id}, callback)
+	_api_post("scooper/equipment/upgrade", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"))
 
 
 func upgrade_equipment_silent(equipment_id: int, callback: Callable) -> void:
-	_api_post_tracked("scooper/equipment/upgrade", {"equipmentId": equipment_id}, callback, false)
+	_api_post_tracked("scooper/equipment/upgrade", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"), false)
 
 
 func repair_equipment(equipment_id: int, callback: Callable) -> void:
-	_api_post("scooper/equipment/repair", {"equipmentId": equipment_id}, callback)
+	_api_post("scooper/equipment/repair", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"))
 
 
 func repair_equipment_silent(equipment_id: int, callback: Callable) -> void:
-	_api_post_tracked("scooper/equipment/repair", {"equipmentId": equipment_id}, callback, false)
+	_api_post_tracked("scooper/equipment/repair", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"), false)
 
 
 func treat_equipment(equipment_id: int, callback: Callable) -> void:
-	_api_post("scooper/equipment/treat", {"equipmentId": equipment_id}, callback)
+	_api_post("scooper/equipment/treat", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"))
 
 
 func treat_equipment_silent(equipment_id: int, callback: Callable) -> void:
-	_api_post_tracked("scooper/equipment/treat", {"equipmentId": equipment_id}, callback, false)
+	_api_post_tracked("scooper/equipment/treat", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"), false)
 
 
 func get_abilities(callback: Callable) -> void:
@@ -150,6 +150,18 @@ func get_authenticated_bootstrap(callback: Callable) -> void:
 
 func get_announcements(callback: Callable) -> void:
 	_api_get("announcements", callback)
+
+
+func get_daily_tasks(callback: Callable) -> void:
+	_api_get("daily-tasks", callback)
+
+
+func claim_daily_task(task_key: String, callback: Callable) -> void:
+	_api_post("daily-tasks/%s/claim" % task_key.uri_encode(), {}, callback)
+
+
+func record_daily_task_event(event_key: String, callback: Callable = Callable()) -> void:
+	_api_post_tracked("daily-tasks/events", {"eventKey": event_key, "count": 1}, callback, false)
 
 
 func admin_get_catalog_access(callback: Callable) -> void:
@@ -255,7 +267,7 @@ func get_chat_history(channel_key: String, before_seq: int, page_size: int, call
 
 
 func post_chat_message(channel_key: String, content: String, callback: Callable) -> void:
-	_api_post("chat/messages", {"channelKey": channel_key, "content": content}, callback)
+	_api_post("chat/messages", {"channelKey": channel_key, "content": content}, _with_daily_task_event(callback, "chat_message"))
 
 
 func post_chat_read(channel_key: String, last_read_sequence: int, callback: Callable) -> void:
@@ -303,7 +315,7 @@ func remove_friend(friend_user_id: int, callback: Callable) -> void:
 
 
 func send_friend_gifts(callback: Callable) -> void:
-	_api_post("friend/gift/send-all", {}, callback)
+	_api_post("friend/gift/send-all", {}, _with_daily_task_event(callback, "friend_gift"))
 
 
 func set_friend_showcase_cat(player_cat_id: int, callback: Callable) -> void:
@@ -415,7 +427,10 @@ func get_party_cheer_status_silent(party_id: int, callback: Callable) -> void:
 
 
 func cheer_party(party_id: int, is_ad_boost: bool, callback: Callable) -> void:
-	_api_post("party/%d/cheer" % party_id, {"isAdBoost": is_ad_boost}, callback)
+	var event_keys: Array[String] = ["party_cheer"]
+	if is_ad_boost:
+		event_keys.append("watch_ad")
+	_api_post("party/%d/cheer" % party_id, {"isAdBoost": is_ad_boost}, _with_daily_task_events(callback, event_keys))
 
 
 func use_party_cheer_coupon(callback: Callable) -> void:
@@ -443,7 +458,7 @@ func get_expedition(callback: Callable) -> void:
 
 
 func start_expedition(zone_id: int, cat_id: String, callback: Callable) -> void:
-	_api_post("expedition/%d/start" % zone_id, {"catId": cat_id}, callback)
+	_api_post("expedition/%d/start" % zone_id, {"catId": cat_id}, _with_daily_task_event(callback, "expedition_dispatch"))
 
 
 func claim_expedition(zone_id: int, callback: Callable) -> void:
@@ -455,11 +470,12 @@ func get_gacha_overview(callback: Callable) -> void:
 
 
 func perform_gacha_pull(pull_count: int, use_free_pull: bool, spend_trap_cages_first: bool, callback: Callable) -> void:
+	var request_callback: Callable = _with_daily_task_event(callback, "free_gacha_pull") if use_free_pull else callback
 	_api_post("gacha/pull", {
 		"pullCount": pull_count,
 		"useFreePull": use_free_pull,
 		"spendTrapCagesFirst": spend_trap_cages_first,
-	}, callback)
+	}, request_callback)
 
 
 func get_shop_overview(callback: Callable) -> void:
@@ -472,8 +488,9 @@ func purchase_trap_cages(trap_cage_count: int, callback: Callable) -> void:
 	}, callback)
 
 
-func purchase_shop_bundle(bundle_id: int, callback: Callable) -> void:
-	_api_post("shop/bundles/%d/purchase" % bundle_id, {}, callback)
+func purchase_shop_bundle(bundle_id: int, callback: Callable, record_daily_free_pack: bool = false) -> void:
+	var request_callback: Callable = _with_daily_task_event(callback, "claim_daily_shop_pack") if record_daily_free_pack else callback
+	_api_post("shop/bundles/%d/purchase" % bundle_id, {}, request_callback)
 
 
 func purchase_trap_points(trap_point_amount: int, callback: Callable) -> void:
@@ -503,7 +520,7 @@ func claim_arena_rank_reward(rank_id: int, callback: Callable) -> void:
 
 
 func complete_arena_battle(opponent_id: String, is_win: bool, callback: Callable) -> void:
-	_api_post("arena/opponents/%s/complete" % opponent_id.uri_encode(), {"isWin": is_win}, callback)
+	_api_post("arena/opponents/%s/complete" % opponent_id.uri_encode(), {"isWin": is_win}, _with_daily_task_event(callback, "arena_battle"))
 
 
 func grant_dungeon_ad_ticket(dungeon_id: int, callback: Callable) -> void:
@@ -515,15 +532,15 @@ func sweep_dungeon(dungeon_id: int, callback: Callable) -> void:
 
 
 func complete_dungeon_challenge(dungeon_id: int, target_floor: int, callback: Callable) -> void:
-	_api_post("dungeon/%d/challenge" % dungeon_id, {"targetFloor": target_floor}, callback)
+	_api_post("dungeon/%d/challenge" % dungeon_id, {"targetFloor": target_floor}, _with_daily_task_event(callback, _get_daily_dungeon_event_key(dungeon_id)))
 
 
 func upgrade_cat_food(player_cat_id: int, callback: Callable) -> void:
-	_api_post("enhance/%d/food" % player_cat_id, {}, callback)
+	_api_post("enhance/%d/food" % player_cat_id, {}, _with_daily_task_event(callback, "upgrade_cat"))
 
 
 func upgrade_cat_food_to_max(player_cat_id: int, callback: Callable) -> void:
-	_api_post("enhance/%d/food/max" % player_cat_id, {}, callback)
+	_api_post("enhance/%d/food/max" % player_cat_id, {}, _with_daily_task_event(callback, "upgrade_cat"))
 
 
 func add_cat_special_point(player_cat_id: int, stat_key: String, callback: Callable) -> void:
@@ -535,11 +552,41 @@ func remove_cat_special_point(player_cat_id: int, stat_key: String, callback: Ca
 
 
 func upgrade_cat_rank(player_cat_id: int, callback: Callable) -> void:
-	_api_post("enhance/%d/rank" % player_cat_id, {}, callback)
+	_api_post("enhance/%d/rank" % player_cat_id, {}, _with_daily_task_event(callback, "upgrade_cat"))
 
 
 func reset_cat_enhance(player_cat_id: int, callback: Callable) -> void:
 	_api_post("enhance/%d/reset" % player_cat_id, {}, callback)
+
+
+func _with_daily_task_event(callback: Callable, event_key: String) -> Callable:
+	return _with_daily_task_events(callback, [event_key])
+
+
+func _with_daily_task_events(callback: Callable, event_keys: Array[String]) -> Callable:
+	return Callable(self, "_on_daily_task_wrapped_callback").bind(callback, event_keys)
+
+
+func _on_daily_task_wrapped_callback(ok: bool, data: Variant, err: Dictionary, callback: Callable, event_keys: Array[String]) -> void:
+	if _can_invoke_callable(callback):
+		callback.call(ok, data, err)
+	if not ok:
+		return
+	for event_key: String in event_keys:
+		if not event_key.strip_edges().is_empty():
+			record_daily_task_event(event_key)
+
+
+func _get_daily_dungeon_event_key(dungeon_id: int) -> String:
+	match dungeon_id:
+		1:
+			return "dungeon_gold"
+		2:
+			return "dungeon_diamond"
+		3:
+			return "dungeon_whisker"
+		_:
+			return ""
 
 
 func retain_loading_overlay(_message: String = DEFAULT_LOADING_MESSAGE) -> void:

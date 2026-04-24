@@ -970,7 +970,7 @@ func _confirm_bundle_purchase(bundle: Dictionary) -> void:
 
 
 func _execute_bundle_purchase(bundle_id: int) -> void:
-	_api_client.purchase_shop_bundle(bundle_id, _on_bundle_purchase_completed)
+	_api_client.purchase_shop_bundle(bundle_id, _on_bundle_purchase_completed, _is_daily_free_bundle(_pending_bundle_purchase))
 
 
 func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictionary) -> void:
@@ -1238,6 +1238,10 @@ func _is_bundle_visible(bundle: Dictionary) -> bool:
 	var price_currency_type: String = str(bundle.get("priceCurrencyType", "")).to_lower()
 	var price_currency_id: int = int(bundle.get("priceCurrencyId", 0))
 	return price_currency_type != "trappoints" and price_currency_id != TRAP_POINTS_CURRENCY_ID
+
+
+func _is_daily_free_bundle(bundle: Dictionary) -> bool:
+	return str(bundle.get("categoryType", "")).to_lower() == "dailypack" and int(bundle.get("priceAmount", -1)) == 0
 
 
 func _has_visible_bundle_for_group(tab_key: String, group_id: String) -> bool:

@@ -280,6 +280,7 @@ Examples:
 - shop overview
 - scooper catalog and live data
 - announcement catalog shown from the home More menu
+- daily task overview loaded from the home More menu
 
 ### 5.2 Device-Local Ownership
 
@@ -355,6 +356,8 @@ Important paths:
 Project rule: persistent runtime data must use `user://`, not `res://`.
 
 Announcement catalog is loaded from player bootstrap and refreshed by `GET /api/announcements` when the player opens the home More menu `公告` entry. The cache file is `user://catalog/announcement_catalog.json`, owned by `GameState.announcement_catalog`.
+
+Daily tasks are opened from the home More menu next to `公告`. The dialog calls `GET /api/daily-tasks`, displays `resetHour` plus `remainingSecondsUntilReset`, and claims rewards through `POST /api/daily-tasks/{taskKey}/claim`. Gameplay actions report completion through `ApiClient.record_daily_task_event(...)`; the daily free shop pack event must only be emitted for `DailyPack` bundles with `priceAmount == 0`.
 
 ### 6.3 API Envelope Shape
 
