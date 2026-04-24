@@ -52,6 +52,14 @@ const DAMAGE_TEAM_OFFSET_X := 10.0
 const DAMAGE_POP_LABEL_W := 40.0
 const DAMAGE_POP_LABEL_H := 42.0
 const DAMAGE_DIGIT_DELAY := 0.05
+const DEATH_ARC_MIN_X := 400.0
+const DEATH_ARC_MAX_X := 1000.0
+const DEATH_ARC_MIN_HEIGHT := 400.0
+const DEATH_ARC_MAX_HEIGHT := 800.0
+const DEATH_ARC_MIN_DURATION := 0.7
+const DEATH_ARC_MAX_DURATION := 1.2
+const DEATH_ROLL_MIN_TURNS := 1.5
+const DEATH_ROLL_MAX_TURNS := 3.0
 
 
 func setup(id: int, team_name: String, name_str: String, hp: int, file_id: String = "") -> void:
@@ -350,12 +358,25 @@ func play_death() -> void:
 		_set_animation_visual_active(true)
 		_animated_sprite.play("death_fly")
 
-	var dir := -1.0 if team == "player" else 1.0
-	var tween := create_tween()
+	var dir: float = -1.0 if team == "player" else 1.0
+	var start_position: Vector2 = position
+	var end_position: Vector2 = start_position + Vector2(
+		dir * _damage_rng.randf_range(DEATH_ARC_MIN_X, DEATH_ARC_MAX_X),
+		_damage_rng.randf_range(DEATH_ARC_MIN_HEIGHT, DEATH_ARC_MAX_HEIGHT)
+	)
+	var peak_height: float = _damage_rng.randf_range(DEATH_ARC_MIN_HEIGHT, DEATH_ARC_MAX_HEIGHT)
+	var flight_duration: float = _damage_rng.randf_range(DEATH_ARC_MIN_DURATION, DEATH_ARC_MAX_DURATION)
+	var roll_turns: float = _damage_rng.randf_range(DEATH_ROLL_MIN_TURNS, DEATH_ROLL_MAX_TURNS)
+	var end_rotation: float = rotation + dir * TAU * roll_turns
+	var tween: Tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(self, "position:x", position.x + dir * 400.0, 0.8)
-	tween.tween_property(self, "position:y", position.y - 200.0, 0.4).set_ease(Tween.EASE_OUT)
-	tween.chain().tween_property(self, "position:y", position.y + 600.0, 0.4).set_ease(Tween.EASE_IN)
+	tween.tween_method(
+		Callable(self, "_set_death_arc_progress").bind(start_position, end_position, peak_height),
+		0.0,
+		1.0,
+		flight_duration
+	).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(self, "rotation", end_rotation, flight_duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
 	tween.chain().tween_callback(Callable(self, "_on_death_tween_finished"))
 
 
@@ -407,6 +428,13 @@ func _play_temporary(animation_name: String, duration: float) -> void:
 func _cancel_revert() -> void:
 	_revert_token += 1
 	_revert_timer = null
+
+
+func _set_death_arc_progress(progress: float, start_position: Vector2, end_position: Vector2, peak_height: float) -> void:
+	var clamped_progress: float = clampf(progress, 0.0, 1.0)
+	var linear_position: Vector2 = start_position.lerp(end_position, clamped_progress)
+	var arc_offset_y: float = -4.0 * peak_height * clamped_progress * (1.0 - clamped_progress)
+	position = linear_position + Vector2(0.0, arc_offset_y)
 
 
 func _on_death_tween_finished() -> void:
