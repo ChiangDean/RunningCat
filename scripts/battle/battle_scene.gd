@@ -10,6 +10,7 @@ const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/home/HomeTopHudEditor.tscn"
 const HOME_BOTTOM_HUD_SCENE := preload("res://scenes/ui/home/HomeBottomHudEditor.tscn")
 const BOSS_WARNING_OVERLAY_SCENE := preload("res://scenes/ui/battle/BossWarningOverlayEditor.tscn")
 const HOME_SCOOP_TEMPLATE_SCENE := preload("res://scenes/ui/home/HomeScoopButtonTemplate.tscn")
+const ITEM_SLOT_TEMPLATE := preload("res://scenes/ui/ItemSlotTemplate.tscn")
 const HOME_TOP_BAR_TEXTURE := preload("res://assets/sprites/ui/home/v2/home_hud_main_v3.png")
 const HOME_LOWER_MENU_BG_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background.png")
 const HOME_LOWER_MENU_BG_SKILL_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/background/home_lower_menu_background_skill.png")
@@ -141,6 +142,9 @@ const HOME_SCOOP_TEMPLATE_RESULT_LABEL_OFFSET := Vector2(12.0, 196.0)
 const HOME_SCOOP_TEMPLATE_RESULT_LABEL_SIZE := Vector2(212.0, 24.0)
 const PARTY_CHEER_COUPON_REUSE_COOLDOWN_SECONDS := 2.0
 const IDLE_CLAIM_RED_DOT_THRESHOLD_SECONDS := 4 * 3600
+const IDLE_REWARD_GRID_COLUMNS := 5
+const IDLE_REWARD_SLOT_SCALE := 0.24
+const IDLE_REWARD_SLOT_CELL_SIZE := Vector2(122.0, 122.0)
 const RESULT_OVERLAY_OFFSET_Y := -200.0
 const RESULT_OVERLAY_START_SCALE := 0.56
 const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
@@ -259,6 +263,7 @@ var _last_overlay_scene_path: String = ""
 var _stats_btn: TextureButton
 var _bottom_hud_layout: Control
 var _skill_filter_mode: String = "scoop"
+var _startup_idle_rewards_dialog_checked: bool = false
 var _current_speed_mult: float = 1.0
 var _free_speed_boost_end_unix: int = 0
 var _free_speed_boost_mult: float = 1.0
@@ -279,6 +284,7 @@ func _ready() -> void:
 	_refresh_home_red_dots()
 	UiAudio.stop_bgm()
 	_start_battle()
+	call_deferred("_show_startup_idle_rewards_dialog_if_needed")
 	# Update the idle button text every second.
 	var sandbox_timer := Timer.new()
 	sandbox_timer.wait_time = 1.0
@@ -1854,6 +1860,72 @@ func _build_idle_reward_float_entries(rewards: Dictionary) -> Array[Dictionary]:
 	return reward_entries
 
 
+func _build_idle_reward_slot_grid(rewards: Dictionary) -> GridContainer:
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = IDLE_REWARD_GRID_COLUMNS
+	grid.add_theme_constant_override("h_separation", 4)
+	grid.add_theme_constant_override("v_separation", 4)
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+	for entry: Array in _get_home_reward_defs():
+		var reward_name: String = str(entry[0])
+		var reward_key: String = str(entry[1])
+		var amount: int = int(rewards.get(reward_key, 0))
+		if amount <= 0:
+			continue
+		grid.add_child(_build_idle_reward_slot(reward_name, reward_key, amount))
+
+	return grid
+
+
+func _build_idle_reward_slot(reward_name: String, reward_key: String, amount: int) -> Control:
+	var cell: Control = Control.new()
+	cell.custom_minimum_size = IDLE_REWARD_SLOT_CELL_SIZE
+	cell.size = IDLE_REWARD_SLOT_CELL_SIZE
+	cell.tooltip_text = "%s x%s" % [reward_name, GameState.format_number(amount)]
+
+	var slot: Control = ITEM_SLOT_TEMPLATE.instantiate() as Control
+	slot.custom_minimum_size = Vector2(512.0, 512.0)
+	slot.size = Vector2(512.0, 512.0)
+	slot.scale = Vector2(IDLE_REWARD_SLOT_SCALE, IDLE_REWARD_SLOT_SCALE)
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(slot)
+
+	var icon: TextureRect = slot.get_node("ItemIcon") as TextureRect
+	var name_label: Label = slot.get_node("ItemNameLabel") as Label
+	var count_label: Label = slot.get_node("CountLabel") as Label
+	var texture: Texture2D = AssetResolver.load_texture(_get_idle_reward_icon_path(reward_key))
+	if texture != null:
+		icon.texture = texture
+		icon.visible = true
+	else:
+		icon.visible = false
+
+	name_label.text = reward_name
+	name_label.tooltip_text = reward_name
+	name_label.add_theme_font_size_override("font_size", 52)
+	count_label.text = GameState.format_number(amount)
+	count_label.tooltip_text = count_label.text
+	count_label.add_theme_font_size_override("font_size", 66)
+	return cell
+
+
+func _get_idle_reward_icon_path(reward_key: String) -> String:
+	match reward_key:
+		"gold":
+			return AssetResolver.resolve_catalog_path("catalog/currency/gold")
+		"poop":
+			return AssetResolver.resolve_catalog_path("catalog/consumable/poop_count")
+		"cat_food":
+			return AssetResolver.resolve_catalog_path("catalog/consumable/cat_food")
+		"diamonds":
+			return AssetResolver.resolve_catalog_path("catalog/currency/diamonds")
+		"whiskers":
+			return AssetResolver.resolve_catalog_path("catalog/consumable/whisker_shards")
+		_:
+			return ""
+
+
 func _get_reward_float_color(reward_key: String, override_color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Color:
 	if override_color.a > 0.0:
 		return override_color
@@ -2109,12 +2181,11 @@ func _refresh_sandbox_btn() -> void:
 	var overlay_open: bool = not SceneNavigator.get_current_overlay_scene_path().is_empty()
 	var elapsed := GameState.get_idle_elapsed_seconds()
 	var claimable_minutes: int = floori(float(elapsed) / 60.0)
+	_sandbox_btn.disabled = false
 	if claimable_minutes < 1:
-		_sandbox_btn.disabled = true
 		_sandbox_btn.text = UiText.HOME_IDLE_NOT_READY
-		UiPalette.apply_button_palette(_sandbox_btn, ENHANCE_APPLY_DISABLED_BG, ENHANCE_APPLY_DISABLED_FG)
+		UiPalette.apply_button_kind(_sandbox_btn, "neutral")
 	else:
-		_sandbox_btn.disabled = false
 		var h: int = floori(float(elapsed) / 3600.0)
 		var m: int = floori(float(elapsed % 3600) / 60.0)
 		var s := elapsed % 60
@@ -2749,6 +2820,19 @@ func _has_idle_claim_red_dot() -> bool:
 	return GameState.get_idle_elapsed_seconds() >= IDLE_CLAIM_RED_DOT_THRESHOLD_SECONDS
 
 
+func _show_startup_idle_rewards_dialog_if_needed() -> void:
+	if _startup_idle_rewards_dialog_checked:
+		return
+	_startup_idle_rewards_dialog_checked = true
+	if not is_inside_tree():
+		return
+	if not SceneNavigator.get_current_overlay_scene_path().is_empty():
+		return
+	if not GameState.has_pending_idle_rewards():
+		return
+	_show_sandbox_dialog()
+
+
 func _build_scoop_reward_entries(
 	result: Dictionary,
 	previous_profile: Dictionary = {},
@@ -2854,7 +2938,7 @@ func _show_sandbox_dialog() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 14)
-	vbox.custom_minimum_size = Vector2(400.0, 0.0)
+	vbox.custom_minimum_size = Vector2(640.0, 0.0)
 
 	# Idle rewards section
 	var rewards_section := VBoxContainer.new()
@@ -2869,13 +2953,9 @@ func _show_sandbox_dialog() -> void:
 		time_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rewards_section.add_child(time_lbl)
 
-		for entry: Array in _get_home_reward_defs():
-			var val: int = int(rewards.get(entry[1], 0))
-			if val > 0:
-				var lbl := Label.new()
-				lbl.text = "%s +%d" % [entry[0], val]
-				lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
-				rewards_section.add_child(lbl)
+		var reward_grid: GridContainer = _build_idle_reward_slot_grid(rewards)
+		if reward_grid.get_child_count() > 0:
+			rewards_section.add_child(reward_grid)
 
 	if has_rewards:
 		vbox.add_child(rewards_section)
