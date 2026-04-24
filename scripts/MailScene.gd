@@ -562,9 +562,7 @@ func _build_attachment_slot(attachment_variant: Variant) -> Control:
 	var name_label: Label = slot.get_node("ItemNameLabel") as Label
 	var qty_label: Label = slot.get_node("CountLabel") as Label
 	var quantity: int = int(attachment.get("quantity", 0))
-	var texture: Texture2D = AssetResolver.load_texture(
-		AssetResolver.resolve_catalog_path(str(attachment.get("imagePath", "")))
-	)
+	var texture: Texture2D = AssetResolver.resolve_catalog_texture(str(attachment.get("imagePath", "")))
 	var display_name: String = str(attachment.get("displayName", attachment.get("rewardType", "")))
 
 	if texture != null:

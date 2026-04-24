@@ -11,6 +11,7 @@
 - Runtime API config is environment-specific: CI generates `config/runtime_config.json`, while local development may override with ignored `config/runtime_config.local.json`.
 - Deploy-generated `config/runtime_config.json` must include an explicit `environment` value. Runtime gating for unfinished content is allowed only in `Local` / `DEV`; `Sandbox` and `Production` builds must not silently fall back to `Local`.
 - Static support / privacy / account-deletion Pages content lives under `site/`; when deploy workflows export the Web build, they must also copy `site/` into `build/web/` so GitHub Pages keeps the game build and legal pages under the same published site.
+- For catalog-driven item art, shop/backpack reward slots, and feature preview images, prefer `AssetResolver` fallback helpers over raw `load_texture(...)` so release builds degrade to placeholders instead of blank UI when art is missing.
 - Persistent local runtime data such as login session and player save files must use `user://`, not `res://`.
 - Treat auth/session `roleType`, `role`, and `permissions` as explicit API string contract values. Do not infer frontend authority from numeric enum ordering.
 - Preserve original file encoding when editing client files with Chinese text. Treat repo GDScript/docs as `UTF-8`, and avoid shell rewrite flows that can re-encode text into mojibake such as `é...`, `?��`, or corrupted `%` lines.
@@ -19,5 +20,13 @@
 - Scooper UI templates should live under `scenes/ui/scooper/<feature>/`; keep equipment, ability, memory, treasure, and achievement card templates grouped by feature instead of adding new Scooper templates to the `scenes/ui/` root.
 - `MailScene`, `ChatScene`, and similar home-overlay social pages that already have bootstrap + realtime cache coverage should open from `GameState` first; do not reintroduce mandatory entry-time loading fetches for data already maintained by bootstrap and websocket sync.
 - For bootstrap-backed social pages such as `MailScene` and `SocialScene`, if summary state says data should exist but the cached detail list is missing, prefer a silent self-heal fetch over restoring visible entry-time loading.
+- Web exports that include `LineEdit` / `TextEdit` input must keep `html/experimental_virtual_keyboard=true` in `export_presets.cfg` so mobile browsers can open the native iOS / Android keyboard.
+- Environment rules:
+  - All files must use UTF-8 without BOM.
+  - Never use UTF-16 or system default encoding.
+  - Use PowerShell 7 (`pwsh`), not Windows PowerShell 5, for shell operations.
+  - Do not use `Out-File`.
+  - Always use `Set-Content -Encoding utf8` when writing files from PowerShell.
+  - Ensure UTF-8 encoding is set before writing files from shell scripts.
 - Tablet and wide-screen layout must keep the playable UI inside the centered `720 x 1280` safe frame; use extra side space only for decorative background, not required buttons or gameplay controls.
 - When new stable project-specific constraints are discovered during work, record them here so future changes stay consistent.

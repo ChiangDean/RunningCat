@@ -18,6 +18,7 @@
 - 多數功能頁仍為純色背景，缺 UI 背景圖。
 - API / DB 已經定義 `image_path` 的 catalog 圖資，目前前端多數尚未補圖或尚未實際套用。
 - Mail / Chat / Shop / Scooper / Arena Reward / Dungeon Overview 等流程仍偏文字化，缺少對應 icon 或卡面圖。
+- 前端 runtime 已補上 catalog 圖示、商店/背包圖示、功能頁預覽圖、背景圖的 fallback；缺圖時不再直接留白，但正式美術補齊需求仍然存在。
 
 ## 盤點依據
 

@@ -118,10 +118,10 @@ func _make_entry_card(entry_data: Dictionary) -> Control:
 	action_button.text = str(entry_data.get("button_text", UiText.ACTIVITY_DEFAULT_BUTTON))
 	UiPalette.apply_button_kind(action_button, "primary")
 
-	var art_path: String = str(entry_data.get("art_path", ""))
-	preview_image.texture = AssetResolver.load_texture(art_path)
-
 	var entry_key: String = str(entry_data.get("key", ""))
+	var art_path: String = str(entry_data.get("art_path", ""))
+	preview_image.texture = AssetResolver.resolve_preview_texture(art_path, entry_key)
+
 	action_button.pressed.connect(_emit_entry_pressed.bind(entry_key))
 	_entry_buttons[entry_key] = action_button
 

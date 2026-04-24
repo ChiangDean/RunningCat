@@ -354,7 +354,7 @@ func _build_shop_slot_cell(image_path: String, display_name: String, quantity: i
 	var overlay_mask: TextureRect = slot.get_node("OverlayMask") as TextureRect
 	var name_label: Label = slot.get_node("ItemNameLabel") as Label
 	var qty_label: Label = slot.get_node("CountLabel") as Label
-	var texture: Texture2D = AssetResolver.load_texture(image_path)
+	var texture: Texture2D = AssetResolver.resolve_texture_or_placeholder(image_path)
 
 	if texture != null:
 		icon.texture = texture
@@ -692,7 +692,7 @@ func _set_bundle_action_button_content(button: Button, label_text: String, icon_
 	center.add_child(row)
 
 	if icon_path != "":
-		var icon_texture: Texture2D = AssetResolver.load_texture(icon_path)
+		var icon_texture: Texture2D = AssetResolver.resolve_texture_or_placeholder(icon_path)
 		if icon_texture != null:
 			var icon: TextureRect = TextureRect.new()
 			icon.custom_minimum_size = SHOP_BUTTON_ICON_SIZE

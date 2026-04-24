@@ -360,7 +360,7 @@ static func _bind_reward_slot(slot: Control, reward_items: Array[Dictionary], in
 	var reward_item: Dictionary = reward_items[index]
 	var reward_key: String = str(reward_item.get("key", ""))
 	var amount: int = int(reward_item.get("amount", 0))
-	var texture: Texture2D = AssetResolver.load_texture(AssetResolver.resolve_catalog_path(_get_reward_catalog_path(reward_key)))
+	var texture: Texture2D = AssetResolver.resolve_catalog_texture(_get_reward_catalog_path(reward_key))
 
 	frame.visible = true
 	icon.visible = texture != null
@@ -455,13 +455,13 @@ static func _resolve_dungeon_preview_texture(dungeon: Dictionary) -> Texture2D:
 
 	var dungeon_key: String = str(dungeon.get("key", "")).to_lower()
 	if DEFAULT_DUNGEON_ICON_BY_KEY.has(dungeon_key):
-		return AssetResolver.load_texture(str(DEFAULT_DUNGEON_ICON_BY_KEY[dungeon_key]))
+		return AssetResolver.resolve_preview_texture(str(DEFAULT_DUNGEON_ICON_BY_KEY[dungeon_key]), "dungeon")
 
 	for key: String in DEFAULT_DUNGEON_ICON_BY_KEY.keys():
 		if image_path.to_lower().contains(key):
-			return AssetResolver.load_texture(str(DEFAULT_DUNGEON_ICON_BY_KEY[key]))
+			return AssetResolver.resolve_preview_texture(str(DEFAULT_DUNGEON_ICON_BY_KEY[key]), "dungeon")
 
-	return null
+	return AssetResolver.resolve_background_texture("dungeon")
 
 
 static func _build_shell_summary_left(scene, dungeon_key: String) -> String:
