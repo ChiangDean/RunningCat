@@ -8,9 +8,9 @@ extends RefCounted
 const MIN_KNOCKBACK: float = 0.0
 const MAX_KNOCKBACK: float = 500.0
 
-# Stagger duration constants
+# Stagger duration constants. Wall stagger is added on top of the base stagger.
 const STAGGER_TIME: float = 0.2
-const WALL_STAGGER_TIME: float = 0.3
+const WALL_STAGGER_TIME: float = 2.0
 const KNOCKBACK_RECOVERY_ACCEL_TIME: float = 1.0
 const KNOCKBACK_INITIAL_SPEED_MULTIPLIER: float = 10.0
 

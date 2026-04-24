@@ -2362,19 +2362,23 @@ func _start_battle_internal() -> void:
 	_refresh_resource_strip()
 	_refresh_skill_bar_names(player_cats)
 
-	var simulator := BattleSimulator.new()
-	var events := simulator.simulate(player_cats, enemy_cats)
 	_current_enemy_cats = enemy_cats.duplicate()
 	_clear_battle_transient_fx()
-	for child in _player_team.get_children():
-		child.queue_free()
-	for child in _enemy_team.get_children():
-		child.queue_free()
-	_battle_manager.setup(events, player_cats, enemy_cats,
+	_clear_team_nodes(_player_team)
+	_clear_team_nodes(_enemy_team)
+	_battle_manager.setup([], player_cats, enemy_cats,
 			_player_team, _enemy_team, _timer_label, _skill_bar)
 	_set_skill_filter_mode(_skill_filter_mode)
 	if GameState.is_current_boss():
 		_start_boss_warning_phase()
+
+
+func _clear_team_nodes(team_node: Node2D) -> void:
+	if team_node == null:
+		return
+	for child: Node in team_node.get_children():
+		team_node.remove_child(child)
+		child.queue_free()
 
 
 func restart_with_latest_team() -> void:

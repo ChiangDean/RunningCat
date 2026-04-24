@@ -71,6 +71,35 @@ func setup(id: int, team_name: String, name_str: String, hp: int, file_id: Strin
 	cat_file_id = file_id
 	_damage_rng.randomize()
 	_build_visuals()
+	reset_for_spawn()
+
+
+func reset_for_spawn() -> void:
+	_cancel_revert()
+	if _move_tween != null and _move_tween.is_valid():
+		_move_tween.kill()
+	_move_tween = null
+	rotation = 0.0
+	scale = Vector2.ONE
+	modulate = Color(1.0, 1.0, 1.0, 1.0)
+	visible = true
+	if _animated_sprite != null:
+		_animated_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_animated_sprite.scale = Vector2(absf(_animated_sprite.scale.x), absf(_animated_sprite.scale.y))
+	if _static_sprite != null:
+		_static_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_static_sprite.scale = Vector2(absf(_static_sprite.scale.x), absf(_static_sprite.scale.y))
+	if _body_rect != null:
+		_body_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_body_rect.scale = Vector2.ONE
+	if _hp_bar_bg != null:
+		_hp_bar_bg.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_hp_bar_bg.scale = Vector2.ONE
+	if _hp_bar_fill != null:
+		_hp_bar_fill.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_hp_bar_fill.scale = Vector2.ONE
+	if _name_label != null:
+		_name_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
 func _build_visuals() -> void:
@@ -351,6 +380,26 @@ func play_skill() -> void:
 	_play_temporary("skill", 0.35)
 
 
+func play_wall_counter(target_x: float, arc_height: float, duration: float) -> void:
+	_play_temporary("knockback", duration)
+	if _move_tween != null and _move_tween.is_valid():
+		_move_tween.kill()
+	var start_position: Vector2 = position
+	var end_position: Vector2 = Vector2(target_x, 0.0)
+	var roll_dir: float = -1.0 if team == "player" else 1.0
+	var end_rotation: float = rotation + roll_dir * TAU
+	_move_tween = create_tween()
+	_move_tween.set_parallel(true)
+	_move_tween.tween_method(
+		Callable(self, "_set_wall_counter_arc_progress").bind(start_position, end_position, arc_height),
+		0.0,
+		1.0,
+		duration
+	).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
+	_move_tween.tween_property(self, "rotation", end_rotation, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
+	_move_tween.chain().tween_callback(Callable(self, "_finish_wall_counter_arc"))
+
+
 func play_death() -> void:
 	_cancel_revert()
 	if _has_animation("death_fly"):
@@ -435,6 +484,18 @@ func _set_death_arc_progress(progress: float, start_position: Vector2, end_posit
 	var linear_position: Vector2 = start_position.lerp(end_position, clamped_progress)
 	var arc_offset_y: float = -4.0 * peak_height * clamped_progress * (1.0 - clamped_progress)
 	position = linear_position + Vector2(0.0, arc_offset_y)
+
+
+func _set_wall_counter_arc_progress(progress: float, start_position: Vector2, end_position: Vector2, peak_height: float) -> void:
+	var clamped_progress: float = clampf(progress, 0.0, 1.0)
+	var linear_position: Vector2 = start_position.lerp(end_position, clamped_progress)
+	var arc_offset_y: float = -4.0 * peak_height * clamped_progress * (1.0 - clamped_progress)
+	position = linear_position + Vector2(0.0, arc_offset_y)
+
+
+func _finish_wall_counter_arc() -> void:
+	position.y = 0.0
+	rotation = 0.0
 
 
 func _on_death_tween_finished() -> void:

@@ -399,9 +399,7 @@ func _start_battle() -> void:
 
 	_refresh_skill_bar_names(player_cats)
 
-	var simulator := BattleSimulator.new()
-	var events := simulator.simulate(player_cats, enemy_cats)
-	_battle_manager.setup(events, player_cats, enemy_cats, _player_team, _enemy_team, _timer_label, _skill_bar)
+	_battle_manager.setup([], player_cats, enemy_cats, _player_team, _enemy_team, _timer_label, _skill_bar)
 
 
 func _on_skip_pressed() -> void:
