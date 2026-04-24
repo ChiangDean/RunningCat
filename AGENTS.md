@@ -20,6 +20,7 @@
 - Scooper UI templates should live under `scenes/ui/scooper/<feature>/`; keep equipment, ability, memory, treasure, and achievement card templates grouped by feature instead of adding new Scooper templates to the `scenes/ui/` root.
 - `MailScene`, `ChatScene`, and similar home-overlay social pages that already have bootstrap + realtime cache coverage should open from `GameState` first; do not reintroduce mandatory entry-time loading fetches for data already maintained by bootstrap and websocket sync.
 - For bootstrap-backed social pages such as `MailScene` and `SocialScene`, if summary state says data should exist but the cached detail list is missing, prefer a silent self-heal fetch over restoring visible entry-time loading.
+- Web exports that include `LineEdit` / `TextEdit` input must keep `html/experimental_virtual_keyboard=true` in `export_presets.cfg` so mobile browsers can open the native iOS / Android keyboard.
 - Environment rules:
   - All files must use UTF-8 without BOM.
   - Never use UTF-16 or system default encoding.
