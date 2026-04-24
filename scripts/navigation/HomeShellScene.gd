@@ -1,15 +1,21 @@
 extends Control
 
 const BATTLE_SCENE := preload("res://scenes/BattleScene.tscn")
+const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+const AdaptiveViewportScript = preload("res://scripts/ui/adaptive_viewport.gd")
 const OVERLAY_BOTTOM_RESERVE := 0.0
 
 var _battle_scene: Node
+var _tablet_decor: TextureRect
+var _tablet_decor_tint: ColorRect
 var _overlay_root: Control
 
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_build_shell()
+	_sync_adaptive_layout()
+	get_viewport().size_changed.connect(_sync_adaptive_layout)
 	SceneNavigator.register_home_shell(self)
 
 
@@ -51,6 +57,21 @@ func clear_overlay_scene() -> void:
 
 
 func _build_shell() -> void:
+	_tablet_decor = TextureRect.new()
+	_tablet_decor.name = "TabletDecorBackground"
+	_tablet_decor.texture = BATTLE_BG_TEXTURE
+	_tablet_decor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_tablet_decor.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_tablet_decor.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_tablet_decor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_tablet_decor)
+
+	_tablet_decor_tint = ColorRect.new()
+	_tablet_decor_tint.name = "TabletDecorTint"
+	_tablet_decor_tint.color = Color(0.20, 0.14, 0.08, 0.18)
+	_tablet_decor_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_tablet_decor_tint)
+
 	_battle_scene = BATTLE_SCENE.instantiate()
 	add_child(_battle_scene)
 
@@ -61,6 +82,18 @@ func _build_shell() -> void:
 	_overlay_root.clip_contents = true
 	_overlay_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay_root)
+	_sync_adaptive_layout()
+
+
+func _sync_adaptive_layout() -> void:
+	AdaptiveViewportScript.apply_full_viewport(_tablet_decor, self)
+	AdaptiveViewportScript.apply_full_viewport(_tablet_decor_tint, self)
+	if _battle_scene is Node2D:
+		var battle_node: Node2D = _battle_scene as Node2D
+		var origin: Vector2 = AdaptiveViewportScript.apply_centered_node2d(battle_node)
+		if _battle_scene.has_method("set_adaptive_content_origin"):
+			_battle_scene.call("set_adaptive_content_origin", origin)
+	AdaptiveViewportScript.apply_safe_control_frame(_overlay_root, self)
 
 
 func _attach_ui_click_sfx(root: Node) -> void:
