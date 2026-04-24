@@ -21,6 +21,7 @@ var _hp_bar_bg: ColorRect
 var _hp_bar_fill: ColorRect
 var _name_label: Label
 var _active_animation: String = ""
+var _move_tween: Tween
 var _revert_timer: SceneTreeTimer
 var _revert_token: int = 0
 var _damage_pop_index: int = 0
@@ -302,9 +303,15 @@ func show_damage_number(damage: int) -> void:
 	tween.chain().tween_callback(Callable(pop_root, "queue_free"))
 
 
-func move_to(target_x: float) -> void:
-	var tween := create_tween()
-	tween.tween_property(self, "position:x", target_x, 0.12).set_ease(Tween.EASE_OUT)
+func move_to(
+		target_x: float,
+		duration: float = 0.12,
+		transition_type: Tween.TransitionType = Tween.TRANS_SINE,
+		ease_type: Tween.EaseType = Tween.EASE_OUT) -> void:
+	if _move_tween != null and _move_tween.is_valid():
+		_move_tween.kill()
+	_move_tween = create_tween()
+	_move_tween.tween_property(self, "position:x", target_x, duration).set_trans(transition_type).set_ease(ease_type)
 
 
 func play_idle() -> void:

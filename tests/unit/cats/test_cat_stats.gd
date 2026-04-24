@@ -62,19 +62,29 @@ func test_equal_weights_returns_200() -> void:
 	assert_almost_eq(CatStats.calc_knockback_distance(100.0, 100.0), 200.0, DELTA)
 
 func test_heavier_attacker_increases_knockback() -> void:
-	var light := CatStats.calc_knockback_distance(100.0, 100.0)
-	var heavy := CatStats.calc_knockback_distance(200.0, 100.0)
+	var light := CatStats.calc_knockback_distance(5.0, 5.0)
+	var heavy := CatStats.calc_knockback_distance(8.0, 5.0)
 	assert_gt(heavy, light)
 
 func test_lighter_attacker_decreases_knockback() -> void:
-	var normal := CatStats.calc_knockback_distance(100.0, 100.0)
-	var light  := CatStats.calc_knockback_distance(50.0,  100.0)
+	var normal := CatStats.calc_knockback_distance(5.0, 5.0)
+	var light  := CatStats.calc_knockback_distance(3.0,  5.0)
 	assert_lt(light, normal)
 
-func test_knockback_clamped_to_min_30() -> void:
-	# 攻擊方極輕 → 回彈距離不低於 MIN_KNOCKBACK=30
+func test_knockback_clamped_to_min_0() -> void:
+	# 攻擊方極輕 → 回彈距離不低於 MIN_KNOCKBACK=0
 	assert_almost_eq(CatStats.calc_knockback_distance(1.0, 99999.0), CatStats.MIN_KNOCKBACK, DELTA)
 
-func test_knockback_clamped_to_max_300() -> void:
-	# 攻擊方極重 → 回彈距離不超過 MAX_KNOCKBACK=300
+func test_knockback_clamped_to_max_500() -> void:
+	# 攻擊方極重 → 回彈距離不超過 MAX_KNOCKBACK=500
 	assert_almost_eq(CatStats.calc_knockback_distance(99999.0, 1.0), CatStats.MAX_KNOCKBACK, DELTA)
+
+func test_cat_scale_weight_difference_is_visible() -> void:
+	assert_almost_eq(CatStats.calc_knockback_distance(8.0, 3.0), 300.0, DELTA)
+	assert_almost_eq(CatStats.calc_knockback_distance(3.0, 8.0), 100.0, DELTA)
+
+func test_large_cat_scale_weight_difference_can_exceed_300() -> void:
+	assert_almost_eq(CatStats.calc_knockback_distance(12.0, 3.0), 380.0, DELTA)
+
+func test_knockback_deceleration_time_uses_10x_base_speed() -> void:
+	assert_almost_eq(CatStats.calc_knockback_deceleration_time(500.0, 100.0), 1.0, DELTA)

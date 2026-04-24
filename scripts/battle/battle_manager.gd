@@ -189,12 +189,18 @@ func _on_collision(ev: BattleEvent) -> void:
 	if damage > 0:
 		node.show_damage_number(damage)
 	_update_skill_slot_hp(ev.cat_id, ev.current_hp)
-	node.move_to(ev.pos_x)
+	var speed: float = float(_cat_speeds.get(ev.cat_id, 80.0))
+	var knockback_distance: float = absf(ev.pos_x - node.position.x)
+	var knockback_duration: float = CatStats.calc_knockback_deceleration_time(
+		knockback_distance,
+		speed
+	)
+	node.move_to(ev.pos_x, knockback_duration, Tween.TRANS_QUAD, Tween.EASE_OUT)
 	node.play_collision(ev.knockback)
 	_play_collision_sfx(ev.timestamp)
 	var is_near_wall: bool = (ev.pos_x <= 50.0 or ev.pos_x >= 670.0)
 	_cat_stagger_timers[ev.cat_id] = \
-		CatStats.WALL_STAGGER_TIME if is_near_wall else CatStats.STAGGER_TIME
+		maxf(CatStats.WALL_STAGGER_TIME if is_near_wall else CatStats.STAGGER_TIME, knockback_duration)
 	_cat_accel_timers[ev.cat_id] = 0.0
 	node.play_stagger()
 
