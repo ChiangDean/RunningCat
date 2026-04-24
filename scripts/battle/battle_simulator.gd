@@ -392,6 +392,8 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 
 	p.pos_x = e.pos_x - CAT_HALF_W * 2.0 - 2.0
 	e.pos_x = p.pos_x + CAT_HALF_W * 2.0 + 2.0
+	var p_before_knockback_x: float = p.pos_x
+	var e_before_knockback_x: float = e.pos_x
 	p.pos_x -= kb_p
 	e.pos_x += kb_e
 
@@ -405,6 +407,17 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array,
 	if e.pos_x + CAT_HALF_W >= WALL_RIGHT:
 		e.pos_x = WALL_RIGHT - CAT_HALF_W
 		e_stagger_t = CatStats.WALL_STAGGER_TIME
+
+	var p_knockback_distance: float = absf(p.pos_x - p_before_knockback_x)
+	var e_knockback_distance: float = absf(e.pos_x - e_before_knockback_x)
+	p_stagger_t = maxf(p_stagger_t, CatStats.calc_knockback_deceleration_time(
+		p_knockback_distance,
+		p.get_effective_speed()
+	))
+	e_stagger_t = maxf(e_stagger_t, CatStats.calc_knockback_deceleration_time(
+		e_knockback_distance,
+		e.get_effective_speed()
+	))
 
 	# ── Stagger ───────────────────────────────────────
 	if not p.is_staggered:

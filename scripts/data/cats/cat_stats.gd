@@ -5,13 +5,14 @@ extends RefCounted
 ## No scene-node dependencies, suitable for headless battle simulation
 
 # Knockback distance clamp range
-const MIN_KNOCKBACK: float = 30.0
-const MAX_KNOCKBACK: float = 300.0
+const MIN_KNOCKBACK: float = 0.0
+const MAX_KNOCKBACK: float = 500.0
 
 # Stagger duration constants
 const STAGGER_TIME: float = 0.2
 const WALL_STAGGER_TIME: float = 0.3
 const KNOCKBACK_RECOVERY_ACCEL_TIME: float = 1.0
+const KNOCKBACK_INITIAL_SPEED_MULTIPLIER: float = 10.0
 
 
 ## DEF damage-reduction formula: DEF / (DEF + 100)
@@ -34,5 +35,11 @@ static func calc_damage(atk: float, defense: float, ignore_def: float = 0.0) -> 
 ## Heavier attacker → greater knockback; clamped to [MIN_KNOCKBACK, MAX_KNOCKBACK]
 static func calc_knockback_distance(attacker_weight: float, target_weight: float) -> float:
 	var weight_diff: float = attacker_weight - target_weight
-	var base_knockback: float = 200.0 + weight_diff * 0.5
+	var base_knockback: float = 200.0 + weight_diff * 20.0
 	return clampf(base_knockback, MIN_KNOCKBACK, MAX_KNOCKBACK)
+
+
+## Computes the duration needed for knockback to decelerate linearly from 10x base speed to 0.
+static func calc_knockback_deceleration_time(distance: float, base_speed: float) -> float:
+	var initial_speed: float = maxf(1.0, base_speed * KNOCKBACK_INITIAL_SPEED_MULTIPLIER)
+	return maxf(0.0, distance * 2.0 / initial_speed)
