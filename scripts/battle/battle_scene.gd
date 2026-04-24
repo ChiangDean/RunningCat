@@ -4,6 +4,7 @@ extends Node2D
 ## Main home scene: battle view plus bottom navigation.
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+const AdaptiveViewportScript = preload("res://scripts/ui/adaptive_viewport.gd")
 const OverlaySceneChromeRef = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/home/HomeTopHudEditor.tscn")
 const HOME_BOTTOM_HUD_SCENE := preload("res://scenes/ui/home/HomeBottomHudEditor.tscn")
@@ -265,6 +266,7 @@ var _free_speed_boost_used: bool = false
 var _boss_warning_flash_tween: Tween
 var _boss_warning_pulse_tween: Tween
 var _current_enemy_cats: Array = []
+var _adaptive_content_origin: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -290,6 +292,18 @@ func _ready() -> void:
 		reward_demo_timer.autostart = true
 		reward_demo_timer.timeout.connect(_play_reward_float_demo_tick)
 		add_child(reward_demo_timer)
+
+
+func set_adaptive_content_origin(origin: Vector2) -> void:
+	_adaptive_content_origin = origin
+	_apply_adaptive_content_origin()
+
+
+func _apply_adaptive_content_origin() -> void:
+	if _nav_canvas != null:
+		_nav_canvas.offset = _adaptive_content_origin
+	if _reward_fx_canvas != null:
+		_reward_fx_canvas.offset = _adaptive_content_origin
 
 
 func _process(_delta: float) -> void:
@@ -877,6 +891,7 @@ func _build_ui() -> void:
 
 	_nav_canvas = CanvasLayer.new()
 	_nav_canvas.layer = 20
+	_nav_canvas.offset = _adaptive_content_origin
 	add_child(_nav_canvas)
 
 	_home_more_buttons_layer = Control.new()
@@ -965,6 +980,7 @@ func _build_ui() -> void:
 
 	_reward_fx_canvas = CanvasLayer.new()
 	_reward_fx_canvas.layer = 101
+	_reward_fx_canvas.offset = _adaptive_content_origin
 	add_child(_reward_fx_canvas)
 
 	_reward_fx_layer = Control.new()

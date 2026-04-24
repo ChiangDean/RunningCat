@@ -2,6 +2,7 @@ class_name ArenaBattleScene
 extends Node2D
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
+const AdaptiveViewportScript = preload("res://scripts/ui/adaptive_viewport.gd")
 const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
 const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
 
@@ -34,9 +35,14 @@ var _skill_bar: Control
 
 var _opponent: Dictionary = {}
 var _settling := false
+var _tablet_decor_canvas: CanvasLayer
+var _tablet_decor: TextureRect
 
 
 func _ready() -> void:
+	_build_tablet_decor()
+	_sync_adaptive_layout()
+	get_viewport().size_changed.connect(_sync_adaptive_layout)
 	_opponent = GameState.arena_opponent
 	_build_scene()
 	_start_battle()
@@ -97,6 +103,7 @@ func _build_battle_area() -> void:
 
 func _build_ui() -> void:
 	_ui_layer = CanvasLayer.new()
+	AdaptiveViewportScript.apply_canvas_layer_origin(_ui_layer, self)
 	add_child(_ui_layer)
 
 	_speed_1x = _make_button("1x", Vector2(20.0, 20.0), Vector2(70.0, 44.0))
@@ -529,3 +536,24 @@ func _show_result_overlay(is_win: bool) -> Control:
 
 func _on_retreat_pressed() -> void:
 	SceneNavigator.open_overlay_scene("res://scenes/ArenaScene.tscn")
+
+
+func _build_tablet_decor() -> void:
+	_tablet_decor_canvas = CanvasLayer.new()
+	_tablet_decor_canvas.layer = -100
+	add_child(_tablet_decor_canvas)
+
+	_tablet_decor = TextureRect.new()
+	_tablet_decor.name = "TabletDecorBackground"
+	_tablet_decor.texture = BATTLE_BG_TEXTURE
+	_tablet_decor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_tablet_decor.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_tablet_decor.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_tablet_decor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tablet_decor_canvas.add_child(_tablet_decor)
+
+
+func _sync_adaptive_layout() -> void:
+	AdaptiveViewportScript.apply_centered_node2d(self)
+	AdaptiveViewportScript.apply_full_viewport(_tablet_decor, self)
+	AdaptiveViewportScript.apply_canvas_layer_origin(_ui_layer, self)
