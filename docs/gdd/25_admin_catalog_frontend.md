@@ -114,6 +114,8 @@ HTTP mapping:
 
 The client does not compose transaction payloads from multiple endpoints. Each section is fetched and saved as one aggregate payload.
 
+`announcements` is a supported catalog section. It edits rows that become visible to players through bootstrap and `GET /api/announcements`; each row uses `is_enabled`, `starts_at_utc`, and `ends_at_utc` to decide whether it appears in the home announcement dialog.
+
 ## 7. GameState And Cache Boundary
 
 `GameState` is used for session identity only:

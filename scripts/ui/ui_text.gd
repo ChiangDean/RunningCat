@@ -83,6 +83,11 @@ const START_LOGOUT_REASON := "玩家從客戶端登出。"
 
 # Home scene labels
 const HOME_DAILY_TASK := "每日任務"
+const HOME_ANNOUNCEMENTS := "公告"
+const HOME_ANNOUNCEMENTS_TITLE := "公告"
+const HOME_ANNOUNCEMENTS_EMPTY := "目前沒有公告"
+const HOME_ANNOUNCEMENTS_LOAD_FAILED := "公告載入失敗"
+const HOME_ANNOUNCEMENTS_CATEGORY_UPDATE := "更新"
 const HOME_MAIL := "信箱"
 const HOME_FRIEND := "\u597d\u53cb"
 const HOME_PARTY := "\u7d44\u968a"

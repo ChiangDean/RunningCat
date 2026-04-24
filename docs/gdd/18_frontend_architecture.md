@@ -279,6 +279,7 @@ Examples:
 - gacha overview
 - shop overview
 - scooper catalog and live data
+- announcement catalog shown from the home More menu
 
 ### 5.2 Device-Local Ownership
 
@@ -352,6 +353,8 @@ Important paths:
 - `user://client_settings.json`
 
 Project rule: persistent runtime data must use `user://`, not `res://`.
+
+Announcement catalog is loaded from player bootstrap and refreshed by `GET /api/announcements` when the player opens the home More menu `公告` entry. The cache file is `user://catalog/announcement_catalog.json`, owned by `GameState.announcement_catalog`.
 
 ### 6.3 API Envelope Shape
 
