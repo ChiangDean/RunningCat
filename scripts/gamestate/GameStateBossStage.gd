@@ -24,6 +24,31 @@ static func is_current_boss(current_stage: int, boss_cfg: Dictionary) -> bool:
 	return get_encounter_index(current_stage, boss_cfg) == enc + 1
 
 
+## 指定 Boss 關對應的最後普通遭遇戰全局關卡
+static func get_last_encounter_stage_for_boss_stage(boss_stage: int, boss_cfg: Dictionary) -> int:
+	var enc: int = _enc(boss_cfg)
+	var normalized_boss_stage: int = maxi(boss_stage, 1)
+	return normalized_boss_stage * (enc + 1) - 1
+
+
+## 指定 Boss 關對應的 Boss 全局關卡
+static func get_boss_global_stage_for_boss_stage(boss_stage: int, boss_cfg: Dictionary) -> int:
+	var enc: int = _enc(boss_cfg)
+	var normalized_boss_stage: int = maxi(boss_stage, 1)
+	return normalized_boss_stage * (enc + 1)
+
+
+## Boss 已解鎖時，最後遭遇戰勝利後停留原關卡，等待玩家手動挑戰 Boss。
+static func should_hold_after_last_encounter_win(current_stage: int, boss_available: bool, boss_cfg: Dictionary) -> bool:
+	if not boss_available:
+		return false
+	if is_current_boss(current_stage, boss_cfg):
+		return false
+
+	var enc: int = _enc(boss_cfg)
+	return get_encounter_index(current_stage, boss_cfg) == enc
+
+
 ## Boss 關在當前區域內的序號（1~boss_stages_per_zone）
 static func get_zone_boss_stage(current_stage: int, boss_cfg: Dictionary) -> int:
 	var bsz := _bsz(boss_cfg)

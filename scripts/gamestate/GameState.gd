@@ -1601,6 +1601,11 @@ func get_enemy_ids() -> Array:
 
 ## 勝利後推進到下一關
 func advance_after_win() -> void:
+	if BossStage.should_hold_after_last_encounter_win(current_global_stage, boss_available, boss_config):
+		player_data.current_stage = current_global_stage
+		player_data.save()
+		return
+
 	boss_available = false
 	current_global_stage += 1
 	player_data.current_stage = current_global_stage
@@ -1610,15 +1615,17 @@ func advance_after_win() -> void:
 ## Boss 失敗後退回該 Boss 關的最後遭遇戰，顯示「挑戰 Boss」按鈕
 func on_boss_fail() -> void:
 	var bs: int = get_boss_stage_number()
-	var enc := int(boss_config.get("encounters_per_boss_stage", 4))
-	current_global_stage = (bs - 1) * (enc + 1) + enc
+	current_global_stage = BossStage.get_last_encounter_stage_for_boss_stage(bs, boss_config)
 	boss_available = true
+	player_data.current_stage = current_global_stage
+	player_data.save()
 
 ## 玩家手動挑戰 Boss（從最後遭遇戰跳到 Boss）
 func challenge_boss() -> void:
 	var bs: int = get_boss_stage_number()
-	var enc := int(boss_config.get("encounters_per_boss_stage", 4))
-	current_global_stage = bs * (enc + 1)
+	current_global_stage = BossStage.get_boss_global_stage_for_boss_stage(bs, boss_config)
+	player_data.current_stage = current_global_stage
+	player_data.save()
 
 
 # ── 技能延遲 ──────────────────────────────────
