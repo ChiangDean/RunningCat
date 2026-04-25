@@ -76,11 +76,26 @@ jobs:
       - name: Import Resources
         run: godot --headless --import || true
 
+      - name: Remove CDN-managed UI backgrounds from Web export
+        run: |
+          rm -f \
+            assets/sprites/ui/arena_background_v1.png \
+            assets/sprites/ui/battle_background_homey_v1.png \
+            assets/sprites/ui/chat_background_v1.png \
+            assets/sprites/ui/config_background_v1.png \
+            assets/sprites/ui/dungeon_background_v1.png \
+            assets/sprites/ui/enhance_background_v1.png \
+            assets/sprites/ui/gacha_background_v1.png \
+            assets/sprites/ui/mail_background_v1.png \
+            assets/sprites/ui/scooper_background_v1.png \
+            assets/sprites/ui/shop_background_v1.png
+
       - name: Export Web
         run: |
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
           cp -R site/. build/web/
+          ls -lh build/web/index.pck
 
       - name: Deploy to Develop
         uses: peaceiris/actions-gh-pages@v4
