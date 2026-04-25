@@ -197,11 +197,11 @@ func _build_ui() -> void:
 
 func _build_title_block() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.24
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.24
-	panel.position = Vector2(-250, 0)
+	panel.anchor_left = 0.0
+	panel.anchor_top = 0.0
+	panel.anchor_right = 0.0
+	panel.anchor_bottom = 0.0
+	panel.position = Vector2.ZERO
 	panel.custom_minimum_size = Vector2(500, 156)
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
@@ -246,11 +246,11 @@ func _build_title_block() -> PanelContainer:
 
 func _build_auth_block() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.63
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.63
-	panel.position = Vector2(-220, 0)
+	panel.anchor_left = 0.0
+	panel.anchor_top = 0.0
+	panel.anchor_right = 0.0
+	panel.anchor_bottom = 0.0
+	panel.position = Vector2.ZERO
 	panel.custom_minimum_size = Vector2(AUTH_BLOCK_WIDTH, _get_auth_block_height())
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
@@ -361,11 +361,11 @@ func _build_auth_block() -> PanelContainer:
 
 func _build_loading_block() -> Control:
 	var block := Control.new()
-	block.anchor_left = 0.5
-	block.anchor_top = 0.80
-	block.anchor_right = 0.5
-	block.anchor_bottom = 0.80
-	block.position = Vector2(-190, 0)
+	block.anchor_left = 0.0
+	block.anchor_top = 0.0
+	block.anchor_right = 0.0
+	block.anchor_bottom = 0.0
+	block.position = Vector2.ZERO
 	block.custom_minimum_size = Vector2(380, 82)
 
 	var frame := PanelContainer.new()
@@ -424,11 +424,11 @@ func _build_loading_block() -> Control:
 func _build_tap_hint() -> Label:
 	var hint := Label.new()
 	hint.text = TAP_TO_START_TEXT
-	hint.anchor_left = 0.5
-	hint.anchor_top = 0.84
-	hint.anchor_right = 0.5
-	hint.anchor_bottom = 0.84
-	hint.position = Vector2(-190, 0)
+	hint.anchor_left = 0.0
+	hint.anchor_top = 0.0
+	hint.anchor_right = 0.0
+	hint.anchor_bottom = 0.0
+	hint.position = Vector2.ZERO
 	hint.size = Vector2(380, 36)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiFonts.apply_noto(hint, UiPalette.FONT_SIZE_TITLE)
@@ -466,14 +466,20 @@ func _sync_adaptive_layout() -> void:
 	var content_origin: Vector2 = AdaptiveViewportScript.get_content_origin(self)
 	var visible_size: Vector2 = AdaptiveViewportScript.get_visible_size(self)
 	var is_compact_auth_focus: bool = _is_compact_auth_focus_active(visible_size)
-	var content_origin_x: float = content_origin.x
+	var safe_frame_left: float = content_origin.x
+	var safe_frame_width: float = AdaptiveViewportScript.BASE_SIZE.x
 
 	if _title_card != null:
 		_title_card.visible = not is_compact_auth_focus
-		_title_card.position = Vector2(content_origin_x - 250.0, content_origin.y + TITLE_CARD_DEFAULT_TOP)
+		var title_width: float = _title_card.custom_minimum_size.x
+		_title_card.position = Vector2(
+			safe_frame_left + (safe_frame_width - title_width) * 0.5,
+			content_origin.y + TITLE_CARD_DEFAULT_TOP
+		)
 
 	if _auth_block != null:
 		var auth_height: float = _auth_block.custom_minimum_size.y
+		var auth_width: float = _auth_block.custom_minimum_size.x
 		var default_auth_top: float = content_origin.y + AUTH_BLOCK_DEFAULT_TOP
 		var min_auth_top: float = content_origin.y + AUTH_BLOCK_FOCUS_MIN_TOP
 		var max_auth_top: float = maxf(
@@ -483,13 +489,24 @@ func _sync_adaptive_layout() -> void:
 		var auth_top: float = default_auth_top
 		if is_compact_auth_focus:
 			auth_top = _fit_top_position(default_auth_top, min_auth_top, max_auth_top)
-		_auth_block.position = Vector2(content_origin_x - 220.0, auth_top)
+		_auth_block.position = Vector2(
+			safe_frame_left + (safe_frame_width - auth_width) * 0.5,
+			auth_top
+		)
 
 	if _loading_block != null:
-		_loading_block.position = Vector2(content_origin_x - 190.0, content_origin.y + LOADING_BLOCK_DEFAULT_TOP)
+		var loading_width: float = _loading_block.custom_minimum_size.x
+		_loading_block.position = Vector2(
+			safe_frame_left + (safe_frame_width - loading_width) * 0.5,
+			content_origin.y + LOADING_BLOCK_DEFAULT_TOP
+		)
 
 	if _tap_hint != null:
-		_tap_hint.position = Vector2(content_origin_x - 190.0, content_origin.y + TAP_HINT_DEFAULT_TOP)
+		var tap_hint_width: float = _tap_hint.size.x
+		_tap_hint.position = Vector2(
+			safe_frame_left + (safe_frame_width - tap_hint_width) * 0.5,
+			content_origin.y + TAP_HINT_DEFAULT_TOP
+		)
 
 	if _logout_button != null:
 		_logout_button.position = content_origin + Vector2(720.0 - 156.0, 28.0)
