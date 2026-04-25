@@ -27,6 +27,17 @@
     "assets/sprites/cdn/ui/treasure",
     "assets/sprites/cdn/ui/activity"
   ],
+  "export_prune_paths": [
+    "assets/sprites/cdn/ui/activity/arena_background_v1.png",
+    "assets/sprites/cdn/ui/activity/chat_background_v1.png",
+    "assets/sprites/cdn/ui/activity/config_background_v1.png",
+    "assets/sprites/cdn/ui/activity/dungeon_background_v1.png",
+    "assets/sprites/cdn/ui/activity/enhance_background_v1.png",
+    "assets/sprites/cdn/ui/activity/gacha_background_v1.png",
+    "assets/sprites/cdn/ui/activity/mail_background_v1.png",
+    "assets/sprites/cdn/ui/activity/scooper_background_v1.png",
+    "assets/sprites/cdn/ui/activity/shop_background_v1.png"
+  ],
   "phase1_cdn_roots": [
     "assets/sprites/cdn/ui/character_refs",
     "assets/sprites/cdn/ui/memory",
@@ -63,6 +74,22 @@
     "assets/sprites/cdn/ui/rewards/trap_points.png",
     "assets/sprites/cdn/ui/rewards/whisker_shards.png"
   ],
+  "phase3_completed_roots": [
+    "assets/sprites/cdn/ui/activity"
+  ],
+  "phase3_completed_files": [
+    "assets/sprites/cdn/ui/activity/activity_background_v1.png",
+    "assets/sprites/cdn/ui/activity/arena_background_v1.png",
+    "assets/sprites/cdn/ui/activity/chat_background_v1.png",
+    "assets/sprites/cdn/ui/activity/config_background_v1.png",
+    "assets/sprites/cdn/ui/activity/dungeon_background_v1.png",
+    "assets/sprites/cdn/ui/activity/enhance_background_v1.png",
+    "assets/sprites/cdn/ui/activity/gacha_background_v1.png",
+    "assets/sprites/cdn/ui/activity/mail_background_v1.png",
+    "assets/sprites/cdn/ui/activity/scooper_background_v1.png",
+    "assets/sprites/cdn/ui/activity/shop_background_v1.png",
+    "assets/sprites/cdn/ui/activity/combat_trial/sofa_trial_card.svg"
+  ],
   "split_folders": {
     "assets/sprites/ui/rewards": {
       "cdn": [
@@ -95,6 +122,26 @@
         "hud",
         "home_shell_core_panels",
         "first-paint_assets"
+      ]
+    },
+    "assets/sprites/ui/activity": {
+      "cdn": [
+        "activity_background_v1.png",
+        "arena_background_v1.png",
+        "chat_background_v1.png",
+        "config_background_v1.png",
+        "dungeon_background_v1.png",
+        "enhance_background_v1.png",
+        "gacha_background_v1.png",
+        "mail_background_v1.png",
+        "scooper_background_v1.png",
+        "shop_background_v1.png",
+        "combat_trial/sofa_trial_card.svg"
+      ],
+      "local": [
+        "start_scene_homey_v1.png",
+        "battle_background_homey_v1.png",
+        "combat_trial/bath_trial_bg.svg"
       ]
     }
   },
