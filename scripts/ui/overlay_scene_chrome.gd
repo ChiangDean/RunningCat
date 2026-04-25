@@ -223,7 +223,7 @@ static func make_card_panel(accent: Color = CARD_BORDER, fill: Color = CARD_FILL
 static func _apply_shell_background(background: TextureRect, slot: String) -> void:
 	if background == null:
 		return
-	background.texture = AssetResolver.resolve_background_texture(slot)
+	AssetResolver.apply_background_texture(background, slot)
 	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED

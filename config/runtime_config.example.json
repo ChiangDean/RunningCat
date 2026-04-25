@@ -4,22 +4,32 @@
   "support_url": "https://chiangdean.github.io/MeowPartyDashClient/support/",
   "privacy_policy_url": "https://chiangdean.github.io/MeowPartyDashClient/privacy/",
   "account_deletion_url": "https://chiangdean.github.io/MeowPartyDashClient/account-deletion/",
+  "assets_base_url": "",
+  "use_cdn_assets": false,
   "feature_flags": {
     "oauth_enabled": true,
     "paid_shop_enabled": true
   },
   "environments": {
     "Local": {
-      "api_base_url": "http://localhost:5000/api"
+      "api_base_url": "http://localhost:5000/api",
+      "assets_base_url": "",
+      "use_cdn_assets": false
     },
     "DEV": {
-      "api_base_url": "https://your-dev-api.example.com/api"
+      "api_base_url": "https://your-dev-api.example.com/api",
+      "assets_base_url": "https://pub-your-dev-bucket-id.r2.dev",
+      "use_cdn_assets": true
     },
     "Sandbox": {
-      "api_base_url": "https://your-sandbox-api.example.com/api"
+      "api_base_url": "https://your-sandbox-api.example.com/api",
+      "assets_base_url": "https://pub-your-sandbox-bucket-id.r2.dev",
+      "use_cdn_assets": true
     },
     "Production": {
-      "api_base_url": "https://your-production-api.example.com/api"
+      "api_base_url": "https://your-production-api.example.com/api",
+      "assets_base_url": "https://pub-your-production-bucket-id.r2.dev",
+      "use_cdn_assets": true
     }
   }
 }

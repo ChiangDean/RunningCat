@@ -431,7 +431,7 @@ const SHOP_BUNDLES := {
 static func make_fullscreen_background(slot: String) -> TextureRect:
 	var background := TextureRect.new()
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	background.texture = resolve_background_texture(slot)
+	apply_background_texture(background, slot)
 	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -456,9 +456,32 @@ static func load_texture(path: String) -> Texture2D:
 	return texture as Texture2D
 
 
+static func resolve_cdn_asset_url(path: String) -> String:
+	if not RuntimeConfig.should_use_cdn_assets():
+		return ""
+	var normalized_path: String = path.strip_edges()
+	if normalized_path == "" or not normalized_path.begins_with("res://assets/"):
+		return ""
+	return "%s/%s" % [RuntimeConfig.get_assets_base_url(), normalized_path.trim_prefix("res://")]
+
+
+static func apply_background_texture(texture_rect: TextureRect, slot: String) -> void:
+	if texture_rect == null:
+		return
+	var asset_path: String = _get_background_path(slot)
+	var fallback_texture: Texture2D = resolve_background_texture(slot)
+	CdnTextureLoader.apply_texture(texture_rect, resolve_cdn_asset_url(asset_path), fallback_texture)
+
+
+static func apply_preview_texture(texture_rect: TextureRect, path: String, fallback_slot: String = DEFAULT_BACKGROUND_SLOT) -> void:
+	if texture_rect == null:
+		return
+	var fallback_texture: Texture2D = resolve_preview_texture(path, fallback_slot)
+	CdnTextureLoader.apply_texture(texture_rect, resolve_cdn_asset_url(path), fallback_texture)
+
+
 static func resolve_background_texture(slot: String) -> Texture2D:
-	var resolved_slot: String = slot.strip_edges().to_lower()
-	var texture: Texture2D = load_texture(str(BACKGROUNDS.get(resolved_slot, "")))
+	var texture: Texture2D = load_texture(_get_background_path(slot))
 	if texture != null:
 		return texture
 	return load_texture(str(BACKGROUNDS.get(DEFAULT_BACKGROUND_SLOT, "")))
@@ -484,6 +507,11 @@ static func resolve_preview_texture(path: String, fallback_slot: String = DEFAUL
 	if texture != null:
 		return texture
 	return resolve_background_texture(fallback_slot)
+
+
+static func _get_background_path(slot: String) -> String:
+	var resolved_slot: String = slot.strip_edges().to_lower()
+	return str(BACKGROUNDS.get(resolved_slot, ""))
 
 
 static func resolve_catalog_path(raw_path: Variant) -> String:

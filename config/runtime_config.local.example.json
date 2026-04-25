@@ -1,6 +1,8 @@
 {
-  "environment": "Local",
+  "environment": "DEV",
   "api_base_url": "http://localhost:5000/api",
+  "assets_base_url": "https://pub-your-dev-bucket-id.r2.dev",
+  "use_cdn_assets": false,
   "support_email": "",
   "support_url": "https://chiangdean.github.io/MeowPartyDashClient/support/",
   "privacy_policy_url": "https://chiangdean.github.io/MeowPartyDashClient/privacy/",

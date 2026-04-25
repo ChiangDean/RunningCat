@@ -27,6 +27,7 @@ UiAudio="*res://scripts/ui/UiAudio.gd"
 ClientSettings="*res://scripts/gamestate/ClientSettings.gd"
 ToastManager="*res://scripts/ui/ToastManager.gd"
 PowerChangeAnimator="*res://scripts/ui/PowerChangeAnimator.gd"
+CdnTextureLoader="*res://scripts/ui/CdnTextureLoader.gd"
 
 [display]
 
