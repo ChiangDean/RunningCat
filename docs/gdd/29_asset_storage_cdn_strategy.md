@@ -352,3 +352,87 @@ assets/
 - 美術新增資產時，先按「是否為主流程硬依賴」決定資料夾
 
 不要再用「哪張圖看起來大就先搬」這種一次性判斷，應該按本文件的類型規則執行。
+
+---
+
+## 10. 維運流程
+
+以下流程是之後新增圖片時的標準做法。
+
+### 10.1 新增一張圖時要先判斷什麼
+
+先問自己兩件事：
+
+1. 這張圖是不是主流程一進場就一定要有？
+2. 這張圖如果晚 0.5 到 2 秒出現，功能是否仍可接受？
+
+判斷結果：
+
+- 如果是「主流程一定要有」，放 `Local`
+- 如果是「可晚載入的展示 / preview / 背景」，放 `CDN`
+
+### 10.2 新圖放置步驟
+
+如果是 `Local`：
+
+1. 放到對應 `assets/sprites/ui/...` 或 `assets/sprites/battle/...`
+2. 確認可以安全被 `preload(...)` 或 scene `ext_resource` 使用
+3. 不要加入 `cdn_asset_manifest.json` 的 CDN 規則
+
+如果是 `CDN`：
+
+1. 放到對應 `assets/sprites/cdn/ui/...`
+2. 優先透過 `AssetResolver` 或既有 helper 接入
+3. 視需要補到 `config/cdn_asset_manifest.json`
+4. 確認它不屬於 parse-time 必要資產後，才考慮列入 export prune
+
+### 10.3 `cdn_asset_manifest.json` 怎麼用
+
+目前這份 manifest 有兩個重點欄位：
+
+- `cdn_roots`
+  給 CI 的 R2 同步白名單使用。只要列在這裡，deploy workflow 就會同步到 R2。
+- `export_prune_paths`
+  給 Web export 前刪檔使用。只有明確確認安全排除的檔案，才可以放這裡。
+
+規則：
+
+- `cdn_roots` 可以是整個資料夾
+- `export_prune_paths` 應該盡量保守，通常是已驗證過的單檔
+- 不要把 still-in-use 的 scene 預設圖整包加進 `export_prune_paths`
+
+### 10.4 什麼情況不能直接加到 `export_prune_paths`
+
+遇到以下任一情況，先不要排除：
+
+- 該圖仍被 `preload(...)` 使用
+- 該圖仍被 `.tscn` 的 `ext_resource` 直接引用
+- 該頁還沒有 CDN-first fallback
+- 還沒確認 R2 已有檔案
+- 該圖屬於首屏、戰鬥、主殼 HUD 核心資產
+
+### 10.5 CI 出問題時先看哪裡
+
+如果 deploy 失敗，優先依序檢查：
+
+1. `Sync assets to R2`
+   看 manifest 白名單路徑是否存在、R2 secret 是否正常
+2. `Remove CDN-managed assets from Web export`
+   看是否刪到了仍被 parse-time 依賴的資產
+3. `Export Web`
+   看 `build/web/index.pck` 最終大小
+4. `Deploy to gh-pages`
+   若超過 100 MB，代表這輪 prune 還不夠
+
+### 10.6 美術與工程的簡單分工
+
+美術新增資產時：
+
+- 先依本文件判斷 `Local` / `CDN`
+- 優先放到正確資料夾，不要先丟 legacy 路徑再等工程搬
+
+工程接線時：
+
+- `Local` 資產可用既有本地載入方式
+- `CDN` 資產應優先透過 `AssetResolver` / helper 接入
+- 修改完成後，要同步檢查 manifest 與文件是否仍一致
