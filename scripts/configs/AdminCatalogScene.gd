@@ -13,6 +13,7 @@ const SECTION_HINTS := {
 	"treasures": "管理寶物與效果。",
 	"achievements": "管理成就條件與獎勵。",
 	"shop": "管理 shop category、group、bundle 與獎勵。",
+	"combat-power": "管理戰力換算權重；bootstrap 會回傳權重表，前端用目前資料本機計算 combatScore。",
 }
 
 var _access_payload: Dictionary = {}
@@ -291,6 +292,8 @@ func _create_renderer(section_key: String) -> Control:
 			return AdminCatalogCatsRenderer.new()
 		"skills":
 			return AdminCatalogSkillsRenderer.new()
+		"combat-power":
+			return AdminCatalogCombatPowerRenderer.new()
 		_:
 			return null
 

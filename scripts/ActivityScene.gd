@@ -150,8 +150,6 @@ func _on_permanent_entry_pressed(entry_key: String) -> void:
 			_on_dungeon_pressed()
 		"arena":
 			_on_arena_pressed()
-		"combat_trial":
-			_on_combat_trial_pressed()
 		"expedition":
 			_on_expedition_pressed()
 

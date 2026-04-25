@@ -283,6 +283,7 @@ func _ready() -> void:
 	GameState.combat_trial_score_changed.connect(_on_combat_trial_score_changed)
 	GameState.red_dot_state_changed.connect(_on_red_dot_state_changed)
 	_build_scene()
+	call_deferred("_show_pending_combat_power_change")
 	_refresh_home_red_dots()
 	UiAudio.stop_bgm()
 	_start_battle()
@@ -679,7 +680,7 @@ func _build_ui() -> void:
 	_ui_layer.add_child(top_bar_root)
 
 	_top_avatar_rect = top_bar_root.get_node("Avatar") as TextureRect
-	_top_avatar_rect.texture = AssetResolver.resolve_profile_avatar(GameState.get_profile_avatar_id())
+	AssetResolver.apply_profile_avatar_texture(_top_avatar_rect, GameState.get_profile_avatar_id())
 	if _top_avatar_rect.texture == null:
 		_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
 	var avatar_circle_material := ShaderMaterial.new()
@@ -703,16 +704,16 @@ func _build_ui() -> void:
 	_resource_value_labels["diamonds"] = top_bar_root.get_node("DiamondsPanel/Value") as Label
 	_resource_value_labels["trap_points"] = top_bar_root.get_node("GoldPanel/Value") as Label
 	_resource_value_labels["power"] = top_bar_root.get_node("PowerPanel/Value") as Label
-	var combat_trial_button: Button = Button.new()
-	combat_trial_button.flat = true
-	combat_trial_button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
-	combat_trial_button.focus_mode = Control.FOCUS_NONE
-	combat_trial_button.position = Vector2(452.0, 128.0)
-	combat_trial_button.size = Vector2(210.0, 58.0)
-	combat_trial_button.modulate = Color(1.0, 1.0, 1.0, 0.01)
-	combat_trial_button.pressed.connect(UiAudio.play_ui_click)
-	combat_trial_button.pressed.connect(_open_combat_trial_scene)
-	top_bar_root.add_child(combat_trial_button)
+	var power_button: Button = Button.new()
+	power_button.flat = true
+	power_button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	power_button.focus_mode = Control.FOCUS_NONE
+	power_button.position = Vector2(452.0, 128.0)
+	power_button.size = Vector2(210.0, 58.0)
+	power_button.modulate = Color(1.0, 1.0, 1.0, 0.01)
+	power_button.pressed.connect(UiAudio.play_ui_click)
+	power_button.pressed.connect(_on_stats_btn_pressed)
+	top_bar_root.add_child(power_button)
 	_apply_home_hud_fonts()
 	var stage_panel := _make_panel(
 		Vector2(188.0, 244.0),
@@ -2175,8 +2176,9 @@ func _refresh_ui() -> void:
 	if _profile_level_label != null:
 		_profile_level_label.text = str(GameState.player_data.scooper_level)
 	if _top_avatar_rect != null:
-		var avatar_texture: Texture2D = AssetResolver.resolve_profile_avatar(GameState.get_profile_avatar_id())
-		_top_avatar_rect.texture = avatar_texture if avatar_texture != null else PROFILE_AVATAR_TEXTURE
+		AssetResolver.apply_profile_avatar_texture(_top_avatar_rect, GameState.get_profile_avatar_id())
+		if _top_avatar_rect.texture == null:
+			_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
 	if _top_exp_bar != null and _top_progress_value_label != null:
 		var top_profile: Dictionary = GameState.scooper_profile_data
 		var top_scooper_level: int
@@ -3607,8 +3609,14 @@ func _on_combat_trial_score_changed() -> void:
 	_refresh_ui()
 
 
-func _open_combat_trial_scene() -> void:
-	SceneNavigator.open_overlay_scene("res://scenes/CombatTrialScene.tscn")
+func _show_pending_combat_power_change() -> void:
+	var pending: Dictionary = GameState.consume_pending_combat_power_change()
+	if pending.is_empty():
+		return
+	PowerChangeAnimator.show_power_change(
+		int(pending.get("previousScore", 0)),
+		int(pending.get("currentScore", 0))
+	)
 
 
 func _on_red_dot_state_changed() -> void:

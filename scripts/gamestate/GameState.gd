@@ -8,10 +8,19 @@ const BossStage = preload("res://scripts/gamestate/GameStateBossStage.gd")
 
 const AUTH_SESSION_PATH := "user://auth_session.json"
 const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
+const COMBAT_TRIAL_VERSION: int = 1
+const COMBAT_TRIAL_SOFA_SECONDS: float = 60.0
+const COMBAT_TRIAL_BATH_TICK_COUNT: int = 600
+const COMBAT_TRIAL_BATH_BASE_DAMAGE: float = 2.0
+const COMBAT_TRIAL_BATH_GROWTH_PER_TICK: float = 0.065
+const COMBAT_TRIAL_BATH_SCORE_MULTIPLIER: int = 5
 
 var api_base_url: String = ""
 var auth_session: Dictionary = {}
 var is_new_player: bool = false
+var _is_applying_bootstrap: bool = false
+var _pending_combat_power_change: Dictionary = {}
+var _suppress_combat_power_notifications: bool = true
 
 signal achievements_changed
 signal chat_connection_state_changed(state: String)
@@ -22,6 +31,7 @@ signal party_cheer_coupon_count_changed(count: int)
 signal player_profile_changed
 signal player_wallet_changed
 signal combat_trial_score_changed
+signal combat_power_changed(previous_score: int, current_score: int)
 signal social_state_changed(domain_key: String)
 signal red_dot_state_changed
 
@@ -101,6 +111,8 @@ func clear_persisted_player_state() -> void:
 	party_applications_data = []
 	party_my_applications_data = []
 	party_red_dot_summary = {}
+	_pending_combat_power_change = {}
+	_suppress_combat_power_notifications = true
 	clear_chat_state()
 	set_party_cheer_coupon_count(0)
 	_emit_red_dot_state_changed()
@@ -277,6 +289,8 @@ func is_admin_session() -> bool:
 func apply_player_bootstrap(data: Dictionary) -> void:
 	if player_data == null:
 		player_data = PlayerData.load_or_default()
+	var should_release_combat_power_notifications: bool = _suppress_combat_power_notifications
+	_is_applying_bootstrap = true
 
 	player_data.account = data.get("account") if data.get("account") != null else player_data.account
 	player_data.display_name = data.get("displayName") if data.get("displayName") != null else player_data.display_name
@@ -309,7 +323,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	player_data.last_quit_time = int(data.get("lastQuitTimeUnixSeconds", player_data.last_quit_time))
 	player_data.poop_count = int(data.get("poopCount", player_data.poop_count))
 	player_data.party_cheer_coupon_count = int(data.get("partyCheerCouponCount", player_data.party_cheer_coupon_count))
-	_apply_combat_trial_scores(data, false)
+	_apply_combat_trial_scores(data, true, false)
 	player_data.memory_shards = int(data.get("memoryShards", player_data.memory_shards))
 	player_data.scooper_level = int(data.get("scooperLevel", player_data.scooper_level))
 	player_data.scooper_exp = int(data.get("scooperExp", player_data.scooper_exp))
@@ -389,6 +403,13 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 
 	var announcement_cat: Variant = data.get("announcementCatalog", [])
 	update_announcements(announcement_cat if announcement_cat is Array else [])
+	var combat_power_weight_cat: Variant = data.get("combatPowerWeights", [])
+	combat_power_weights = combat_power_weight_cat if combat_power_weight_cat is Array else combat_power_weights
+	CacheIO.save_catalog("combat_power_weights", combat_power_weights)
+
+	var opp_cfg: Variant = data.get("stageOpponentConfig", {})
+	stage_opponent_config = opp_cfg if opp_cfg is Dictionary else {}
+	CacheIO.save_config("stage_opponent_config", stage_opponent_config)
 
 	# ── Parse and cache live scooper data ──
 	var s_profile: Variant = data.get("scooperProfile", {})
@@ -450,6 +471,11 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 		party_my_applications_variant if party_my_applications_variant is Array else []
 	)
 	is_new_player = bool(data.get("isNewPlayer", false))
+	_is_applying_bootstrap = false
+	recalculate_combat_power()
+	if should_release_combat_power_notifications:
+		_pending_combat_power_change.clear()
+		_suppress_combat_power_notifications = false
 	player_profile_changed.emit()
 	player_wallet_changed.emit()
 	_emit_red_dot_state_changed()
@@ -641,6 +667,8 @@ var _achievement_popup_scheduled: bool = false
 var cat_catalog: Array = []
 var active_skill_catalog: Array = []
 var passive_skill_catalog: Array = []
+var combat_power_weights: Array = []
+var stage_opponent_config: Dictionary = {}
 var gacha_config: Dictionary = {}
 var _cat_file_map: Dictionary = {}
 
@@ -675,6 +703,7 @@ var party_cheer_status_data: Dictionary = {}
 var party_applications_data: Array = []
 var party_my_applications_data: Array = []
 var party_red_dot_summary: Dictionary = {}
+var combat_trial_battle_payload: Dictionary = {}
 
 
 func _ready() -> void:
@@ -683,6 +712,8 @@ func _ready() -> void:
 	cat_catalog = CacheIO.load_catalog("cat_catalog")
 	active_skill_catalog = CacheIO.load_catalog("active_skill_catalog")
 	passive_skill_catalog = CacheIO.load_catalog("passive_skill_catalog")
+	combat_power_weights = CacheIO.load_catalog("combat_power_weights")
+	stage_opponent_config = CacheIO.load_config_dict("stage_opponent_config")
 	dungeon_config = CacheIO.load_config_dict("dungeon_static")
 	boss_config = CacheIO.load_config_dict("boss_static")
 	arena_config = CacheIO.load_config_dict("arena_static")
@@ -936,6 +967,7 @@ func adjust_party_cheer_coupon_count(delta: int) -> void:
 func update_scooper_equipment(data: Array) -> void:
 	scooper_equipment_data = _normalize_image_fields_variant(data)
 	CacheIO.save_scooper("equipment", scooper_equipment_data)
+	recalculate_combat_power_if_ready()
 	_emit_red_dot_state_changed()
 
 ## Update special ability cache (memory + local file)
@@ -947,12 +979,14 @@ func update_scooper_ability(data: Array) -> void:
 func update_scooper_memory(data: Array) -> void:
 	scooper_memory_data = _normalize_image_fields_variant(data)
 	CacheIO.save_scooper("memory", scooper_memory_data)
+	recalculate_combat_power_if_ready()
 	_emit_red_dot_state_changed()
 
 ## Update treasure cache (memory + local file)
 func update_scooper_treasure(data: Array) -> void:
 	scooper_treasure_data = _normalize_image_fields_variant(data)
 	CacheIO.save_scooper("treasure", scooper_treasure_data)
+	recalculate_combat_power_if_ready()
 
 ## Update achievement cache (memory + local file)
 func update_scooper_achievement(data: Array) -> void:
@@ -1035,20 +1069,343 @@ func apply_wallet_snapshot(data: Dictionary) -> void:
 
 
 func apply_combat_trial_scores(data: Dictionary) -> void:
-	_apply_combat_trial_scores(data, true)
+	_apply_combat_trial_scores(data, true, false)
 
 
-func _apply_combat_trial_scores(data: Dictionary, emit_changed: bool) -> void:
+func apply_combat_power_score(current_score: int) -> void:
+	if player_data == null:
+		player_data = PlayerData.load_or_default()
+	var old_combat_score: int = player_data.combat_score
+	player_data.combat_score = current_score
+	player_data.save()
+	combat_trial_score_changed.emit()
+	if _suppress_combat_power_notifications:
+		return
+	if old_combat_score > 0 and old_combat_score != player_data.combat_score:
+		_pending_combat_power_change = {
+			"previousScore": old_combat_score,
+			"currentScore": player_data.combat_score,
+		}
+	if old_combat_score > 0 and old_combat_score != player_data.combat_score:
+		combat_power_changed.emit(old_combat_score, player_data.combat_score)
+
+
+func consume_pending_combat_power_change() -> Dictionary:
+	var pending: Dictionary = _pending_combat_power_change.duplicate(true)
+	_pending_combat_power_change.clear()
+	return pending
+
+
+func clear_pending_combat_power_change() -> void:
+	_pending_combat_power_change.clear()
+
+
+func recalculate_combat_power() -> void:
+	apply_combat_power_score(calculate_current_combat_power_score())
+
+
+func recalculate_combat_power_if_ready() -> void:
+	if _is_applying_bootstrap:
+		return
+	if player_data == null:
+		return
+	recalculate_combat_power()
+
+
+func calculate_current_combat_power_score() -> int:
+	var weights: Dictionary = _build_combat_power_weight_map()
+	if weights.is_empty():
+		return 0
+	var cats: Array[CatData] = _resolve_current_combat_power_cats()
+	var total: float = 0.0
+	for cat: CatData in cats:
+		var stats: Dictionary = {
+			"hp": float(cat.max_hp),
+			"atk": float(cat.atk),
+			"def": float(cat.defense),
+			"speed": float(cat.speed),
+			"crit_rate": clampf(float(cat.get_meta("crit_rate", 0.0)), 0.0, 1.0),
+			"crit_damage": maxf(0.0, float(cat.get_meta("crit_damage_bonus", 0.0))),
+			"damage_reduction": clampf(float(cat.get_meta("damage_reduction_bonus", 0.0)), 0.0, 0.9),
+			"cooldown_reduction": clampf(float(cat.get_meta("cdr", 0.0)), 0.0, 0.5),
+		}
+		_apply_combat_power_passives(stats, cat)
+		total += _score_combat_power_stats(stats, weights)
+	if total <= 0.0:
+		return 0
+	return mini(roundi(total), 2147483647)
+
+
+func _resolve_current_combat_power_cats() -> Array[CatData]:
+	if player_team.is_empty():
+		apply_active_team_from_config("Boss")
+
+	var result: Array[CatData] = []
+	for player_cat_id_variant: Variant in player_team:
+		var player_cat_id: int = int(player_cat_id_variant)
+		var cat_id: String = get_cat_file_id(player_cat_id)
+		if cat_id.is_empty():
+			continue
+		var data: CatData = CatData.from_json_file(cat_id + ".json")
+		if data == null:
+			continue
+		var player_cat: PlayerCatData = get_player_cat(cat_id)
+		data.apply_enhancement(player_cat)
+		data.apply_rank_bonus(player_cat)
+		apply_player_combat_bonuses(data)
+		result.append(data)
+	return result
+
+
+func _build_combat_power_weight_map() -> Dictionary:
+	var result: Dictionary = {}
+	for item_variant: Variant in combat_power_weights:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		if not bool(item.get("isEnabled", true)):
+			continue
+		var stat_key: String = _combat_power_stat_key(str(item.get("statType", "")))
+		if stat_key == "":
+			continue
+		result[stat_key] = {
+			"flat": float(item.get("flatWeight", 0.0)),
+			"percent": float(item.get("percentWeight", 0.0)),
+			"offset": float(item.get("baseOffset", 0.0)),
+		}
+	if result.is_empty():
+		result = _default_combat_power_weight_map()
+	return result
+
+
+func _default_combat_power_weight_map() -> Dictionary:
+	return {
+		"hp": {"flat": 5.0, "percent": 5.0, "offset": 0.0},
+		"atk": {"flat": 28.0, "percent": 28.0, "offset": 0.0},
+		"def": {"flat": 18.0, "percent": 18.0, "offset": 0.0},
+		"speed": {"flat": 2.0, "percent": 2.0, "offset": 0.0},
+		"crit_rate": {"flat": 180.0, "percent": 180.0, "offset": 0.0},
+		"crit_damage": {"flat": 120.0, "percent": 120.0, "offset": 0.0},
+		"damage_reduction": {"flat": 220.0, "percent": 220.0, "offset": 0.0},
+		"cooldown_reduction": {"flat": 140.0, "percent": 140.0, "offset": 0.0},
+	}
+
+
+func _score_combat_power_stats(stats: Dictionary, weights: Dictionary) -> float:
+	var total: float = 0.0
+	for stat_key_variant: Variant in stats.keys():
+		var stat_key: String = str(stat_key_variant)
+		if not weights.has(stat_key):
+			continue
+		var weight: Dictionary = weights[stat_key]
+		var value: float = maxf(0.0, float(stats.get(stat_key, 0.0)))
+		var effective_weight: float = float(weight.get("flat", 0.0))
+		if value < 1.0:
+			effective_weight += float(weight.get("percent", 0.0))
+		total += float(weight.get("offset", 0.0)) + value * effective_weight
+	return total
+
+
+func _apply_combat_power_passives(stats: Dictionary, cat: CatData) -> void:
+	for passive_variant: Variant in cat.passive_skills_data:
+		if not (passive_variant is Dictionary):
+			continue
+		var passive: Dictionary = passive_variant
+		var effects: Array = passive.get("effects", [])
+		var scaling: Array = passive.get("rank_scaling", [])
+		for index: int in range(effects.size()):
+			var effect_variant: Variant = effects[index]
+			if not (effect_variant is Dictionary):
+				continue
+			var effect: Dictionary = effect_variant
+			var value: float = float(effect.get("value", 0.0)) + _combat_power_scaling_value(scaling, index, cat.rank)
+			var effect_type: String = str(effect.get("type", ""))
+			if effect_type == "stat_boost":
+				_apply_combat_power_stat_boost(stats, str(effect.get("stat", "")), str(effect.get("value_type", "")), value)
+			elif effect_type == "damage_reduction":
+				stats["damage_reduction"] = float(stats.get("damage_reduction", 0.0)) + value
+			elif effect_type == "cooldown_reduction":
+				stats["cooldown_reduction"] = float(stats.get("cooldown_reduction", 0.0)) + value
+
+
+func _apply_combat_power_stat_boost(stats: Dictionary, stat: String, value_type: String, value: float) -> void:
+	var stat_key: String = _combat_power_stat_key(stat)
+	if stat_key == "":
+		return
+	if value_type == "percent" and (stat_key == "hp" or stat_key == "atk" or stat_key == "def"):
+		stats[stat_key] = float(stats.get(stat_key, 0.0)) * (1.0 + value)
+		return
+	stats[stat_key] = float(stats.get(stat_key, 0.0)) + value
+
+
+func _combat_power_scaling_value(scaling: Array, effect_index: int, rank: int) -> float:
+	var total: float = 0.0
+	for row_variant: Variant in scaling:
+		if not (row_variant is Dictionary):
+			continue
+		var row: Dictionary = row_variant
+		if int(row.get("effect_index", -1)) != effect_index:
+			continue
+		total += floorf(float(rank) / 5.0) * float(row.get("per_5_ranks", 0.0))
+	return total
+
+
+func _combat_power_stat_key(value: String) -> String:
+	var normalized: String = _to_snake_case(value.strip_edges())
+	match normalized:
+		"hp", "max_hp", "max_hp_percent", "hp_percent":
+			return "hp"
+		"atk", "atk_percent":
+			return "atk"
+		"def", "defense", "def_percent":
+			return "def"
+		"speed":
+			return "speed"
+		"crit_rate":
+			return "crit_rate"
+		"crit_damage":
+			return "crit_damage"
+		"damage_reduction":
+			return "damage_reduction"
+		"cooldown_reduction", "cdr":
+			return "cooldown_reduction"
+		_:
+			return ""
+
+
+func apply_local_combat_trial_scores(data: Dictionary) -> void:
+	if player_data == null:
+		player_data = PlayerData.load_or_default()
+	player_data.sofa_score = int(data.get("sofaScore", player_data.sofa_score))
+	player_data.bath_score = int(data.get("bathScore", player_data.bath_score))
+	player_data.combat_trial_version = int(data.get("trialVersion", player_data.combat_trial_version))
+	player_data.save()
+	if data.has("sofaScore") or data.has("bathScore"):
+		combat_trial_score_changed.emit()
+
+
+func calculate_current_combat_trial_scores() -> Dictionary:
+	var cats: Array[CatData] = resolve_current_combat_trial_cats()
+	if cats.is_empty():
+		return {
+			"sofaScore": 0,
+			"bathScore": 0,
+			"combatScore": 0,
+			"trialVersion": COMBAT_TRIAL_VERSION,
+		}
+	var sofa_score: int = calculate_sofa_trial_score(cats)
+	var bath_score: int = calculate_bath_trial_score(cats)
+	return {
+		"sofaScore": sofa_score,
+		"bathScore": bath_score,
+		"combatScore": mini(int(sofa_score) + int(bath_score), 2147483647),
+		"trialVersion": COMBAT_TRIAL_VERSION,
+	}
+
+
+func resolve_current_combat_trial_cats() -> Array[CatData]:
+	if player_team.is_empty():
+		apply_active_team_from_config("Boss")
+
+	var result: Array[CatData] = []
+	for i: int in range(player_team.size()):
+		var player_cat_id: int = int(player_team[i])
+		var cat_id: String = get_cat_file_id(player_cat_id)
+		if cat_id.is_empty():
+			continue
+		var data: CatData = CatData.from_json_file(cat_id + ".json")
+		if data == null:
+			continue
+		var player_cat: PlayerCatData = get_player_cat(cat_id)
+		data.apply_enhancement(player_cat)
+		data.apply_rank_bonus(player_cat)
+		apply_player_combat_bonuses(data)
+		result.append(data)
+	return result
+
+
+func calculate_sofa_trial_score(cats: Array[CatData]) -> int:
+	var total: float = 0.0
+	for cat: CatData in cats:
+		var crit_rate: float = clampf(float(cat.get_meta("crit_rate", 0.0)), 0.0, 1.0)
+		var crit_damage_bonus: float = maxf(0.0, float(cat.get_meta("crit_damage_bonus", 0.0)))
+		var crit_multiplier: float = 1.0 + crit_rate * (1.5 + crit_damage_bonus - 1.0)
+		var speed_multiplier: float = 0.75 + clampf(cat.speed / 220.0, 0.25, 1.4)
+		var cdr: float = clampf(float(cat.get_meta("cdr", 0.0)), 0.0, 0.5)
+		var skill_multiplier: float = 1.0 + float(cat.active_skills_data.size()) * (0.18 + cdr * 0.5)
+		total += float(cat.atk) * speed_multiplier * crit_multiplier * skill_multiplier * COMBAT_TRIAL_SOFA_SECONDS
+	return maxi(0, roundi(total))
+
+
+func calculate_bath_trial_score(cats: Array[CatData]) -> int:
+	var hp_values: Array[float] = []
+	var def_values: Array[float] = []
+	var reduction_values: Array[float] = []
+	for cat: CatData in cats:
+		hp_values.append(float(cat.max_hp))
+		def_values.append(float(cat.defense))
+		reduction_values.append(clampf(float(cat.get_meta("damage_reduction_bonus", 0.0)), 0.0, 0.9))
+
+	var pressure_score: float = 0.0
+	for tick: int in range(COMBAT_TRIAL_BATH_TICK_COUNT):
+		var alive_count: int = 0
+		for hp: float in hp_values:
+			if hp > 0.0:
+				alive_count += 1
+		if alive_count <= 0:
+			break
+
+		var raw_damage: float = COMBAT_TRIAL_BATH_BASE_DAMAGE + COMBAT_TRIAL_BATH_GROWTH_PER_TICK * float(tick)
+		pressure_score += raw_damage * float(alive_count)
+
+		for index: int in range(hp_values.size()):
+			if hp_values[index] <= 0.0:
+				continue
+			var defense_reduction: float = def_values[index] / (def_values[index] + 120.0)
+			var effective_damage: float = raw_damage * (1.0 - defense_reduction) * (1.0 - reduction_values[index])
+			hp_values[index] = maxf(0.0, hp_values[index] - maxf(1.0, effective_damage))
+
+	var remaining_hp: float = 0.0
+	for hp: float in hp_values:
+		remaining_hp += maxf(0.0, hp)
+	if remaining_hp > 0.0:
+		pressure_score += remaining_hp * 0.35
+	return maxi(0, roundi(pressure_score) * COMBAT_TRIAL_BATH_SCORE_MULTIPLIER)
+
+
+func set_combat_trial_battle_payload(payload: Dictionary) -> void:
+	combat_trial_battle_payload = payload.duplicate(true)
+
+
+func get_combat_trial_battle_payload() -> Dictionary:
+	return combat_trial_battle_payload.duplicate(true)
+
+
+func clear_combat_trial_battle_payload() -> void:
+	combat_trial_battle_payload.clear()
+
+
+func _apply_combat_trial_scores(data: Dictionary, emit_changed: bool, update_combat_power: bool) -> void:
 	if player_data == null:
 		player_data = PlayerData.load_or_default()
 	var old_combat_score: int = player_data.combat_score
 	player_data.sofa_score = int(data.get("sofaScore", player_data.sofa_score))
 	player_data.bath_score = int(data.get("bathScore", player_data.bath_score))
-	player_data.combat_score = int(data.get("combatScore", player_data.combat_score))
+	if update_combat_power:
+		player_data.combat_score = int(data.get("combatScore", player_data.combat_score))
 	player_data.combat_trial_version = int(data.get("combatTrialVersion", data.get("trialVersion", player_data.combat_trial_version)))
 	player_data.save()
-	if emit_changed and old_combat_score != player_data.combat_score:
+	if emit_changed:
 		combat_trial_score_changed.emit()
+	if _suppress_combat_power_notifications:
+		return
+	if emit_changed and update_combat_power and old_combat_score > 0 and old_combat_score != player_data.combat_score:
+		_pending_combat_power_change = {
+			"previousScore": old_combat_score,
+			"currentScore": player_data.combat_score,
+		}
+	if emit_changed and update_combat_power and old_combat_score > 0 and old_combat_score != player_data.combat_score:
+		combat_power_changed.emit(old_combat_score, player_data.combat_score)
 
 
 func apply_idle_claim_response(data: Dictionary) -> void:
@@ -1223,6 +1580,7 @@ func update_player_cats(data: Array) -> void:
 		owned_cat_ids = ["milk_cat"]
 	player_data.owned_cat_ids = owned_cat_ids
 	player_data.save()
+	recalculate_combat_power_if_ready()
 
 
 func update_gacha(data: Dictionary) -> void:
@@ -1303,14 +1661,20 @@ func update_enhance(data: Array) -> void:
 			"atk": int(row.get("atkPoints", 0)),
 			"def": int(row.get("defPoints", 0)),
 		}
+		player_cat.save()
 
 		for cat_row: Variant in player_cats_data:
 			if cat_row is Dictionary and int(cat_row.get("playerCatId", -1)) == int(row.get("playerCatId", -2)):
 				cat_row["catFoodLevel"] = player_cat.cat_food_level
 				cat_row["rank"] = player_cat.rank
+				cat_row["catShards"] = player_cat.cat_shards
+				cat_row["hpPoints"] = int(player_cat.special_food_points.get("hp", 0))
+				cat_row["atkPoints"] = int(player_cat.special_food_points.get("atk", 0))
+				cat_row["defPoints"] = int(player_cat.special_food_points.get("def", 0))
 				break
 	if not player_cats_data.is_empty():
 		CacheIO.save_config("player_cats", player_cats_data)
+	recalculate_combat_power_if_ready()
 	_emit_red_dot_state_changed()
 
 
@@ -1322,7 +1686,12 @@ func apply_enhance_overview(data: Dictionary) -> void:
 	var cats: Variant = data.get("cats", [])
 	if cats is Array:
 		update_enhance(cats)
+	else:
+		recalculate_combat_power_if_ready()
 	player_data.save()
+	player_wallet_changed.emit()
+	player_profile_changed.emit()
+	_emit_red_dot_state_changed()
 
 
 func update_dungeon_overview(data: Array) -> void:
@@ -1366,6 +1735,8 @@ func update_player_teams(data: Array) -> void:
 			if team_type != "":
 				teams_data[team_type] = team
 	CacheIO.save_config("teams", data)
+	apply_active_team_from_config("Boss")
+	recalculate_combat_power_if_ready()
 
 
 ## Get team data by teamType (e.g. "Boss", "Dungeon", "ArenaAttack", "ArenaDefense")
@@ -1626,7 +1997,23 @@ func get_difficulty_multiplier() -> float:
 	return BossStage.get_difficulty_multiplier(current_global_stage, boss_config)
 
 func get_enemy_ids() -> Array:
-	return BossStage.get_enemy_ids(current_global_stage, boss_config)
+	return BossStage.get_enemy_ids(current_global_stage, boss_config, stage_opponent_config)
+
+
+func get_enemy_catalog_item(enemy_key: String) -> Dictionary:
+	for item: Variant in stage_opponent_config.get("enemies", []):
+		if item is Dictionary and str(item.get("enemyKey", "")) == enemy_key:
+			return {
+				"id": enemy_key,
+				"display_name": str(item.get("displayName", enemy_key)),
+				"cat_type": "enemy",
+				"base_hp": int(item.get("baseHp", 100)),
+				"base_atk": int(item.get("baseAtk", 10)),
+				"base_def": int(item.get("baseDef", 0)),
+				"base_speed": float(item.get("baseSpd", 100.0)),
+				"weight": 100.0,
+			}
+	return {}
 
 
 # ── Stage progress logic ──────────────────────────────────
@@ -1994,8 +2381,8 @@ func get_memory_bonuses() -> Array:
 			if not bool(item.get("isUnlocked", false)):
 				continue
 			live_result.append({
-				"target": str(item.get("bonusTarget", "All")).to_lower(),
-				"stat": str(item.get("bonusStatType", "")),
+				"target": _to_snake_case(str(item.get("bonusTarget", "All"))),
+				"stat": _to_snake_case(str(item.get("bonusStatType", ""))),
 				"value": float(item.get("bonusValue", 0.0)),
 			})
 		return live_result
@@ -2122,8 +2509,8 @@ func get_treasure_effects() -> Array:
 			for _i in range(quantity):
 				for effect: Dictionary in effects:
 					scooper_result.append({
-						"target": str(effect.get("targetElementType", "all")).to_lower(),
-						"stat": str(effect.get("statType", "")),
+						"target": _to_snake_case(str(effect.get("targetElementType", effect.get("targetScope", "All")))),
+						"stat": _to_snake_case(str(effect.get("statType", ""))),
 						"value": float(effect.get("value", 0.0)),
 					})
 		return scooper_result
@@ -2251,8 +2638,8 @@ func get_equipment_bonuses() -> Array:
 				continue
 			var bonus_per_level: float = float(item.get("bonusPerLevel", 0.0))
 			live_result.append({
-				"target": str(item.get("bonusTarget", "All")).to_lower(),
-				"stat":   str(item.get("bonusStat", "")),
+				"target": _to_snake_case(str(item.get("bonusTarget", "All"))),
+				"stat":   _to_snake_case(str(item.get("bonusStat", ""))),
 				"value":  bonus_per_level * level,
 			})
 		return live_result

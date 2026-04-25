@@ -63,6 +63,13 @@ const AUTH_BLOCK_HEIGHT_WITH_OAUTH := 584.0
 const AUTH_BLOCK_HEIGHT_LOGIN_COMPACT := 388.0
 const AUTH_BLOCK_HEIGHT_REGISTER_COMPACT := 456.0
 const AUTH_BLOCK_HEIGHT_OAUTH_PROFILE := 286.0
+const TITLE_CARD_DEFAULT_TOP := 307.2
+const AUTH_BLOCK_DEFAULT_TOP := 806.4
+const LOADING_BLOCK_DEFAULT_TOP := 1024.0
+const TAP_HINT_DEFAULT_TOP := 1075.2
+const AUTH_BLOCK_FOCUS_MIN_TOP := 120.0
+const AUTH_BLOCK_FOCUS_BOTTOM_MARGIN := 24.0
+const KEYBOARD_COMPACT_HEIGHT_THRESHOLD := 1120.0
 enum AuthMode
 {
 	LOGIN,
@@ -190,11 +197,11 @@ func _build_ui() -> void:
 
 func _build_title_block() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.24
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.24
-	panel.position = Vector2(-250, 0)
+	panel.anchor_left = 0.0
+	panel.anchor_top = 0.0
+	panel.anchor_right = 0.0
+	panel.anchor_bottom = 0.0
+	panel.position = Vector2.ZERO
 	panel.custom_minimum_size = Vector2(500, 156)
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
@@ -239,11 +246,11 @@ func _build_title_block() -> PanelContainer:
 
 func _build_auth_block() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.63
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.63
-	panel.position = Vector2(-220, 0)
+	panel.anchor_left = 0.0
+	panel.anchor_top = 0.0
+	panel.anchor_right = 0.0
+	panel.anchor_bottom = 0.0
+	panel.position = Vector2.ZERO
 	panel.custom_minimum_size = Vector2(AUTH_BLOCK_WIDTH, _get_auth_block_height())
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
@@ -354,11 +361,11 @@ func _build_auth_block() -> PanelContainer:
 
 func _build_loading_block() -> Control:
 	var block := Control.new()
-	block.anchor_left = 0.5
-	block.anchor_top = 0.80
-	block.anchor_right = 0.5
-	block.anchor_bottom = 0.80
-	block.position = Vector2(-190, 0)
+	block.anchor_left = 0.0
+	block.anchor_top = 0.0
+	block.anchor_right = 0.0
+	block.anchor_bottom = 0.0
+	block.position = Vector2.ZERO
 	block.custom_minimum_size = Vector2(380, 82)
 
 	var frame := PanelContainer.new()
@@ -417,11 +424,11 @@ func _build_loading_block() -> Control:
 func _build_tap_hint() -> Label:
 	var hint := Label.new()
 	hint.text = TAP_TO_START_TEXT
-	hint.anchor_left = 0.5
-	hint.anchor_top = 0.84
-	hint.anchor_right = 0.5
-	hint.anchor_bottom = 0.84
-	hint.position = Vector2(-190, 0)
+	hint.anchor_left = 0.0
+	hint.anchor_top = 0.0
+	hint.anchor_right = 0.0
+	hint.anchor_bottom = 0.0
+	hint.position = Vector2.ZERO
 	hint.size = Vector2(380, 36)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiFonts.apply_noto(hint, UiPalette.FONT_SIZE_TITLE)
@@ -456,8 +463,80 @@ func _build_logout_button() -> Button:
 
 
 func _sync_adaptive_layout() -> void:
+	var content_origin: Vector2 = AdaptiveViewportScript.get_content_origin(self)
+	var visible_size: Vector2 = AdaptiveViewportScript.get_visible_size(self)
+	var is_compact_auth_focus: bool = _is_compact_auth_focus_active(visible_size)
+	var safe_frame_left: float = content_origin.x
+	var safe_frame_width: float = AdaptiveViewportScript.BASE_SIZE.x
+
+	if _title_card != null:
+		_title_card.visible = not is_compact_auth_focus
+		var title_width: float = _title_card.custom_minimum_size.x
+		_title_card.position = Vector2(
+			safe_frame_left + (safe_frame_width - title_width) * 0.5,
+			content_origin.y + TITLE_CARD_DEFAULT_TOP
+		)
+
+	if _auth_block != null:
+		var auth_height: float = _auth_block.custom_minimum_size.y
+		var auth_width: float = _auth_block.custom_minimum_size.x
+		var default_auth_top: float = content_origin.y + AUTH_BLOCK_DEFAULT_TOP
+		var min_auth_top: float = content_origin.y + AUTH_BLOCK_FOCUS_MIN_TOP
+		var max_auth_top: float = maxf(
+			content_origin.y + visible_size.y - auth_height - AUTH_BLOCK_FOCUS_BOTTOM_MARGIN,
+			AUTH_BLOCK_FOCUS_BOTTOM_MARGIN
+		)
+		var auth_top: float = default_auth_top
+		if is_compact_auth_focus:
+			auth_top = _fit_top_position(default_auth_top, min_auth_top, max_auth_top)
+		_auth_block.position = Vector2(
+			safe_frame_left + (safe_frame_width - auth_width) * 0.5,
+			auth_top
+		)
+
+	if _loading_block != null:
+		var loading_width: float = _loading_block.custom_minimum_size.x
+		_loading_block.position = Vector2(
+			safe_frame_left + (safe_frame_width - loading_width) * 0.5,
+			content_origin.y + LOADING_BLOCK_DEFAULT_TOP
+		)
+
+	if _tap_hint != null:
+		var tap_hint_width: float = _tap_hint.size.x
+		_tap_hint.position = Vector2(
+			safe_frame_left + (safe_frame_width - tap_hint_width) * 0.5,
+			content_origin.y + TAP_HINT_DEFAULT_TOP
+		)
+
 	if _logout_button != null:
-		_logout_button.position = AdaptiveViewportScript.get_content_origin(self) + Vector2(720.0 - 156.0, 28.0)
+		_logout_button.position = content_origin + Vector2(720.0 - 156.0, 28.0)
+
+
+func _on_auth_input_focus_changed() -> void:
+	call_deferred("_sync_adaptive_layout")
+
+
+func _is_compact_auth_focus_active(visible_size: Vector2) -> bool:
+	return _is_auth_input_focused() and visible_size.y < KEYBOARD_COMPACT_HEIGHT_THRESHOLD
+
+
+func _is_auth_input_focused() -> bool:
+	var inputs: Array[LineEdit] = [
+		_display_name_input,
+		_account_input,
+		_password_input,
+		_confirm_password_input,
+	]
+	for input in inputs:
+		if input != null and input.visible and input.has_focus():
+			return true
+	return false
+
+
+func _fit_top_position(preferred_top: float, min_top: float, max_top: float) -> float:
+	if max_top <= min_top:
+		return max_top
+	return clampf(preferred_top, min_top, max_top)
 
 
 func _build_paw_row() -> HBoxContainer:
@@ -480,6 +559,8 @@ func _build_input(placeholder: String, secret: bool) -> LineEdit:
 	input.secret = secret
 	UiFonts.apply_noto(input, UiPalette.FONT_SIZE_BODY)
 	input.text_submitted.connect(_on_input_submitted)
+	input.focus_entered.connect(_on_auth_input_focus_changed)
+	input.focus_exited.connect(_on_auth_input_focus_changed)
 	return input
 
 
@@ -599,6 +680,7 @@ func _refresh_auth_block_layout() -> void:
 	if _auth_block == null:
 		return
 	_auth_block.custom_minimum_size = Vector2(AUTH_BLOCK_WIDTH, _get_auth_block_height())
+	_sync_adaptive_layout()
 
 
 func _set_auth_interactable(editable: bool) -> void:

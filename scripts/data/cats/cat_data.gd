@@ -24,7 +24,9 @@ static func from_json_file(path: String) -> CatData:
 	var cat_id := path.get_file().get_basename()
 	var raw := GameState.get_cat_catalog_item(cat_id)
 	if raw.is_empty():
-		push_error("CatData: missing cached cat catalog for " + cat_id)
+		raw = GameState.get_enemy_catalog_item(cat_id)
+	if raw.is_empty():
+		push_error("CatData: missing catalog entry for " + cat_id)
 		return null
 	return _from_catalog(raw)
 

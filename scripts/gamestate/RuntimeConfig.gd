@@ -10,6 +10,8 @@ const SUPPORT_EMAIL_KEY := "support_email"
 const SUPPORT_URL_KEY := "support_url"
 const PRIVACY_POLICY_URL_KEY := "privacy_policy_url"
 const ACCOUNT_DELETION_URL_KEY := "account_deletion_url"
+const ASSETS_BASE_URL_KEY := "assets_base_url"
+const USE_CDN_ASSETS_KEY := "use_cdn_assets"
 
 
 static func get_config() -> Dictionary:
@@ -67,6 +69,17 @@ static func get_account_deletion_url() -> String:
 	return _get_config_string(ACCOUNT_DELETION_URL_KEY)
 
 
+static func get_assets_base_url() -> String:
+	return _get_config_string(ASSETS_BASE_URL_KEY).rstrip("/")
+
+
+static func should_use_cdn_assets() -> bool:
+	var configured_value: Variant = _get_config_value(USE_CDN_ASSETS_KEY)
+	if configured_value == null:
+		return false
+	return bool(configured_value) and get_assets_base_url() != ""
+
+
 static func _get_feature_flag(flag_name: String, default_value: bool) -> bool:
 	var config: Dictionary = get_config()
 	var top_level_value: Variant = _read_feature_flag(config, flag_name)
@@ -81,18 +94,25 @@ static func _get_feature_flag(flag_name: String, default_value: bool) -> bool:
 	return default_value
 
 
-static func _get_config_string(key_name: String, default_value: String = "") -> String:
+static func _get_config_value(key_name: String) -> Variant:
 	var config: Dictionary = get_config()
 	var top_level_value: Variant = _read_config_value(config, key_name)
 	if top_level_value != null:
-		return str(top_level_value).strip_edges()
+		return top_level_value
 
 	var environment_config: Dictionary = _get_active_environment_config(config)
 	var environment_value: Variant = _read_config_value(environment_config, key_name)
 	if environment_value != null:
-		return str(environment_value).strip_edges()
+		return environment_value
 
-	return default_value
+	return null
+
+
+static func _get_config_string(key_name: String, default_value: String = "") -> String:
+	var value: Variant = _get_config_value(key_name)
+	if value == null:
+		return default_value
+	return str(value).strip_edges()
 
 
 static func _get_active_environment_config(config: Dictionary) -> Dictionary:

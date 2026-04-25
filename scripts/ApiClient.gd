@@ -88,6 +88,10 @@ func purchase_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/purchase", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"))
 
 
+func purchase_equipment_silent(equipment_id: int, callback: Callable) -> void:
+	_api_post_tracked("scooper/equipment/purchase", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"), false)
+
+
 func upgrade_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/upgrade", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"))
 
@@ -148,6 +152,10 @@ func get_authenticated_bootstrap(callback: Callable) -> void:
 	_api_get("auth/bootstrap", callback)
 
 
+func get_authenticated_bootstrap_silent(callback: Callable) -> void:
+	_api_get_tracked("auth/bootstrap", callback, false)
+
+
 func get_combat_trial_scores(callback: Callable) -> void:
 	_api_get("combat-trial", callback)
 
@@ -174,18 +182,6 @@ func claim_daily_task(task_key: String, callback: Callable) -> void:
 
 func record_daily_task_event(event_key: String, callback: Callable = Callable()) -> void:
 	_api_post_tracked("daily-tasks/events", {"eventKey": event_key, "count": 1}, callback, false)
-
-
-func admin_get_catalog_access(callback: Callable) -> void:
-	_api_get("admin/catalog/access", callback)
-
-
-func admin_get_catalog_section(section_key: String, callback: Callable) -> void:
-	_api_get("admin/catalog/%s" % section_key.uri_encode(), callback)
-
-
-func admin_save_catalog_section(section_key: String, payload: Dictionary, callback: Callable) -> void:
-	_api_put("admin/catalog/%s" % section_key.uri_encode(), payload, callback)
 
 
 func get_profile_me(callback: Callable) -> void:

@@ -113,7 +113,7 @@ func _build_ui() -> void:
 
 
 func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
-	_api_client.get_authenticated_bootstrap(Callable(self, "_on_shop_bootstrap_refreshed").bind(show_error_dialog))
+	_api_client.get_authenticated_bootstrap_silent(Callable(self, "_on_shop_bootstrap_refreshed").bind(show_error_dialog))
 
 
 func _on_shop_bootstrap_refreshed(success: bool, data: Variant, error: Dictionary, show_error_dialog: bool) -> void:

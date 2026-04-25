@@ -20,9 +20,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Sync assets to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_REGION: auto
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$R2_BUCKET_NAME" ] || [ -z "$R2_ENDPOINT" ]; then
+            echo "Missing required R2 deployment secrets for Production environment." >&2
+            exit 1
+          fi
+          aws --version
+          aws s3 sync assets "s3://$R2_BUCKET_NAME/assets" \
+            --endpoint-url "$R2_ENDPOINT" \
+            --delete
+
       - name: Generate runtime config
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
+          ASSETS_BASE_URL: ${{ vars.ASSETS_BASE_URL }}
+          USE_CDN_ASSETS: ${{ vars.USE_CDN_ASSETS }}
         run: |
           if [ -z "$API_BASE_URL" ]; then
             echo "API_BASE_URL is not set for Production environment." >&2
@@ -38,6 +57,8 @@ jobs:
           {
             "environment": "Production",
             "api_base_url": "$FINAL_API_BASE_URL",
+            "assets_base_url": "$ASSETS_BASE_URL",
+            "use_cdn_assets": ${USE_CDN_ASSETS:-false},
             "support_email": "",
             "support_url": "$SITE_BASE_URL/support/",
             "privacy_policy_url": "$SITE_BASE_URL/privacy/",
@@ -55,11 +76,25 @@ jobs:
       - name: Import Resources
         run: godot --headless --import || true
 
+      - name: Remove CDN-managed UI backgrounds from Web export
+        run: |
+          rm -f \
+            assets/sprites/ui/arena_background_v1.png \
+            assets/sprites/ui/chat_background_v1.png \
+            assets/sprites/ui/config_background_v1.png \
+            assets/sprites/ui/dungeon_background_v1.png \
+            assets/sprites/ui/enhance_background_v1.png \
+            assets/sprites/ui/gacha_background_v1.png \
+            assets/sprites/ui/mail_background_v1.png \
+            assets/sprites/ui/scooper_background_v1.png \
+            assets/sprites/ui/shop_background_v1.png
+
       - name: Export Web
         run: |
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
           cp -R site/. build/web/
+          ls -lh build/web/index.pck
 
       - name: Deploy to Production
         uses: peaceiris/actions-gh-pages@v4

@@ -49,11 +49,17 @@ const BACKGROUNDS := {
 }
 
 const CAT_ICONS := {
+	"baby": UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
+	"bird": UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
 	"black_cat": UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
 	"calico_cat": UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
+	"chihuahua": UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
+	"crazy_neighbor_boy": UI_ROOT + "character_refs/boss/crazy_neighbor_boy/crazy_neighbor_boy_icon_v1.png",
+	"grandma": UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
 	"milk_cat": UI_ROOT + "character_refs/milk_cat/milk_cat_icon_v1.png",
 	"ninja_cat": UI_ROOT + "character_refs/ninja_cat/ninja_cat_icon_v1.png",
 	"orange_cat": UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
+	"schoolgirl": UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_icon_v1.png",
 	"test_enemy": UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
 	"tuxedo_cat": UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
 }
@@ -77,6 +83,36 @@ const PROFILE_AVATAR_LABELS := {
 }
 
 const CAT_SHOWCASE_TEXTURES := {
+	"baby": [
+		UI_ROOT + "character_refs/boss/baby/baby_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
+	],
+	"bird": [
+		UI_ROOT + "character_refs/boss/bird/bird_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
+	],
+	"chihuahua": [
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
+	],
+	"grandma": [
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
+	],
+	"schoolgirl": [
+		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_icon_v1.png",
+	],
 	"black_cat": [
 		UI_ROOT + "character_refs/black_cat/black_cat_ref_right_v1.png",
 		UI_ROOT + "character_refs/black_cat/black_cat_ref_front_v1.png",
@@ -118,6 +154,30 @@ const CAT_SHOWCASE_TEXTURES := {
 }
 
 const CAT_BATTLE_STATIC_ARTS := {
+	"baby": [
+		UI_ROOT + "character_refs/boss/baby/baby_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
+	],
+	"bird": [
+		UI_ROOT + "character_refs/boss/bird/bird_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
+	],
+	"chihuahua": [
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
+	],
+	"grandma": [
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
+	],
 	"black_cat": [
 		UI_ROOT + "character_refs/black_cat/black_cat_ref_right_v1.png",
 		UI_ROOT + "character_refs/black_cat/black_cat_ref_front_v1.png",
@@ -159,10 +219,129 @@ const CAT_BATTLE_STATIC_ARTS := {
 }
 
 const CAT_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/cats/"
+const ENCOUNTER_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/encounter/"
+const BOSS_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/boss/"
+const ENCOUNTER_CHARACTER_REF_ROOT := UI_ROOT + "character_refs/encounters/"
+const BOSS_CHARACTER_REF_ROOT := UI_ROOT + "character_refs/boss/"
 const CAT_BATTLE_DEFAULT_SHEET_WIDTH := 1100
 const CAT_BATTLE_DEFAULT_SHEET_HEIGHT := 335
 const CAT_BATTLE_DEFAULT_FRAME_WIDTH := 275
 const CAT_BATTLE_DEFAULT_FRAME_HEIGHT := 335
+const CAT_BATTLE_SPEC_PROFILES := {
+	"baby_256": {
+		"sheet_height": 128,
+		"frame_width": 128,
+		"frame_height": 128,
+		"sheet_widths": {
+			"idle": 768,
+			"run": 1024,
+			"collide": 512,
+			"knockback": 768,
+			"stagger": 512,
+			"skill": 768,
+			"death_fly": 768,
+		},
+	},
+	"standard_256": {
+		"sheet_height": 128,
+		"frame_width": 128,
+		"frame_height": 128,
+		"sheet_widths": {
+			"idle": 768,
+			"run": 1024,
+			"collide": 512,
+			"knockback": 768,
+			"stagger": 512,
+			"skill": 768,
+			"death_fly": 768,
+		},
+	},
+	"boss_standard_128": {
+		"sheet_height": 128,
+		"frame_width": 128,
+		"frame_height": 128,
+		"sheet_widths": {
+			"idle": 768,
+			"run": 1024,
+			"collide": 512,
+			"knockback": 768,
+			"stagger": 512,
+			"skill": 768,
+			"death_fly": 768,
+		},
+	},
+	"bird_256": {
+		"sheet_height": 128,
+		"frame_width": 128,
+		"frame_height": 128,
+		"sheet_widths": {
+			"idle": 768,
+			"run": 1024,
+			"collide": 512,
+			"knockback": 768,
+			"stagger": 512,
+			"skill": 640,
+			"death_fly": 768,
+		},
+	},
+	"small_128": {
+		"sheet_height": 128,
+		"frame_width": 128,
+		"frame_height": 128,
+		"sheet_widths": {
+			"idle": 512,
+			"run": 768,
+			"collide": 512,
+			"knockback": 512,
+			"stagger": 512,
+			"skill": 768,
+			"death_fly": 768,
+		},
+	},
+}
+const CAT_BATTLE_ENCOUNTER_CHARACTER_IDS: Array[String] = [
+	"lipstick",
+	"mug",
+	"potted_plant",
+	"remote_control",
+	"toilet_paper",
+]
+const CAT_BATTLE_BOSS_CHARACTER_IDS: Array[String] = [
+	"baby",
+	"bird",
+	"chihuahua",
+	"cucumber",
+	"crazy_neighbor_boy",
+	"grandma",
+	"male_coworker",
+	"mouse",
+	"robot_vacuum",
+	"schoolgirl",
+]
+const BATTLE_SPEC_PROFILE_BY_CHARACTER := {
+	"baby": "baby_256",
+	"bird": "bird_256",
+	"black_cat": "standard_256",
+	"calico_cat": "small_128",
+	"chihuahua": "boss_standard_128",
+	"crazy_neighbor_boy": "boss_standard_128",
+	"cucumber": "boss_standard_128",
+	"grandma": "boss_standard_128",
+	"lipstick": "standard_256",
+	"male_coworker": "boss_standard_128",
+	"milk_cat": "small_128",
+	"mouse": "boss_standard_128",
+	"mug": "standard_256",
+	"ninja_cat": "standard_256",
+	"orange_cat": "standard_256",
+	"potted_plant": "standard_256",
+	"remote_control": "standard_256",
+	"robot_vacuum": "boss_standard_128",
+	"schoolgirl": "boss_standard_128",
+	"test_enemy": "standard_256",
+	"toilet_paper": "standard_256",
+	"tuxedo_cat": "standard_256",
+}
 const CAT_BATTLE_ANIMATION_NAMES: Array[String] = [
 	"idle",
 	"run",
@@ -266,7 +445,7 @@ const SHOP_BUNDLES := {
 static func make_fullscreen_background(slot: String) -> TextureRect:
 	var background := TextureRect.new()
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	background.texture = resolve_background_texture(slot)
+	apply_background_texture(background, slot)
 	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -291,9 +470,57 @@ static func load_texture(path: String) -> Texture2D:
 	return texture as Texture2D
 
 
+static func resolve_cdn_asset_url(path: String) -> String:
+	if not RuntimeConfig.should_use_cdn_assets():
+		return ""
+	var normalized_path: String = path.strip_edges()
+	if normalized_path == "" or not normalized_path.begins_with("res://assets/"):
+		return ""
+	return "%s/%s" % [RuntimeConfig.get_assets_base_url(), normalized_path.trim_prefix("res://")]
+
+
+static func apply_background_texture(texture_rect: TextureRect, slot: String) -> void:
+	if texture_rect == null:
+		return
+	var asset_path: String = _get_background_path(slot)
+	var fallback_texture: Texture2D = resolve_background_texture(slot)
+	_apply_remote_texture(texture_rect, asset_path, fallback_texture)
+
+
+static func apply_preview_texture(texture_rect: TextureRect, path: String, fallback_slot: String = DEFAULT_BACKGROUND_SLOT) -> void:
+	if texture_rect == null:
+		return
+	var fallback_texture: Texture2D = resolve_preview_texture(path, fallback_slot)
+	_apply_remote_texture(texture_rect, path, fallback_texture)
+
+
+static func apply_catalog_texture(texture_rect: TextureRect, raw_path: Variant) -> void:
+	if texture_rect == null:
+		return
+	var resolved_path: String = resolve_catalog_path(raw_path)
+	var fallback_texture: Texture2D = resolve_catalog_texture(raw_path)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
+static func apply_cat_icon_texture(texture_rect: TextureRect, cat_id: String) -> void:
+	if texture_rect == null:
+		return
+	var resolved_path: String = str(CAT_ICONS.get(cat_id, ""))
+	var fallback_texture: Texture2D = resolve_cat_icon(cat_id)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
+static func apply_profile_avatar_texture(texture_rect: TextureRect, avatar_id: String) -> void:
+	if texture_rect == null:
+		return
+	var normalized_id: String = avatar_id if avatar_id != "" else DEFAULT_PROFILE_AVATAR_ID
+	var resolved_path: String = str(CAT_ICONS.get(normalized_id, CAT_ICONS.get(DEFAULT_PROFILE_AVATAR_ID, "")))
+	var fallback_texture: Texture2D = resolve_profile_avatar(normalized_id)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
 static func resolve_background_texture(slot: String) -> Texture2D:
-	var resolved_slot: String = slot.strip_edges().to_lower()
-	var texture: Texture2D = load_texture(str(BACKGROUNDS.get(resolved_slot, "")))
+	var texture: Texture2D = load_texture(_get_background_path(slot))
 	if texture != null:
 		return texture
 	return load_texture(str(BACKGROUNDS.get(DEFAULT_BACKGROUND_SLOT, "")))
@@ -319,6 +546,15 @@ static func resolve_preview_texture(path: String, fallback_slot: String = DEFAUL
 	if texture != null:
 		return texture
 	return resolve_background_texture(fallback_slot)
+
+
+static func _apply_remote_texture(texture_rect: TextureRect, asset_path: String, fallback_texture: Texture2D) -> void:
+	CdnTextureLoader.apply_texture(texture_rect, resolve_cdn_asset_url(asset_path), fallback_texture)
+
+
+static func _get_background_path(slot: String) -> String:
+	var resolved_slot: String = slot.strip_edges().to_lower()
+	return str(BACKGROUNDS.get(resolved_slot, ""))
 
 
 static func resolve_catalog_path(raw_path: Variant) -> String:
@@ -400,6 +636,18 @@ static func resolve_cat_battle_static_art(cat_id: String) -> Texture2D:
 		var texture: Texture2D = load_texture(candidate_path)
 		if texture != null:
 			return texture
+	if CAT_BATTLE_ENCOUNTER_CHARACTER_IDS.has(cat_id):
+		for suffix: String in ["ref_right_v1", "ref_three_quarter_v1", "ref_front_v1", "icon_v1"]:
+			var encounter_path: String = ENCOUNTER_CHARACTER_REF_ROOT + cat_id + "/" + cat_id + "_" + suffix + ".png"
+			var encounter_texture: Texture2D = load_texture(encounter_path)
+			if encounter_texture != null:
+				return encounter_texture
+	if CAT_BATTLE_BOSS_CHARACTER_IDS.has(cat_id):
+		for suffix: String in ["ref_right_v1", "ref_three_quarter_v1", "ref_front_v1", "icon_v1"]:
+			var boss_path: String = BOSS_CHARACTER_REF_ROOT + cat_id + "/" + cat_id + "_" + suffix + ".png"
+			var boss_texture: Texture2D = load_texture(boss_path)
+			if boss_texture != null:
+				return boss_texture
 	return resolve_cat_showcase_art(cat_id)
 
 
@@ -435,25 +683,31 @@ static func _resolve_cat_battle_animation_path_exact(cat_id: String, animation_n
 	var suffixes: Variant = CAT_BATTLE_ANIMATION_SUFFIXES.get(animation_name, [])
 	if not (suffixes is Array):
 		return ""
+	var sprite_roots: Array[String] = [CAT_BATTLE_SPRITES_ROOT]
+	if CAT_BATTLE_ENCOUNTER_CHARACTER_IDS.has(cat_id):
+		sprite_roots.append(ENCOUNTER_BATTLE_SPRITES_ROOT)
+	if CAT_BATTLE_BOSS_CHARACTER_IDS.has(cat_id):
+		sprite_roots.append(BOSS_BATTLE_SPRITES_ROOT)
 	for suffix_variant: Variant in suffixes:
 		var suffix: String = str(suffix_variant)
 		for extension: String in [".png", ".png.png"]:
-			var candidate_path: String = (
-				CAT_BATTLE_SPRITES_ROOT
-				+ cat_id
-				+ "/"
-				+ cat_id
-				+ "_"
-				+ suffix
-				+ extension
-			)
-			if ResourceLoader.exists(candidate_path):
-				return candidate_path
+			for sprite_root: String in sprite_roots:
+				var candidate_path: String = (
+					sprite_root
+					+ cat_id
+					+ "/"
+					+ cat_id
+					+ "_"
+					+ suffix
+					+ extension
+				)
+				if ResourceLoader.exists(candidate_path):
+					return candidate_path
 	return ""
 
 
-static func resolve_cat_battle_animation_spec(_cat_id: String, animation_name: String) -> Dictionary:
-	return {
+static func resolve_cat_battle_animation_spec(cat_id: String, animation_name: String) -> Dictionary:
+	var spec: Dictionary = {
 		"sheet_width": CAT_BATTLE_DEFAULT_SHEET_WIDTH,
 		"sheet_height": CAT_BATTLE_DEFAULT_SHEET_HEIGHT,
 		"frame_width": CAT_BATTLE_DEFAULT_FRAME_WIDTH,
@@ -461,6 +715,23 @@ static func resolve_cat_battle_animation_spec(_cat_id: String, animation_name: S
 		"fps": float(CAT_BATTLE_ANIMATION_FPS.get(animation_name, 12.0)),
 		"loop": bool(CAT_BATTLE_LOOPING_ANIMATIONS.get(animation_name, false)),
 	}
+	var profile_name: String = str(BATTLE_SPEC_PROFILE_BY_CHARACTER.get(cat_id, ""))
+	if profile_name == "":
+		return spec
+
+	var profile_variant: Variant = CAT_BATTLE_SPEC_PROFILES.get(profile_name, {})
+	var profile: Dictionary = profile_variant if profile_variant is Dictionary else {}
+	var sheet_widths_variant: Variant = profile.get("sheet_widths", {})
+	var sheet_widths: Dictionary = sheet_widths_variant if sheet_widths_variant is Dictionary else {}
+	var sheet_width: int = int(sheet_widths.get(animation_name, 0))
+	if sheet_width <= 0:
+		return spec
+
+	spec["sheet_width"] = sheet_width
+	spec["sheet_height"] = int(profile.get("sheet_height", spec["sheet_height"]))
+	spec["frame_width"] = int(profile.get("frame_width", spec["frame_width"]))
+	spec["frame_height"] = int(profile.get("frame_height", spec["frame_height"]))
+	return spec
 
 
 static func get_cat_battle_animation_names() -> Array[String]:
