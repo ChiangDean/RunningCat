@@ -406,6 +406,10 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	combat_power_weights = combat_power_weight_cat if combat_power_weight_cat is Array else combat_power_weights
 	CacheIO.save_catalog("combat_power_weights", combat_power_weights)
 
+	var opp_cfg: Variant = data.get("stageOpponentConfig", {})
+	stage_opponent_config = opp_cfg if opp_cfg is Dictionary else {}
+	CacheIO.save_config("stage_opponent_config", stage_opponent_config)
+
 	# ── Parse and cache live scooper data ──
 	var s_profile: Variant = data.get("scooperProfile", {})
 	if s_profile is Dictionary and not (s_profile as Dictionary).is_empty():
@@ -662,6 +666,7 @@ var cat_catalog: Array = []
 var active_skill_catalog: Array = []
 var passive_skill_catalog: Array = []
 var combat_power_weights: Array = []
+var stage_opponent_config: Dictionary = {}
 var gacha_config: Dictionary = {}
 var _cat_file_map: Dictionary = {}
 
@@ -706,6 +711,7 @@ func _ready() -> void:
 	active_skill_catalog = CacheIO.load_catalog("active_skill_catalog")
 	passive_skill_catalog = CacheIO.load_catalog("passive_skill_catalog")
 	combat_power_weights = CacheIO.load_catalog("combat_power_weights")
+	stage_opponent_config = CacheIO.load_config_dict("stage_opponent_config")
 	dungeon_config = CacheIO.load_config_dict("dungeon_static")
 	boss_config = CacheIO.load_config_dict("boss_static")
 	arena_config = CacheIO.load_config_dict("arena_static")
@@ -1989,7 +1995,23 @@ func get_difficulty_multiplier() -> float:
 	return BossStage.get_difficulty_multiplier(current_global_stage, boss_config)
 
 func get_enemy_ids() -> Array:
-	return BossStage.get_enemy_ids(current_global_stage, boss_config)
+	return BossStage.get_enemy_ids(current_global_stage, boss_config, stage_opponent_config)
+
+
+func get_enemy_catalog_item(enemy_key: String) -> Dictionary:
+	for item: Variant in stage_opponent_config.get("enemies", []):
+		if item is Dictionary and str(item.get("enemyKey", "")) == enemy_key:
+			return {
+				"id": enemy_key,
+				"display_name": str(item.get("displayName", enemy_key)),
+				"cat_type": "enemy",
+				"base_hp": int(item.get("baseHp", 100)),
+				"base_atk": int(item.get("baseAtk", 10)),
+				"base_def": int(item.get("baseDef", 0)),
+				"base_speed": float(item.get("baseSpd", 100.0)),
+				"weight": 100.0,
+			}
+	return {}
 
 
 # ── Stage progress logic ──────────────────────────────────
