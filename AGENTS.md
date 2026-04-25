@@ -29,4 +29,5 @@
   - Always use `Set-Content -Encoding utf8` when writing files from PowerShell.
   - Ensure UTF-8 encoding is set before writing files from shell scripts.
 - Tablet and wide-screen layout must keep the playable UI inside the centered `720 x 1280` safe frame; use extra side space only for decorative background, not required buttons or gameplay controls.
+- Battle character sprites and animation sheets must be displayed with one uniform x/y scale derived from the full animation set, not stretched per axis or sized from only one frame.
 - When new stable project-specific constraints are discovered during work, record them here so future changes stay consistent.

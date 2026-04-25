@@ -31,7 +31,7 @@ const BODY_W := 56.0
 const BODY_H := 72.0
 const HP_BAR_W := 64.0
 const HP_BAR_H := 8.0
-const SPRITE_TARGET_W := 96.0
+const SPRITE_TARGET_W := 128.0
 const SPRITE_TARGET_H := 128.0
 const SPRITE_TARGET_SIZE := Vector2(SPRITE_TARGET_W, SPRITE_TARGET_H)
 const SPRITE_VERTICAL_OFFSET_Y := 10.0
@@ -145,10 +145,7 @@ func _build_body() -> void:
 		var visible_rect: Rect2 = _get_texture_visible_rect(sprite_texture)
 		var safe_width: float = maxf(1.0, visible_rect.size.x)
 		var safe_height: float = maxf(1.0, visible_rect.size.y)
-		var scale_ratio: float = minf(
-			SPRITE_TARGET_SIZE.x / safe_width,
-			SPRITE_TARGET_SIZE.y / safe_height
-		)
+		var scale_ratio: float = _calculate_uniform_sprite_scale(Vector2(safe_width, safe_height))
 		_static_sprite.scale = Vector2(scale_ratio, scale_ratio)
 		var texture_size: Vector2 = sprite_texture.get_size()
 		var texture_center: Vector2 = texture_size * 0.5
@@ -186,6 +183,8 @@ func _build_shadow() -> void:
 func _build_animated_body() -> void:
 	var sprite_frames: SpriteFrames = SpriteFrames.new()
 	var preview_texture: Texture2D = null
+	var preview_visible_rect: Rect2 = Rect2()
+	var max_visible_size: Vector2 = Vector2.ONE
 	for animation_name: String in AssetResolver.get_cat_battle_animation_names():
 		var animation_path: String = AssetResolver.resolve_cat_battle_animation_path(cat_file_id, animation_name)
 		if animation_path == "":
@@ -225,8 +224,12 @@ func _build_animated_body() -> void:
 				float(effective_frame_height)
 			)
 			sprite_frames.add_frame(animation_name, atlas_texture)
+			var frame_visible_rect: Rect2 = _get_texture_visible_rect(atlas_texture)
+			max_visible_size.x = maxf(max_visible_size.x, frame_visible_rect.size.x)
+			max_visible_size.y = maxf(max_visible_size.y, frame_visible_rect.size.y)
 			if preview_texture == null:
 				preview_texture = atlas_texture
+				preview_visible_rect = frame_visible_rect
 
 	if preview_texture == null:
 		return
@@ -238,13 +241,8 @@ func _build_animated_body() -> void:
 	_animated_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_animated_sprite.visible = false
 
-	var visible_rect: Rect2 = _get_texture_visible_rect(preview_texture)
-	var safe_width: float = maxf(1.0, visible_rect.size.x)
-	var safe_height: float = maxf(1.0, visible_rect.size.y)
-	var scale_ratio: float = minf(
-		SPRITE_TARGET_SIZE.x / safe_width,
-		SPRITE_TARGET_SIZE.y / safe_height
-	)
+	var visible_rect: Rect2 = preview_visible_rect
+	var scale_ratio: float = _calculate_uniform_sprite_scale(max_visible_size)
 	_animated_sprite.scale = Vector2(scale_ratio, scale_ratio)
 	var texture_size: Vector2 = preview_texture.get_size()
 	var texture_center: Vector2 = texture_size * 0.5
@@ -255,6 +253,15 @@ func _build_animated_body() -> void:
 		-(visible_bottom_y - texture_center.y) * scale_ratio - SPRITE_VERTICAL_OFFSET_Y
 	)
 	add_child(_animated_sprite)
+
+
+func _calculate_uniform_sprite_scale(visible_size: Vector2) -> float:
+	var safe_width: float = maxf(1.0, visible_size.x)
+	var safe_height: float = maxf(1.0, visible_size.y)
+	return minf(
+		SPRITE_TARGET_SIZE.x / safe_width,
+		SPRITE_TARGET_SIZE.y / safe_height
+	)
 
 
 func _get_texture_visible_rect(texture: Texture2D) -> Rect2:

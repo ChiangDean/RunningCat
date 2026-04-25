@@ -163,6 +163,316 @@ const CAT_BATTLE_DEFAULT_SHEET_WIDTH := 1100
 const CAT_BATTLE_DEFAULT_SHEET_HEIGHT := 335
 const CAT_BATTLE_DEFAULT_FRAME_WIDTH := 275
 const CAT_BATTLE_DEFAULT_FRAME_HEIGHT := 335
+const CAT_BATTLE_CUSTOM_SPECS := {
+	"black_cat": {
+		"idle": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"run": {
+			"sheet_width": 2048,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"collide": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"knockback": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"stagger": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"skill": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"death_fly": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+	},
+	"calico_cat": {
+		"idle": {
+			"sheet_width": 512,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"run": {
+			"sheet_width": 768,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"collide": {
+			"sheet_width": 512,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"knockback": {
+			"sheet_width": 512,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"stagger": {
+			"sheet_width": 512,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"skill": {
+			"sheet_width": 768,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"death_fly": {
+			"sheet_width": 768,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+	},
+	"milk_cat": {
+		"idle": {
+			"sheet_width": 512,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"run": {
+			"sheet_width": 768,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"collide": {
+			"sheet_width": 512,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"knockback": {
+			"sheet_width": 512,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"stagger": {
+			"sheet_width": 512,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"skill": {
+			"sheet_width": 768,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+		"death_fly": {
+			"sheet_width": 768,
+			"sheet_height": 128,
+			"frame_width": 128,
+			"frame_height": 128,
+		},
+	},
+	"ninja_cat": {
+		"idle": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"run": {
+			"sheet_width": 2048,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"collide": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"knockback": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"stagger": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"skill": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"death_fly": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+	},
+	"orange_cat": {
+		"idle": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"run": {
+			"sheet_width": 2048,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"collide": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"knockback": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"stagger": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"skill": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"death_fly": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+	},
+	"test_enemy": {
+		"idle": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"run": {
+			"sheet_width": 2048,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"collide": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"knockback": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"stagger": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"skill": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"death_fly": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+	},
+	"tuxedo_cat": {
+		"idle": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"run": {
+			"sheet_width": 2048,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"collide": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"knockback": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"stagger": {
+			"sheet_width": 1024,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"skill": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+		"death_fly": {
+			"sheet_width": 1536,
+			"sheet_height": 256,
+			"frame_width": 256,
+			"frame_height": 256,
+		},
+	},
+}
 const CAT_BATTLE_ANIMATION_NAMES: Array[String] = [
 	"idle",
 	"run",
@@ -452,8 +762,8 @@ static func _resolve_cat_battle_animation_path_exact(cat_id: String, animation_n
 	return ""
 
 
-static func resolve_cat_battle_animation_spec(_cat_id: String, animation_name: String) -> Dictionary:
-	return {
+static func resolve_cat_battle_animation_spec(cat_id: String, animation_name: String) -> Dictionary:
+	var spec: Dictionary = {
 		"sheet_width": CAT_BATTLE_DEFAULT_SHEET_WIDTH,
 		"sheet_height": CAT_BATTLE_DEFAULT_SHEET_HEIGHT,
 		"frame_width": CAT_BATTLE_DEFAULT_FRAME_WIDTH,
@@ -461,6 +771,13 @@ static func resolve_cat_battle_animation_spec(_cat_id: String, animation_name: S
 		"fps": float(CAT_BATTLE_ANIMATION_FPS.get(animation_name, 12.0)),
 		"loop": bool(CAT_BATTLE_LOOPING_ANIMATIONS.get(animation_name, false)),
 	}
+	var cat_specs_variant: Variant = CAT_BATTLE_CUSTOM_SPECS.get(cat_id, {})
+	var cat_specs: Dictionary = cat_specs_variant if cat_specs_variant is Dictionary else {}
+	var animation_spec_variant: Variant = cat_specs.get(animation_name, {})
+	var animation_spec: Dictionary = animation_spec_variant if animation_spec_variant is Dictionary else {}
+	for key_variant: Variant in animation_spec.keys():
+		spec[str(key_variant)] = animation_spec[key_variant]
+	return spec
 
 
 static func get_cat_battle_animation_names() -> Array[String]:
