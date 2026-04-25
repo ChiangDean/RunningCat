@@ -13,6 +13,7 @@ const UI_CDN_DUNGEON_ROOT := UI_CDN_ROOT + "dungeon/"
 const UI_CDN_SCOOPER_EQUIPMENT_ROOT := UI_CDN_ROOT + "scooper_equipment/"
 const UI_CDN_SCOOPER_ABILITIES_ROOT := UI_CDN_ROOT + "scooper_abilities/"
 const UI_CDN_TREASURE_ROOT := UI_CDN_ROOT + "treasure/"
+const UI_CDN_ACTIVITY_ROOT := UI_CDN_ROOT + "activity/"
 const UI_ROOT := UI_LOCAL_ROOT
 const BACKGROUND_SHADER := preload("res://scripts/ui/background_desaturate_shader.gdshader")
 const DEFAULT_PROFILE_AVATAR_ID := "black_cat"
@@ -46,18 +47,18 @@ const CAT_TYPE_ICONS := {
 }
 
 const BACKGROUNDS := {
-	"activity": UI_LOCAL_ROOT + "activity_background_v1.png",
-	"arena": UI_LOCAL_ROOT + "arena_background_v1.png",
-	"chat": UI_LOCAL_ROOT + "chat_background_v1.png",
+	"activity": UI_CDN_ACTIVITY_ROOT + "activity_background_v1.png",
+	"arena": UI_CDN_ACTIVITY_ROOT + "arena_background_v1.png",
+	"chat": UI_CDN_ACTIVITY_ROOT + "chat_background_v1.png",
 	"combat_trial": UI_LOCAL_ROOT + "combat_trial/bath_trial_bg.svg",
-	"config": UI_LOCAL_ROOT + "config_background_v1.png",
-	"dungeon": UI_LOCAL_ROOT + "dungeon_background_v1.png",
-	"enhance": UI_LOCAL_ROOT + "enhance_background_v1.png",
-	"expedition": UI_LOCAL_ROOT + "activity_background_v1.png",
-	"gacha": UI_LOCAL_ROOT + "gacha_background_v1.png",
-	"mail": UI_LOCAL_ROOT + "mail_background_v1.png",
-	"scooper": UI_LOCAL_ROOT + "scooper_background_v1.png",
-	"shop": UI_LOCAL_ROOT + "shop_background_v1.png",
+	"config": UI_CDN_ACTIVITY_ROOT + "config_background_v1.png",
+	"dungeon": UI_CDN_ACTIVITY_ROOT + "dungeon_background_v1.png",
+	"enhance": UI_CDN_ACTIVITY_ROOT + "enhance_background_v1.png",
+	"expedition": UI_CDN_ACTIVITY_ROOT + "activity_background_v1.png",
+	"gacha": UI_CDN_ACTIVITY_ROOT + "gacha_background_v1.png",
+	"mail": UI_CDN_ACTIVITY_ROOT + "mail_background_v1.png",
+	"scooper": UI_CDN_ACTIVITY_ROOT + "scooper_background_v1.png",
+	"shop": UI_CDN_ACTIVITY_ROOT + "shop_background_v1.png",
 }
 
 const CAT_ICONS := {

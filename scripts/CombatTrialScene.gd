@@ -2,7 +2,7 @@ extends Control
 
 const TRIAL_VERSION: int = 1
 const COMBAT_TRIAL_BATTLE_SCENE_PATH: String = "res://scenes/CombatTrialBattleScene.tscn"
-const SOFA_CARD_ART: String = "res://assets/sprites/ui/combat_trial/sofa_trial_card.svg"
+const SOFA_CARD_ART: String = "res://assets/sprites/cdn/ui/activity/combat_trial/sofa_trial_card.svg"
 const BATH_CARD_ART: String = "res://assets/sprites/ui/combat_trial/bath_trial_bg.svg"
 
 var _sofa_best_label: Label

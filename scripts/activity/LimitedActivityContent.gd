@@ -2,7 +2,7 @@ extends VBoxContainer
 
 
 const CARD_TEMPLATE_SCENE = preload("res://scenes/ui/activity/limited/LimitedActivityCardTemplate.tscn")
-const COMBAT_TRIAL_CARD_ART: String = "res://assets/sprites/ui/combat_trial/sofa_trial_card.svg"
+const COMBAT_TRIAL_CARD_ART: String = "res://assets/sprites/cdn/ui/activity/combat_trial/sofa_trial_card.svg"
 
 const ENTRY_DEFINITIONS: Array[Dictionary] = [
 	{

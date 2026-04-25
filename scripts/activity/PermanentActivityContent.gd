@@ -5,10 +5,10 @@ signal entry_pressed(entry_key: String)
 
 const CARD_TEMPLATE_SCENE = preload("res://scenes/ui/activity/permanent/PermanentActivityCardTemplate.tscn")
 
-const GACHA_CARD_ART: String = "res://assets/sprites/ui/gacha_background_v1.png"
-const DUNGEON_CARD_ART: String = "res://assets/sprites/ui/dungeon_background_v1.png"
-const ARENA_CARD_ART: String = "res://assets/sprites/ui/arena_background_v1.png"
-const EXPEDITION_CARD_ART: String = "res://assets/sprites/ui/activity_background_v1.png"
+const GACHA_CARD_ART: String = "res://assets/sprites/cdn/ui/activity/gacha_background_v1.png"
+const DUNGEON_CARD_ART: String = "res://assets/sprites/cdn/ui/activity/dungeon_background_v1.png"
+const ARENA_CARD_ART: String = "res://assets/sprites/cdn/ui/activity/arena_background_v1.png"
+const EXPEDITION_CARD_ART: String = "res://assets/sprites/cdn/ui/activity/activity_background_v1.png"
 
 const ENTRY_DEFINITIONS: Array[Dictionary] = [
 	{

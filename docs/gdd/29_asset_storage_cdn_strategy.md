@@ -133,6 +133,20 @@ assets/
 - `assets/sprites/cdn/ui/treasure/**`
 - `assets/sprites/cdn/ui/rewards/{arena_ticket,cat_food,memory_shards,party_cheer_coupon,special_cat_food,trap_cages,trap_points,whisker_shards}.png`
 
+目前第 3 階段已完成 activity 類背景與 preview 搬移：
+
+- `assets/sprites/cdn/ui/activity/activity_background_v1.png`
+- `assets/sprites/cdn/ui/activity/arena_background_v1.png`
+- `assets/sprites/cdn/ui/activity/chat_background_v1.png`
+- `assets/sprites/cdn/ui/activity/config_background_v1.png`
+- `assets/sprites/cdn/ui/activity/dungeon_background_v1.png`
+- `assets/sprites/cdn/ui/activity/enhance_background_v1.png`
+- `assets/sprites/cdn/ui/activity/gacha_background_v1.png`
+- `assets/sprites/cdn/ui/activity/mail_background_v1.png`
+- `assets/sprites/cdn/ui/activity/scooper_background_v1.png`
+- `assets/sprites/cdn/ui/activity/shop_background_v1.png`
+- `assets/sprites/cdn/ui/activity/combat_trial/sofa_trial_card.svg`
+
 其餘類別仍在過渡期，會先按照本文件做邏輯分類，再逐批搬移。
 
 ---
@@ -172,6 +186,17 @@ assets/
 - `assets/sprites/ui/scooper_abilities/**`
 - `assets/sprites/ui/treasure/**`
 - `assets/sprites/ui/rewards/{arena_ticket,cat_food,memory_shards,party_cheer_coupon,special_cat_food,trap_cages,trap_points,whisker_shards}.png`
+- `assets/sprites/ui/activity_background_v1.png`
+- `assets/sprites/ui/arena_background_v1.png`
+- `assets/sprites/ui/chat_background_v1.png`
+- `assets/sprites/ui/config_background_v1.png`
+- `assets/sprites/ui/dungeon_background_v1.png`
+- `assets/sprites/ui/enhance_background_v1.png`
+- `assets/sprites/ui/gacha_background_v1.png`
+- `assets/sprites/ui/mail_background_v1.png`
+- `assets/sprites/ui/scooper_background_v1.png`
+- `assets/sprites/ui/shop_background_v1.png`
+- `assets/sprites/ui/combat_trial/sofa_trial_card.svg`
 
 ### 4.3 條件式搬遷
 
@@ -184,6 +209,10 @@ assets/
 - `assets/sprites/ui/home/**`
   - 可搬：活動入口 preview、展示圖、非首屏裝飾圖
   - 留本地：HUD、首頁核心面板、首屏立即可見資產
+
+- `assets/sprites/ui/activity/**`
+  - 已搬 CDN：各功能頁晚載入背景、activity preview 背景、`combat_trial/sofa_trial_card.svg`
+  - 留本地：`start_scene_homey_v1.png`、`battle_background_homey_v1.png`、`combat_trial/bath_trial_bg.svg`
 
 - 各功能頁背景圖
   - 可搬：`arena_background_v1.png`、`chat_background_v1.png`、`config_background_v1.png`、`dungeon_background_v1.png`、`enhance_background_v1.png`、`gacha_background_v1.png`、`mail_background_v1.png`、`scooper_background_v1.png`、`shop_background_v1.png`

@@ -2,7 +2,7 @@
 
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
 [ext_resource type="Texture2D" uid="uid://ud0q1ef7irvk" path="res://assets/sprites/ui/common/content_s2_default_uncheck_v1.png" id="2"]
-[ext_resource type="Texture2D" uid="uid://b8ooeufjfoikf" path="res://assets/sprites/ui/activity_background_v1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://b8ooeufjfoikf" path="res://assets/sprites/cdn/ui/activity/activity_background_v1.png" id="3"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.19, 0.17, 0.15, 0)
