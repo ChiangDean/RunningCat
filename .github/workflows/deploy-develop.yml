@@ -80,7 +80,6 @@ jobs:
         run: |
           rm -f \
             assets/sprites/ui/arena_background_v1.png \
-            assets/sprites/ui/battle_background_homey_v1.png \
             assets/sprites/ui/chat_background_v1.png \
             assets/sprites/ui/config_background_v1.png \
             assets/sprites/ui/dungeon_background_v1.png \
