@@ -11,6 +11,7 @@ const PLAYER_DATA_PATH := PlayerData.SAVE_PATH
 
 var api_base_url: String = ""
 var auth_session: Dictionary = {}
+var is_new_player: bool = false
 
 signal achievements_changed
 signal chat_connection_state_changed(state: String)
@@ -448,6 +449,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 		party_applications_variant if party_applications_variant is Array else [],
 		party_my_applications_variant if party_my_applications_variant is Array else []
 	)
+	is_new_player = bool(data.get("isNewPlayer", false))
 	player_profile_changed.emit()
 	player_wallet_changed.emit()
 	_emit_red_dot_state_changed()
