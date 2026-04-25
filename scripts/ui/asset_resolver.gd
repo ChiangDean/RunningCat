@@ -49,11 +49,16 @@ const BACKGROUNDS := {
 }
 
 const CAT_ICONS := {
+	"bird": UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
 	"black_cat": UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
 	"calico_cat": UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
+	"chihuahua": UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
+	"crazy_neighbor_boy": UI_ROOT + "character_refs/boss/crazy_neighbor_boy/crazy_neighbor_boy_icon_v1.png",
+	"grandma": UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
 	"milk_cat": UI_ROOT + "character_refs/milk_cat/milk_cat_icon_v1.png",
 	"ninja_cat": UI_ROOT + "character_refs/ninja_cat/ninja_cat_icon_v1.png",
 	"orange_cat": UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
+	"schoolgirl": UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_icon_v1.png",
 	"test_enemy": UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
 	"tuxedo_cat": UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
 }
@@ -77,6 +82,30 @@ const PROFILE_AVATAR_LABELS := {
 }
 
 const CAT_SHOWCASE_TEXTURES := {
+	"bird": [
+		UI_ROOT + "character_refs/boss/bird/bird_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
+	],
+	"chihuahua": [
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
+	],
+	"grandma": [
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
+	],
+	"schoolgirl": [
+		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_icon_v1.png",
+	],
 	"black_cat": [
 		UI_ROOT + "character_refs/black_cat/black_cat_ref_right_v1.png",
 		UI_ROOT + "character_refs/black_cat/black_cat_ref_front_v1.png",
@@ -118,6 +147,24 @@ const CAT_SHOWCASE_TEXTURES := {
 }
 
 const CAT_BATTLE_STATIC_ARTS := {
+	"bird": [
+		UI_ROOT + "character_refs/boss/bird/bird_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
+	],
+	"chihuahua": [
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
+	],
+	"grandma": [
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
+	],
 	"black_cat": [
 		UI_ROOT + "character_refs/black_cat/black_cat_ref_right_v1.png",
 		UI_ROOT + "character_refs/black_cat/black_cat_ref_front_v1.png",
@@ -159,319 +206,98 @@ const CAT_BATTLE_STATIC_ARTS := {
 }
 
 const CAT_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/cats/"
+const ENCOUNTER_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/encounter/"
+const BOSS_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/boss/"
+const ENCOUNTER_CHARACTER_REF_ROOT := UI_ROOT + "character_refs/encounters/"
+const BOSS_CHARACTER_REF_ROOT := UI_ROOT + "character_refs/boss/"
 const CAT_BATTLE_DEFAULT_SHEET_WIDTH := 1100
 const CAT_BATTLE_DEFAULT_SHEET_HEIGHT := 335
 const CAT_BATTLE_DEFAULT_FRAME_WIDTH := 275
 const CAT_BATTLE_DEFAULT_FRAME_HEIGHT := 335
-const CAT_BATTLE_CUSTOM_SPECS := {
-	"black_cat": {
-		"idle": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"run": {
-			"sheet_width": 2048,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"collide": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"knockback": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"stagger": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"skill": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"death_fly": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
+const CAT_BATTLE_SPEC_PROFILES := {
+	"standard_256": {
+		"sheet_height": 256,
+		"frame_width": 256,
+		"frame_height": 256,
+		"sheet_widths": {
+			"idle": 1536,
+			"run": 2048,
+			"collide": 1024,
+			"knockback": 1536,
+			"stagger": 1024,
+			"skill": 1536,
+			"death_fly": 1536,
 		},
 	},
-	"calico_cat": {
-		"idle": {
-			"sheet_width": 512,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"run": {
-			"sheet_width": 768,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"collide": {
-			"sheet_width": 512,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"knockback": {
-			"sheet_width": 512,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"stagger": {
-			"sheet_width": 512,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"skill": {
-			"sheet_width": 768,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"death_fly": {
-			"sheet_width": 768,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
+	"bird_256": {
+		"sheet_height": 256,
+		"frame_width": 256,
+		"frame_height": 256,
+		"sheet_widths": {
+			"idle": 1536,
+			"run": 2048,
+			"collide": 1024,
+			"knockback": 1536,
+			"stagger": 1024,
+			"skill": 1280,
+			"death_fly": 1536,
 		},
 	},
-	"milk_cat": {
-		"idle": {
-			"sheet_width": 512,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"run": {
-			"sheet_width": 768,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"collide": {
-			"sheet_width": 512,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"knockback": {
-			"sheet_width": 512,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"stagger": {
-			"sheet_width": 512,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"skill": {
-			"sheet_width": 768,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
-		},
-		"death_fly": {
-			"sheet_width": 768,
-			"sheet_height": 128,
-			"frame_width": 128,
-			"frame_height": 128,
+	"small_128": {
+		"sheet_height": 128,
+		"frame_width": 128,
+		"frame_height": 128,
+		"sheet_widths": {
+			"idle": 512,
+			"run": 768,
+			"collide": 512,
+			"knockback": 512,
+			"stagger": 512,
+			"skill": 768,
+			"death_fly": 768,
 		},
 	},
-	"ninja_cat": {
-		"idle": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"run": {
-			"sheet_width": 2048,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"collide": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"knockback": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"stagger": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"skill": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"death_fly": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-	},
-	"orange_cat": {
-		"idle": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"run": {
-			"sheet_width": 2048,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"collide": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"knockback": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"stagger": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"skill": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"death_fly": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-	},
-	"test_enemy": {
-		"idle": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"run": {
-			"sheet_width": 2048,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"collide": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"knockback": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"stagger": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"skill": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"death_fly": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-	},
-	"tuxedo_cat": {
-		"idle": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"run": {
-			"sheet_width": 2048,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"collide": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"knockback": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"stagger": {
-			"sheet_width": 1024,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"skill": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-		"death_fly": {
-			"sheet_width": 1536,
-			"sheet_height": 256,
-			"frame_width": 256,
-			"frame_height": 256,
-		},
-	},
+}
+const CAT_BATTLE_ENCOUNTER_CHARACTER_IDS: Array[String] = [
+	"lipstick",
+	"mug",
+	"potted_plant",
+	"remote_control",
+	"toilet_paper",
+]
+const CAT_BATTLE_BOSS_CHARACTER_IDS: Array[String] = [
+	"bird",
+	"chihuahua",
+	"cucumber",
+	"crazy_neighbor_boy",
+	"grandma",
+	"male_coworker",
+	"mouse",
+	"robot_vacuum",
+	"schoolgirl",
+]
+const BATTLE_SPEC_PROFILE_BY_CHARACTER := {
+	"bird": "bird_256",
+	"black_cat": "standard_256",
+	"calico_cat": "small_128",
+	"chihuahua": "standard_256",
+	"crazy_neighbor_boy": "standard_256",
+	"cucumber": "standard_256",
+	"grandma": "standard_256",
+	"lipstick": "standard_256",
+	"male_coworker": "standard_256",
+	"milk_cat": "small_128",
+	"mouse": "standard_256",
+	"mug": "standard_256",
+	"ninja_cat": "standard_256",
+	"orange_cat": "standard_256",
+	"potted_plant": "standard_256",
+	"remote_control": "standard_256",
+	"robot_vacuum": "standard_256",
+	"schoolgirl": "standard_256",
+	"test_enemy": "standard_256",
+	"toilet_paper": "standard_256",
+	"tuxedo_cat": "standard_256",
 }
 const CAT_BATTLE_ANIMATION_NAMES: Array[String] = [
 	"idle",
@@ -710,6 +536,18 @@ static func resolve_cat_battle_static_art(cat_id: String) -> Texture2D:
 		var texture: Texture2D = load_texture(candidate_path)
 		if texture != null:
 			return texture
+	if CAT_BATTLE_ENCOUNTER_CHARACTER_IDS.has(cat_id):
+		for suffix: String in ["ref_right_v1", "ref_three_quarter_v1", "ref_front_v1", "icon_v1"]:
+			var encounter_path: String = ENCOUNTER_CHARACTER_REF_ROOT + cat_id + "/" + cat_id + "_" + suffix + ".png"
+			var encounter_texture: Texture2D = load_texture(encounter_path)
+			if encounter_texture != null:
+				return encounter_texture
+	if CAT_BATTLE_BOSS_CHARACTER_IDS.has(cat_id):
+		for suffix: String in ["ref_right_v1", "ref_three_quarter_v1", "ref_front_v1", "icon_v1"]:
+			var boss_path: String = BOSS_CHARACTER_REF_ROOT + cat_id + "/" + cat_id + "_" + suffix + ".png"
+			var boss_texture: Texture2D = load_texture(boss_path)
+			if boss_texture != null:
+				return boss_texture
 	return resolve_cat_showcase_art(cat_id)
 
 
@@ -745,20 +583,26 @@ static func _resolve_cat_battle_animation_path_exact(cat_id: String, animation_n
 	var suffixes: Variant = CAT_BATTLE_ANIMATION_SUFFIXES.get(animation_name, [])
 	if not (suffixes is Array):
 		return ""
+	var sprite_roots: Array[String] = [CAT_BATTLE_SPRITES_ROOT]
+	if CAT_BATTLE_ENCOUNTER_CHARACTER_IDS.has(cat_id):
+		sprite_roots.append(ENCOUNTER_BATTLE_SPRITES_ROOT)
+	if CAT_BATTLE_BOSS_CHARACTER_IDS.has(cat_id):
+		sprite_roots.append(BOSS_BATTLE_SPRITES_ROOT)
 	for suffix_variant: Variant in suffixes:
 		var suffix: String = str(suffix_variant)
 		for extension: String in [".png", ".png.png"]:
-			var candidate_path: String = (
-				CAT_BATTLE_SPRITES_ROOT
-				+ cat_id
-				+ "/"
-				+ cat_id
-				+ "_"
-				+ suffix
-				+ extension
-			)
-			if ResourceLoader.exists(candidate_path):
-				return candidate_path
+			for sprite_root: String in sprite_roots:
+				var candidate_path: String = (
+					sprite_root
+					+ cat_id
+					+ "/"
+					+ cat_id
+					+ "_"
+					+ suffix
+					+ extension
+				)
+				if ResourceLoader.exists(candidate_path):
+					return candidate_path
 	return ""
 
 
@@ -771,12 +615,22 @@ static func resolve_cat_battle_animation_spec(cat_id: String, animation_name: St
 		"fps": float(CAT_BATTLE_ANIMATION_FPS.get(animation_name, 12.0)),
 		"loop": bool(CAT_BATTLE_LOOPING_ANIMATIONS.get(animation_name, false)),
 	}
-	var cat_specs_variant: Variant = CAT_BATTLE_CUSTOM_SPECS.get(cat_id, {})
-	var cat_specs: Dictionary = cat_specs_variant if cat_specs_variant is Dictionary else {}
-	var animation_spec_variant: Variant = cat_specs.get(animation_name, {})
-	var animation_spec: Dictionary = animation_spec_variant if animation_spec_variant is Dictionary else {}
-	for key_variant: Variant in animation_spec.keys():
-		spec[str(key_variant)] = animation_spec[key_variant]
+	var profile_name: String = str(BATTLE_SPEC_PROFILE_BY_CHARACTER.get(cat_id, ""))
+	if profile_name == "":
+		return spec
+
+	var profile_variant: Variant = CAT_BATTLE_SPEC_PROFILES.get(profile_name, {})
+	var profile: Dictionary = profile_variant if profile_variant is Dictionary else {}
+	var sheet_widths_variant: Variant = profile.get("sheet_widths", {})
+	var sheet_widths: Dictionary = sheet_widths_variant if sheet_widths_variant is Dictionary else {}
+	var sheet_width: int = int(sheet_widths.get(animation_name, 0))
+	if sheet_width <= 0:
+		return spec
+
+	spec["sheet_width"] = sheet_width
+	spec["sheet_height"] = int(profile.get("sheet_height", spec["sheet_height"]))
+	spec["frame_width"] = int(profile.get("frame_width", spec["frame_width"]))
+	spec["frame_height"] = int(profile.get("frame_height", spec["frame_height"]))
 	return spec
 
 
