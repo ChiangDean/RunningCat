@@ -282,7 +282,7 @@ func _apply_profile_to_player_data(profile: Dictionary) -> void:
 
 
 func refresh_from_bootstrap(on_completed: Callable = Callable()) -> void:
-	ApiClient.get_authenticated_bootstrap(Callable(self, "_on_refresh_from_bootstrap_completed").bind(on_completed))
+	ApiClient.get_authenticated_bootstrap_silent(Callable(self, "_on_refresh_from_bootstrap_completed").bind(on_completed))
 
 
 func _on_refresh_from_bootstrap_completed(ok: bool, data: Variant, err: Dictionary, on_completed: Callable) -> void:

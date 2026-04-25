@@ -88,6 +88,10 @@ func purchase_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/purchase", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"))
 
 
+func purchase_equipment_silent(equipment_id: int, callback: Callable) -> void:
+	_api_post_tracked("scooper/equipment/purchase", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"), false)
+
+
 func upgrade_equipment(equipment_id: int, callback: Callable) -> void:
 	_api_post("scooper/equipment/upgrade", {"equipmentId": equipment_id}, _with_daily_task_event(callback, "equipment_action"))
 
@@ -146,6 +150,10 @@ func claim_achievement_silent(achievement_id: int, callback: Callable) -> void:
 
 func get_authenticated_bootstrap(callback: Callable) -> void:
 	_api_get("auth/bootstrap", callback)
+
+
+func get_authenticated_bootstrap_silent(callback: Callable) -> void:
+	_api_get_tracked("auth/bootstrap", callback, false)
 
 
 func get_combat_trial_scores(callback: Callable) -> void:

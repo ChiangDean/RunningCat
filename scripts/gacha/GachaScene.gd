@@ -147,7 +147,7 @@ func _build_ui() -> void:
 	technique_nav_row.add_child(_technique_next_button)
 
 func refresh_from_bootstrap(show_error_dialog: bool = true) -> void:
-	_api_client.get_authenticated_bootstrap(Callable(self, "_on_gacha_bootstrap_refreshed").bind(show_error_dialog))
+	_api_client.get_authenticated_bootstrap_silent(Callable(self, "_on_gacha_bootstrap_refreshed").bind(show_error_dialog))
 
 
 func _on_free_pull_pressed() -> void:

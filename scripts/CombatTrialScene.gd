@@ -1,10 +1,7 @@
 extends Control
 
 const TRIAL_VERSION: int = 1
-const SOFA_TRIAL_SECONDS: float = 60.0
-const BATH_TICK_COUNT: int = 600
-const BATH_BASE_DAMAGE: float = 2.0
-const BATH_GROWTH_PER_TICK: float = 0.065
+const COMBAT_TRIAL_BATTLE_SCENE_PATH: String = "res://scenes/CombatTrialBattleScene.tscn"
 const SOFA_CARD_ART: String = "res://assets/sprites/ui/combat_trial/sofa_trial_card.svg"
 const BATH_CARD_ART: String = "res://assets/sprites/ui/combat_trial/bath_trial_bg.svg"
 
@@ -12,12 +9,9 @@ var _sofa_best_label: Label
 var _bath_best_label: Label
 var _combat_best_label: Label
 var _result_label: Label
-var _progress_bar: ProgressBar
 var _sofa_button: Button
 var _bath_button: Button
 var _trial_inflight: bool = false
-var _pending_trial_type: String = ""
-var _pending_score: int = 0
 
 
 func _ready() -> void:
@@ -81,16 +75,6 @@ func _build_ui() -> void:
 		UiText.COMBAT_TRIAL_START_BATH,
 		Callable(self, "_start_bath_trial")
 	)
-
-	_progress_bar = ProgressBar.new()
-	_progress_bar.min_value = 0.0
-	_progress_bar.max_value = 100.0
-	_progress_bar.value = 0.0
-	_progress_bar.show_percentage = false
-	_progress_bar.custom_minimum_size = Vector2(0.0, 28.0)
-	_progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiPalette.style_exp_progress_bar(_progress_bar, "normal")
-	content_box.add_child(_progress_bar)
 
 	_result_label = Label.new()
 	_result_label.text = ""
@@ -181,121 +165,35 @@ func _make_trial_card(parent: HBoxContainer, title_text: String, body_text: Stri
 func _start_sofa_trial() -> void:
 	if _trial_inflight:
 		return
-	var cats: Array[CatData] = _resolve_trial_cats()
+	var cats: Array[CatData] = GameState.resolve_current_combat_trial_cats()
 	if cats.is_empty():
 		_show_message(UiText.COMBAT_TRIAL_TEAM_EMPTY)
 		return
-	var score: int = _calculate_sofa_score(cats)
-	_run_trial_animation("sofa", score, UiText.COMBAT_TRIAL_RESULT_SOFA_FORMAT % GameState.format_number(score))
+	var score: int = GameState.calculate_sofa_trial_score(cats)
+	_start_trial_battle("sofa", score, UiText.COMBAT_TRIAL_RESULT_SOFA_FORMAT % GameState.format_number(score))
 
 
 func _start_bath_trial() -> void:
 	if _trial_inflight:
 		return
-	var cats: Array[CatData] = _resolve_trial_cats()
+	var cats: Array[CatData] = GameState.resolve_current_combat_trial_cats()
 	if cats.is_empty():
 		_show_message(UiText.COMBAT_TRIAL_TEAM_EMPTY)
 		return
-	var score: int = _calculate_bath_score(cats)
-	_run_trial_animation("bath", score, UiText.COMBAT_TRIAL_RESULT_BATH_FORMAT % GameState.format_number(score))
+	var score: int = GameState.calculate_bath_trial_score(cats)
+	_start_trial_battle("bath", score, UiText.COMBAT_TRIAL_RESULT_BATH_FORMAT % GameState.format_number(score))
 
 
-func _run_trial_animation(trial_type: String, score: int, result_text: String) -> void:
+func _start_trial_battle(trial_type: String, score: int, result_text: String) -> void:
 	_trial_inflight = true
-	_pending_trial_type = trial_type
-	_pending_score = score
 	_set_buttons_disabled(true)
-	_progress_bar.value = 0.0
-	_result_label.text = result_text
-
-	var tween: Tween = create_tween()
-	tween.tween_property(_progress_bar, "value", 100.0, 1.2)
-	tween.finished.connect(_submit_pending_score)
-
-
-func _submit_pending_score() -> void:
-	_show_message(UiText.COMBAT_TRIAL_SAVING)
-	ApiClient.submit_combat_trial_score(_pending_trial_type, _pending_score, TRIAL_VERSION, Callable(self, "_on_score_submitted"))
-
-
-func _on_score_submitted(success: bool, data: Variant, _error: Dictionary) -> void:
-	_trial_inflight = false
-	_set_buttons_disabled(false)
-	if success and data is Dictionary:
-		GameState.apply_combat_trial_scores(data as Dictionary)
-		_refresh_score_labels()
-		return
-	_show_message(UiText.COMBAT_TRIAL_SAVE_FAILED)
-
-
-func _resolve_trial_cats() -> Array[CatData]:
-	if GameState.player_team.is_empty():
-		GameState.apply_active_team_from_config("Boss")
-
-	var result: Array[CatData] = []
-	for i: int in range(GameState.player_team.size()):
-		var player_cat_id: int = int(GameState.player_team[i])
-		var cat_id: String = GameState.get_cat_file_id(player_cat_id)
-		if cat_id.is_empty():
-			continue
-		var data: CatData = CatData.from_json_file(cat_id + ".json")
-		if data == null:
-			continue
-		var player_cat: PlayerCatData = GameState.get_player_cat(cat_id)
-		data.apply_enhancement(player_cat)
-		data.apply_rank_bonus(player_cat)
-		GameState.apply_player_combat_bonuses(data)
-		result.append(data)
-	return result
-
-
-func _calculate_sofa_score(cats: Array[CatData]) -> int:
-	var total: float = 0.0
-	for cat: CatData in cats:
-		var crit_rate: float = clampf(float(cat.get_meta("crit_rate", 0.0)), 0.0, 1.0)
-		var crit_damage_bonus: float = maxf(0.0, float(cat.get_meta("crit_damage_bonus", 0.0)))
-		var crit_multiplier: float = 1.0 + crit_rate * (1.5 + crit_damage_bonus - 1.0)
-		var speed_multiplier: float = 0.75 + clampf(cat.speed / 220.0, 0.25, 1.4)
-		var cdr: float = clampf(float(cat.get_meta("cdr", 0.0)), 0.0, 0.5)
-		var skill_multiplier: float = 1.0 + float(cat.active_skills_data.size()) * (0.18 + cdr * 0.5)
-		total += float(cat.atk) * speed_multiplier * crit_multiplier * skill_multiplier * SOFA_TRIAL_SECONDS
-	return maxi(0, roundi(total))
-
-
-func _calculate_bath_score(cats: Array[CatData]) -> int:
-	var hp_values: Array[float] = []
-	var def_values: Array[float] = []
-	var reduction_values: Array[float] = []
-	for cat: CatData in cats:
-		hp_values.append(float(cat.max_hp))
-		def_values.append(float(cat.defense))
-		reduction_values.append(clampf(float(cat.get_meta("damage_reduction_bonus", 0.0)), 0.0, 0.9))
-
-	var pressure_score: float = 0.0
-	for tick: int in range(BATH_TICK_COUNT):
-		var alive_count: int = 0
-		for hp: float in hp_values:
-			if hp > 0.0:
-				alive_count += 1
-		if alive_count <= 0:
-			break
-
-		var raw_damage: float = BATH_BASE_DAMAGE + BATH_GROWTH_PER_TICK * float(tick)
-		pressure_score += raw_damage * float(alive_count)
-
-		for index: int in range(hp_values.size()):
-			if hp_values[index] <= 0.0:
-				continue
-			var defense_reduction: float = def_values[index] / (def_values[index] + 120.0)
-			var effective_damage: float = raw_damage * (1.0 - defense_reduction) * (1.0 - reduction_values[index])
-			hp_values[index] = maxf(0.0, hp_values[index] - maxf(1.0, effective_damage))
-
-	var remaining_hp: float = 0.0
-	for hp: float in hp_values:
-		remaining_hp += maxf(0.0, hp)
-	if remaining_hp > 0.0:
-		pressure_score += remaining_hp * 0.35
-	return maxi(0, roundi(pressure_score))
+	GameState.set_combat_trial_battle_payload({
+		"trialType": trial_type,
+		"score": score,
+		"trialVersion": TRIAL_VERSION,
+		"resultText": result_text,
+	})
+	SceneNavigator.open_overlay_scene(COMBAT_TRIAL_BATTLE_SCENE_PATH)
 
 
 func _refresh_score_labels() -> void:

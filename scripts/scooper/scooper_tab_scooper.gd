@@ -298,7 +298,7 @@ func _do_equipment_action(scene: Control, action: String, equip_id: int) -> void
 
 	match action:
 		"purchase":
-			scene.ApiClient.purchase_equipment(equip_id, Callable(self, "_on_equipment_action_completed").bind(scene, action))
+			scene.ApiClient.purchase_equipment_silent(equip_id, Callable(self, "_on_equipment_action_completed").bind(scene, action, equip_id))
 		"upgrade":
 			scene.ApiClient.upgrade_equipment_silent(equip_id, Callable(self, "_on_equipment_action_completed").bind(scene, action, equip_id))
 		"repair":
@@ -348,33 +348,38 @@ func _refresh_equipment_after_action(scene: Control) -> void:
 	scene.ApiClient.get_scooper_profile_silent(Callable(self, "_on_refresh_equipment_profile_completed").bind(scene))
 
 
-func _on_refresh_equipment_profile_completed(
-	profile_ok: bool,
-	profile_data: Variant,
-	_profile_err: Dictionary,
-	scene: Control
-) -> void:
+func _on_refresh_equipment_profile_completed(refresh_ok: bool, refresh_data: Variant, refresh_err: Dictionary, scene: Control) -> void:
 	if not _is_scene_alive(scene):
 		return
-	if profile_ok and profile_data is Dictionary:
-		scene.GameState.update_scooper_profile(profile_data)
+	if not refresh_ok:
+		_finish_equipment_refresh_failed(scene, refresh_err)
+		return
+	if refresh_data is Dictionary:
+		scene.GameState.update_scooper_profile(refresh_data)
 		scene._refresh_resource_label()
-
 	scene.ApiClient.get_equipment_list_silent(Callable(self, "_on_refresh_equipment_list_completed").bind(scene))
 
 
-func _on_refresh_equipment_list_completed(ok: bool, data: Variant, err: Dictionary, scene: Control) -> void:
+func _on_refresh_equipment_list_completed(refresh_ok: bool, refresh_data: Variant, refresh_err: Dictionary, scene: Control) -> void:
+	if not _is_scene_alive(scene):
+		return
+	if not refresh_ok:
+		_finish_equipment_refresh_failed(scene, refresh_err)
+		return
+	if refresh_data is Array:
+		scene.GameState.update_scooper_equipment(refresh_data)
+	scene._api_in_flight = false
+	_refresh_equipment_tab(scene)
+
+
+func _finish_equipment_refresh_failed(scene: Control, refresh_err: Dictionary) -> void:
 	if not _is_scene_alive(scene):
 		return
 	scene._api_in_flight = false
-	if ok and data is Array:
-		scene.GameState.update_scooper_equipment(data)
-		_refresh_equipment_tab(scene)
-		return
 	_refresh_equipment_tab(scene)
 	scene.DialogManager.show_info(
 		UiText.SCOOPER_EQUIPMENT_REFRESH_FAILED,
-		str(err.get("message", UiText.SCOOPER_EQUIPMENT_REFRESH_FAILED_DEFAULT))
+		str(refresh_err.get("message", UiText.SCOOPER_EQUIPMENT_REFRESH_FAILED_DEFAULT))
 	)
 
 

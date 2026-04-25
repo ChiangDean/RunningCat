@@ -9,7 +9,6 @@ const GACHA_CARD_ART: String = "res://assets/sprites/ui/gacha_background_v1.png"
 const DUNGEON_CARD_ART: String = "res://assets/sprites/ui/dungeon_background_v1.png"
 const ARENA_CARD_ART: String = "res://assets/sprites/ui/arena_background_v1.png"
 const EXPEDITION_CARD_ART: String = "res://assets/sprites/ui/activity_background_v1.png"
-const COMBAT_TRIAL_CARD_ART: String = "res://assets/sprites/ui/combat_trial/sofa_trial_card.svg"
 
 const ENTRY_DEFINITIONS: Array[Dictionary] = [
 	{
@@ -44,17 +43,6 @@ const ENTRY_DEFINITIONS: Array[Dictionary] = [
 		"rewards": UiText.ACTIVITY_REWARDS_ARENA,
 		"button_text": UiText.ACTIVITY_ARENA_BUTTON,
 		"art_path": ARENA_CARD_ART,
-	},
-	{
-		"key": "combat_trial",
-		"title": UiText.COMBAT_TRIAL_PAGE_TITLE,
-		"category": UiText.ACTIVITY_CATEGORY_COMBAT_TRIAL,
-		"status": UiText.ACTIVITY_STATUS_PERMANENT,
-		"preview_title": UiText.ACTIVITY_PREVIEW_COMBAT_TRIAL,
-		"description": UiText.ACTIVITY_COMBAT_TRIAL_DESC,
-		"rewards": UiText.ACTIVITY_REWARDS_COMBAT_TRIAL,
-		"button_text": UiText.ACTIVITY_COMBAT_TRIAL_BUTTON,
-		"art_path": COMBAT_TRIAL_CARD_ART,
 	},
 	{
 		"key": "expedition",
