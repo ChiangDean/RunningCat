@@ -942,7 +942,7 @@ func _build_avatar_card(avatar_id: String) -> Control:
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	icon.texture = AssetResolver.resolve_profile_avatar(avatar_id)
+	AssetResolver.apply_profile_avatar_texture(icon, avatar_id)
 	box.add_child(icon)
 
 	var label: Label = Label.new()
@@ -1317,7 +1317,7 @@ func _build_local_profile_snapshot() -> Dictionary:
 
 func _refresh_avatar_selection() -> void:
 	if is_instance_valid(_avatar_preview):
-		_avatar_preview.texture = AssetResolver.resolve_profile_avatar(_selected_avatar_id)
+		AssetResolver.apply_profile_avatar_texture(_avatar_preview, _selected_avatar_id)
 	if is_instance_valid(_avatar_name_label):
 		_avatar_name_label.text = AssetResolver.get_profile_avatar_label(_selected_avatar_id)
 

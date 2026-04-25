@@ -484,14 +484,39 @@ static func apply_background_texture(texture_rect: TextureRect, slot: String) ->
 		return
 	var asset_path: String = _get_background_path(slot)
 	var fallback_texture: Texture2D = resolve_background_texture(slot)
-	CdnTextureLoader.apply_texture(texture_rect, resolve_cdn_asset_url(asset_path), fallback_texture)
+	_apply_remote_texture(texture_rect, asset_path, fallback_texture)
 
 
 static func apply_preview_texture(texture_rect: TextureRect, path: String, fallback_slot: String = DEFAULT_BACKGROUND_SLOT) -> void:
 	if texture_rect == null:
 		return
 	var fallback_texture: Texture2D = resolve_preview_texture(path, fallback_slot)
-	CdnTextureLoader.apply_texture(texture_rect, resolve_cdn_asset_url(path), fallback_texture)
+	_apply_remote_texture(texture_rect, path, fallback_texture)
+
+
+static func apply_catalog_texture(texture_rect: TextureRect, raw_path: Variant) -> void:
+	if texture_rect == null:
+		return
+	var resolved_path: String = resolve_catalog_path(raw_path)
+	var fallback_texture: Texture2D = resolve_catalog_texture(raw_path)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
+static func apply_cat_icon_texture(texture_rect: TextureRect, cat_id: String) -> void:
+	if texture_rect == null:
+		return
+	var resolved_path: String = str(CAT_ICONS.get(cat_id, ""))
+	var fallback_texture: Texture2D = resolve_cat_icon(cat_id)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
+static func apply_profile_avatar_texture(texture_rect: TextureRect, avatar_id: String) -> void:
+	if texture_rect == null:
+		return
+	var normalized_id: String = avatar_id if avatar_id != "" else DEFAULT_PROFILE_AVATAR_ID
+	var resolved_path: String = str(CAT_ICONS.get(normalized_id, CAT_ICONS.get(DEFAULT_PROFILE_AVATAR_ID, "")))
+	var fallback_texture: Texture2D = resolve_profile_avatar(normalized_id)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
 
 
 static func resolve_background_texture(slot: String) -> Texture2D:
@@ -521,6 +546,10 @@ static func resolve_preview_texture(path: String, fallback_slot: String = DEFAUL
 	if texture != null:
 		return texture
 	return resolve_background_texture(fallback_slot)
+
+
+static func _apply_remote_texture(texture_rect: TextureRect, asset_path: String, fallback_texture: Texture2D) -> void:
+	CdnTextureLoader.apply_texture(texture_rect, resolve_cdn_asset_url(asset_path), fallback_texture)
 
 
 static func _get_background_path(slot: String) -> String:

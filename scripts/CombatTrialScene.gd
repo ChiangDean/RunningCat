@@ -133,7 +133,7 @@ func _make_trial_card(parent: HBoxContainer, title_text: String, body_text: Stri
 	var preview: TextureRect = TextureRect.new()
 	preview.custom_minimum_size = Vector2(0.0, 190.0)
 	preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	preview.texture = AssetResolver.resolve_preview_texture(art_path, "combat_trial")
+	AssetResolver.apply_preview_texture(preview, art_path, "combat_trial")
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	box.add_child(preview)

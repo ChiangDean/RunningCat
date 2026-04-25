@@ -680,7 +680,7 @@ func _build_ui() -> void:
 	_ui_layer.add_child(top_bar_root)
 
 	_top_avatar_rect = top_bar_root.get_node("Avatar") as TextureRect
-	_top_avatar_rect.texture = AssetResolver.resolve_profile_avatar(GameState.get_profile_avatar_id())
+	AssetResolver.apply_profile_avatar_texture(_top_avatar_rect, GameState.get_profile_avatar_id())
 	if _top_avatar_rect.texture == null:
 		_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
 	var avatar_circle_material := ShaderMaterial.new()
@@ -2176,8 +2176,9 @@ func _refresh_ui() -> void:
 	if _profile_level_label != null:
 		_profile_level_label.text = str(GameState.player_data.scooper_level)
 	if _top_avatar_rect != null:
-		var avatar_texture: Texture2D = AssetResolver.resolve_profile_avatar(GameState.get_profile_avatar_id())
-		_top_avatar_rect.texture = avatar_texture if avatar_texture != null else PROFILE_AVATAR_TEXTURE
+		AssetResolver.apply_profile_avatar_texture(_top_avatar_rect, GameState.get_profile_avatar_id())
+		if _top_avatar_rect.texture == null:
+			_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
 	if _top_exp_bar != null and _top_progress_value_label != null:
 		var top_profile: Dictionary = GameState.scooper_profile_data
 		var top_scooper_level: int

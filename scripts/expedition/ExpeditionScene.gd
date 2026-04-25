@@ -223,7 +223,7 @@ func _make_zone_card(zone: Dictionary) -> Control:
 	countdown_label.visible = false
 	status_badge.visible = false
 	if preview_image != null:
-		preview_image.texture = AssetResolver.load_texture("res://assets/sprites/ui/activity_background_v1.png")
+		AssetResolver.apply_background_texture(preview_image, "expedition")
 
 	if not unlocked:
 		_add_preview_locked_overlay(preview_root)
