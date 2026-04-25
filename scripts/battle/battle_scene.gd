@@ -29,7 +29,7 @@ const BOSS_WARNING_TEXTURE := preload("res://assets/sprites/ui/warning/boss_warn
 const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png.png")
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
 const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
-const PROFILE_AVATAR_TEXTURE := preload("res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png")
+const PROFILE_AVATAR_TEXTURE := preload("res://assets/sprites/cdn/ui/character_refs/black_cat/black_cat_icon_v1.png")
 const REWARD_DEFAULT_SFX := preload("res://assets/audio/sfx/rewards/ui_reward_float_default.mp3")
 const REWARD_SFX_BY_KEY := {
 	"gold": preload("res://assets/audio/sfx/rewards/reward_gold.mp3"),

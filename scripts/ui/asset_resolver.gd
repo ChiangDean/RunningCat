@@ -1,67 +1,73 @@
 class_name AssetResolver
 extends RefCounted
 
-const UI_ROOT := "res://assets/sprites/ui/"
+const UI_LOCAL_ROOT := "res://assets/sprites/ui/"
+const UI_CDN_ROOT := "res://assets/sprites/cdn/ui/"
+const UI_CDN_CARDS_ROOT := UI_CDN_ROOT + "cards/"
+const UI_CDN_CHARACTER_REF_ROOT := UI_CDN_ROOT + "character_refs/"
+const UI_CDN_MEMORY_ROOT := UI_CDN_ROOT + "memory/"
+const UI_CDN_GACHA_ROOT := UI_CDN_ROOT + "gacha/"
+const UI_ROOT := UI_LOCAL_ROOT
 const BACKGROUND_SHADER := preload("res://scripts/ui/background_desaturate_shader.gdshader")
 const DEFAULT_PROFILE_AVATAR_ID := "black_cat"
-const CAT_CARD_FRAME := UI_ROOT + "cards/cat_card_frame_homey_v1.png"
-const CAT_CARD_EMPTY_SILHOUETTE := UI_ROOT + "cards/cat_card_empty_silhouette_v1.png"
+const CAT_CARD_FRAME := UI_CDN_CARDS_ROOT + "cat_card_frame_homey_v1.png"
+const CAT_CARD_EMPTY_SILHOUETTE := UI_CDN_CARDS_ROOT + "cat_card_empty_silhouette_v1.png"
 const DEFAULT_ICON_PLACEHOLDER_PATH := CAT_CARD_EMPTY_SILHOUETTE
 const DEFAULT_BACKGROUND_SLOT := "activity"
 const DEFAULT_GACHA_FRAME_KEY := "common"
 const CAT_CARD_SQUARE_FRAMES := {
-	"common": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"uncommon": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"fine": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"special": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"precious": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"excellent": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"rare": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"epic": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"legendary": UI_ROOT + "cards/square/cat_card_square_common.png",
-	"master": UI_ROOT + "cards/square/cat_card_square_common.png",
+	"common": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"uncommon": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"fine": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"special": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"precious": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"excellent": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"rare": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"epic": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"legendary": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
+	"master": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
 }
 const CAT_TYPE_ICONS := {
-	"tank": UI_ROOT + "cards/type_icons/cat_type_tank_v1.png",
-	"assassin": UI_ROOT + "cards/type_icons/cat_type_assassin_v1.png",
-	"defensive": UI_ROOT + "cards/type_icons/cat_type_defensive_v1.png",
-	"flying": UI_ROOT + "cards/type_icons/cat_type_flying_v1.png",
-	"elemental": UI_ROOT + "cards/type_icons/cat_type_elemental_v1.png",
-	"cute": UI_ROOT + "cards/type_icons/cat_type_cute_v1.png",
-	"speed": UI_ROOT + "cards/type_icons/cat_type_speed_v1.png",
-	"bouncer": UI_ROOT + "cards/type_icons/cat_type_bouncer_v1.png",
-	"base": UI_ROOT + "cards/type_icons/cat_type_tank_v1.png",
+	"tank": UI_CDN_CARDS_ROOT + "type_icons/cat_type_tank_v1.png",
+	"assassin": UI_CDN_CARDS_ROOT + "type_icons/cat_type_assassin_v1.png",
+	"defensive": UI_CDN_CARDS_ROOT + "type_icons/cat_type_defensive_v1.png",
+	"flying": UI_CDN_CARDS_ROOT + "type_icons/cat_type_flying_v1.png",
+	"elemental": UI_CDN_CARDS_ROOT + "type_icons/cat_type_elemental_v1.png",
+	"cute": UI_CDN_CARDS_ROOT + "type_icons/cat_type_cute_v1.png",
+	"speed": UI_CDN_CARDS_ROOT + "type_icons/cat_type_speed_v1.png",
+	"bouncer": UI_CDN_CARDS_ROOT + "type_icons/cat_type_bouncer_v1.png",
+	"base": UI_CDN_CARDS_ROOT + "type_icons/cat_type_tank_v1.png",
 }
 
 const BACKGROUNDS := {
-	"activity": UI_ROOT + "activity_background_v1.png",
-	"arena": UI_ROOT + "arena_background_v1.png",
-	"chat": UI_ROOT + "chat_background_v1.png",
-	"combat_trial": UI_ROOT + "combat_trial/bath_trial_bg.svg",
-	"config": UI_ROOT + "config_background_v1.png",
-	"dungeon": UI_ROOT + "dungeon_background_v1.png",
-	"enhance": UI_ROOT + "enhance_background_v1.png",
-	"expedition": UI_ROOT + "activity_background_v1.png",
-	"gacha": UI_ROOT + "gacha_background_v1.png",
-	"mail": UI_ROOT + "mail_background_v1.png",
-	"scooper": UI_ROOT + "scooper_background_v1.png",
-	"shop": UI_ROOT + "shop_background_v1.png",
+	"activity": UI_LOCAL_ROOT + "activity_background_v1.png",
+	"arena": UI_LOCAL_ROOT + "arena_background_v1.png",
+	"chat": UI_LOCAL_ROOT + "chat_background_v1.png",
+	"combat_trial": UI_LOCAL_ROOT + "combat_trial/bath_trial_bg.svg",
+	"config": UI_LOCAL_ROOT + "config_background_v1.png",
+	"dungeon": UI_LOCAL_ROOT + "dungeon_background_v1.png",
+	"enhance": UI_LOCAL_ROOT + "enhance_background_v1.png",
+	"expedition": UI_LOCAL_ROOT + "activity_background_v1.png",
+	"gacha": UI_LOCAL_ROOT + "gacha_background_v1.png",
+	"mail": UI_LOCAL_ROOT + "mail_background_v1.png",
+	"scooper": UI_LOCAL_ROOT + "scooper_background_v1.png",
+	"shop": UI_LOCAL_ROOT + "shop_background_v1.png",
 }
 
 const CAT_ICONS := {
-	"baby": UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
-	"bird": UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
-	"black_cat": UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
-	"calico_cat": UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
-	"chihuahua": UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
-	"crazy_neighbor_boy": UI_ROOT + "character_refs/boss/crazy_neighbor_boy/crazy_neighbor_boy_icon_v1.png",
-	"grandma": UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
-	"milk_cat": UI_ROOT + "character_refs/milk_cat/milk_cat_icon_v1.png",
-	"ninja_cat": UI_ROOT + "character_refs/ninja_cat/ninja_cat_icon_v1.png",
-	"orange_cat": UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
-	"schoolgirl": UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_icon_v1.png",
-	"test_enemy": UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
-	"tuxedo_cat": UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
+	"baby": UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_icon_v1.png",
+	"bird": UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_icon_v1.png",
+	"black_cat": UI_CDN_CHARACTER_REF_ROOT + "black_cat/black_cat_icon_v1.png",
+	"calico_cat": UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_icon_v1.png",
+	"chihuahua": UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_icon_v1.png",
+	"crazy_neighbor_boy": UI_CDN_CHARACTER_REF_ROOT + "boss/crazy_neighbor_boy/crazy_neighbor_boy_icon_v1.png",
+	"grandma": UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_icon_v1.png",
+	"milk_cat": UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_icon_v1.png",
+	"ninja_cat": UI_CDN_CHARACTER_REF_ROOT + "ninja_cat/ninja_cat_icon_v1.png",
+	"orange_cat": UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_icon_v1.png",
+	"schoolgirl": UI_CDN_CHARACTER_REF_ROOT + "boss/schoolgirl/schoolgirl_icon_v1.png",
+	"test_enemy": UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_icon_v1.png",
+	"tuxedo_cat": UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_icon_v1.png",
 }
 
 const PROFILE_AVATAR_IDS := [
@@ -84,145 +90,145 @@ const PROFILE_AVATAR_LABELS := {
 
 const CAT_SHOWCASE_TEXTURES := {
 	"baby": [
-		UI_ROOT + "character_refs/boss/baby/baby_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/baby/baby_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/baby/baby_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_icon_v1.png",
 	],
 	"bird": [
-		UI_ROOT + "character_refs/boss/bird/bird_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/bird/bird_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/bird/bird_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_icon_v1.png",
 	],
 	"chihuahua": [
-		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_icon_v1.png",
 	],
 	"grandma": [
-		UI_ROOT + "character_refs/boss/grandma/grandma_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/grandma/grandma_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/grandma/grandma_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_icon_v1.png",
 	],
 	"schoolgirl": [
-		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/schoolgirl/schoolgirl_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/schoolgirl/schoolgirl_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/schoolgirl/schoolgirl_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/schoolgirl/schoolgirl_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/schoolgirl/schoolgirl_icon_v1.png",
 	],
 	"black_cat": [
-		UI_ROOT + "character_refs/black_cat/black_cat_ref_right_v1.png",
-		UI_ROOT + "character_refs/black_cat/black_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "black_cat/black_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "black_cat/black_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "black_cat/black_cat_icon_v1.png",
 	],
 	"calico_cat": [
-		UI_ROOT + "character_refs/calico_cat/calico_cat_ref_three_quarter_v1-Photoroom.png",
-		UI_ROOT + "character_refs/calico_cat/calico_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_ref_three_quarter_v1-Photoroom.png",
+		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_icon_v1.png",
 	],
 	"milk_cat": [
-		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_right_v1.png",
-		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/milk_cat/milk_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_icon_v1.png",
 	],
 	"ninja_cat": [
-		UI_ROOT + "character_refs/ninja_cat/ninja_cat_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/ninja_cat/ninja_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/ninja_cat/ninja_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "ninja_cat/ninja_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "ninja_cat/ninja_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "ninja_cat/ninja_cat_icon_v1.png",
 	],
 	"orange_cat": [
-		UI_ROOT + "character_refs/orange_cat/orange_cat_ref_right_v1.png",
-		UI_ROOT + "character_refs/orange_cat/orange_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_icon_v1.png",
 	],
 	"test_enemy": [
-		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_right_v1.png",
-		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_front_v1.png",
-		UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_icon_v1.png",
 	],
 	"tuxedo_cat": [
-		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_right_v1.png",
-		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_icon_v1.png",
 	],
 }
 
 const CAT_BATTLE_STATIC_ARTS := {
 	"baby": [
-		UI_ROOT + "character_refs/boss/baby/baby_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/baby/baby_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/baby/baby_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/baby/baby_icon_v1.png",
 	],
 	"bird": [
-		UI_ROOT + "character_refs/boss/bird/bird_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/bird/bird_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/bird/bird_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/bird/bird_icon_v1.png",
 	],
 	"chihuahua": [
-		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/chihuahua/chihuahua_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_icon_v1.png",
 	],
 	"grandma": [
-		UI_ROOT + "character_refs/boss/grandma/grandma_ref_right_v1.png",
-		UI_ROOT + "character_refs/boss/grandma/grandma_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/boss/grandma/grandma_ref_front_v1.png",
-		UI_ROOT + "character_refs/boss/grandma/grandma_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_icon_v1.png",
 	],
 	"black_cat": [
-		UI_ROOT + "character_refs/black_cat/black_cat_ref_right_v1.png",
-		UI_ROOT + "character_refs/black_cat/black_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "black_cat/black_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "black_cat/black_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "black_cat/black_cat_icon_v1.png",
 	],
 	"calico_cat": [
-		UI_ROOT + "character_refs/calico_cat/calico_cat_ref_three_quarter_v1-Photoroom.png",
-		UI_ROOT + "character_refs/calico_cat/calico_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_ref_three_quarter_v1-Photoroom.png",
+		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_icon_v1.png",
 	],
 	"milk_cat": [
-		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_right_v1.png",
-		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/milk_cat/milk_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/milk_cat/milk_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_icon_v1.png",
 	],
 	"ninja_cat": [
-		UI_ROOT + "character_refs/ninja_cat/ninja_cat_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/ninja_cat/ninja_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/ninja_cat/ninja_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "ninja_cat/ninja_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "ninja_cat/ninja_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "ninja_cat/ninja_cat_icon_v1.png",
 	],
 	"orange_cat": [
-		UI_ROOT + "character_refs/orange_cat/orange_cat_ref_right_v1.png",
-		UI_ROOT + "character_refs/orange_cat/orange_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/orange_cat/orange_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_icon_v1.png",
 	],
 	"test_enemy": [
-		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_right_v1.png",
-		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/test_enemy/test_enemy_ref_front_v1.png",
-		UI_ROOT + "character_refs/test_enemy/test_enemy_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_icon_v1.png",
 	],
 	"tuxedo_cat": [
-		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_right_v1.png",
-		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_three_quarter_v1.png",
-		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_ref_front_v1.png",
-		UI_ROOT + "character_refs/tuxedo_cat/tuxedo_cat_icon_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_icon_v1.png",
 	],
 }
 
 const CAT_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/cats/"
 const ENCOUNTER_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/encounter/"
 const BOSS_BATTLE_SPRITES_ROOT := "res://assets/sprites/battle/boss/"
-const ENCOUNTER_CHARACTER_REF_ROOT := UI_ROOT + "character_refs/encounters/"
-const BOSS_CHARACTER_REF_ROOT := UI_ROOT + "character_refs/boss/"
+const ENCOUNTER_CHARACTER_REF_ROOT := UI_CDN_CHARACTER_REF_ROOT + "encounters/"
+const BOSS_CHARACTER_REF_ROOT := UI_CDN_CHARACTER_REF_ROOT + "boss/"
 const CAT_BATTLE_DEFAULT_SHEET_WIDTH := 1100
 const CAT_BATTLE_DEFAULT_SHEET_HEIGHT := 335
 const CAT_BATTLE_DEFAULT_FRAME_WIDTH := 275
@@ -389,15 +395,15 @@ const CAT_BATTLE_ANIMATION_FALLBACKS := {
 }
 
 const GACHA_FRAMES := {
-	"common": UI_ROOT + "gacha/rarity_common_frame_v1.png",
-	"uncommon": UI_ROOT + "gacha/rarity_uncommon_frame_v1.png",
-	"fine": UI_ROOT + "gacha/rarity_fine_frame_v1.png",
-	"special": UI_ROOT + "gacha/rarity_special_frame_v1.png",
-	"precious": UI_ROOT + "gacha/rarity_precious_frame_v1.png",
-	"excellent": UI_ROOT + "gacha/rarity_excellent_frame_v1.png",
-	"rare": UI_ROOT + "gacha/rarity_rare_frame_v1.png",
-	"epic": UI_ROOT + "gacha/rarity_epic_frame_v1.png",
-	"legendary": UI_ROOT + "gacha/rarity_legendary_frame_v1.png",
+	"common": UI_CDN_GACHA_ROOT + "rarity_common_frame_v1.png",
+	"uncommon": UI_CDN_GACHA_ROOT + "rarity_uncommon_frame_v1.png",
+	"fine": UI_CDN_GACHA_ROOT + "rarity_fine_frame_v1.png",
+	"special": UI_CDN_GACHA_ROOT + "rarity_special_frame_v1.png",
+	"precious": UI_CDN_GACHA_ROOT + "rarity_precious_frame_v1.png",
+	"excellent": UI_CDN_GACHA_ROOT + "rarity_excellent_frame_v1.png",
+	"rare": UI_CDN_GACHA_ROOT + "rarity_rare_frame_v1.png",
+	"epic": UI_CDN_GACHA_ROOT + "rarity_epic_frame_v1.png",
+	"legendary": UI_CDN_GACHA_ROOT + "rarity_legendary_frame_v1.png",
 }
 
 const SCOOPER_EQUIPMENT := {
@@ -578,18 +584,18 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 		match folder:
 			"currency", "consumable":
 				if key == "gold":
-					return UI_ROOT + "rewards/gold.png.png"
+					return UI_LOCAL_ROOT + "rewards/gold.png.png"
 				if key == "party_cheer_coupon":
-					return UI_ROOT + "rewards/party_cheer_coupon.png"
-				return UI_ROOT + "rewards/%s.png" % key
+					return UI_LOCAL_ROOT + "rewards/party_cheer_coupon.png"
+				return UI_LOCAL_ROOT + "rewards/%s.png" % key
 			"dungeon":
-				return UI_ROOT + "dungeon/%s.png" % key
+				return UI_LOCAL_ROOT + "dungeon/%s.png" % key
 			"arena":
-				return UI_ROOT + "arena_ranks/%s.png" % key
+				return UI_LOCAL_ROOT + "arena_ranks/%s.png" % key
 			"memory":
-				return UI_ROOT + "memory/%s.png" % key
+				return UI_CDN_MEMORY_ROOT + "%s.png" % key
 			"treasure":
-				return UI_ROOT + "treasure/%s.png" % key
+				return UI_LOCAL_ROOT + "treasure/%s.png" % key
 			"cat":
 				return CAT_ICONS.get(key, "")
 	return image_path

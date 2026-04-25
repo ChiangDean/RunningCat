@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://bfb1wjwn0evt5" path="res://assets/sprites/ui/home/v2/home_hud_main_v3.png" id="1"]
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="2"]
-[ext_resource type="Texture2D" uid="uid://dsr2bhbkssjhs" path="res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://dsr2bhbkssjhs" path="res://assets/sprites/cdn/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://bakdwyhnhd6rl" path="res://assets/sprites/ui/rewards/diamonds.png" id="4"]
 [ext_resource type="Texture2D" uid="uid://dinl7jg457cgi" path="res://assets/sprites/ui/rewards/evil_cat_power_icon.png" id="6"]
 [ext_resource type="Texture2D" uid="uid://b4swk8qowpetn" path="res://assets/sprites/ui/rewards/collision_coin.png" id="9"]

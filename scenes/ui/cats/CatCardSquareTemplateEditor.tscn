@@ -1,11 +1,11 @@
 [gd_scene format=3 uid="uid://ctx867rj8tjk2"]
 
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
-[ext_resource type="Texture2D" uid="uid://dxmidvy4xsddl" path="res://assets/sprites/ui/cards/square/cat_card_square_common.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://dxmidvy4xsddl" path="res://assets/sprites/cdn/ui/cards/square/cat_card_square_common.png" id="2"]
 [ext_resource type="FontFile" uid="uid://vr1jgsnc66ig" path="res://assets/fonts/NotoSansTC/NotoSansTC-Bold.ttf" id="3"]
 [ext_resource type="FontFile" uid="uid://b62fb1oug0bfa" path="res://assets/fonts/Fredoka/Fredoka-Bold.ttf" id="4"]
-[ext_resource type="Texture2D" uid="uid://b07pyvi25ndpc" path="res://assets/sprites/ui/character_refs/milk_cat/milk_cat_icon_v1.png" id="5"]
-[ext_resource type="Texture2D" uid="uid://x10cog3l4qm" path="res://assets/sprites/ui/cards/type_icons/cat_type_tank_v1.png" id="6"]
+[ext_resource type="Texture2D" uid="uid://b07pyvi25ndpc" path="res://assets/sprites/cdn/ui/character_refs/milk_cat/milk_cat_icon_v1.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://x10cog3l4qm" path="res://assets/sprites/cdn/ui/cards/type_icons/cat_type_tank_v1.png" id="6"]
 
 [sub_resource type="FontVariation" id="FontVariation_card_name_bold"]
 fallbacks = Array[Font]([ExtResource("3")])

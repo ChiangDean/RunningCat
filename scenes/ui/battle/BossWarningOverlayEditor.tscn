@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://cfe4g4irsrnnt" path="res://assets/sprites/ui/warning/boss_warning_compact_overlay_v1.png" id="1"]
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="2"]
-[ext_resource type="Texture2D" uid="uid://dsr2bhbkssjhs" path="res://assets/sprites/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://dsr2bhbkssjhs" path="res://assets/sprites/cdn/ui/character_refs/black_cat/black_cat_icon_v1.png" id="3"]
 
 [node name="BossWarningOverlayEditor" type="Control" unique_id=1536782712]
 layout_mode = 3

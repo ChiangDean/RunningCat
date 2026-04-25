@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "transition_mode": "hybrid",
+  "documentation": "docs/gdd/29_asset_storage_cdn_strategy.md",
+  "local_roots": [
+    "assets/sprites/local/ui/start",
+    "assets/sprites/local/ui/battle_shell",
+    "assets/sprites/local/ui/common",
+    "assets/sprites/local/ui/warning",
+    "assets/sprites/local/ui/oauth",
+    "assets/sprites/local/ui/core_icons",
+    "assets/sprites/local/battle/cats",
+    "assets/sprites/local/battle/encounter",
+    "assets/sprites/local/battle/boss"
+  ],
+  "cdn_roots": [
+    "assets/sprites/cdn/ui/character_refs",
+    "assets/sprites/cdn/ui/memory",
+    "assets/sprites/cdn/ui/cards",
+    "assets/sprites/cdn/ui/gacha",
+    "assets/sprites/cdn/ui/rewards",
+    "assets/sprites/cdn/ui/arena_ranks",
+    "assets/sprites/cdn/ui/dungeon",
+    "assets/sprites/cdn/ui/home",
+    "assets/sprites/cdn/ui/scooper_equipment",
+    "assets/sprites/cdn/ui/scooper_abilities",
+    "assets/sprites/cdn/ui/treasure",
+    "assets/sprites/cdn/ui/activity"
+  ],
+  "phase1_cdn_roots": [
+    "assets/sprites/cdn/ui/character_refs",
+    "assets/sprites/cdn/ui/memory",
+    "assets/sprites/cdn/ui/cards",
+    "assets/sprites/cdn/ui/gacha"
+  ],
+  "phase1_legacy_sources": [
+    "assets/sprites/ui/character_refs",
+    "assets/sprites/ui/memory",
+    "assets/sprites/ui/cards",
+    "assets/sprites/ui/gacha"
+  ],
+  "phase2_cdn_candidates": [
+    "assets/sprites/ui/arena_ranks",
+    "assets/sprites/ui/dungeon",
+    "assets/sprites/ui/scooper_equipment",
+    "assets/sprites/ui/scooper_abilities",
+    "assets/sprites/ui/treasure"
+  ],
+  "split_folders": {
+    "assets/sprites/ui/rewards": {
+      "cdn": [
+        "large_preview_icons",
+        "reward_showcase_art",
+        "non-core_display_icons"
+      ],
+      "local": [
+        "item_slot_frame_*",
+        "item_slot_overlay_mask*",
+        "core_wallet_icons_used_on_first_paint"
+      ]
+    },
+    "assets/sprites/ui/home": {
+      "cdn": [
+        "activity_entry_preview",
+        "non-first-paint_decorative_art",
+        "late-load_feature_preview"
+      ],
+      "local": [
+        "hud",
+        "home_shell_core_panels",
+        "first-paint_assets"
+      ]
+    }
+  },
+  "do_not_move_yet": [
+    "assets/sprites/ui/start_scene_homey_v1.png",
+    "assets/sprites/ui/battle_background_homey_v1.png",
+    "assets/sprites/ui/common",
+    "assets/sprites/ui/oauth",
+    "assets/sprites/ui/warning",
+    "assets/sprites/battle/cats",
+    "assets/sprites/battle/encounter",
+    "assets/sprites/battle/boss"
+  ]
+}
