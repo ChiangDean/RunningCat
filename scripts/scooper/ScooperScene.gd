@@ -11,26 +11,6 @@ const TAB_CONTENT_RIGHT := OverlaySceneChrome.SUBMENU_SHELL_CONTENT_RIGHT
 const TAB_CONTENT_BOTTOM := -24.0
 const TAB_CONTENT_TO_SUBMENU_GAP := OverlaySceneChrome.SUBMENU_SHELL_CONTENT_TO_SUBMENU_GAP
 
-const SUBMENU_TAB_DEFAULT_COLOR := Color(0.9529412, 0.85490197, 0.7176471, 1.0)
-const SUBMENU_TAB_ACTIVE_COLOR := Color(0.98, 0.97, 0.92, 1.0)
-const SUBMENU_TAB_FONT_SIZE := 18
-
-const SUBMENU_BACK_BUTTON_RECT := Rect2(9.0, 39.0, 102.59459, 78.0)
-const SUBMENU_TAB_BUTTON_RECTS := {
-	"equipment": Rect2(137.0, 39.0, 107.52432, 78.0),
-	"ability": Rect2(244.52432, 39.0, 107.52433, 78.0),
-	"memory": Rect2(352.04865, 39.0, 107.52432, 78.0),
-	"treasure": Rect2(459.57297, 39.0, 107.52433, 78.0),
-	"achievement": Rect2(567.0973, 39.0, 107.52434, 78.0),
-}
-const SUBMENU_TAB_LABEL_PATHS := {
-	"equipment": "TabEquipLabel",
-	"ability": "TabAbilityLabel",
-	"memory": "TabMemoryLabel",
-	"treasure": "TabTreasureLabel",
-	"achievement": "TabAchievementLabel",
-}
-
 var _current_tab: String = "equipment"
 var _tab_btns: Dictionary = {}
 var _tab_header_title: Label
@@ -225,7 +205,7 @@ func _refresh_tab_button_labels() -> void:
 		var btn: Button = _tab_btns[tab_key]
 		if btn == null:
 			continue
-		_set_shell_button_label(btn, str(_get_tab_meta(tab_key).get("label", tab_key)))
+		btn.text = str(_get_tab_meta(tab_key).get("label", tab_key))
 	_refresh_shell_submenu(_current_tab)
 	_refresh_red_dots()
 
@@ -364,65 +344,37 @@ func _on_back_pressed() -> void:
 
 
 func _build_shell_submenu(submenu_root: Control) -> void:
-	var back_label: Label = submenu_root.get_node("BackLabel") as Label
-	if back_label != null:
-		back_label.text = UiText.SCOOPER_BACK
-	var back_button: Button = _make_shell_hit_button(SUBMENU_BACK_BUTTON_RECT)
-	back_button.pressed.connect(_on_back_pressed)
-	submenu_root.add_child(back_button)
-
-	_tab_btns.clear()
+	var submenu_items: Array = []
 	for tab_key: String in TAB_KEYS:
-		var label_path: String = str(SUBMENU_TAB_LABEL_PATHS.get(tab_key, ""))
-		var label: Label = submenu_root.get_node_or_null(label_path) as Label
-		if label == null:
-			continue
-		var button_rect: Rect2 = SUBMENU_TAB_BUTTON_RECTS.get(tab_key, Rect2())
-		var tab_button: Button = _make_shell_hit_button(button_rect)
-		tab_button.set_meta("submenu_label", label)
-		tab_button.pressed.connect(_switch_tab.bind(tab_key))
-		submenu_root.add_child(tab_button)
-		_tab_btns[tab_key] = tab_button
+		var tab_meta: Dictionary = _get_tab_meta(tab_key)
+		submenu_items.append({
+			"key": tab_key,
+			"label": str(tab_meta.get("label", tab_key)),
+			"shell_description": str(tab_meta.get("description", "")),
+			"shell_summary_left": Callable(self, "_get_shell_summary_left"),
+		})
+
+	var submenu: Dictionary = SceneSubmenuBar.build_on_shell(submenu_root, {
+		"items": submenu_items,
+		"active_key": _current_tab,
+		"back_label": UiText.SCOOPER_BACK,
+		"back_pressed": Callable(self, "_on_back_pressed"),
+		"button_pressed": Callable(self, "_switch_tab"),
+		"shell_title_label": _tab_header_title,
+		"shell_description_label": _tab_header_desc,
+		"shell_summary_left_label": _resource_label,
+		"shell_summary_right_label": _tab_header_summary,
+	})
+	_tab_btns = submenu.get("buttons", {})
 
 
-func _make_shell_hit_button(button_rect: Rect2) -> Button:
-	var button: Button = Button.new()
-	button.focus_mode = Control.FOCUS_NONE
-	button.flat = true
-	button.text = ""
-	button.anchor_left = 0.0
-	button.anchor_top = 0.0
-	button.anchor_right = 0.0
-	button.anchor_bottom = 0.0
-	button.offset_left = button_rect.position.x
-	button.offset_top = button_rect.position.y
-	button.offset_right = button_rect.position.x + button_rect.size.x
-	button.offset_bottom = button_rect.position.y + button_rect.size.y
-	var empty_style: StyleBoxEmpty = StyleBoxEmpty.new()
-	button.add_theme_stylebox_override("normal", empty_style)
-	button.add_theme_stylebox_override("hover", empty_style)
-	button.add_theme_stylebox_override("pressed", empty_style)
-	button.add_theme_stylebox_override("focus", empty_style)
-	button.add_theme_stylebox_override("disabled", empty_style)
-	return button
-
-
-func _set_shell_button_label(button: Button, text: String) -> void:
-	if button == null:
-		return
-	var label: Label = button.get_meta("submenu_label", null) as Label
-	if label != null:
-		label.text = text
+func _get_shell_summary_left() -> String:
+	return UiText.SCOOPER_RESOURCE_FORMAT % [
+		GameState.player_data.gold,
+		GameState.player_data.poop_count,
+		GameState.player_data.memory_shards,
+	]
 
 
 func _refresh_shell_submenu(active_key: String) -> void:
-	for tab_key: String in _tab_btns.keys():
-		var button: Button = _tab_btns.get(tab_key) as Button
-		if button == null:
-			continue
-		var label: Label = button.get_meta("submenu_label", null) as Label
-		if label == null:
-			continue
-		var is_active: bool = tab_key == active_key
-		label.add_theme_color_override("font_color", SUBMENU_TAB_ACTIVE_COLOR if is_active else SUBMENU_TAB_DEFAULT_COLOR)
-		label.add_theme_font_size_override("font_size", SUBMENU_TAB_FONT_SIZE)
+	SceneSubmenuBar.refresh(_tab_btns, active_key)
