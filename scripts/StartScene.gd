@@ -1505,7 +1505,10 @@ func _on_bootstrap_retry_timeout() -> void:
 func _start_game() -> void:
 	if not _input_ready:
 		return
-	SceneNavigator.enter_home_shell()
+	if GameState.is_new_player:
+		SceneNavigator.enter_onboarding()
+	else:
+		SceneNavigator.enter_home_shell()
 
 
 func _input(event: InputEvent) -> void:

@@ -1,6 +1,7 @@
 extends Node
 
 const HOME_SHELL_SCENE_PATH := "res://scenes/HomeShellScene.tscn"
+const ONBOARDING_SCENE_PATH := "res://scenes/OnboardingScene.tscn"
 
 var _home_shell: Node = null
 var _pending_overlay_scene_path: String = ""
@@ -25,6 +26,12 @@ func enter_home_shell() -> void:
 	_pending_overlay_scene_path = ""
 	_current_overlay_scene_path = ""
 	get_tree().change_scene_to_file(HOME_SHELL_SCENE_PATH)
+
+
+func enter_onboarding() -> void:
+	_pending_overlay_scene_path = ""
+	_current_overlay_scene_path = ""
+	get_tree().change_scene_to_file(ONBOARDING_SCENE_PATH)
 
 
 func open_overlay_scene(scene_path: String) -> void:

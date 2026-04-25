@@ -17,6 +17,7 @@ const COMBAT_TRIAL_BATH_SCORE_MULTIPLIER: int = 5
 
 var api_base_url: String = ""
 var auth_session: Dictionary = {}
+var is_new_player: bool = false
 var _is_applying_bootstrap: bool = false
 var _pending_combat_power_change: Dictionary = {}
 var _suppress_combat_power_notifications: bool = true
@@ -469,6 +470,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 		party_applications_variant if party_applications_variant is Array else [],
 		party_my_applications_variant if party_my_applications_variant is Array else []
 	)
+	is_new_player = bool(data.get("isNewPlayer", false))
 	_is_applying_bootstrap = false
 	recalculate_combat_power()
 	if should_release_combat_power_notifications:
