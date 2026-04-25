@@ -10,7 +10,7 @@ const TAB_DIAMOND_STORE := "diamond_store"
 const TAB_POINT := "point_bundle"
 const TRAP_POINTS_CURRENCY_ID := 3
 const COLLISION_COIN_ICON_PATH := "res://assets/sprites/ui/rewards/collision_coin.png"
-const ARENA_TICKET_ICON_PATH := "res://assets/sprites/ui/rewards/arena_ticket.png"
+const ARENA_TICKET_ICON_PATH := "res://assets/sprites/cdn/ui/rewards/arena_ticket.png"
 
 const CATEGORY_CONFIGS := [
 	{"key": TAB_VALUE, "label": "SHOP_SUBMENU_VALUE", "category_type": "valuepack"},

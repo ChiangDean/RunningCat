@@ -7,6 +7,12 @@ const UI_CDN_CARDS_ROOT := UI_CDN_ROOT + "cards/"
 const UI_CDN_CHARACTER_REF_ROOT := UI_CDN_ROOT + "character_refs/"
 const UI_CDN_MEMORY_ROOT := UI_CDN_ROOT + "memory/"
 const UI_CDN_GACHA_ROOT := UI_CDN_ROOT + "gacha/"
+const UI_CDN_REWARDS_ROOT := UI_CDN_ROOT + "rewards/"
+const UI_CDN_ARENA_RANKS_ROOT := UI_CDN_ROOT + "arena_ranks/"
+const UI_CDN_DUNGEON_ROOT := UI_CDN_ROOT + "dungeon/"
+const UI_CDN_SCOOPER_EQUIPMENT_ROOT := UI_CDN_ROOT + "scooper_equipment/"
+const UI_CDN_SCOOPER_ABILITIES_ROOT := UI_CDN_ROOT + "scooper_abilities/"
+const UI_CDN_TREASURE_ROOT := UI_CDN_ROOT + "treasure/"
 const UI_ROOT := UI_LOCAL_ROOT
 const BACKGROUND_SHADER := preload("res://scripts/ui/background_desaturate_shader.gdshader")
 const DEFAULT_PROFILE_AVATAR_ID := "black_cat"
@@ -407,23 +413,23 @@ const GACHA_FRAMES := {
 }
 
 const SCOOPER_EQUIPMENT := {
-	1: UI_ROOT + "scooper_equipment/food_bowl.png",
-	2: UI_ROOT + "scooper_equipment/scratcher.png",
-	3: UI_ROOT + "scooper_equipment/teaser_wand.png",
-	4: UI_ROOT + "scooper_equipment/grooming_brush.png",
-	5: UI_ROOT + "scooper_equipment/camera.png",
-	6: UI_ROOT + "scooper_equipment/warm_pad.png",
-	7: UI_ROOT + "scooper_equipment/cardboard_box.png",
-	8: UI_ROOT + "scooper_equipment/toy_doll.png",
+	1: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "food_bowl.png",
+	2: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "scratcher.png",
+	3: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "teaser_wand.png",
+	4: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "grooming_brush.png",
+	5: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "camera.png",
+	6: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "warm_pad.png",
+	7: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "cardboard_box.png",
+	8: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "toy_doll.png",
 }
 
 const SCOOPER_ABILITIES := {
-	1: UI_ROOT + "scooper_abilities/diligent_scooper.png",
-	2: UI_ROOT + "scooper_abilities/golden_scooper.png",
-	3: UI_ROOT + "scooper_abilities/overtime_photo.png",
-	4: UI_ROOT + "scooper_abilities/double_speed.png",
-	5: UI_ROOT + "scooper_abilities/triple_speed.png",
-	6: UI_ROOT + "scooper_abilities/instant_finish.png",
+	1: UI_CDN_SCOOPER_ABILITIES_ROOT + "diligent_scooper.png",
+	2: UI_CDN_SCOOPER_ABILITIES_ROOT + "golden_scooper.png",
+	3: UI_CDN_SCOOPER_ABILITIES_ROOT + "overtime_photo.png",
+	4: UI_CDN_SCOOPER_ABILITIES_ROOT + "double_speed.png",
+	5: UI_CDN_SCOOPER_ABILITIES_ROOT + "triple_speed.png",
+	6: UI_CDN_SCOOPER_ABILITIES_ROOT + "instant_finish.png",
 }
 
 const SHOP_BUNDLES := {
@@ -564,7 +570,7 @@ static func _get_background_path(slot: String) -> String:
 
 
 static func resolve_catalog_path(raw_path: Variant) -> String:
-	var image_path := str(raw_path if raw_path != null else "").strip_edges()
+	var image_path: String = str(raw_path if raw_path != null else "").strip_edges()
 	if image_path == "":
 		return ""
 	if image_path.begins_with("res://"):
@@ -575,27 +581,35 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 		if legacy_parts.size() >= 2:
 			normalized_path = "catalog/%s/%s" % [str(legacy_parts[0]), str(legacy_parts[1])]
 	if normalized_path.begins_with("catalog/"):
-		var suffix := normalized_path.trim_prefix("catalog/")
-		var parts := suffix.split("/")
+		var suffix: String = normalized_path.trim_prefix("catalog/")
+		var parts: PackedStringArray = suffix.split("/")
 		if parts.size() < 2:
 			return ""
-		var folder := str(parts[0])
-		var key := str(parts[1])
+		var folder: String = str(parts[0])
+		var key: String = str(parts[1])
 		match folder:
 			"currency", "consumable":
 				if key == "gold":
 					return UI_LOCAL_ROOT + "rewards/gold.png.png"
+				if key == "diamonds":
+					return UI_LOCAL_ROOT + "rewards/diamonds.png"
+				if key == "collision_coin":
+					return UI_LOCAL_ROOT + "rewards/collision_coin.png"
+				if key == "evil_cat_power_icon":
+					return UI_LOCAL_ROOT + "rewards/evil_cat_power_icon.png"
+				if key == "poop_count":
+					return UI_LOCAL_ROOT + "rewards/poop_count.png"
 				if key == "party_cheer_coupon":
-					return UI_LOCAL_ROOT + "rewards/party_cheer_coupon.png"
-				return UI_LOCAL_ROOT + "rewards/%s.png" % key
+					return UI_CDN_REWARDS_ROOT + "party_cheer_coupon.png"
+				return UI_CDN_REWARDS_ROOT + "%s.png" % key
 			"dungeon":
-				return UI_LOCAL_ROOT + "dungeon/%s.png" % key
+				return UI_CDN_DUNGEON_ROOT + "%s.png" % key
 			"arena":
-				return UI_LOCAL_ROOT + "arena_ranks/%s.png" % key
+				return UI_CDN_ARENA_RANKS_ROOT + "%s.png" % key
 			"memory":
 				return UI_CDN_MEMORY_ROOT + "%s.png" % key
 			"treasure":
-				return UI_LOCAL_ROOT + "treasure/%s.png" % key
+				return UI_CDN_TREASURE_ROOT + "%s.png" % key
 			"cat":
 				return CAT_ICONS.get(key, "")
 	return image_path

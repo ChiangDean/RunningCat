@@ -3,7 +3,7 @@
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
 [ext_resource type="Texture2D" uid="uid://bgfob8og7uoum" path="res://assets/sprites/ui/common/content_s_default_v1.png" id="2"]
 [ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="3"]
-[ext_resource type="Texture2D" uid="uid://313it5185y0g" path="res://assets/sprites/ui/scooper_equipment/food_bowl.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://313it5185y0g" path="res://assets/sprites/cdn/ui/scooper_equipment/food_bowl.png" id="4"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.19, 0.35, 0.23, 1)

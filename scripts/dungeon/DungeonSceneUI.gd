@@ -4,9 +4,9 @@ extends RefCounted
 const DUNGEON_CONTENT_EDITOR_SCENE = preload("res://scenes/ui/activity/dungeon/DungeonContentEditor.tscn")
 
 const DEFAULT_DUNGEON_ICON_BY_KEY := {
-	"cat_food": "res://assets/sprites/ui/dungeon/cat_food.png",
-	"diamond": "res://assets/sprites/ui/dungeon/diamond.png",
-	"whisker": "res://assets/sprites/ui/dungeon/whisker.png",
+	"cat_food": "res://assets/sprites/cdn/ui/dungeon/cat_food.png",
+	"diamond": "res://assets/sprites/cdn/ui/dungeon/diamond.png",
+	"whisker": "res://assets/sprites/cdn/ui/dungeon/whisker.png",
 }
 
 const DUNGEON_REWARD_KEYS: Array[String] = [

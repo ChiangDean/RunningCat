@@ -2,12 +2,12 @@
 
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
 [ext_resource type="Texture2D" uid="uid://bdvfq1i266esl" path="res://assets/sprites/ui/common/button_bar_m_default.png" id="2"]
-[ext_resource type="Texture2D" uid="uid://bkbp52enbnm0p" path="res://assets/sprites/ui/arena_ranks/master_1.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://bkbp52enbnm0p" path="res://assets/sprites/cdn/ui/arena_ranks/master_1.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="4"]
 [ext_resource type="Texture2D" uid="uid://bgnlujru3nkkk" path="res://assets/sprites/ui/rewards/item_slot_overlay_mask.png" id="5"]
 [ext_resource type="Texture2D" uid="uid://bakdwyhnhd6rl" path="res://assets/sprites/ui/rewards/diamonds.png" id="6"]
-[ext_resource type="Texture2D" uid="uid://xhh112x8cax4" path="res://assets/sprites/ui/rewards/trap_cages.png" id="7"]
-[ext_resource type="Texture2D" uid="uid://cf1k0vs51rj6g" path="res://assets/sprites/ui/rewards/special_cat_food.png" id="8"]
+[ext_resource type="Texture2D" uid="uid://xhh112x8cax4" path="res://assets/sprites/cdn/ui/rewards/trap_cages.png" id="7"]
+[ext_resource type="Texture2D" uid="uid://cf1k0vs51rj6g" path="res://assets/sprites/cdn/ui/rewards/special_cat_food.png" id="8"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.8, 0.7, 0.43, 0.98)

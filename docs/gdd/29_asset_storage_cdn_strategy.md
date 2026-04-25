@@ -124,6 +124,15 @@ assets/
 - `assets/sprites/cdn/ui/cards/**`
 - `assets/sprites/cdn/ui/gacha/**`
 
+目前第 2 階段也已完成實體搬移：
+
+- `assets/sprites/cdn/ui/arena_ranks/**`
+- `assets/sprites/cdn/ui/dungeon/**`
+- `assets/sprites/cdn/ui/scooper_equipment/**`
+- `assets/sprites/cdn/ui/scooper_abilities/**`
+- `assets/sprites/cdn/ui/treasure/**`
+- `assets/sprites/cdn/ui/rewards/{arena_ticket,cat_food,memory_shards,party_cheer_coupon,special_cat_food,trap_cages,trap_points,whisker_shards}.png`
+
 其餘類別仍在過渡期，會先按照本文件做邏輯分類，再逐批搬移。
 
 ---
@@ -162,14 +171,15 @@ assets/
 - `assets/sprites/ui/scooper_equipment/**`
 - `assets/sprites/ui/scooper_abilities/**`
 - `assets/sprites/ui/treasure/**`
+- `assets/sprites/ui/rewards/{arena_ticket,cat_food,memory_shards,party_cheer_coupon,special_cat_food,trap_cages,trap_points,whisker_shards}.png`
 
 ### 4.3 條件式搬遷
 
 以下資料夾不能整包搬，必須拆內容：
 
 - `assets/sprites/ui/rewards/**`
-  - 可搬：大 icon、獎勵展示圖、preview 圖
-  - 留本地：`item_slot_frame_*`、`item_slot_overlay_mask`、通用骨架
+  - 已搬 CDN：`arena_ticket.png`、`cat_food.png`、`memory_shards.png`、`party_cheer_coupon.png`、`special_cat_food.png`、`trap_cages.png`、`trap_points.png`、`whisker_shards.png`
+  - 留本地：`collision_coin.png`、`diamonds.png`、`evil_cat_power_icon.png`、`gold.png.png`、`poop_count.png`、`item_slot_frame_*`、`item_slot_overlay_mask*`
 
 - `assets/sprites/ui/home/**`
   - 可搬：活動入口 preview、展示圖、非首屏裝飾圖

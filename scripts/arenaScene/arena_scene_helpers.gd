@@ -127,7 +127,7 @@ static func resolve_rank_texture(image_path: Variant, rank_key: Variant) -> Text
 
 	var normalized_rank_key: String = str(rank_key if rank_key != null else "").strip_edges().to_lower()
 	if normalized_rank_key != "":
-		return AssetResolver.resolve_texture_or_placeholder("res://assets/sprites/ui/arena_ranks/%s.png" % normalized_rank_key)
+		return AssetResolver.resolve_texture_or_placeholder("res://assets/sprites/cdn/ui/arena_ranks/%s.png" % normalized_rank_key)
 	return AssetResolver.resolve_placeholder_icon()
 
 
