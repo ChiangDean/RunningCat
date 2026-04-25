@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://l33t46kv64b6"]
 
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
-[ext_resource type="Texture2D" uid="uid://crbwcuyyjyfci" path="res://assets/sprites/ui/scooper_background_v1.png" id="2"]
 [ext_resource type="Texture2D" uid="uid://dvgi7tsejs4jp" path="res://assets/sprites/ui/common/content_m_default_v1.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://b3j1goddylwph" path="res://assets/sprites/ui/common/function_bar_m_v1.png" id="4_j5a1g"]
 [ext_resource type="Texture2D" uid="uid://cb3irvjtrsvjg" path="res://assets/sprites/ui/common/button_s_default_v1.png" id="5_j5a1g"]
@@ -17,7 +16,6 @@ theme = ExtResource("1")
 layout_mode = 0
 offset_right = 720.0
 offset_bottom = 1280.0
-texture = ExtResource("2")
 expand_mode = 1
 
 [node name="Dim" type="ColorRect" parent="." unique_id=1159155586]

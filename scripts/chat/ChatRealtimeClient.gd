@@ -72,7 +72,7 @@ func reconnect_now() -> void:
 func _connect_socket() -> void:
 	_disconnect_internal()
 	_socket = WebSocketPeer.new()
-	var error: int = _socket.connect_to_url(GameState.chat_endpoint)
+	var error: int = _socket.connect_to_url(_resolve_chat_endpoint())
 	if error != OK:
 		_schedule_reconnect()
 		return
@@ -186,3 +186,13 @@ func _resolve_client_channel(channel_key: String) -> String:
 	if GameState.chat_party_channel_key != "" and channel_key == GameState.chat_party_channel_key.to_lower():
 		return "party"
 	return channel_key
+
+
+func _resolve_chat_endpoint() -> String:
+	var endpoint: String = GameState.chat_endpoint.strip_edges()
+	if endpoint == "":
+		return ""
+	var api_url: String = RuntimeConfig.get_api_base_url().strip_edges().to_lower()
+	if api_url.begins_with("https://") and endpoint.begins_with("ws://"):
+		return "wss://%s" % endpoint.trim_prefix("ws://")
+	return endpoint
