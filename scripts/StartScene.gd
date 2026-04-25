@@ -466,10 +466,11 @@ func _sync_adaptive_layout() -> void:
 	var content_origin: Vector2 = AdaptiveViewportScript.get_content_origin(self)
 	var visible_size: Vector2 = AdaptiveViewportScript.get_visible_size(self)
 	var is_compact_auth_focus: bool = _is_compact_auth_focus_active(visible_size)
+	var content_origin_x: float = content_origin.x
 
 	if _title_card != null:
 		_title_card.visible = not is_compact_auth_focus
-		_title_card.position = Vector2(-250.0, content_origin.y + TITLE_CARD_DEFAULT_TOP)
+		_title_card.position = Vector2(content_origin_x - 250.0, content_origin.y + TITLE_CARD_DEFAULT_TOP)
 
 	if _auth_block != null:
 		var auth_height: float = _auth_block.custom_minimum_size.y
@@ -482,13 +483,13 @@ func _sync_adaptive_layout() -> void:
 		var auth_top: float = default_auth_top
 		if is_compact_auth_focus:
 			auth_top = _fit_top_position(default_auth_top, min_auth_top, max_auth_top)
-		_auth_block.position = Vector2(-220.0, auth_top)
+		_auth_block.position = Vector2(content_origin_x - 220.0, auth_top)
 
 	if _loading_block != null:
-		_loading_block.position = Vector2(-190.0, content_origin.y + LOADING_BLOCK_DEFAULT_TOP)
+		_loading_block.position = Vector2(content_origin_x - 190.0, content_origin.y + LOADING_BLOCK_DEFAULT_TOP)
 
 	if _tap_hint != null:
-		_tap_hint.position = Vector2(-190.0, content_origin.y + TAP_HINT_DEFAULT_TOP)
+		_tap_hint.position = Vector2(content_origin_x - 190.0, content_origin.y + TAP_HINT_DEFAULT_TOP)
 
 	if _logout_button != null:
 		_logout_button.position = content_origin + Vector2(720.0 - 156.0, 28.0)

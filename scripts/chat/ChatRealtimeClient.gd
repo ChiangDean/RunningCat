@@ -192,7 +192,7 @@ func _resolve_chat_endpoint() -> String:
 	var endpoint: String = GameState.chat_endpoint.strip_edges()
 	if endpoint == "":
 		return ""
-	var api_url: String = RuntimeConfig.get_api_base_url().strip_edges().to_lower()
+	var api_url: String = RuntimeConfig.get_api_base_url(GameState.api_base_url).strip_edges().to_lower()
 	if api_url.begins_with("https://") and endpoint.begins_with("ws://"):
 		return "wss://%s" % endpoint.trim_prefix("ws://")
 	return endpoint
