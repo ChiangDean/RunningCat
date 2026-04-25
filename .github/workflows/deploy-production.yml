@@ -33,9 +33,16 @@ jobs:
             exit 1
           fi
           aws --version
-          aws s3 sync assets "s3://$R2_BUCKET_NAME/assets" \
-            --endpoint-url "$R2_ENDPOINT" \
-            --delete
+          python3 scripts/ci/cdn_manifest_paths.py sync | while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            if [ -d "$path" ]; then
+              aws s3 sync "$path" "s3://$R2_BUCKET_NAME/$path" \
+                --endpoint-url "$R2_ENDPOINT" \
+                --delete
+            else
+              echo "Skipping missing CDN path: $path"
+            fi
+          done
 
       - name: Generate runtime config
         env:
@@ -76,18 +83,12 @@ jobs:
       - name: Import Resources
         run: godot --headless --import || true
 
-      - name: Remove CDN-managed UI backgrounds from Web export
+      - name: Remove CDN-managed assets from Web export
         run: |
-          rm -f \
-            assets/sprites/ui/arena_background_v1.png \
-            assets/sprites/ui/chat_background_v1.png \
-            assets/sprites/ui/config_background_v1.png \
-            assets/sprites/ui/dungeon_background_v1.png \
-            assets/sprites/ui/enhance_background_v1.png \
-            assets/sprites/ui/gacha_background_v1.png \
-            assets/sprites/ui/mail_background_v1.png \
-            assets/sprites/ui/scooper_background_v1.png \
-            assets/sprites/ui/shop_background_v1.png
+          python3 scripts/ci/cdn_manifest_paths.py export-prune | while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            rm -rf "$path"
+          done
 
       - name: Export Web
         run: |
