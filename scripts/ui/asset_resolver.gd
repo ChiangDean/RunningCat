@@ -49,6 +49,7 @@ const BACKGROUNDS := {
 }
 
 const CAT_ICONS := {
+	"baby": UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
 	"bird": UI_ROOT + "character_refs/boss/bird/bird_icon_v1.png",
 	"black_cat": UI_ROOT + "character_refs/black_cat/black_cat_icon_v1.png",
 	"calico_cat": UI_ROOT + "character_refs/calico_cat/calico_cat_icon_v1.png",
@@ -82,6 +83,12 @@ const PROFILE_AVATAR_LABELS := {
 }
 
 const CAT_SHOWCASE_TEXTURES := {
+	"baby": [
+		UI_ROOT + "character_refs/boss/baby/baby_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
+	],
 	"bird": [
 		UI_ROOT + "character_refs/boss/bird/bird_ref_right_v1.png",
 		UI_ROOT + "character_refs/boss/bird/bird_ref_three_quarter_v1.png",
@@ -147,6 +154,12 @@ const CAT_SHOWCASE_TEXTURES := {
 }
 
 const CAT_BATTLE_STATIC_ARTS := {
+	"baby": [
+		UI_ROOT + "character_refs/boss/baby/baby_ref_right_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_ref_three_quarter_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_ref_front_v1.png",
+		UI_ROOT + "character_refs/boss/baby/baby_icon_v1.png",
+	],
 	"bird": [
 		UI_ROOT + "character_refs/boss/bird/bird_ref_right_v1.png",
 		UI_ROOT + "character_refs/boss/bird/bird_ref_three_quarter_v1.png",
@@ -215,6 +228,20 @@ const CAT_BATTLE_DEFAULT_SHEET_HEIGHT := 335
 const CAT_BATTLE_DEFAULT_FRAME_WIDTH := 275
 const CAT_BATTLE_DEFAULT_FRAME_HEIGHT := 335
 const CAT_BATTLE_SPEC_PROFILES := {
+	"baby_256": {
+		"sheet_height": 256,
+		"frame_width": 256,
+		"frame_height": 256,
+		"sheet_widths": {
+			"idle": 1536,
+			"run": 2048,
+			"collide": 1024,
+			"knockback": 1536,
+			"stagger": 1024,
+			"skill": 1536,
+			"death_fly": 1536,
+		},
+	},
 	"standard_256": {
 		"sheet_height": 256,
 		"frame_width": 256,
@@ -266,6 +293,7 @@ const CAT_BATTLE_ENCOUNTER_CHARACTER_IDS: Array[String] = [
 	"toilet_paper",
 ]
 const CAT_BATTLE_BOSS_CHARACTER_IDS: Array[String] = [
+	"baby",
 	"bird",
 	"chihuahua",
 	"cucumber",
@@ -277,6 +305,7 @@ const CAT_BATTLE_BOSS_CHARACTER_IDS: Array[String] = [
 	"schoolgirl",
 ]
 const BATTLE_SPEC_PROFILE_BY_CHARACTER := {
+	"baby": "baby_256",
 	"bird": "bird_256",
 	"black_cat": "standard_256",
 	"calico_cat": "small_128",
