@@ -1,7 +1,6 @@
 extends Control
 
 
-const ADMIN_CATALOG_SCENE_PATH := "res://scenes/AdminCatalogScene.tscn"
 const START_SCENE_PATH := "res://scenes/StartScene.tscn"
 
 const MUTED_TEXT_COLOR := Color(0.90, 0.88, 0.82, 0.92)
@@ -439,12 +438,6 @@ func _build_section_items() -> Array:
 			"shell_description": UiText.SETTINGS_SECTION_GAME_DESC,
 		},
 	]
-	if GameState.is_admin_session():
-		items.append({
-			"key": "admin",
-			"label": "Admin Catalog",
-			"shell_description": UiText.CONFIG_ADMIN_SECTION_DESC,
-		})
 	return items
 
 
@@ -468,12 +461,6 @@ func _render_active_section() -> void:
 			_section_content.add_child(_build_account_section())
 		"game":
 			_section_content.add_child(_build_game_settings_section())
-		"admin":
-			if GameState.is_admin_session():
-				_section_content.add_child(_build_admin_section())
-			else:
-				_active_section = "profile"
-				_section_content.add_child(_build_profile_section())
 		_:
 			_section_content.add_child(_build_profile_section())
 
@@ -839,53 +826,6 @@ func _build_game_settings_section() -> Control:
 	return section
 
 
-func _build_admin_catalog_row() -> Control:
-	var panel: PanelContainer = PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(FIELD_BG, FIELD_BORDER, 12))
-
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(12)
-	panel.add_child(margin)
-
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	margin.add_child(row)
-
-	var text_box: VBoxContainer = VBoxContainer.new()
-	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_box.add_theme_constant_override("separation", 4)
-	row.add_child(text_box)
-
-	var title: Label = Label.new()
-	title.text = "Admin Catalog"
-	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
-	text_box.add_child(title)
-
-	var hint: Label = Label.new()
-	hint.text = "Every visit re-validates admin access before loading catalog settings."
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
-	hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
-	text_box.add_child(hint)
-
-	var button: Button = _make_action_button("Open", "confirm", 160.0)
-	button.pressed.connect(UiAudio.play_ui_click)
-	button.pressed.connect(_open_admin_catalog_scene)
-	row.add_child(button)
-	return panel
-
-
-func _build_admin_section() -> Control:
-	var section: PanelContainer = OverlaySceneChrome.make_card_panel()
-	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
-	section.add_child(margin)
-
-	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	margin.add_child(column)
-
-	column.add_child(_make_section_header("Admin Catalog", UiText.SETTINGS_ADMIN_DESC))
-	column.add_child(_build_admin_catalog_row())
-	return section
 
 
 func _build_external_link_row(title_text: String, hint_text: String, url: String, callback: Callable) -> Control:
@@ -2329,10 +2269,6 @@ func _on_birthday_year_changed(_value: float) -> void:
 
 func _on_birthday_month_changed(_value: float) -> void:
 	_refresh_birthday_day_limit()
-
-
-func _open_admin_catalog_scene() -> void:
-	SceneNavigator.open_overlay_scene(ADMIN_CATALOG_SCENE_PATH)
 
 
 func _close_dialog(close_dialog: Callable) -> Callable:

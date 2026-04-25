@@ -184,18 +184,6 @@ func record_daily_task_event(event_key: String, callback: Callable = Callable())
 	_api_post_tracked("daily-tasks/events", {"eventKey": event_key, "count": 1}, callback, false)
 
 
-func admin_get_catalog_access(callback: Callable) -> void:
-	_api_get("admin/catalog/access", callback)
-
-
-func admin_get_catalog_section(section_key: String, callback: Callable) -> void:
-	_api_get("admin/catalog/%s" % section_key.uri_encode(), callback)
-
-
-func admin_save_catalog_section(section_key: String, payload: Dictionary, callback: Callable) -> void:
-	_api_put("admin/catalog/%s" % section_key.uri_encode(), payload, callback)
-
-
 func get_profile_me(callback: Callable) -> void:
 	_api_get("profile/me", callback)
 
