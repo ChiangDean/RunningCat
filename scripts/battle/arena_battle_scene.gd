@@ -77,14 +77,14 @@ func _build_background() -> void:
 
 	var wall_l := ColorRect.new()
 	wall_l.color = Color(0.5, 0.2, 0.7, 0.0)
-	wall_l.position = Vector2(-20.0, 200.0)
-	wall_l.size = Vector2(20.0, BATTLE_Y - 200.0)
+	wall_l.position = Vector2(-20.0, 0.0)
+	wall_l.size = Vector2(20.0, BATTLE_Y)
 	add_child(wall_l)
 
 	var wall_r := ColorRect.new()
 	wall_r.color = Color(0.5, 0.2, 0.7, 0.0)
-	wall_r.position = Vector2(SW, 200.0)
-	wall_r.size = Vector2(20.0, BATTLE_Y - 200.0)
+	wall_r.position = Vector2(SW, 0.0)
+	wall_r.size = Vector2(20.0, BATTLE_Y)
 	add_child(wall_r)
 
 

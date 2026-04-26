@@ -48,6 +48,7 @@ var _cat_stagger_timers: Dictionary = {}
 var _cat_knockback_timers: Dictionary = {}
 var _cat_accel_timers: Dictionary = {}
 var _cat_skip_recovery_accel: Dictionary = {}
+var _cat_airborne_timers: Dictionary = {}
 var _pending_recycled_cats: Dictionary = {}
 var _pending_recycle_count: int = 0
 
@@ -83,6 +84,7 @@ func setup(_events_param: Array, player_cats: Array, enemy_cats: Array,
 	_cat_knockback_timers.clear()
 	_cat_accel_timers.clear()
 	_cat_skip_recovery_accel.clear()
+	_cat_airborne_timers.clear()
 	_pending_recycled_cats.clear()
 	_pending_recycle_count = 0
 	_player_skill_slots.clear()
@@ -359,6 +361,10 @@ func _update_cat_movement(delta: float) -> void:
 			if previous_stagger_timer > 0.0:
 				if float(_cat_stagger_timers[id]) <= 0.0:
 					_cat_stagger_timers.erase(id)
+		if _cat_airborne_timers.has(id):
+			_cat_airborne_timers[id] = maxf(0.0, float(_cat_airborne_timers[id]) - scaled_delta)
+			if float(_cat_airborne_timers[id]) <= 0.0:
+				_cat_airborne_timers.erase(id)
 		if _cat_knockback_timers.has(id):
 			var previous_knockback_timer: float = float(_cat_knockback_timers[id])
 			_cat_knockback_timers[id] = maxf(0.0, previous_knockback_timer - scaled_delta)
@@ -389,8 +395,8 @@ func _update_cat_movement(delta: float) -> void:
 
 
 func _check_runtime_collision() -> void:
-	var p_front: CatNode = _get_front_runtime_node("player")
-	var e_front: CatNode = _get_front_runtime_node("enemy")
+	var p_front: CatNode = _get_front_runtime_collision_node("player")
+	var e_front: CatNode = _get_front_runtime_collision_node("enemy")
 	if p_front == null or e_front == null:
 		return
 	if absf(p_front.position.x - e_front.position.x) > CAT_HALF_W * 2.0:
@@ -488,6 +494,7 @@ func _apply_runtime_wall_counter(cat_id: int, target_x: float, arc_height: float
 	_cat_knockback_timers[cat_id] = WALL_COUNTER_DURATION
 	_cat_accel_timers[cat_id] = 0.0
 	_cat_skip_recovery_accel[cat_id] = false
+	_cat_airborne_timers[cat_id] = WALL_COUNTER_DURATION
 
 
 func _get_front_runtime_node(team_name: String) -> CatNode:
@@ -506,8 +513,28 @@ func _get_front_runtime_node(team_name: String) -> CatNode:
 	return best
 
 
+func _get_front_runtime_collision_node(team_name: String) -> CatNode:
+	var best: CatNode = null
+	for id_variant: Variant in _cat_nodes.keys():
+		var cat_id: int = int(id_variant)
+		var node: CatNode = _get_cat_node(cat_id)
+		if node == null or node.team != team_name or _is_cat_airborne(cat_id):
+			continue
+		if best == null:
+			best = node
+		elif team_name == "player" and node.position.x > best.position.x:
+			best = node
+		elif team_name == "enemy" and node.position.x < best.position.x:
+			best = node
+	return best
+
+
 func _is_cat_staggered(cat_id: int) -> bool:
 	return float(_cat_stagger_timers.get(cat_id, 0.0)) > 0.0
+
+
+func _is_cat_airborne(cat_id: int) -> bool:
+	return float(_cat_airborne_timers.get(cat_id, 0.0)) > 0.0
 
 
 func _get_wall_counter_target_x(node: CatNode, target_knockback: float) -> float:
@@ -933,6 +960,7 @@ func _remove_cat_runtime_state(cat_id: int) -> void:
 	_cat_knockback_timers.erase(cat_id)
 	_cat_accel_timers.erase(cat_id)
 	_cat_skip_recovery_accel.erase(cat_id)
+	_cat_airborne_timers.erase(cat_id)
 
 
 func _play_collision_sfx(event_time: float) -> void:

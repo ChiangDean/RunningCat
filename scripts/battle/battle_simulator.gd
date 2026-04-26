@@ -35,6 +35,7 @@ class SimCat:
 	var stagger_timer: float = 0.0
 	var knockback_timer: float = 0.0
 	var recovery_accel_timer: float = 0.0
+	var airborne_timer: float = 0.0
 	var facing: int          # 1 = right, -1 = left
 
 	# Skill cooldowns (indexed parallel to data.active_skills_data)
@@ -206,7 +207,7 @@ func simulate(player_cats: Array, enemy_cats: Array) -> Array:
 			events.append(BattleEvent.battle_end(sim_time, "WIN"))
 			events.sort_custom(_sort_battle_events_by_timestamp)
 			return events
-		_check_front_collision(p_front, e_front, sim_time, events)
+		_check_front_collision(_get_front_collidable(p_list), _get_front_collidable(e_list), sim_time, events)
 
 		# Skill timing + triggering
 		for sc: SimCat in p_list + e_list:
@@ -336,6 +337,8 @@ func _init_skill_cooldowns(sc: SimCat) -> void:
 # ── Movement ──────────────────────────────────────────
 
 func _move_cat(sc: SimCat, delta: float) -> void:
+	if sc.airborne_timer > 0.0:
+		sc.airborne_timer = maxf(0.0, sc.airborne_timer - delta)
 	if sc.is_staggered:
 		sc.stagger_timer = maxf(0.0, sc.stagger_timer - delta)
 		if sc.stagger_timer <= 0.0:
@@ -363,6 +366,20 @@ func _get_front(team_list: Array) -> SimCat:
 	var best: SimCat = null
 	for sc: SimCat in team_list:
 		if not sc.is_alive:
+			continue
+		if best == null:
+			best = sc
+		elif sc.team == "player" and sc.pos_x > best.pos_x:
+			best = sc
+		elif sc.team == "enemy" and sc.pos_x < best.pos_x:
+			best = sc
+	return best
+
+
+func _get_front_collidable(team_list: Array) -> SimCat:
+	var best: SimCat = null
+	for sc: SimCat in team_list:
+		if not sc.is_alive or sc.airborne_timer > 0.0:
 			continue
 		if best == null:
 			best = sc
@@ -481,6 +498,7 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array) -> void:
 		p.skip_recovery_accel_after_stagger = false
 		p.stagger_timer = WALL_COUNTER_DURATION
 		p.knockback_timer = WALL_COUNTER_DURATION
+		p.airborne_timer = WALL_COUNTER_DURATION
 		events.append(BattleEvent.wall_counter(t, p.instance_id, p.pos_x, WALL_COUNTER_DURATION, p_counter_height))
 	else:
 		events.append(BattleEvent.collision(t, p.instance_id, p.pos_x, p.current_hp, -kb_p, p_hit_wall))
@@ -492,6 +510,7 @@ func _handle_collision(p: SimCat, e: SimCat, t: float, events: Array) -> void:
 		e.skip_recovery_accel_after_stagger = false
 		e.stagger_timer = WALL_COUNTER_DURATION
 		e.knockback_timer = WALL_COUNTER_DURATION
+		e.airborne_timer = WALL_COUNTER_DURATION
 		events.append(BattleEvent.wall_counter(t, e.instance_id, e.pos_x, WALL_COUNTER_DURATION, e_counter_height))
 	else:
 		events.append(BattleEvent.collision(t, e.instance_id, e.pos_x, e.current_hp, kb_e, e_hit_wall))
