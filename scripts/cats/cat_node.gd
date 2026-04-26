@@ -37,9 +37,8 @@ const BODY_W := 56.0
 const BODY_H := 72.0
 const HP_BAR_W := 64.0
 const HP_BAR_H := 8.0
-const SPRITE_TARGET_W := 128.0
-const SPRITE_TARGET_H := 128.0
-const SPRITE_TARGET_SIZE := Vector2(SPRITE_TARGET_W, SPRITE_TARGET_H)
+const PLAYER_SPRITE_TARGET_SIZE := Vector2(128.0, 128.0)
+const ENEMY_SPRITE_TARGET_SIZE := Vector2(160.0, 160.0)
 const SPRITE_VERTICAL_OFFSET_Y := 10.0
 const SHADOW_RADIUS_X := 28.0
 const SHADOW_RADIUS_Y := 9.0
@@ -59,6 +58,7 @@ const DAMAGE_POP_LABEL_W := 40.0
 const DAMAGE_POP_LABEL_H := 42.0
 const DAMAGE_DIGIT_DELAY := 0.05
 const SKILL_BUBBLE_OFFSET_Y := 162.0
+const SKILL_BUBBLE_VERTICAL_NUDGE_DOWN := 5.0
 const SKILL_BUBBLE_MIN_WIDTH := 92.0
 const SKILL_BUBBLE_MAX_WIDTH := 220.0
 const SKILL_BUBBLE_HEIGHT := 42.0
@@ -66,6 +66,7 @@ const SKILL_BUBBLE_H_PADDING := 18.0
 const SKILL_BUBBLE_TAIL_WIDTH := 18.0
 const SKILL_BUBBLE_TAIL_HEIGHT := 12.0
 const SKILL_BUBBLE_TAIL_GAP := 23.0
+const SKILL_BUBBLE_TAIL_VERTICAL_NUDGE_UP := 10.0
 const SKILL_BUBBLE_POP_TIME := 0.12
 const SKILL_BUBBLE_HOLD_TIME := 2.0
 const SKILL_BUBBLE_FADE_TIME := 0.22
@@ -89,6 +90,11 @@ func setup(id: int, team_name: String, name_str: String, hp: int, file_id: Strin
 	_damage_rng.randomize()
 	_build_visuals()
 	reset_for_spawn()
+
+
+func _process(_delta: float) -> void:
+	if _skill_bubble_root != null and _skill_bubble_root.visible and not SceneNavigator.get_current_overlay_scene_path().is_empty():
+		_hide_skill_bubble()
 
 
 func reset_for_spawn() -> void:
@@ -283,10 +289,20 @@ func _build_animated_body() -> void:
 func _calculate_uniform_sprite_scale(visible_size: Vector2) -> float:
 	var safe_width: float = maxf(1.0, visible_size.x)
 	var safe_height: float = maxf(1.0, visible_size.y)
+	var target_size: Vector2 = _get_sprite_target_size()
 	return minf(
-		SPRITE_TARGET_SIZE.x / safe_width,
-		SPRITE_TARGET_SIZE.y / safe_height
+		target_size.x / safe_width,
+		target_size.y / safe_height
 	)
+
+
+func _get_sprite_target_size() -> Vector2:
+	var parent_node: Node = get_parent()
+	if parent_node != null and parent_node.has_meta("battle_sprite_target_size"):
+		var override_size: Variant = parent_node.get_meta("battle_sprite_target_size")
+		if override_size is Vector2:
+			return override_size as Vector2
+	return PLAYER_SPRITE_TARGET_SIZE if team == "player" else ENEMY_SPRITE_TARGET_SIZE
 
 
 func _get_texture_visible_rect(texture: Texture2D) -> Rect2:
@@ -375,10 +391,23 @@ func show_damage_number(damage: int) -> void:
 func show_skill_bubble(skill_name: String) -> void:
 	if skill_name.strip_edges().is_empty():
 		return
+	if not SceneNavigator.get_current_overlay_scene_path().is_empty():
+		return
+	_ensure_skill_bubble_root()
 	if _skill_bubble_root == null or _skill_bubble_panel == null or _skill_bubble_label == null or _skill_bubble_tail == null:
 		return
 	if _skill_bubble_tween != null and _skill_bubble_tween.is_valid():
 		_skill_bubble_tween.kill()
+	var bubble_host: Node = self
+	var battle_scene: Node = get_tree().get_first_node_in_group("battle_scene")
+	if battle_scene != null and battle_scene.has_method("get_damage_fx_host"):
+		bubble_host = battle_scene.call("get_damage_fx_host")
+	elif battle_scene != null:
+		bubble_host = battle_scene
+	if _skill_bubble_root.get_parent() != bubble_host:
+		if _skill_bubble_root.get_parent() != null:
+			_skill_bubble_root.get_parent().remove_child(_skill_bubble_root)
+		bubble_host.add_child(_skill_bubble_root)
 	_skill_bubble_label.text = skill_name
 	var content_size: Vector2 = _skill_bubble_label.get_combined_minimum_size()
 	var bubble_width: float = clampf(content_size.x + SKILL_BUBBLE_H_PADDING * 2.0, SKILL_BUBBLE_MIN_WIDTH, SKILL_BUBBLE_MAX_WIDTH)
@@ -386,8 +415,8 @@ func show_skill_bubble(skill_name: String) -> void:
 	_skill_bubble_panel.position = Vector2(-bubble_width * 0.5, -SKILL_BUBBLE_HEIGHT)
 	_skill_bubble_label.position = Vector2(SKILL_BUBBLE_H_PADDING, 5.0)
 	_skill_bubble_label.size = Vector2(bubble_width - SKILL_BUBBLE_H_PADDING * 2.0, SKILL_BUBBLE_HEIGHT - 10.0)
-	_skill_bubble_tail.position = Vector2(0.0, SKILL_BUBBLE_TAIL_GAP - SKILL_BUBBLE_TAIL_HEIGHT)
-	_skill_bubble_root.position = Vector2(0.0, -SKILL_BUBBLE_OFFSET_Y)
+	_skill_bubble_tail.position = Vector2(0.0, SKILL_BUBBLE_TAIL_GAP - SKILL_BUBBLE_TAIL_HEIGHT - SKILL_BUBBLE_TAIL_VERTICAL_NUDGE_UP)
+	_skill_bubble_root.global_position = global_position + Vector2(0.0, -SKILL_BUBBLE_OFFSET_Y + SKILL_BUBBLE_VERTICAL_NUDGE_DOWN)
 	_skill_bubble_root.scale = Vector2(0.92, 0.92)
 	_skill_bubble_root.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	_skill_bubble_root.visible = true
@@ -398,7 +427,7 @@ func show_skill_bubble(skill_name: String) -> void:
 	_skill_bubble_tween.tween_property(_skill_bubble_root, "scale", Vector2.ONE, SKILL_BUBBLE_POP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_skill_bubble_tween.chain().tween_interval(SKILL_BUBBLE_HOLD_TIME)
 	_skill_bubble_tween.chain().tween_property(_skill_bubble_root, "modulate:a", 0.0, SKILL_BUBBLE_FADE_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	_skill_bubble_tween.parallel().tween_property(_skill_bubble_root, "position:y", -SKILL_BUBBLE_OFFSET_Y - 12.0, SKILL_BUBBLE_FADE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	_skill_bubble_tween.parallel().tween_property(_skill_bubble_root, "global_position:y", _skill_bubble_root.global_position.y - 12.0, SKILL_BUBBLE_FADE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	_skill_bubble_tween.chain().tween_callback(Callable(self, "_hide_skill_bubble"))
 
 
@@ -439,7 +468,7 @@ func play_stagger() -> void:
 
 
 func play_skill() -> void:
-	_play_temporary("skill", 0.35)
+	_play_temporary("skill", 0.5)
 
 
 func play_wall_counter(target_x: float, arc_height: float, duration: float) -> void:
@@ -518,11 +547,12 @@ func flash_skill() -> void:
 
 
 func _build_skill_bubble() -> void:
+	if _skill_bubble_root != null and is_instance_valid(_skill_bubble_root):
+		return
 	_skill_bubble_root = Node2D.new()
 	_skill_bubble_root.visible = false
 	_skill_bubble_root.z_as_relative = false
-	_skill_bubble_root.z_index = 2
-	add_child(_skill_bubble_root)
+	_skill_bubble_root.z_index = 1
 
 	_skill_bubble_panel = PanelContainer.new()
 	var bubble_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -571,15 +601,31 @@ func _hide_skill_bubble() -> void:
 	if _skill_bubble_tween != null and _skill_bubble_tween.is_valid():
 		_skill_bubble_tween.kill()
 	_skill_bubble_tween = null
-	if _skill_bubble_root != null:
+	if _skill_bubble_root != null and is_instance_valid(_skill_bubble_root):
 		_skill_bubble_root.visible = false
-		_skill_bubble_root.position = Vector2(0.0, -SKILL_BUBBLE_OFFSET_Y)
+		_skill_bubble_root.global_position = global_position + Vector2(0.0, -SKILL_BUBBLE_OFFSET_Y + SKILL_BUBBLE_VERTICAL_NUDGE_DOWN)
 		_skill_bubble_root.scale = Vector2.ONE
 		_skill_bubble_root.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
+func hide_skill_bubble() -> void:
+	_hide_skill_bubble()
+
+
+func _ensure_skill_bubble_root() -> void:
+	if _skill_bubble_root != null and is_instance_valid(_skill_bubble_root):
+		return
+	_skill_bubble_root = null
+	_skill_bubble_panel = null
+	_skill_bubble_label = null
+	_skill_bubble_tail = null
+	_build_skill_bubble()
+
+
 func _play_loop(animation_name: String) -> void:
 	if not _has_animation(animation_name):
+		return
+	if animation_name == "run" and _revert_timer != null:
 		return
 	_cancel_revert()
 	if _active_animation == animation_name:
@@ -741,7 +787,6 @@ func _play_hit_feedback() -> void:
 		body_target = _body_rect
 	if body_target != null:
 		var body_base_position: Vector2 = body_target.position
-		var body_base_scale: Vector2 = body_target.scale
 		var body_tween: Tween = create_tween()
 		body_tween.set_parallel(true)
 		body_tween.tween_property(
@@ -752,18 +797,11 @@ func _play_hit_feedback() -> void:
 		).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		body_tween.tween_property(
 			body_target,
-			"scale",
-			Vector2(body_base_scale.x * 1.08, body_base_scale.y * 0.93),
-			0.06
-		).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		body_tween.tween_property(
-			body_target,
 			"modulate",
 			Color(1.25, 1.25, 1.25, 1.0),
 			0.04
 		).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 		body_tween.chain().tween_property(body_target, "position", body_base_position, 0.12).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-		body_tween.parallel().tween_property(body_target, "scale", body_base_scale, 0.14).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 		body_tween.parallel().tween_property(body_target, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 	if _hp_bar_fill != null:

@@ -520,7 +520,7 @@ static func apply_catalog_texture(texture_rect: TextureRect, raw_path: Variant) 
 static func apply_cat_icon_texture(texture_rect: TextureRect, cat_id: String) -> void:
 	if texture_rect == null:
 		return
-	var resolved_path: String = str(CAT_ICONS.get(cat_id, ""))
+	var resolved_path: String = _resolve_cat_icon_path(cat_id)
 	var fallback_texture: Texture2D = resolve_cat_icon(cat_id)
 	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
 
@@ -619,7 +619,7 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 
 
 static func resolve_cat_icon(cat_id: String) -> Texture2D:
-	return resolve_texture_or_placeholder(str(CAT_ICONS.get(cat_id, "")))
+	return resolve_texture_or_placeholder(_resolve_cat_icon_path(cat_id))
 
 
 static func get_profile_avatar_ids() -> Array[String]:
@@ -649,6 +649,11 @@ static func resolve_cat_showcase_art(cat_id: String) -> Texture2D:
 		var texture: Texture2D = load_texture(candidate_path)
 		if texture != null:
 			return texture
+	for suffix: String in ["ref_right_v1", "ref_three_quarter_v1", "ref_front_v1", "icon_v1"]:
+		var resolved_path: String = _resolve_character_ref_path(cat_id, suffix)
+		var resolved_texture: Texture2D = load_texture(resolved_path)
+		if resolved_texture != null:
+			return resolved_texture
 	return resolve_cat_icon(cat_id)
 
 
@@ -673,18 +678,11 @@ static func resolve_cat_battle_static_art(cat_id: String) -> Texture2D:
 		var texture: Texture2D = load_texture(candidate_path)
 		if texture != null:
 			return texture
-	if CAT_BATTLE_ENCOUNTER_CHARACTER_IDS.has(cat_id):
-		for suffix: String in ["ref_right_v1", "ref_three_quarter_v1", "ref_front_v1", "icon_v1"]:
-			var encounter_path: String = ENCOUNTER_CHARACTER_REF_ROOT + cat_id + "/" + cat_id + "_" + suffix + ".png"
-			var encounter_texture: Texture2D = load_texture(encounter_path)
-			if encounter_texture != null:
-				return encounter_texture
-	if CAT_BATTLE_BOSS_CHARACTER_IDS.has(cat_id):
-		for suffix: String in ["ref_right_v1", "ref_three_quarter_v1", "ref_front_v1", "icon_v1"]:
-			var boss_path: String = BOSS_CHARACTER_REF_ROOT + cat_id + "/" + cat_id + "_" + suffix + ".png"
-			var boss_texture: Texture2D = load_texture(boss_path)
-			if boss_texture != null:
-				return boss_texture
+	for suffix: String in ["ref_right_v1", "ref_three_quarter_v1", "ref_front_v1", "icon_v1"]:
+		var resolved_path: String = _resolve_character_ref_path(cat_id, suffix)
+		var resolved_texture: Texture2D = load_texture(resolved_path)
+		if resolved_texture != null:
+			return resolved_texture
 	return resolve_cat_showcase_art(cat_id)
 
 
@@ -776,6 +774,33 @@ static func get_cat_battle_animation_names() -> Array[String]:
 	for animation_name: String in CAT_BATTLE_ANIMATION_NAMES:
 		animation_names.append(animation_name)
 	return animation_names
+
+
+static func _resolve_cat_icon_path(cat_id: String) -> String:
+	var mapped_path: String = str(CAT_ICONS.get(cat_id, ""))
+	if mapped_path != "" and ResourceLoader.exists(mapped_path):
+		return mapped_path
+	return _resolve_character_ref_path(cat_id, "icon_v1")
+
+
+static func _resolve_character_ref_path(cat_id: String, suffix: String) -> String:
+	if cat_id.strip_edges().is_empty():
+		return ""
+	for root: String in _get_character_ref_roots(cat_id):
+		var candidate_path: String = "%s%s/%s_%s.png" % [root, cat_id, cat_id, suffix]
+		if ResourceLoader.exists(candidate_path):
+			return candidate_path
+	return ""
+
+
+static func _get_character_ref_roots(cat_id: String) -> Array[String]:
+	var roots: Array[String] = []
+	if CAT_BATTLE_ENCOUNTER_CHARACTER_IDS.has(cat_id):
+		roots.append(ENCOUNTER_CHARACTER_REF_ROOT)
+	if CAT_BATTLE_BOSS_CHARACTER_IDS.has(cat_id):
+		roots.append(BOSS_CHARACTER_REF_ROOT)
+	roots.append(UI_CDN_CHARACTER_REF_ROOT)
+	return roots
 
 
 static func resolve_gacha_frame(result: Dictionary) -> Texture2D:

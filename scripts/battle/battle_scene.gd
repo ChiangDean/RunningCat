@@ -2355,6 +2355,18 @@ func _refresh_overlay_fx_state() -> void:
 			for child: Node in _damage_fx_layer.get_children():
 				child.queue_free()
 		_damage_fx_layer.visible = not overlay_open
+	if overlay_open:
+		_hide_team_skill_bubbles()
+
+
+func _hide_team_skill_bubbles() -> void:
+	for team_node: Node2D in [_player_team, _enemy_team]:
+		if team_node == null:
+			continue
+		for child: Node in team_node.get_children():
+			var cat_node: CatNode = child as CatNode
+			if cat_node != null:
+				cat_node.hide_skill_bubble()
 
 
 func _clear_battle_transient_fx() -> void:

@@ -95,6 +95,7 @@ func _build_battle_area() -> void:
 
 	_enemy_team = Node2D.new()
 	_enemy_team.position = Vector2(0.0, BATTLE_Y)
+	_enemy_team.set_meta("battle_sprite_target_size", Vector2(128.0, 128.0))
 	add_child(_enemy_team)
 
 	_battle_manager = BattleManager.new()
