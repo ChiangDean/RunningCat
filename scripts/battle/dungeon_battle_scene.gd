@@ -20,6 +20,7 @@ const SKILL_SLOT_H := 90.0
 const RESULT_OVERLAY_OFFSET_Y := -200.0
 const RESULT_OVERLAY_START_SCALE := 0.56
 const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
+const BATTLE_START_DELAY_SECONDS := 1.0
 
 var _player_team: Node2D
 var _enemy_team: Node2D
@@ -343,6 +344,7 @@ func _highlight_speed_btn(active: Button) -> void:
 
 
 func _start_battle() -> void:
+	await get_tree().create_timer(BATTLE_START_DELAY_SECONDS).timeout
 	if _result_display != null:
 		_result_display.texture = null
 		_result_display.visible = false
@@ -412,10 +414,12 @@ func _on_battle_finished(result: String) -> void:
 	if result == "WIN":
 		_show_result_overlay(true)
 		await get_tree().create_timer(1.0).timeout
+		await _battle_manager.await_cat_recycles()
 		_handle_win()
 	else:
 		_show_result_overlay(false)
 		await get_tree().create_timer(1.0).timeout
+		await _battle_manager.await_cat_recycles()
 		SceneNavigator.open_overlay_scene("res://scenes/DungeonScene.tscn")
 
 

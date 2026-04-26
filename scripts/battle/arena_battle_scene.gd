@@ -20,6 +20,7 @@ const SKILL_SLOT_H := 90.0
 const RESULT_OVERLAY_OFFSET_Y := -200.0
 const RESULT_OVERLAY_START_SCALE := 0.56
 const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
+const BATTLE_START_DELAY_SECONDS := 1.0
 
 var _player_team: Node2D
 var _enemy_team: Node2D
@@ -346,6 +347,7 @@ func _highlight_speed_btn(active: Button) -> void:
 
 
 func _start_battle() -> void:
+	await get_tree().create_timer(BATTLE_START_DELAY_SECONDS).timeout
 	for child in _player_team.get_children():
 		child.queue_free()
 	for child in _enemy_team.get_children():

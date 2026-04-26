@@ -30,7 +30,6 @@ const WALL_COUNTER_MAX_ARC_HEIGHT: float = 400.0
 const WALL_COUNTER_DURATION: float = 0.6
 
 signal battle_finished(result: String)
-
 var _events: Array = []
 var _event_idx: int = 0
 
@@ -49,6 +48,8 @@ var _cat_stagger_timers: Dictionary = {}
 var _cat_knockback_timers: Dictionary = {}
 var _cat_accel_timers: Dictionary = {}
 var _cat_skip_recovery_accel: Dictionary = {}
+var _pending_recycled_cats: Dictionary = {}
+var _pending_recycle_count: int = 0
 
 var _player_team_node: Node2D
 var _enemy_team_node: Node2D
@@ -82,6 +83,8 @@ func setup(_events_param: Array, player_cats: Array, enemy_cats: Array,
 	_cat_knockback_timers.clear()
 	_cat_accel_timers.clear()
 	_cat_skip_recovery_accel.clear()
+	_pending_recycled_cats.clear()
+	_pending_recycle_count = 0
 	_player_skill_slots.clear()
 	_enemy_skill_slots.clear()
 	_event_idx = 0
@@ -328,6 +331,7 @@ func _on_cat_die(ev: BattleEvent) -> void:
 	if node:
 		node.move_to(ev.pos_x)
 		node.play_death()
+		_track_cat_recycle(ev.cat_id)
 		var died_sfx_index: int = _collision_sfx_rng.randi_range(0, CAT_DIED_SFXS.size() - 1)
 		var died_sfx: AudioStream = CAT_DIED_SFXS[died_sfx_index]
 		_play_audio_sfx(died_sfx, -4.0, 1.0)
@@ -546,6 +550,7 @@ func _check_runtime_death(cat_id: int) -> void:
 	var node: CatNode = _get_cat_node(cat_id)
 	if node != null:
 		node.play_death()
+		_track_cat_recycle(cat_id)
 		var died_sfx_index: int = _collision_sfx_rng.randi_range(0, CAT_DIED_SFXS.size() - 1)
 		var died_sfx: AudioStream = CAT_DIED_SFXS[died_sfx_index]
 		_play_audio_sfx(died_sfx, -4.0, 1.0)
@@ -892,6 +897,32 @@ func _get_cat_node(cat_id: int) -> CatNode:
 		_remove_cat_runtime_state(cat_id)
 		return null
 	return node
+
+
+func _track_cat_recycle(cat_id: int) -> void:
+	if _pending_recycled_cats.has(cat_id):
+		return
+
+	var node: CatNode = _get_cat_node(cat_id)
+	if node == null:
+		return
+
+	_pending_recycled_cats[cat_id] = true
+	_pending_recycle_count += 1
+	node.died.connect(_on_cat_node_recycled.bind(cat_id), CONNECT_ONE_SHOT)
+
+
+func _on_cat_node_recycled(_node: CatNode, cat_id: int) -> void:
+	if not _pending_recycled_cats.has(cat_id):
+		return
+
+	_pending_recycled_cats.erase(cat_id)
+	_pending_recycle_count = maxi(0, _pending_recycle_count - 1)
+
+
+func await_cat_recycles() -> void:
+	while _pending_recycle_count > 0:
+		await get_tree().process_frame
 
 
 func _remove_cat_runtime_state(cat_id: int) -> void:
