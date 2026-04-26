@@ -5,6 +5,7 @@ extends Node2D
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
 const AdaptiveViewportScript = preload("res://scripts/ui/adaptive_viewport.gd")
+const HomeMiniChatPanelScript = preload("res://scripts/chat/HomeMiniChatPanel.gd")
 const OverlaySceneChromeRef = preload("res://scripts/ui/overlay_scene_chrome.gd")
 const HOME_TOP_HUD_SCENE := preload("res://scenes/ui/home/HomeTopHudEditor.tscn")
 const HOME_BOTTOM_HUD_SCENE := preload("res://scenes/ui/home/HomeBottomHudEditor.tscn")
@@ -177,6 +178,7 @@ var _battle_manager: BattleManager
 # UI nodes
 var _ui_layer: Control
 var _timer_label: Label
+var _chat_mode_btn: Button
 var _scoop_mode_btn: Button
 var _skill_filter_btn: Button
 var _speed_1x: Button
@@ -207,6 +209,7 @@ var _chat_btn: TextureButton
 var _backpack_btn: TextureButton
 var _lineup_btn: TextureButton
 var _chat_badge: Label
+var _chat_mode_badge: Label
 var _home_lower_mainmenu_bg: TextureRect
 var _home_lower_menu_bg: TextureRect
 var _home_main_button_panel: TextureRect
@@ -265,6 +268,7 @@ var _announcement_btn: TextureButton
 var _stats_btn: TextureButton
 var _bottom_hud_layout: Control
 var _skill_filter_mode: String = "scoop"
+var _home_mini_chat_panel: HomeMiniChatPanel
 var _startup_idle_rewards_dialog_checked: bool = false
 var _current_speed_mult: float = 1.0
 var _free_speed_boost_end_unix: int = 0
@@ -753,6 +757,8 @@ func _build_ui() -> void:
 	_mail_badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 	_chat_badge = _make_label("", Vector2.ZERO, Vector2(22.0, 18.0), 12)
 	_chat_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_chat_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chat_badge.visible = false
 	GameState.chat_unread_changed.connect(_on_chat_unread_changed)
 	GameState.party_cheer_coupon_count_changed.connect(_on_party_cheer_coupon_count_changed)
 	_refresh_chat_badge()
@@ -798,6 +804,16 @@ func _build_ui() -> void:
 	_skill_header_rule.color = Color(0.84, 0.66, 0.34, 0.26)
 	_skill_panel.add_child(_skill_header_rule)
 
+	_chat_mode_btn = _make_button(
+		UiText.HOME_CHAT,
+		_get_bottom_hud_position("SkillPanel/ChatModeButton", Vector2(72.0, 48.0)),
+		_get_bottom_hud_size("SkillPanel/ChatModeButton", Vector2(104.0, 43.0))
+	)
+	_apply_bottom_hud_font_size(_chat_mode_btn, "SkillPanel/ChatModeButton", UiPalette.FONT_SIZE_SUBHEADING)
+	_skill_panel.add_child(_chat_mode_btn)
+	_setup_skill_mode_button_visual(_chat_mode_btn, "SkillPanel/ChatModeButton")
+	_chat_mode_btn.pressed.connect(_show_chat_mode)
+
 	_scoop_mode_btn = _make_button(
 		UiText.HOME_SKILL_MODE_SCOOP,
 		_get_bottom_hud_position("SkillPanel/ScoopButton", Vector2(194.0, 48.0)),
@@ -818,6 +834,12 @@ func _build_ui() -> void:
 	_setup_skill_mode_button_visual(_skill_filter_btn, "SkillPanel/SkillFilterButton")
 	_apply_skill_filter_button_style(_skill_filter_btn, true)
 	_skill_filter_btn.pressed.connect(_show_dash_mode)
+
+	_chat_mode_badge = _make_label("", Vector2.ZERO, Vector2(26.0, 20.0), 12)
+	_chat_mode_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_chat_mode_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chat_mode_badge.visible = false
+	_skill_panel.add_child(_chat_mode_badge)
 
 	_skill_bar = _build_skill_bar()
 	_skill_panel.add_child(_skill_bar)
@@ -847,6 +869,12 @@ func _build_ui() -> void:
 	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
 	_skill_panel.add_child(_sandbox_btn)
 	_layout_sandbox_btn()
+
+	_home_mini_chat_panel = HomeMiniChatPanelScript.new()
+	_home_mini_chat_panel.position = _get_bottom_hud_position("SkillPanel/ChatPanelHost", Vector2(SKILL_PANEL_CONTENT_PAD, 112.0))
+	_home_mini_chat_panel.size = _get_bottom_hud_size("SkillPanel/ChatPanelHost", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, 252.0))
+	_home_mini_chat_panel.visible = false
+	_skill_panel.add_child(_home_mini_chat_panel)
 
 	_home_scoop_panel = HOME_SCOOP_TEMPLATE_SCENE.instantiate() as Control
 	_home_scoop_panel.position = Vector2(HOME_SCOOP_PANEL_X, HOME_SCOOP_PANEL_Y)
@@ -1181,6 +1209,7 @@ func _apply_skill_bar_layout() -> void:
 		return
 	var skill_panel_base_size: Vector2 = _get_bottom_hud_size("SkillPanel", Vector2(SKILL_PANEL_W, SKILL_PANEL_H))
 	var is_all_mode: bool = _skill_filter_mode == "all"
+	var is_chat_mode: bool = _skill_filter_mode == "chat"
 	var is_scoop_mode: bool = _skill_filter_mode == "scoop"
 	_skill_panel.size = Vector2(
 		skill_panel_base_size.x,
@@ -1209,13 +1238,18 @@ func _apply_skill_bar_layout() -> void:
 		_sandbox_btn.visible = true
 	if _home_scoop_panel != null:
 		_home_scoop_panel.visible = is_scoop_mode
+	if _home_mini_chat_panel != null:
+		_home_mini_chat_panel.position = _get_bottom_hud_position("SkillPanel/ChatPanelHost", _home_mini_chat_panel.position)
+		_home_mini_chat_panel.size = _get_bottom_hud_size("SkillPanel/ChatPanelHost", _home_mini_chat_panel.size)
+		_home_mini_chat_panel.visible = is_chat_mode
+		_home_mini_chat_panel.set_panel_active(is_chat_mode)
 	if _skip_btn != null:
 		_skip_btn.visible = GameState.is_admin_session()
 	var skill_bar_anchor_pos: Vector2 = _get_bottom_hud_position("SkillPanel/SkillBarAnchor", Vector2(SKILL_PANEL_CONTENT_PAD, 48.0))
 	var skill_bar_anchor_size: Vector2 = _get_bottom_hud_size("SkillPanel/SkillBarAnchor", Vector2(_skill_panel.size.x - SKILL_PANEL_CONTENT_PAD * 2.0, SKILL_BAR_H))
 	_skill_bar.position.x = skill_bar_anchor_pos.x
 	_skill_bar.size.x = skill_bar_anchor_size.x
-	if is_scoop_mode:
+	if is_scoop_mode or is_chat_mode:
 		_skill_bar.position = skill_bar_anchor_pos
 		_skill_bar.size = Vector2(_skill_bar.size.x, 0.0)
 		for i in range(MAX_CATS_ON_FIELD * 2):
@@ -1319,6 +1353,9 @@ func _layout_sandbox_btn() -> void:
 
 
 func _refresh_skill_mode_buttons() -> void:
+	if _chat_mode_btn != null:
+		_chat_mode_btn.text = UiText.HOME_CHAT
+		_apply_skill_filter_button_style(_chat_mode_btn, _skill_filter_mode == "chat")
 	if _scoop_mode_btn != null:
 		_scoop_mode_btn.text = UiText.HOME_SKILL_MODE_SCOOP
 		_apply_skill_filter_button_style(_scoop_mode_btn, _skill_filter_mode == "scoop")
@@ -1328,12 +1365,20 @@ func _refresh_skill_mode_buttons() -> void:
 
 
 func _set_skill_filter_mode(mode: String) -> void:
-	_skill_filter_mode = "all" if mode == "all" else "scoop"
+	match mode:
+		"all", "chat":
+			_skill_filter_mode = mode
+		_:
+			_skill_filter_mode = "scoop"
 	_refresh_home_lower_menu_background()
 	_apply_skill_bar_layout()
 	_refresh_skill_mode_buttons()
 	if _battle_manager != null:
-		_battle_manager.set_skill_bar_filter(_skill_filter_mode)
+		_battle_manager.set_skill_bar_filter("all" if _skill_filter_mode == "all" else "scoop")
+
+
+func _show_chat_mode() -> void:
+	_set_skill_filter_mode("chat")
 
 
 func _show_scoop_mode() -> void:
@@ -1345,7 +1390,7 @@ func _show_dash_mode() -> void:
 
 
 func _get_home_lower_menu_background_texture() -> Texture2D:
-	return HOME_LOWER_MENU_BG_SKILL_TEXTURE if _skill_filter_mode == "all" else HOME_LOWER_MENU_BG_TEXTURE
+	return HOME_LOWER_MENU_BG_SKILL_TEXTURE if _skill_filter_mode == "all" or _skill_filter_mode == "chat" else HOME_LOWER_MENU_BG_TEXTURE
 
 
 func _refresh_home_lower_menu_background() -> void:
@@ -1694,6 +1739,8 @@ func _refresh_home_more_badge_positions() -> void:
 		_mail_badge.position = _mail_btn.position + Vector2(_mail_btn.size.x - 18.0, 4.0)
 	if _chat_badge != null and _chat_btn != null:
 		_chat_badge.position = _chat_btn.position + Vector2(_chat_btn.size.x - 18.0, 6.0)
+	if _chat_mode_badge != null and _chat_mode_btn != null:
+		_chat_mode_badge.position = _chat_mode_btn.position + Vector2(_chat_mode_btn.size.x - 18.0, 4.0)
 
 
 func _set_home_quick_button_active(button: TextureButton, is_active: bool) -> void:
@@ -3646,9 +3693,21 @@ func _open_party() -> void:
 
 
 func _refresh_chat_badge() -> void:
-	if _chat_badge == null:
+	if _chat_badge == null and _chat_mode_badge == null:
 		return
 	_refresh_home_more_badge_positions()
 	var unread := GameState.get_chat_total_unread()
-	_chat_badge.visible = _home_more_menu_expanded and unread > 0
-	_chat_badge.text = str(min(unread, 99))
+	if _chat_badge != null:
+		_chat_badge.visible = false
+	if _chat_mode_badge != null:
+		_chat_mode_badge.visible = false
+	if _chat_badge != null and _chat_btn != null:
+		if _home_more_menu_expanded and unread > 0:
+			BadgeOverlay.add_count(_chat_btn, unread)
+		else:
+			BadgeOverlay.remove(_chat_btn)
+	if _chat_mode_badge != null and _chat_mode_btn != null:
+		if unread > 0:
+			BadgeOverlay.add_count(_chat_mode_btn, unread)
+		else:
+			BadgeOverlay.remove(_chat_mode_btn)

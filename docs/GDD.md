@@ -24,3 +24,4 @@
 | 鏟屎官資料架構 | [14_scooper_data_architecture.md](gdd/14_scooper_data_architecture.md) |
 | 屬性數值總覽面板 | [24_stats_panel.md](gdd/24_stats_panel.md) |
 | Admin Catalog 後台 | [25_admin_catalog_frontend.md](gdd/25_admin_catalog_frontend.md) |
+| 首頁聊天快捷入口 | [30_home_chat_shortcut.md](gdd/30_home_chat_shortcut.md) |

@@ -82,6 +82,14 @@ offset_right = 712.0
 offset_bottom = 36.0
 color = Color(0.84, 0.66, 0.34, 0.4)
 
+[node name="ChatModeButton" type="Button" parent="SkillPanel" unique_id=1044495206]
+layout_mode = 0
+offset_left = 63.0
+offset_top = 38.0
+offset_right = 168.0
+offset_bottom = 96.0
+text = "聊天"
+
 [node name="ScoopButton" type="Button" parent="SkillPanel" unique_id=68054259]
 layout_mode = 0
 offset_left = 185.0
@@ -121,6 +129,14 @@ offset_top = 114.0
 offset_right = 714.0
 offset_bottom = 240.0
 color = Color(0.92, 0.82, 0.35, 0.1)
+
+[node name="ChatPanelHost" type="ColorRect" parent="SkillPanel" unique_id=1720299812]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 114.0
+offset_right = 712.0
+offset_bottom = 366.0
+color = Color(0.92, 0.82, 0.35, 0.08)
 
 [node name="HomeScoopPanel" parent="." unique_id=869017672 instance=ExtResource("7")]
 layout_mode = 0
