@@ -1,8 +1,6 @@
 extends Control
 
-const HERO_IMAGE := preload("res://assets/sprites/ui/start_scene_homey_v1.png")
-const AdaptiveViewportScript = preload("res://scripts/ui/adaptive_viewport.gd")
-const RuntimeConfigScript = preload("res://scripts/gamestate/RuntimeConfig.gd")
+const HERO_IMAGE_PATH := "res://assets/sprites/ui/start_scene_homey_v1.png"
 const TITLE_TEXT := UiText.START_TITLE
 const SUBTITLE_TEXT := UiText.START_SUBTITLE
 const TAP_TO_START_TEXT := UiText.START_TAP_TO_START
@@ -78,6 +76,7 @@ enum AuthMode
 }
 
 var _api_base_url := DEFAULT_API_BASE_URL
+var _hero_image: Texture2D
 var _device_id := ""
 var _request_in_flight := false
 var _request_kind := ""
@@ -127,11 +126,13 @@ var _oauth_poll_elapsed := 0.0
 var _pending_retry_login_active := false
 var _pending_retry_login_account: String = ""
 var _pending_retry_login_password: String = ""
+var _guest_account_exists_recovery_attempted := false
 
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiAudio.stop_bgm()
+	_hero_image = load(HERO_IMAGE_PATH) as Texture2D
 	var resolved_api_base_url: String = _resolve_api_base_url()
 	_api_base_url = resolved_api_base_url
 	_device_id = _load_or_create_device_id()
@@ -142,7 +143,7 @@ func _ready() -> void:
 	_play_idle_animation()
 	_apply_mode()
 	if GameState.load_persisted_auth_session():
-		if RuntimeConfigScript.has_explicit_api_base_url():
+		if RuntimeConfig.has_explicit_api_base_url():
 			_api_base_url = resolved_api_base_url
 			if GameState.api_base_url != _api_base_url:
 				GameState.set_auth_session(_api_base_url, GameState.auth_session)
@@ -159,7 +160,7 @@ func _build_ui() -> void:
 
 	var background := TextureRect.new()
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	background.texture = HERO_IMAGE
+	background.texture = _hero_image
 	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -333,7 +334,7 @@ func _build_auth_block() -> PanelContainer:
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f"))
 	content.add_child(_status_label)
 
-	if RuntimeConfigScript.is_oauth_enabled():
+	if RuntimeConfig.is_oauth_enabled():
 		_oauth_intro_label = Label.new()
 		_oauth_intro_label.text = OAUTH_DIVIDER_TEXT
 		_oauth_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -469,11 +470,11 @@ func _build_logout_button() -> Button:
 
 
 func _sync_adaptive_layout() -> void:
-	var content_origin: Vector2 = AdaptiveViewportScript.get_content_origin(self)
-	var visible_size: Vector2 = AdaptiveViewportScript.get_visible_size(self)
+	var content_origin: Vector2 = AdaptiveViewport.get_content_origin(self)
+	var visible_size: Vector2 = AdaptiveViewport.get_visible_size(self)
 	var is_compact_auth_focus: bool = _is_compact_auth_focus_active(visible_size)
 	var safe_frame_left: float = content_origin.x
-	var safe_frame_width: float = AdaptiveViewportScript.BASE_SIZE.x
+	var safe_frame_width: float = AdaptiveViewport.BASE_SIZE.x
 
 	if _title_card != null:
 		_title_card.visible = not is_compact_auth_focus
@@ -675,7 +676,7 @@ func _apply_mode() -> void:
 func _get_auth_block_height() -> float:
 	if _mode == AuthMode.OAUTH_PROFILE:
 		return AUTH_BLOCK_HEIGHT_OAUTH_PROFILE
-	if RuntimeConfigScript.is_oauth_enabled():
+	if RuntimeConfig.is_oauth_enabled():
 		return AUTH_BLOCK_HEIGHT_WITH_OAUTH
 	if _mode == AuthMode.REGISTER:
 		return AUTH_BLOCK_HEIGHT_REGISTER_COMPACT
@@ -737,7 +738,7 @@ func _on_secondary_pressed() -> void:
 
 
 func _on_guest_pressed() -> void:
-	_submit_guest_login()
+	_submit_guest_login(true)
 
 
 func _submit_login() -> void:
@@ -775,12 +776,14 @@ func _submit_login() -> void:
 		_set_status(UiText.START_STATUS_REQUEST_ERROR_FORMAT % error, true)
 
 
-func _submit_guest_login() -> void:
+func _submit_guest_login(reset_recovery_state: bool = false) -> void:
 	if _request_in_flight:
 		return
 
 	_mode = AuthMode.LOGIN
 	_apply_mode()
+	if reset_recovery_state:
+		_guest_account_exists_recovery_attempted = false
 	_request_in_flight = true
 	_request_kind = REQUEST_KIND_GUEST_LOGIN
 	_auth_request_mode = AuthMode.LOGIN
@@ -881,7 +884,7 @@ func _submit_register() -> void:
 func _begin_oauth_sign_in(provider_key: String, provider_name: String) -> void:
 	if _request_in_flight:
 		return
-	if not RuntimeConfigScript.is_oauth_enabled():
+	if not RuntimeConfig.is_oauth_enabled():
 		_set_status(UiText.START_STATUS_OAUTH_DISABLED, true)
 		return
 
@@ -1162,8 +1165,16 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 
 	if completed_request_kind == REQUEST_KIND_GUEST_LOGIN:
 		_release_network_loading_overlay()
-		if response_code == 401:
+		if _is_account_already_exists_error(error_payload) and not _guest_account_exists_recovery_attempted:
+			_guest_account_exists_recovery_attempted = true
+			_submit_guest_login()
+			return
+		if response_code == 401 and not _guest_account_exists_recovery_attempted:
 			_submit_guest_register()
+			return
+		if _guest_account_exists_recovery_attempted and response_code == 401:
+			var guest_login_message: String = str(error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED)
+			_set_status(guest_login_message, true)
 			return
 		var guest_login_message: String = str(error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED)
 		_set_status(guest_login_message, true)
@@ -1171,6 +1182,10 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 
 	if completed_request_kind == REQUEST_KIND_GUEST_REGISTER:
 		_release_network_loading_overlay()
+		if _is_account_already_exists_error(error_payload) and not _guest_account_exists_recovery_attempted:
+			_guest_account_exists_recovery_attempted = true
+			_submit_guest_login()
+			return
 		var guest_register_message: String = str(error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED)
 		_set_status(guest_register_message, true)
 		return
@@ -1482,6 +1497,21 @@ func _is_bootstrap_retryable_result(result: int) -> bool:
 		or result == HTTPRequest.RESULT_CONNECTION_ERROR
 
 
+func _is_account_already_exists_error(error_payload: Dictionary) -> bool:
+	var code: String = str(error_payload.get("code", "")).strip_edges().to_upper()
+	if code == "AUTH.ACCOUNT_ALREADY_EXISTS":
+		return true
+	if code == "AUTH.ACCOUNT_DELETED":
+		return true
+
+	var message: String = str(error_payload.get("message", "")).strip_edges().to_lower()
+	if message.findn("account already exists") != -1:
+		return true
+	if message.findn("account deleted") != -1:
+		return true
+	return message.findn("account is deleted") != -1
+
+
 func _schedule_bootstrap_retry() -> void:
 	_bootstrap_retry_count += 1
 	var retry_message := UiText.START_STATUS_RETRY_FORMAT % [
@@ -1691,7 +1721,7 @@ func _build_request_headers(access_token: String = "", include_json_content_type
 	return headers
 
 func _resolve_api_base_url() -> String:
-	return RuntimeConfigScript.get_api_base_url(DEFAULT_API_BASE_URL)
+	return RuntimeConfig.get_api_base_url(DEFAULT_API_BASE_URL)
 
 
 func _build_device_name() -> String:

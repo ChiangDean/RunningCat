@@ -91,6 +91,7 @@ const SKILL_MODE_LABEL_OUTLINE := Color(0.98, 0.93, 0.84, 0.98)
 const SKILL_MODE_LABEL_OUTLINE_SIZE := 5
 const SKILL_MODE_LABEL_ACTIVE_OUTLINE_SIZE := 6
 const SKILL_MODE_LABEL_FONT_BOOST := 2
+const BATTLE_START_DELAY_SECONDS := 1.0
 
 # Skill bar baseline positioned just below BATTLE_Y.
 const SKILL_BAR_Y := BATTLE_Y + 10.0
@@ -2330,6 +2331,7 @@ func _refresh_mail_badge() -> void:
 # Battle flow
 
 func _start_battle() -> void:
+	await get_tree().create_timer(BATTLE_START_DELAY_SECONDS).timeout
 	_start_battle_internal()
 
 
@@ -2425,6 +2427,7 @@ func _on_battle_finished(result: String) -> void:
 	var is_boss := GameState.is_current_boss()
 
 	if result == "WIN":
+		await _battle_manager.await_cat_recycles()
 		if is_boss:
 			_show_result_overlay(true)
 		GameState.advance_after_win()
@@ -2433,6 +2436,7 @@ func _on_battle_finished(result: String) -> void:
 		_start_battle()
 	else:
 		_show_result_overlay(false)
+		await _battle_manager.await_cat_recycles()
 		if is_boss:
 			GameState.on_boss_fail()
 		await get_tree().create_timer(1.0).timeout

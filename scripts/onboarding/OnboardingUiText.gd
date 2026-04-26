@@ -12,13 +12,13 @@ const NAME_PLACEHOLDER := "輸入鏟屎官稱號"
 const NAME_CONFIRM := "就這個了！"
 const NAME_SKIP := "略過"
 const NAME_ERROR_EMPTY := "請輸入名稱，或點擊略過。"
-const NAME_HINT := "這個名字會跟著你的貓咪一起出現在世界上。"
+const NAME_HINT := "這個名字會跟著你出現在世界上。(可修改)"
 
 # ── Step 2：選貓 ──
 const CAT_PICKER_TITLE := "選擇你的第一隻貓"
 const CAT_PICKER_SUBTITLE := "牠會成為你的初始夥伴，帶著牠一起探索吧！"
 const CAT_PICKER_CONFIRM := "領養牠！"
-const CAT_PICKER_HINT := "點選一隻貓來查看詳情"
+const CAT_PICKER_HINT := "請選擇第一隻看上的貓咪"
 const CAT_PICKER_SELECTED_FORMAT := "你選擇了「%s」"
 const CAT_PICKER_LOADING := "正在安排領養手續..."
 const CAT_PICKER_ERROR := "領養失敗，請再試一次。"
@@ -32,13 +32,13 @@ const DIALOGUE_START := "開始冒險！"
 # 格式：[speaker, text, show_cat_image]
 # speaker = "" → 旁白（無頭像）
 # speaker = "{cat_name}" → 貓咪（顯示貓圖）
-# speaker = "{player_name}" → 鏟屎官（無圖）
+# speaker = "{player_name}" → 鏟屎官（顯示角色圖）
 
 const DIALOGUE_BEAT_NARRATOR_1_SPEAKER := ""
 const DIALOGUE_BEAT_NARRATOR_1_TEXT := "某個平凡的街角，有個人每天都準時出現。\n不論颳風下雨，手上永遠拿著貓罐頭。"
 
 const DIALOGUE_BEAT_NARRATOR_2_SPEAKER := ""
-const DIALOGUE_BEAT_NARRATOR_2_TEXT := "這個人就是你——\n在這個以派對解決一切的貓咪世界裡，你是一位鏟屎官。"
+const DIALOGUE_BEAT_NARRATOR_2_TEXT := "這個人就是你——\n在這個以衝撞解決一切的貓咪世界裡，你是一位鏟屎官。"
 
 const DIALOGUE_BEAT_CAT_1_SPEAKER := "{cat_name}"
 const DIALOGUE_BEAT_CAT_1_TEXT := "哼，那個每天來的人類。\n罐頭還行。但想摸我？做夢。"
@@ -75,5 +75,5 @@ const DIALOGUE_BEAT_NARRATOR_6_TEXT := "{player_name} 的誘捕籠，再次出�
 
 # ── 結尾 ──
 const COMPLETE_TITLE := "歡迎來到喵喵衝撞派對！"
-const COMPLETE_SUBTITLE_FORMAT := "%s 與 %s，冒險開始了！"
+const COMPLETE_SUBTITLE_FORMAT := "%s 與 %s 的衝撞派對開始了！"
 const COMPLETE_BUTTON := "開始遊戲！"

@@ -31,8 +31,7 @@ static func get_api_base_url(default_api_base_url: String) -> String:
 		return str(config.get("api_base_url", default_api_base_url)).rstrip("/")
 
 	var environment_config: Dictionary = _get_active_environment_config(config)
-	var api_base_url: Variant = environment_config.get("api_base_url", default_api_base_url)
-	return str(api_base_url).rstrip("/")
+	return str(environment_config.get("api_base_url", default_api_base_url)).rstrip("/")
 
 
 static func has_explicit_api_base_url() -> bool:
@@ -55,7 +54,7 @@ static func _get_web_api_base_url_override() -> String:
 	if not ClassDB.class_exists("JavaScriptBridge"):
 		return ""
 
-	var raw_query_url := JavaScriptBridge.eval("(() => { const params = new URLSearchParams(window.location.search); const queryValue = params.get('api_base_url') || params.get('apiBaseUrl') || ''; if (queryValue) { window.sessionStorage.setItem('mpd_api_base_url', queryValue); return queryValue; } return window.sessionStorage.getItem('mpd_api_base_url') || ''; })()", true)
+	var raw_query_url: String = str(JavaScriptBridge.eval("(() => { const params = new URLSearchParams(window.location.search); const queryValue = params.get('api_base_url') || params.get('apiBaseUrl') || ''; if (queryValue) { window.sessionStorage.setItem('mpd_api_base_url', queryValue); return queryValue; } return window.sessionStorage.getItem('mpd_api_base_url') || ''; })()", true))
 
 	var query_url: String = str(raw_query_url).strip_edges()
 	if query_url == "null" or query_url == "":

@@ -1,9 +1,54 @@
 extends Control
 
-const OT := OnboardingUiText
+const OT = preload("res://scripts/onboarding/OnboardingUiText.gd")
 
 const ONBOARDING_API_PATH := "/onboarding/complete"
 const REQUEST_TIMEOUT_SECONDS := 15.0
+const ONBOARDING_PLAYER_NAME_FALLBACK := "鏟屎官"
+const ONBOARDING_CAT_NAME_PLACEHOLDER := "貓咪"
+const DIALOGUE_SPEAKER_CAT: String = "cat"
+const DIALOGUE_SPEAKER_OWNER: String = "owner"
+const DIALOGUE_SPEAKER_NONE: String = ""
+const DIALOGUE_IMAGE_SPECIAL_CAT_FOOD := "catalog/consumable/special_cat_food"
+const DIALOGUE_IMAGE_TRAP_CAGES := "catalog/consumable/trap_cages"
+const DIALOGUE_INLINE_KIND_NONE := ""
+const DIALOGUE_INLINE_KIND_CATALOG_IMAGE := "catalog_image"
+const DIALOGUE_INLINE_KIND_IMAGE_ROW := "image_row"
+const DIALOGUE_INLINE_KIND_CAT_FORMATION := "cat_formation"
+const DIALOGUE_INLINE_KIND_SCOOP_ANIMATION := "scoop_animation"
+const DIALOGUE_PORTRAIT_KIND_NONE := ""
+const DIALOGUE_PORTRAIT_KIND_CAT := "cat"
+const DIALOGUE_PORTRAIT_KIND_OWNER := "owner"
+const DIALOGUE_CAT_PICKER_INSERT_BEAT_INDEX := 7
+const DIALOGUE_SELECTED_CAT_REVEAL_BEAT_INDEX := 9
+const DIALOGUE_GENERIC_CAT_IMAGE_SIZE := Vector2(220, 220)
+const DIALOGUE_SELECTED_CAT_IMAGE_SIZE := Vector2(220, 220)
+const DIALOGUE_OWNER_IMAGE_SIZE := Vector2(192, 192)
+const DIALOGUE_INLINE_IMAGE_SIZE := Vector2(336, 336)
+const DIALOGUE_INLINE_SCOOP_SIZE := Vector2(320, 320)
+const DIALOGUE_INLINE_ROW_IMAGE_SIZE := Vector2(112, 112)
+const DIALOGUE_INLINE_FORMATION_GENERIC_SIZE := Vector2(92, 92)
+const DIALOGUE_INLINE_FORMATION_SELECTED_SIZE := Vector2(224.4, 224.4)
+const DIALOGUE_INLINE_FORMATION_STAGE_SIZE := Vector2(520, 336)
+const DIALOGUE_INLINE_FORMATION_TRAP_SIZE := Vector2(300, 300)
+const PICKER_GENERIC_CAT_IMAGE_SIZE := Vector2(120, 120)
+const HOME_SCOOP_SHEET_TEXTURE := preload("res://assets/sprites/ui/home/scooper/clean_litter_button_sheet.png")
+const HOME_SCOOP_FRAME_SIZE := Vector2i(256, 256)
+const HOME_SCOOP_FRAME_COUNT := 14
+const HOME_SCOOP_ANIMATION_START_FRAME := 1
+const HOME_SCOOP_ANIMATION_FPS := 8.0
+const DIALOGUE_ROW_IMAGE_ENCOUNTERS := [
+	"res://assets/sprites/cdn/ui/character_refs/encounters/lipstick/lipstick_ref_right_v1.png",
+	"res://assets/sprites/cdn/ui/character_refs/encounters/toilet_paper/toilet_paper_ref_front_v1.png",
+	"res://assets/sprites/cdn/ui/character_refs/encounters/remote_control/remote_control_ref_three_quarter_v1.png",
+	"res://assets/sprites/cdn/ui/character_refs/encounters/mug/mug_ref_front_v1.png",
+]
+const DIALOGUE_ROW_IMAGE_VISITORS := [
+	"res://assets/sprites/cdn/ui/character_refs/boss/schoolgirl/schoolgirl_ref_three_quarter_v1.png",
+	"res://assets/sprites/cdn/ui/character_refs/boss/male_coworker/male_coworker_ref_three_quarter_v1.png",
+	"res://assets/sprites/cdn/ui/character_refs/boss/grandma/grandma_ref_front_v1.png",
+	"res://assets/sprites/cdn/ui/character_refs/boss/baby/baby_ref_right_v1.png",
+]
 
 enum Step { NAME, CAT_PICKER, DIALOGUE, COMPLETE }
 
@@ -19,7 +64,8 @@ var _name_skip_btn: Button
 var _name_status: Label
 
 var _picker_panel: PanelContainer
-var _picker_grid: HFlowContainer
+var _picker_grid: GridContainer
+var _picker_scroller: InertialScroller
 var _picker_confirm_btn: Button
 var _picker_status: Label
 var _picker_selected_label: Label
@@ -28,10 +74,14 @@ var _dialogue_panel: PanelContainer
 var _dialogue_cat_image: TextureRect
 var _dialogue_speaker_label: Label
 var _dialogue_text_label: Label
+var _dialogue_inline_image: TextureRect
+var _dialogue_inline_image_row: HBoxContainer
+var _dialogue_inline_cat_formation: Control
+var _dialogue_inline_animation: TextureRect
 var _dialogue_next_btn: Button
-var _dialogue_skip_btn: Button
 
 var _complete_panel: PanelContainer
+var _complete_subtitle_label: Label
 var _complete_start_btn: Button
 
 # ── HTTP ──
@@ -43,27 +93,39 @@ var _step: Step = Step.NAME
 var _selected_cat_key := ""
 var _selected_cat_name := ""
 var _player_name_input := ""
+var _onboarding_player_name := ""
 var _dialogue_beat_index := 0
 var _dialogue_beats: Array = []
+var _dialogue_scoop_frames: Array[Texture2D] = []
+var _dialogue_scoop_animation_elapsed := 0.0
+var _dialogue_scoop_frame_index := 0
+var _dialogue_scoop_animation_active := false
+
+const CATS_PER_ROW: int = 4
+const CATS_PICKER_CARD_WIDTH: float = 148.0
+const CATS_PICKER_CARD_HEIGHT: float = 178.0
+const CATS_PICKER_CARD_H_GAP := 12
+const CATS_PICKER_CARD_V_GAP := 12
 
 var _cat_picker_cards: Dictionary = {}  # cat_key -> Control
 
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_onboarding_player_name = _resolve_onboarding_player_name()
+	_player_name_input = _onboarding_player_name
 	_build_dialogue_beats()
+	_build_dialogue_scoop_frames()
 	_build_ui()
 	_attach_http()
+	set_process(true)
 	_apply_step()
 
 
 # ── Build dialogue beats from text constants ──
 func _build_dialogue_beats() -> void:
-	var player_name: String = GameState.player_data.player_name \
-		if GameState.player_data != null else "你"
-	if player_name.strip_edges() == "":
-		player_name = GameState.player_data.display_name \
-			if GameState.player_data != null else "你"
+	var player_name: String = _resolve_onboarding_player_name()
+	var cat_name: String = _resolve_dialogue_cat_name()
 
 	var raw_beats := [
 		[OT.DIALOGUE_BEAT_NARRATOR_1_SPEAKER, OT.DIALOGUE_BEAT_NARRATOR_1_TEXT],
@@ -82,14 +144,64 @@ func _build_dialogue_beats() -> void:
 	]
 
 	_dialogue_beats = []
-	for raw: Array in raw_beats:
+	for index: int in range(raw_beats.size()):
+		var raw: Array = raw_beats[index]
 		var speaker: String = str(raw[0])
+		var speaker_type: String = DIALOGUE_SPEAKER_NONE
 		var text: String = str(raw[1])
-		speaker = speaker.replace("{cat_name}", _selected_cat_name) \
+		var portrait_kind: String = DIALOGUE_PORTRAIT_KIND_NONE
+		var portrait_size := Vector2.ZERO
+		var inline_kind: String = DIALOGUE_INLINE_KIND_NONE
+		var inline_image_path := ""
+		var inline_image_paths: Array = []
+		if index == 0:
+			inline_kind = DIALOGUE_INLINE_KIND_CATALOG_IMAGE
+			inline_image_path = DIALOGUE_IMAGE_SPECIAL_CAT_FOOD
+		elif index == 1:
+			portrait_kind = DIALOGUE_PORTRAIT_KIND_OWNER
+			portrait_size = DIALOGUE_OWNER_IMAGE_SIZE
+		elif index == 4:
+			inline_kind = DIALOGUE_INLINE_KIND_CATALOG_IMAGE
+			inline_image_path = DIALOGUE_IMAGE_TRAP_CAGES
+		elif index == 8:
+			portrait_kind = DIALOGUE_PORTRAIT_KIND_CAT
+			inline_kind = DIALOGUE_INLINE_KIND_IMAGE_ROW
+			inline_image_paths = DIALOGUE_ROW_IMAGE_ENCOUNTERS.duplicate()
+		elif index == 10:
+			inline_kind = DIALOGUE_INLINE_KIND_SCOOP_ANIMATION
+		elif index == 11:
+			inline_kind = DIALOGUE_INLINE_KIND_IMAGE_ROW
+			inline_image_paths = DIALOGUE_ROW_IMAGE_VISITORS.duplicate()
+		elif index == 12:
+			inline_kind = DIALOGUE_INLINE_KIND_CAT_FORMATION
+		var inline_size := DIALOGUE_INLINE_IMAGE_SIZE
+		if inline_kind == DIALOGUE_INLINE_KIND_SCOOP_ANIMATION:
+			inline_size = DIALOGUE_INLINE_SCOOP_SIZE
+		elif inline_kind == DIALOGUE_INLINE_KIND_IMAGE_ROW:
+			inline_size = DIALOGUE_INLINE_ROW_IMAGE_SIZE
+		if speaker == OT.DIALOGUE_BEAT_CAT_1_SPEAKER:
+			speaker_type = DIALOGUE_SPEAKER_CAT
+			if portrait_kind == DIALOGUE_PORTRAIT_KIND_NONE:
+				portrait_kind = DIALOGUE_PORTRAIT_KIND_CAT
+		elif speaker == OT.DIALOGUE_BEAT_PLAYER_1_SPEAKER:
+			speaker_type = DIALOGUE_SPEAKER_OWNER
+			if portrait_kind == DIALOGUE_PORTRAIT_KIND_NONE:
+				portrait_kind = DIALOGUE_PORTRAIT_KIND_OWNER
+		speaker = speaker.replace("{cat_name}", cat_name) \
 			.replace("{player_name}", player_name)
-		text = text.replace("{cat_name}", _selected_cat_name) \
+		text = text.replace("{cat_name}", cat_name) \
 			.replace("{player_name}", player_name)
-		_dialogue_beats.append({"speaker": speaker, "text": text})
+		_dialogue_beats.append({
+			"speaker": speaker,
+			"text": text,
+			"speaker_type": speaker_type,
+			"portrait_kind": portrait_kind,
+			"portrait_size": portrait_size,
+			"inline_kind": inline_kind,
+			"inline_image_path": inline_image_path,
+			"inline_image_paths": inline_image_paths,
+			"inline_size": inline_size
+		})
 
 
 # ── UI construction ──
@@ -150,7 +262,11 @@ func _build_step_dots() -> HBoxContainer:
 func _refresh_step_dots() -> void:
 	if _step_dots_row == null:
 		return
-	var current_dot_index := int(_step)
+	var current_dot_index := 1
+	if _step == Step.NAME:
+		current_dot_index = 0
+	elif _step == Step.COMPLETE:
+		current_dot_index = 2
 	for i in range(_step_dots_row.get_child_count()):
 		var dot: Label = _step_dots_row.get_child(i)
 		dot.text = OT.STEP_DOT_ACTIVE if i == current_dot_index else OT.STEP_DOT_INACTIVE
@@ -228,8 +344,8 @@ func _build_picker_panel() -> PanelContainer:
 	panel.anchor_top = 0.5
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.5
-	panel.position = Vector2(-300, -200)
-	panel.custom_minimum_size = Vector2(600, 400)
+	panel.position = Vector2(-300, -230)
+	panel.custom_minimum_size = Vector2(700, 600)
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
 	var margin := _make_margin_container()
@@ -258,10 +374,14 @@ func _build_picker_panel() -> PanelContainer:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	vbox.add_child(scroll)
 
-	_picker_grid = HFlowContainer.new()
-	_picker_grid.add_theme_constant_override("h_separation", 12)
-	_picker_grid.add_theme_constant_override("v_separation", 12)
+	_picker_grid = GridContainer.new()
+	_picker_grid.columns = CATS_PER_ROW
+	_picker_grid.add_theme_constant_override("h_separation", CATS_PICKER_CARD_H_GAP)
+	_picker_grid.add_theme_constant_override("v_separation", CATS_PICKER_CARD_V_GAP)
+	_picker_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_picker_grid)
+
+	_picker_scroller = InertialScroller.attach(scroll, "vertical")
 
 	_populate_cat_picker()
 
@@ -310,7 +430,7 @@ func _populate_cat_picker() -> void:
 
 func _build_cat_card(cat_key: String, display_name: String) -> Control:
 	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(110, 140)
+	btn.custom_minimum_size = Vector2(CATS_PICKER_CARD_WIDTH, CATS_PICKER_CARD_HEIGHT)
 	btn.add_theme_stylebox_override("normal", _make_button_stylebox(Color("f0e8d8"), 6))
 	btn.add_theme_stylebox_override("hover", _make_button_stylebox(Color("f8f0e0"), 6))
 	btn.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("d8c8b0"), 4))
@@ -323,9 +443,9 @@ func _build_cat_card(cat_key: String, display_name: String) -> Control:
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(vbox)
 
-	var icon_texture: Texture2D = AssetResolver.resolve_cat_icon(cat_key)
+	var icon_texture: Texture2D = AssetResolver.resolve_onboarding_generic_cat()
 	var icon := TextureRect.new()
-	icon.custom_minimum_size = Vector2(72, 72)
+	icon.custom_minimum_size = PICKER_GENERIC_CAT_IMAGE_SIZE
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -352,8 +472,8 @@ func _build_dialogue_panel() -> PanelContainer:
 	panel.anchor_top = 0.5
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.5
-	panel.position = Vector2(-260, -210)
-	panel.custom_minimum_size = Vector2(520, 420)
+	panel.position = Vector2(-310, -300)
+	panel.custom_minimum_size = Vector2(620, 600)
 	panel.add_theme_stylebox_override("panel", _make_card_stylebox())
 
 	var margin := _make_margin_container()
@@ -363,7 +483,7 @@ func _build_dialogue_panel() -> PanelContainer:
 	margin.add_child(vbox)
 
 	_dialogue_cat_image = TextureRect.new()
-	_dialogue_cat_image.custom_minimum_size = Vector2(160, 160)
+	_dialogue_cat_image.custom_minimum_size = DIALOGUE_SELECTED_CAT_IMAGE_SIZE
 	_dialogue_cat_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_dialogue_cat_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_dialogue_cat_image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -391,21 +511,50 @@ func _build_dialogue_panel() -> PanelContainer:
 	text_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(text_frame)
 
+	var text_content := VBoxContainer.new()
+	text_content.add_theme_constant_override("separation", 10)
+	text_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	text_frame.add_child(text_content)
+
 	_dialogue_text_label = Label.new()
 	_dialogue_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_dialogue_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	UiFonts.apply_noto(_dialogue_text_label, UiPalette.FONT_SIZE_BODY_LG)
 	_dialogue_text_label.add_theme_color_override("font_color", Color("3d2f20"))
-	text_frame.add_child(_dialogue_text_label)
+	text_content.add_child(_dialogue_text_label)
+
+	_dialogue_inline_image = TextureRect.new()
+	_dialogue_inline_image.custom_minimum_size = DIALOGUE_INLINE_IMAGE_SIZE
+	_dialogue_inline_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_dialogue_inline_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_dialogue_inline_image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_dialogue_inline_image.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_dialogue_inline_image.visible = false
+	text_content.add_child(_dialogue_inline_image)
+
+	_dialogue_inline_image_row = HBoxContainer.new()
+	_dialogue_inline_image_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_dialogue_inline_image_row.add_theme_constant_override("separation", 8)
+	_dialogue_inline_image_row.visible = false
+	text_content.add_child(_dialogue_inline_image_row)
+
+	_dialogue_inline_cat_formation = Control.new()
+	_dialogue_inline_cat_formation.custom_minimum_size = DIALOGUE_INLINE_FORMATION_STAGE_SIZE
+	_dialogue_inline_cat_formation.visible = false
+	text_content.add_child(_dialogue_inline_cat_formation)
+
+	_dialogue_inline_animation = TextureRect.new()
+	_dialogue_inline_animation.custom_minimum_size = DIALOGUE_INLINE_SCOOP_SIZE
+	_dialogue_inline_animation.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_dialogue_inline_animation.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_dialogue_inline_animation.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_dialogue_inline_animation.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_dialogue_inline_animation.visible = false
+	text_content.add_child(_dialogue_inline_animation)
 
 	var btn_row := HBoxContainer.new()
 	btn_row.add_theme_constant_override("separation", 12)
 	vbox.add_child(btn_row)
-
-	_dialogue_skip_btn = _make_button(OT.DIALOGUE_SKIP, Color("bbb0a0"), Color("ccc0b0"), Color("aaa090"))
-	_dialogue_skip_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_dialogue_skip_btn.pressed.connect(_on_dialogue_skip_pressed)
-	btn_row.add_child(_dialogue_skip_btn)
 
 	_dialogue_next_btn = _make_button(OT.DIALOGUE_NEXT, Color("9aae8b"), Color("a8bc98"), Color("869a79"))
 	_dialogue_next_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -439,18 +588,13 @@ func _build_complete_panel() -> PanelContainer:
 	title.add_theme_color_override("font_color", Color("4f3d31"))
 	vbox.add_child(title)
 
-	var sub := Label.new()
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiFonts.apply_noto(sub, UiPalette.FONT_SIZE_BODY_LG)
-	sub.add_theme_color_override("font_color", Color("7a6655"))
-	var player_name: String = GameState.player_data.player_name \
-		if GameState.player_data != null else ""
-	if player_name.strip_edges() == "":
-		player_name = GameState.player_data.display_name \
-			if GameState.player_data != null else "鏟屎官"
-	sub.text = OT.COMPLETE_SUBTITLE_FORMAT % [player_name, _selected_cat_name]
-	vbox.add_child(sub)
+	_complete_subtitle_label = Label.new()
+	_complete_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_complete_subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UiFonts.apply_noto(_complete_subtitle_label, UiPalette.FONT_SIZE_BODY_LG)
+	_complete_subtitle_label.add_theme_color_override("font_color", Color("7a6655"))
+	vbox.add_child(_complete_subtitle_label)
+	_refresh_complete_subtitle()
 
 	_complete_start_btn = _make_button(OT.COMPLETE_BUTTON, Color("9aae8b"), Color("a8bc98"), Color("869a79"))
 	_complete_start_btn.custom_minimum_size = Vector2(0, 56)
@@ -470,6 +614,10 @@ func _apply_step() -> void:
 
 	if _step == Step.DIALOGUE:
 		_apply_dialogue_beat()
+	else:
+		_stop_dialogue_inline_animation()
+	if _step == Step.COMPLETE:
+		_refresh_complete_subtitle()
 
 
 func _go_to_step(step: Step) -> void:
@@ -488,26 +636,62 @@ func _on_name_confirm_pressed() -> void:
 		_name_status.text = OT.NAME_ERROR_EMPTY
 		return
 	_player_name_input = name_text
+	_onboarding_player_name = _persist_onboarding_player_name(name_text)
+	_name_input.text = _onboarding_player_name
+	_build_dialogue_beats()
+	_dialogue_beat_index = 0
 	_name_status.text = ""
-	_go_to_step(Step.CAT_PICKER)
+	_go_to_step(Step.DIALOGUE)
 
 
 func _on_name_skip_pressed() -> void:
-	_player_name_input = ""
-	_go_to_step(Step.CAT_PICKER)
+	_player_name_input = _resolve_onboarding_player_name()
+	_onboarding_player_name = _player_name_input
+	_build_dialogue_beats()
+	_dialogue_beat_index = 0
+	_go_to_step(Step.DIALOGUE)
 
 
 func _get_default_player_name() -> String:
+	return _resolve_onboarding_player_name()
+
+
+func _resolve_onboarding_player_name() -> String:
+	var typed_name := _player_name_input.strip_edges()
+	if typed_name != "":
+		return typed_name
+
+	var saved_player_name := ""
+	if GameState.player_data != null:
+		saved_player_name = str(GameState.player_data.player_name).strip_edges()
+		if saved_player_name != "":
+			return saved_player_name
+		saved_player_name = str(GameState.player_data.display_name).strip_edges()
+		if saved_player_name != "":
+			return saved_player_name
+	return ONBOARDING_PLAYER_NAME_FALLBACK
+
+
+func _persist_onboarding_player_name(name_text: String) -> String:
+	var normalized_name := name_text.strip_edges()
+	if normalized_name == "":
+		return _resolve_onboarding_player_name()
+
 	if GameState.player_data == null:
-		return ""
-	var name: String = GameState.player_data.player_name
-	if name.strip_edges() == "":
-		name = GameState.player_data.display_name
-	return name
+		GameState.player_data = PlayerData.load_or_default()
+
+	GameState.player_data.player_name = normalized_name
+	if str(GameState.player_data.display_name).strip_edges() == "":
+		GameState.player_data.display_name = normalized_name
+	GameState.player_data.save()
+	return normalized_name
 
 
 # ── Cat picker step handlers ──
 func _on_cat_card_pressed(cat_key: String, display_name: String) -> void:
+	if _picker_scroller != null and _picker_scroller.consume_moved():
+		return
+
 	_selected_cat_key = cat_key
 	_selected_cat_name = display_name
 	_picker_selected_label.text = OT.CAT_PICKER_SELECTED_FORMAT % display_name
@@ -540,8 +724,9 @@ func _submit_onboarding() -> void:
 	])
 
 	var body_dict: Dictionary = {"catKey": _selected_cat_key}
-	if _player_name_input.strip_edges() != "":
-		body_dict["playerName"] = _player_name_input.strip_edges()
+	var resolved_player_name := _resolve_onboarding_player_name()
+	if resolved_player_name != "" and resolved_player_name != ONBOARDING_PLAYER_NAME_FALLBACK:
+		body_dict["playerName"] = resolved_player_name
 
 	var body: String = JSON.stringify(body_dict)
 	var url: String = "%s%s" % [GameState.api_base_url, ONBOARDING_API_PATH]
@@ -578,12 +763,65 @@ func _on_http_request_completed(result: int, response_code: int, _headers: Packe
 		_picker_status.text = str(error_dict.get("message", OT.CAT_PICKER_ERROR))
 		return
 
+	_sync_onboarding_starter((payload as Dictionary))
 	_picker_status.text = ""
 	GameState.is_new_player = false
 	_build_dialogue_beats()
-	_dialogue_beat_index = 0
+	_dialogue_beat_index = DIALOGUE_CAT_PICKER_INSERT_BEAT_INDEX
 	_update_cat_dialogue_image()
 	_go_to_step(Step.DIALOGUE)
+
+
+func _sync_onboarding_starter(payload: Dictionary) -> void:
+	var data_variant: Variant = payload.get("data", {})
+	if not (data_variant is Dictionary):
+		return
+	var data: Dictionary = data_variant as Dictionary
+	var starter_variant: Variant = data.get("starterCat", {})
+	if not (starter_variant is Dictionary):
+		return
+
+	var starter_cat: Dictionary = starter_variant as Dictionary
+	var player_cat_id: int = _read_starter_int(starter_cat, ["playerCatId", "PlayerCatId"])
+	var catalog_id: int = _read_starter_int(starter_cat, ["catCatalogId", "CatCatalogId"])
+	if player_cat_id <= 0 or catalog_id <= 0:
+		return
+
+	var starter_row: Dictionary = {
+		"playerCatId": player_cat_id,
+		"catCatalogId": catalog_id,
+		"displayName": str(starter_cat.get("displayName", starter_cat.get("DisplayName", ""))),
+		"catFoodLevel": _read_starter_int(starter_cat, ["catFoodLevel", "CatFoodLevel"]),
+		"rank": _read_starter_int(starter_cat, ["rank", "Rank"]),
+		"isOwned": bool(starter_cat.get("isOwned", starter_cat.get("IsOwned", true))),
+	}
+	GameState.update_player_cats([starter_row])
+
+	var boss_team: Dictionary = {
+		"teamType": "Boss",
+		"members": [{
+			"slotNo": 0,
+			"playerCatId": player_cat_id,
+			"catCatalogId": catalog_id,
+			"catDisplayName": str(starter_row.get("displayName", "")),
+			"catFoodLevel": int(starter_row.get("catFoodLevel", 1)),
+			"rank": int(starter_row.get("rank", 0)),
+			"initialDelaySeconds": 0.0,
+		}],
+	}
+	GameState.update_player_teams([boss_team])
+
+	if GameState.player_data == null:
+		GameState.player_data = PlayerData.load_or_default()
+	GameState.player_data.boss_team = [player_cat_id]
+	GameState.player_data.save()
+
+
+func _read_starter_int(data: Dictionary, candidate_keys: Array[String]) -> int:
+	for key: String in candidate_keys:
+		if data.has(key):
+			return int(data.get(key, 0))
+	return 0
 
 
 # ── Dialogue step handlers ──
@@ -593,15 +831,21 @@ func _apply_dialogue_beat() -> void:
 		return
 
 	var beat: Dictionary = _dialogue_beats[_dialogue_beat_index]
-	var speaker: String = str(beat.get("speaker", ""))
+	var speaker: String = str(beat.get("speaker", DIALOGUE_SPEAKER_NONE))
+	var speaker_type: String = str(beat.get("speaker_type", DIALOGUE_SPEAKER_NONE))
 	var text: String = str(beat.get("text", ""))
+	var portrait_kind: String = str(beat.get("portrait_kind", DIALOGUE_PORTRAIT_KIND_NONE))
+	var portrait_size: Variant = beat.get("portrait_size", Vector2.ZERO)
+	var inline_kind: String = str(beat.get("inline_kind", DIALOGUE_INLINE_KIND_NONE))
+	var inline_image_path: String = str(beat.get("inline_image_path", ""))
+	var inline_image_paths: Array = beat.get("inline_image_paths", [])
+	var inline_size: Variant = beat.get("inline_size", DIALOGUE_INLINE_IMAGE_SIZE)
 
 	_dialogue_speaker_label.text = speaker
 	_dialogue_speaker_label.visible = speaker != ""
 	_dialogue_text_label.text = text
-
-	var is_cat_speaking: bool = speaker == _selected_cat_name
-	_dialogue_cat_image.visible = is_cat_speaking
+	_apply_dialogue_inline_media(inline_kind, inline_image_path, inline_image_paths, inline_size)
+	_apply_dialogue_portrait(portrait_kind, portrait_size, speaker_type)
 
 	var is_last_beat: bool = _dialogue_beat_index >= _dialogue_beats.size() - 1
 	_dialogue_next_btn.text = OT.DIALOGUE_START if is_last_beat else OT.DIALOGUE_NEXT
@@ -610,19 +854,32 @@ func _apply_dialogue_beat() -> void:
 func _update_cat_dialogue_image() -> void:
 	if _dialogue_cat_image == null:
 		return
-	_dialogue_cat_image.texture = AssetResolver.resolve_cat_showcase_art(_selected_cat_key)
+	if _dialogue_beat_index >= DIALOGUE_SELECTED_CAT_REVEAL_BEAT_INDEX:
+		_dialogue_cat_image.custom_minimum_size = DIALOGUE_SELECTED_CAT_IMAGE_SIZE
+		_dialogue_cat_image.texture = AssetResolver.resolve_cat_showcase_art(_selected_cat_key)
+	else:
+		_dialogue_cat_image.custom_minimum_size = DIALOGUE_GENERIC_CAT_IMAGE_SIZE
+		_dialogue_cat_image.texture = AssetResolver.resolve_onboarding_generic_cat()
+
+
+func _update_owner_dialogue_image() -> void:
+	if _dialogue_cat_image == null:
+		return
+	_dialogue_cat_image.custom_minimum_size = DIALOGUE_OWNER_IMAGE_SIZE
+	_dialogue_cat_image.texture = AssetResolver.resolve_onboarding_owner_avatar()
 
 
 func _on_dialogue_next_pressed() -> void:
+	if _dialogue_beat_index + 1 == DIALOGUE_CAT_PICKER_INSERT_BEAT_INDEX and _selected_cat_key == "":
+		_go_to_step(Step.CAT_PICKER)
+		return
 	_dialogue_beat_index += 1
 	if _dialogue_beat_index >= _dialogue_beats.size():
 		_go_to_step(Step.COMPLETE)
 	else:
 		_apply_dialogue_beat()
-
-
-func _on_dialogue_skip_pressed() -> void:
-	_go_to_step(Step.COMPLETE)
+func _process(delta: float) -> void:
+	_update_dialogue_scoop_animation(delta)
 
 
 # ── Complete step handler ──
@@ -667,6 +924,228 @@ func _make_margin_container() -> MarginContainer:
 	m.add_theme_constant_override("margin_bottom", 20)
 	m.set_anchors_preset(Control.PRESET_FULL_RECT)
 	return m
+
+
+func _refresh_complete_subtitle() -> void:
+	if _complete_subtitle_label == null:
+		return
+	var player_name: String = _resolve_onboarding_player_name()
+	var cat_name: String = _resolve_dialogue_cat_name()
+	_complete_subtitle_label.text = OT.COMPLETE_SUBTITLE_FORMAT % [player_name, cat_name]
+
+
+func _resolve_dialogue_cat_name() -> String:
+	var resolved_name := _selected_cat_name.strip_edges()
+	return resolved_name if resolved_name != "" else ONBOARDING_CAT_NAME_PLACEHOLDER
+
+
+func _apply_dialogue_portrait(portrait_kind: String, portrait_size_variant: Variant, speaker_type: String) -> void:
+	if _dialogue_cat_image == null:
+		return
+
+	var resolved_portrait_kind := portrait_kind
+	if resolved_portrait_kind == DIALOGUE_PORTRAIT_KIND_NONE:
+		if speaker_type == DIALOGUE_SPEAKER_CAT:
+			resolved_portrait_kind = DIALOGUE_PORTRAIT_KIND_CAT
+		elif speaker_type == DIALOGUE_SPEAKER_OWNER:
+			resolved_portrait_kind = DIALOGUE_PORTRAIT_KIND_OWNER
+
+	if resolved_portrait_kind == DIALOGUE_PORTRAIT_KIND_CAT:
+		_update_cat_dialogue_image()
+		if portrait_size_variant is Vector2 and portrait_size_variant != Vector2.ZERO:
+			_dialogue_cat_image.custom_minimum_size = portrait_size_variant
+		_dialogue_cat_image.visible = true
+	elif resolved_portrait_kind == DIALOGUE_PORTRAIT_KIND_OWNER:
+		_update_owner_dialogue_image()
+		if portrait_size_variant is Vector2 and portrait_size_variant != Vector2.ZERO:
+			_dialogue_cat_image.custom_minimum_size = portrait_size_variant
+		_dialogue_cat_image.visible = true
+	else:
+		_dialogue_cat_image.visible = false
+
+
+func _apply_dialogue_inline_media(inline_kind: String, inline_image_path: String, inline_image_paths: Array, inline_size_variant: Variant) -> void:
+	if _dialogue_inline_image == null or _dialogue_inline_image_row == null or _dialogue_inline_cat_formation == null or _dialogue_inline_animation == null:
+		return
+
+	_dialogue_inline_image.visible = false
+	_dialogue_inline_image_row.visible = false
+	_dialogue_inline_cat_formation.visible = false
+	_dialogue_inline_animation.visible = false
+	_stop_dialogue_inline_animation()
+	_clear_dialogue_inline_image_row()
+	_clear_dialogue_inline_cat_formation()
+
+	var inline_size := DIALOGUE_INLINE_IMAGE_SIZE
+	if inline_size_variant is Vector2 and inline_size_variant != Vector2.ZERO:
+		inline_size = inline_size_variant
+
+	if inline_kind == DIALOGUE_INLINE_KIND_CATALOG_IMAGE and inline_image_path != "":
+		_dialogue_inline_image.custom_minimum_size = inline_size
+		_dialogue_inline_image.texture = AssetResolver.resolve_catalog_texture(inline_image_path)
+		_dialogue_inline_image.visible = true
+	elif inline_kind == DIALOGUE_INLINE_KIND_IMAGE_ROW:
+		_populate_dialogue_inline_image_row(inline_image_paths, inline_size)
+	elif inline_kind == DIALOGUE_INLINE_KIND_CAT_FORMATION:
+		_populate_dialogue_inline_cat_formation()
+	elif inline_kind == DIALOGUE_INLINE_KIND_SCOOP_ANIMATION:
+		_dialogue_inline_animation.custom_minimum_size = inline_size
+		_start_dialogue_inline_animation()
+
+
+func _build_dialogue_scoop_frames() -> void:
+	_dialogue_scoop_frames.clear()
+	if HOME_SCOOP_SHEET_TEXTURE == null:
+		return
+
+	for frame_index: int in range(HOME_SCOOP_FRAME_COUNT):
+		var atlas_texture: AtlasTexture = AtlasTexture.new()
+		atlas_texture.atlas = HOME_SCOOP_SHEET_TEXTURE
+		atlas_texture.region = Rect2(
+			float(frame_index * HOME_SCOOP_FRAME_SIZE.x),
+			0.0,
+			float(HOME_SCOOP_FRAME_SIZE.x),
+			float(HOME_SCOOP_FRAME_SIZE.y)
+		)
+		_dialogue_scoop_frames.append(atlas_texture)
+
+
+func _clear_dialogue_inline_image_row() -> void:
+	if _dialogue_inline_image_row == null:
+		return
+	for child in _dialogue_inline_image_row.get_children():
+		child.queue_free()
+
+
+func _clear_dialogue_inline_cat_formation() -> void:
+	if _dialogue_inline_cat_formation == null:
+		return
+	for child in _dialogue_inline_cat_formation.get_children():
+		child.queue_free()
+
+
+func _populate_dialogue_inline_image_row(image_paths: Array, inline_size: Vector2) -> void:
+	if _dialogue_inline_image_row == null:
+		return
+
+	for path_variant: Variant in image_paths:
+		var image_path: String = str(path_variant).strip_edges()
+		if image_path == "":
+			continue
+		var image := TextureRect.new()
+		image.custom_minimum_size = inline_size
+		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		image.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		image.texture = AssetResolver.resolve_texture_or_placeholder(image_path)
+		_dialogue_inline_image_row.add_child(image)
+
+	_dialogue_inline_image_row.visible = _dialogue_inline_image_row.get_child_count() > 0
+
+
+func _populate_dialogue_inline_cat_formation() -> void:
+	if _dialogue_inline_cat_formation == null:
+		return
+
+	_dialogue_inline_cat_formation.custom_minimum_size = DIALOGUE_INLINE_FORMATION_STAGE_SIZE
+
+	var trap_cage := _build_dialogue_inline_cat_sprite(
+		AssetResolver.resolve_catalog_texture(DIALOGUE_IMAGE_TRAP_CAGES),
+		DIALOGUE_INLINE_FORMATION_TRAP_SIZE
+	)
+	trap_cage.position = Vector2(110, 30)
+	trap_cage.modulate = Color(1, 1, 1, 0.5)
+	_dialogue_inline_cat_formation.add_child(trap_cage)
+
+	var top_left := _build_dialogue_inline_cat_sprite(
+		AssetResolver.resolve_onboarding_generic_cat(),
+		DIALOGUE_INLINE_FORMATION_GENERIC_SIZE
+	)
+	top_left.position = Vector2(40, 22)
+	_dialogue_inline_cat_formation.add_child(top_left)
+
+	var top_right := _build_dialogue_inline_cat_sprite(
+		AssetResolver.resolve_onboarding_generic_cat(),
+		DIALOGUE_INLINE_FORMATION_GENERIC_SIZE
+	)
+	top_right.position = Vector2(388, 22)
+	_dialogue_inline_cat_formation.add_child(top_right)
+
+	var lower_left := _build_dialogue_inline_cat_sprite(
+		AssetResolver.resolve_onboarding_generic_cat(),
+		DIALOGUE_INLINE_FORMATION_GENERIC_SIZE
+	)
+	lower_left.position = Vector2(126, 110)
+	_dialogue_inline_cat_formation.add_child(lower_left)
+
+	var lower_right := _build_dialogue_inline_cat_sprite(
+		AssetResolver.resolve_onboarding_generic_cat(),
+		DIALOGUE_INLINE_FORMATION_GENERIC_SIZE
+	)
+	lower_right.position = Vector2(302, 110)
+	_dialogue_inline_cat_formation.add_child(lower_right)
+
+	var selected_cat := _build_dialogue_inline_cat_sprite(
+		AssetResolver.resolve_cat_showcase_art(_selected_cat_key),
+		DIALOGUE_INLINE_FORMATION_SELECTED_SIZE
+	)
+	selected_cat.position = Vector2(128, 108)
+	_dialogue_inline_cat_formation.add_child(selected_cat)
+
+	_dialogue_inline_cat_formation.visible = true
+
+
+func _build_dialogue_inline_cat_sprite(texture: Texture2D, sprite_size: Vector2) -> TextureRect:
+	var image := TextureRect.new()
+	image.position = Vector2.ZERO
+	image.size = sprite_size
+	image.custom_minimum_size = sprite_size
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	image.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	image.texture = texture
+	return image
+
+
+func _start_dialogue_inline_animation() -> void:
+	if _dialogue_inline_animation == null or _dialogue_scoop_frames.is_empty():
+		return
+
+	_dialogue_scoop_animation_active = true
+	_dialogue_scoop_animation_elapsed = 0.0
+	_dialogue_inline_animation.visible = true
+	_set_dialogue_scoop_frame(HOME_SCOOP_ANIMATION_START_FRAME)
+
+
+func _stop_dialogue_inline_animation() -> void:
+	_dialogue_scoop_animation_active = false
+	_dialogue_scoop_animation_elapsed = 0.0
+
+
+func _set_dialogue_scoop_frame(frame_index: int) -> void:
+	if _dialogue_inline_animation == null or _dialogue_scoop_frames.is_empty():
+		return
+
+	var safe_index: int = clampi(frame_index, 0, _dialogue_scoop_frames.size() - 1)
+	_dialogue_scoop_frame_index = safe_index
+	_dialogue_inline_animation.texture = _dialogue_scoop_frames[safe_index]
+
+
+func _update_dialogue_scoop_animation(delta: float) -> void:
+	if not _dialogue_scoop_animation_active or _dialogue_scoop_frames.size() <= 1:
+		return
+
+	var animated_frame_count: int = _dialogue_scoop_frames.size() - HOME_SCOOP_ANIMATION_START_FRAME
+	if animated_frame_count <= 0:
+		return
+
+	_dialogue_scoop_animation_elapsed += delta
+	var frame_offset: int = int(floor(_dialogue_scoop_animation_elapsed * HOME_SCOOP_ANIMATION_FPS)) % animated_frame_count
+	var frame_index: int = HOME_SCOOP_ANIMATION_START_FRAME + frame_offset
+	if frame_index != _dialogue_scoop_frame_index:
+		_set_dialogue_scoop_frame(frame_index)
 
 
 func _make_button(label: String, normal: Color, hover: Color, pressed: Color) -> Button:

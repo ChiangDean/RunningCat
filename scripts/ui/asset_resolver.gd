@@ -19,6 +19,8 @@ const BACKGROUND_SHADER := preload("res://scripts/ui/background_desaturate_shade
 const DEFAULT_PROFILE_AVATAR_ID := "black_cat"
 const CAT_CARD_FRAME := UI_CDN_CARDS_ROOT + "cat_card_frame_homey_v1.png"
 const CAT_CARD_EMPTY_SILHOUETTE := UI_CDN_CARDS_ROOT + "cat_card_empty_silhouette_v1.png"
+const ONBOARDING_OWNER_AVATAR_PATH := UI_LOCAL_ROOT + "onboarding/onboarding_owner_avatar_no_face_v1.png"
+const ONBOARDING_GENERIC_CAT_PATH := UI_LOCAL_ROOT + "onboarding/onboarding_generic_cat_v3.png"
 const DEFAULT_ICON_PLACEHOLDER_PATH := CAT_CARD_EMPTY_SILHOUETTE
 const DEFAULT_BACKGROUND_SLOT := "activity"
 const DEFAULT_GACHA_FRAME_KEY := "common"
@@ -648,6 +650,20 @@ static func resolve_cat_showcase_art(cat_id: String) -> Texture2D:
 		if texture != null:
 			return texture
 	return resolve_cat_icon(cat_id)
+
+
+static func resolve_onboarding_owner_avatar() -> Texture2D:
+	var texture: Texture2D = load_texture(ONBOARDING_OWNER_AVATAR_PATH)
+	if texture != null:
+		return texture
+	return resolve_placeholder_icon()
+
+
+static func resolve_onboarding_generic_cat() -> Texture2D:
+	var texture: Texture2D = load_texture(ONBOARDING_GENERIC_CAT_PATH)
+	if texture != null:
+		return texture
+	return resolve_cat_icon(DEFAULT_PROFILE_AVATAR_ID)
 
 
 static func resolve_cat_battle_static_art(cat_id: String) -> Texture2D:
