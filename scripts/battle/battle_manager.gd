@@ -309,6 +309,7 @@ func _on_skill_activate(ev: BattleEvent) -> void:
 	if node:
 		node.play_skill()
 		node.flash_skill()
+		node.show_skill_bubble(_get_skill_display_name(ev.cat_id, ev.skill_id))
 		_play_audio_sfx(CAT_SKILL_SFX, -6.0, 1.0)
 	_reset_skill_slot_cooldown(ev.cat_id)
 
@@ -706,6 +707,7 @@ func _execute_runtime_skill(caster_id: int, skill_d: Dictionary) -> void:
 		return
 	caster_node.play_skill()
 	caster_node.flash_skill()
+	caster_node.show_skill_bubble(str(skill_d.get("display_name", "")))
 	_play_audio_sfx(CAT_SKILL_SFX, -6.0, 1.0)
 	var rank: int = caster_data.rank
 	var effects: Array = skill_d.get("effects", [])
@@ -987,6 +989,23 @@ func _should_play_battle_audio() -> bool:
 func _find_cat_data(id: int, _team: String) -> CatData:
 	var cat_data_variant: Variant = _cat_data_by_instance_id.get(id, null)
 	return cat_data_variant as CatData
+
+
+func _get_skill_display_name(cat_id: int, skill_id: String) -> String:
+	var cat_data: CatData = _find_cat_data(cat_id, "")
+	if cat_data == null:
+		return ""
+	var fallback_name: String = ""
+	for skill_variant: Variant in cat_data.active_skills_data:
+		if not (skill_variant is Dictionary):
+			continue
+		var skill_d: Dictionary = skill_variant
+		var display_name: String = str(skill_d.get("display_name", ""))
+		if fallback_name.is_empty():
+			fallback_name = display_name
+		if str(skill_d.get("id", "")) == skill_id:
+			return display_name
+	return fallback_name
 
 
 func _init_skill_slots() -> void:
