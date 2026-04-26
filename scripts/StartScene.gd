@@ -1556,10 +1556,12 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if _is_event_on_logout_button(event.position):
 			return
+		UiAudio.unlock_from_user_gesture(false)
 		_start_game()
 	elif event is InputEventScreenTouch and event.pressed:
 		if _is_event_on_logout_button(event.position):
 			return
+		UiAudio.unlock_from_user_gesture(false)
 		_start_game()
 
 

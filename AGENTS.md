@@ -5,6 +5,7 @@
 - Preserve the established visual identity of `StartScene` unless the user explicitly asks to change it.
 - When updating `StartScene`, treat the legacy title block, loading block, tap-to-start placement, and loading timing as separate behaviors; do not change them unless requested.
 - Keep Godot client changes in GDScript and follow existing scene/script patterns already used in this project.
+- When the task involves launching the Godot project, running it, capturing runtime debug output, or performing scene/node operations through the editor/runtime, prefer the configured `godot` MCP server before relying on static inspection alone.
 - Before making Client frontend architecture, UI flow, scene flow, or shared-state changes, first read `docs/gdd/18_frontend_architecture.md`.
 - Prefer adding small, explicit UI state transitions instead of rewriting whole scene flows when only one stage changes.
 - The home flow now runs through `HomeShellScene` + `SceneNavigator`; keep `BattleScene` persistent there and open home subpages as overlays instead of replacing the battle scene with `change_scene_to_file(...)`.

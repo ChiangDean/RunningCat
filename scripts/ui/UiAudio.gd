@@ -7,6 +7,7 @@ const SFX_BUS_NAME := "SFX"
 
 var _bgm_player: AudioStreamPlayer
 var _current_bgm_path: String = ""
+var _web_audio_unlocked: bool = false
 
 
 func _ready() -> void:
@@ -24,9 +25,21 @@ func should_play_for_button(button: BaseButton) -> bool:
 
 
 func play_ui_click() -> void:
+	unlock_from_user_gesture(true)
+
+
+func unlock_from_user_gesture(play_feedback: bool = false) -> void:
+	ensure_audio_buses()
+	var should_prime_silently: bool = _is_web_runtime() and not _web_audio_unlocked and not play_feedback
+	if _is_web_runtime() and not _web_audio_unlocked:
+		_resume_web_audio_contexts()
+		_web_audio_unlocked = true
 	if UI_BUTTON_CLICK_SFX == null:
 		return
-	play_sfx(UI_BUTTON_CLICK_SFX, 0.0, 1.0)
+	if should_prime_silently:
+		play_sfx(UI_BUTTON_CLICK_SFX, -80.0, 1.0)
+	elif play_feedback:
+		play_sfx(UI_BUTTON_CLICK_SFX, 0.0, 1.0)
 
 
 func ensure_audio_buses() -> void:
@@ -108,3 +121,33 @@ func _linear_to_db(value: float) -> float:
 	if value <= 0.0001:
 		return -80.0
 	return linear_to_db(value)
+
+
+func _is_web_runtime() -> bool:
+	return OS.has_feature("web")
+
+
+func _resume_web_audio_contexts() -> void:
+	if not _is_web_runtime():
+		return
+	if not ClassDB.class_exists("JavaScriptBridge"):
+		return
+	JavaScriptBridge.eval("""
+(() => {
+	const contexts = [];
+	if (window.godotAudioContext) contexts.push(window.godotAudioContext);
+	if (window.AudioContext && window.__mpdUnlockContext == null) {
+		try {
+			window.__mpdUnlockContext = new window.AudioContext();
+		} catch (_err) {}
+	}
+	if (window.__mpdUnlockContext) contexts.push(window.__mpdUnlockContext);
+	for (const context of contexts) {
+		if (context && typeof context.resume === 'function' && context.state !== 'running') {
+			try {
+				context.resume();
+			} catch (_err) {}
+		}
+	}
+})();
+""", true)
