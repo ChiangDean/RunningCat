@@ -17,6 +17,9 @@ const CAT_DIED_SFXS := [
 const SKILL_SLOT_DISPLAY_CAP: int = 10
 const BATTLE_WALL_LEFT: float = 20.0
 const BATTLE_WALL_RIGHT: float = 700.0
+const BATTLE_WALL_START_LEFT: float = -80.0
+const BATTLE_WALL_START_RIGHT: float = 800.0
+const BATTLE_WALL_SHRINK_DURATION: float = 3.0
 const CAT_HALF_W: float = 48.0
 const PLAYER_FRONT_START_X: float = 220.0
 const ENEMY_FRONT_START_X: float = 500.0
@@ -28,6 +31,10 @@ const WALL_COUNTER_HEIGHT_MULT: float = 2.0
 const WALL_COUNTER_MIN_ARC_HEIGHT: float = 200.0
 const WALL_COUNTER_MAX_ARC_HEIGHT: float = 400.0
 const WALL_COUNTER_DURATION: float = 0.6
+const DEFAULT_SKILL_HIT_KNOCKBACK: float = 120.0
+const SKILL_ANIMATION_DURATION: float = 0.5
+const SKILL_CAST_STAND_START: float = 0.2
+const SKILL_CAST_STAND_END: float = 0.5
 
 signal battle_finished(result: String)
 var _events: Array = []
@@ -49,6 +56,7 @@ var _cat_knockback_timers: Dictionary = {}
 var _cat_accel_timers: Dictionary = {}
 var _cat_skip_recovery_accel: Dictionary = {}
 var _cat_airborne_timers: Dictionary = {}
+var _cat_skill_animation_timers: Dictionary = {}
 var _pending_recycled_cats: Dictionary = {}
 var _pending_recycle_count: int = 0
 
@@ -85,6 +93,7 @@ func setup(_events_param: Array, player_cats: Array, enemy_cats: Array,
 	_cat_accel_timers.clear()
 	_cat_skip_recovery_accel.clear()
 	_cat_airborne_timers.clear()
+	_cat_skill_animation_timers.clear()
 	_pending_recycled_cats.clear()
 	_pending_recycle_count = 0
 	_player_skill_slots.clear()
@@ -104,6 +113,7 @@ func setup(_events_param: Array, player_cats: Array, enemy_cats: Array,
 	_refresh_skill_bar_display()
 	_spawn_initial_cat_nodes()
 	_apply_all_passives()
+	_refresh_initial_skill_slot_cooldowns()
 
 
 func prime_initial_spawn_state() -> void:
@@ -178,6 +188,7 @@ func _spawn_runtime_cat(cat_id: int, team_name: String, cat_data: CatData, pos_x
 		"reflect": 0.0,
 		"buffs": [],
 	}
+	_cat_skill_animation_timers[cat_id] = 0.0
 	_update_skill_slot_spawn_state(cat_id, cat_data.max_hp, cat_data.max_hp)
 
 
@@ -259,6 +270,7 @@ func _spawn_cat_node(ev: BattleEvent) -> void:
 	_cat_speeds[ev.cat_id] = cat_data.speed
 	_cat_stagger_timers[ev.cat_id] = 0.0
 	_cat_accel_timers[ev.cat_id] = 0.0
+	_cat_skill_animation_timers[ev.cat_id] = 0.0
 	_update_skill_slot_spawn_state(ev.cat_id, ev.current_hp, ev.max_hp)
 
 
@@ -308,6 +320,7 @@ func _on_skill_activate(ev: BattleEvent) -> void:
 	var node: CatNode = _get_cat_node(ev.cat_id)
 	if node:
 		node.play_skill()
+		_cat_skill_animation_timers[ev.cat_id] = SKILL_ANIMATION_DURATION
 		node.flash_skill()
 		node.show_skill_bubble(_get_skill_display_name(ev.cat_id, ev.skill_id))
 		_play_audio_sfx(CAT_SKILL_SFX, -6.0, 1.0)
@@ -366,6 +379,8 @@ func _update_cat_movement(delta: float) -> void:
 			_cat_airborne_timers[id] = maxf(0.0, float(_cat_airborne_timers[id]) - scaled_delta)
 			if float(_cat_airborne_timers[id]) <= 0.0:
 				_cat_airborne_timers.erase(id)
+		if _cat_skill_animation_timers.has(id):
+			_cat_skill_animation_timers[id] = maxf(0.0, float(_cat_skill_animation_timers[id]) - scaled_delta)
 		if _cat_knockback_timers.has(id):
 			var previous_knockback_timer: float = float(_cat_knockback_timers[id])
 			_cat_knockback_timers[id] = maxf(0.0, previous_knockback_timer - scaled_delta)
@@ -387,10 +402,14 @@ func _update_cat_movement(delta: float) -> void:
 			)
 			_cat_accel_timers[id] = maxf(0.0, float(_cat_accel_timers[id]) - scaled_delta)
 		var dir: float = 1.0 if node.team == "player" else -1.0
+		if _is_cat_in_skill_cast_stand_window(id):
+			continue
+		var current_left_wall: float = _get_current_wall_left()
+		var current_right_wall: float = _get_current_wall_right()
 		node.position.x = clampf(
 			node.position.x + dir * speed * speed_scale * scaled_delta,
-			BATTLE_WALL_LEFT + CAT_HALF_W,
-			BATTLE_WALL_RIGHT - CAT_HALF_W
+			current_left_wall + CAT_HALF_W,
+			current_right_wall - CAT_HALF_W
 		)
 		node.play_run()
 
@@ -446,12 +465,14 @@ func _handle_runtime_collision(p_node: CatNode, e_node: CatNode) -> void:
 	var e_hit_wall: bool = false
 	var p_causes_wall_hit: bool = false
 	var e_causes_wall_hit: bool = false
-	if p_target_x - CAT_HALF_W <= BATTLE_WALL_LEFT:
-		p_target_x = BATTLE_WALL_LEFT + CAT_HALF_W
+	var current_left_wall: float = _get_current_wall_left()
+	var current_right_wall: float = _get_current_wall_right()
+	if p_target_x - CAT_HALF_W <= current_left_wall:
+		p_target_x = current_left_wall + CAT_HALF_W
 		p_hit_wall = true
 		e_causes_wall_hit = not e_staggered
-	if e_target_x + CAT_HALF_W >= BATTLE_WALL_RIGHT:
-		e_target_x = BATTLE_WALL_RIGHT - CAT_HALF_W
+	if e_target_x + CAT_HALF_W >= current_right_wall:
+		e_target_x = current_right_wall - CAT_HALF_W
 		e_hit_wall = true
 		p_causes_wall_hit = not p_staggered
 
@@ -538,11 +559,21 @@ func _is_cat_airborne(cat_id: int) -> bool:
 	return float(_cat_airborne_timers.get(cat_id, 0.0)) > 0.0
 
 
+func _is_cat_in_skill_cast_stand_window(cat_id: int) -> bool:
+	var remaining: float = float(_cat_skill_animation_timers.get(cat_id, 0.0))
+	if remaining <= 0.0:
+		return false
+	var elapsed: float = SKILL_ANIMATION_DURATION - remaining
+	return elapsed >= SKILL_CAST_STAND_START and elapsed < SKILL_CAST_STAND_END
+
+
 func _get_wall_counter_target_x(node: CatNode, target_knockback: float) -> float:
 	var retreat_distance: float = maxf(WALL_COUNTER_MIN_RETREAT_X, target_knockback * WALL_COUNTER_DISTANCE_MULT)
+	var current_left_wall: float = _get_current_wall_left()
+	var current_right_wall: float = _get_current_wall_right()
 	if node.team == "player":
-		return maxf(BATTLE_WALL_LEFT + CAT_HALF_W, node.position.x - retreat_distance)
-	return minf(BATTLE_WALL_RIGHT - CAT_HALF_W, node.position.x + retreat_distance)
+		return maxf(current_left_wall + CAT_HALF_W, node.position.x - retreat_distance)
+	return minf(current_right_wall - CAT_HALF_W, node.position.x + retreat_distance)
 
 
 func _get_wall_counter_arc_height(target_knockback: float) -> float:
@@ -706,6 +737,7 @@ func _execute_runtime_skill(caster_id: int, skill_d: Dictionary) -> void:
 	if caster_data == null:
 		return
 	caster_node.play_skill()
+	_cat_skill_animation_timers[caster_id] = SKILL_ANIMATION_DURATION
 	caster_node.flash_skill()
 	caster_node.show_skill_bubble(str(skill_d.get("display_name", "")))
 	_play_audio_sfx(CAT_SKILL_SFX, -6.0, 1.0)
@@ -727,8 +759,8 @@ func _execute_runtime_skill(caster_id: int, skill_d: Dictionary) -> void:
 					if _is_runtime_dead(target_id):
 						_check_runtime_death(target_id)
 						break
-				var extra_kb: float = float(eff.get("extra_knockback", 0.0))
-				if extra_kb > 0.0 and _cat_runtime.has(target_id):
+				var extra_kb: float = maxf(float(eff.get("extra_knockback", 0.0)), DEFAULT_SKILL_HIT_KNOCKBACK)
+				if _cat_runtime.has(target_id) and not _is_cat_airborne(target_id):
 					_apply_skill_extra_knockback(caster_id, target_id, extra_kb)
 			"buff_stat":
 				var buff_target_id: int = _resolve_runtime_buff_target_id(caster_id, str(eff.get("target", "self")))
@@ -805,12 +837,24 @@ func _apply_skill_extra_knockback(caster_id: int, target_id: int, extra_kb: floa
 	if caster_node == null or target_node == null:
 		return
 	var direction: float = 1.0 if caster_node.team == "player" else -1.0
+	var current_left_wall: float = _get_current_wall_left()
+	var current_right_wall: float = _get_current_wall_right()
 	var target_x: float = clampf(
 		target_node.position.x + extra_kb * direction,
-		BATTLE_WALL_LEFT + CAT_HALF_W,
-		BATTLE_WALL_RIGHT - CAT_HALF_W
+		current_left_wall + CAT_HALF_W,
+		current_right_wall - CAT_HALF_W
 	)
-	_apply_runtime_knockback(target_id, target_x, extra_kb * direction, target_x <= BATTLE_WALL_LEFT + CAT_HALF_W or target_x >= BATTLE_WALL_RIGHT - CAT_HALF_W)
+	_apply_runtime_knockback(target_id, target_x, extra_kb * direction, target_x <= current_left_wall + CAT_HALF_W or target_x >= current_right_wall - CAT_HALF_W)
+
+
+func _get_current_wall_left() -> float:
+	var progress: float = clampf(_sim_time / BATTLE_WALL_SHRINK_DURATION, 0.0, 1.0)
+	return lerpf(BATTLE_WALL_START_LEFT, BATTLE_WALL_LEFT, progress)
+
+
+func _get_current_wall_right() -> float:
+	var progress: float = clampf(_sim_time / BATTLE_WALL_SHRINK_DURATION, 0.0, 1.0)
+	return lerpf(BATTLE_WALL_START_RIGHT, BATTLE_WALL_RIGHT, progress)
 
 
 func _resolve_runtime_target_id(caster_id: int, target: String) -> int:
@@ -963,6 +1007,7 @@ func _remove_cat_runtime_state(cat_id: int) -> void:
 	_cat_accel_timers.erase(cat_id)
 	_cat_skip_recovery_accel.erase(cat_id)
 	_cat_airborne_timers.erase(cat_id)
+	_cat_skill_animation_timers.erase(cat_id)
 
 
 func _play_collision_sfx(event_time: float) -> void:
@@ -1027,7 +1072,7 @@ func _build_skill_slot_entries(cats: Array) -> Array:
 			skill_id = str(cat.active_skills_data[0].get("id", ""))
 			max_cd = float(cat.active_skills_data[0].get("cooldown", 5.0))
 			var initial_delay: float = float(cat.active_skills_data[0].get("initial_delay", 0))
-			remaining_cd = initial_delay
+			remaining_cd = _calc_initial_skill_cooldown(max_cd, initial_delay)
 			skill_name = str(cat.active_skills_data[0].get("display_name", ""))
 		entries.append({
 			"max_cd": max_cd,
@@ -1041,6 +1086,28 @@ func _build_skill_slot_entries(cats: Array) -> Array:
 			"skill_name": skill_name,
 		})
 	return entries
+
+
+func _refresh_initial_skill_slot_cooldowns() -> void:
+	for id_variant: Variant in _cat_runtime.keys():
+		var cat_id: int = int(id_variant)
+		var runtime: Dictionary = _cat_runtime.get(cat_id, {})
+		var cat_data: CatData = runtime.get("data", null) as CatData
+		if cat_data == null or cat_data.active_skills_data.is_empty():
+			continue
+		var slot: Dictionary = _get_skill_slot_entry(cat_id)
+		if slot.is_empty():
+			continue
+		var skill_d: Dictionary = cat_data.active_skills_data[0]
+		var cdr_mult: float = 1.0 - float(runtime.get("cooldown_reduction", 0.0))
+		var effective_cooldown: float = float(skill_d.get("cooldown", 5.0)) * cdr_mult
+		var initial_delay: float = float(skill_d.get("initial_delay", 0.0))
+		slot["max_cd"] = effective_cooldown
+		slot["remaining_cd"] = _calc_initial_skill_cooldown(effective_cooldown, initial_delay)
+
+
+func _calc_initial_skill_cooldown(cooldown: float, initial_delay: float) -> float:
+	return maxf(0.0, cooldown * 0.3 + initial_delay)
 
 
 func _update_skill_bar(delta: float) -> void:
@@ -1078,7 +1145,12 @@ func _refresh_skill_bar_display() -> void:
 
 func _get_display_skill_slots() -> Array:
 	if _skill_bar_filter == "all":
-		return _player_skill_slots + _enemy_skill_slots
+		var display_slots: Array = []
+		for i in range(SKILL_SLOT_DISPLAY_CAP / 2):
+			display_slots.append(_player_skill_slots[i] if i < _player_skill_slots.size() else null)
+		for i in range(SKILL_SLOT_DISPLAY_CAP / 2):
+			display_slots.append(_enemy_skill_slots[i] if i < _enemy_skill_slots.size() else null)
+		return display_slots	
 	return []
 
 

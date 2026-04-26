@@ -329,8 +329,8 @@ func _init_skill_cooldowns(sc: SimCat) -> void:
 	for skill_d: Dictionary in sc.data.active_skills_data:
 		var base_cd: float = float(skill_d.get("cooldown", 5.0))
 		var eff_cd: float = base_cd * cdr_mult
-		var delay: float = float(skill_d.get("initial_delay", 0)) * cdr_mult
-		sc.skill_cooldowns.append(delay)
+		var delay: float = float(skill_d.get("initial_delay", 0.0))
+		sc.skill_cooldowns.append(maxf(0.0, eff_cd * 0.3 + delay))
 		sc.skill_max_cds.append(eff_cd)
 
 
@@ -599,8 +599,8 @@ func _execute_skill(caster: SimCat, skill_d: Dictionary, t: float, events: Array
 						_check_death(target, t, events)
 						break
 				# Extra knockback
-				var extra_kb: float = eff.get("extra_knockback", 0.0)
-				if extra_kb > 0.0 and target.is_alive:
+				var extra_kb: float = maxf(float(eff.get("extra_knockback", 0.0)), 120.0)
+				if target.is_alive:
 					if caster.team == "player":
 						target.pos_x += extra_kb
 						if target.pos_x + CAT_HALF_W >= WALL_RIGHT:
