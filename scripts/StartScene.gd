@@ -132,7 +132,8 @@ var _pending_retry_login_password: String = ""
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiAudio.stop_bgm()
-	_api_base_url = _resolve_api_base_url()
+	var resolved_api_base_url: String = _resolve_api_base_url()
+	_api_base_url = resolved_api_base_url
 	_device_id = _load_or_create_device_id()
 	_build_ui()
 	_sync_adaptive_layout()
@@ -141,7 +142,12 @@ func _ready() -> void:
 	_play_idle_animation()
 	_apply_mode()
 	if GameState.load_persisted_auth_session():
-		_api_base_url = GameState.api_base_url
+		if RuntimeConfigScript.has_explicit_api_base_url():
+			_api_base_url = resolved_api_base_url
+			if GameState.api_base_url != _api_base_url:
+				GameState.set_auth_session(_api_base_url, GameState.auth_session)
+		else:
+			_api_base_url = GameState.api_base_url
 		_sync_logout_button_visibility()
 		_show_loading_state()
 		_begin_authenticated_bootstrap(UiText.START_STATUS_BOOTSTRAP_RESTORE)

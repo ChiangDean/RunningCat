@@ -35,6 +35,19 @@ static func get_api_base_url(default_api_base_url: String) -> String:
 	return str(api_base_url).rstrip("/")
 
 
+static func has_explicit_api_base_url() -> bool:
+	var web_override: String = _get_web_api_base_url_override()
+	if web_override != "":
+		return true
+
+	var config: Dictionary = get_config()
+	if _read_config_value(config, "api_base_url") != null:
+		return true
+
+	var environment_config: Dictionary = _get_active_environment_config(config)
+	return _read_config_value(environment_config, "api_base_url") != null
+
+
 static func _get_web_api_base_url_override() -> String:
 	if not OS.has_feature("web"):
 		return ""
