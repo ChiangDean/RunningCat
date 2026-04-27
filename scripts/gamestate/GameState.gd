@@ -70,6 +70,8 @@ func clear_auth_session() -> void:
 func clear_persisted_player_state() -> void:
 	FileUtils.delete_file_if_exists(PLAYER_DATA_PATH)
 	FileUtils.delete_files_in_directory(CacheIO.CONFIG_CACHE_DIR)
+	FileUtils.delete_files_in_directory(CacheIO.CATALOG_CACHE_DIR)
+	FileUtils.delete_files_in_directory(CacheIO.SCOOPER_CACHE_DIR)
 
 	player_data = PlayerData.new()
 	_player_cat_cache = {}

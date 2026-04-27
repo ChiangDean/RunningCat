@@ -1125,6 +1125,11 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 			_handle_oauth_exchange_success(data)
 			return
 		if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
+			if not _is_bootstrap_payload_complete(data):
+				GameState.clear_persisted_player_state()
+				_abort_loading_state()
+				_set_status(UiText.START_STATUS_INVALID_RESPONSE, true)
+				return
 			_cancel_bootstrap_retry()
 			GameState.apply_player_bootstrap(data)
 			_bootstrap_completed = true
@@ -1149,6 +1154,10 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		_begin_refresh_then_bootstrap()
 		return
 
+	if completed_request_kind == REQUEST_KIND_BOOTSTRAP and response_code == 401:
+		_handle_session_expired(UiText.START_STATUS_LOGIN_EXPIRED)
+		return
+
 	if completed_request_kind == REQUEST_KIND_BOOTSTRAP:
 		_abort_loading_state()
 		var bootstrap_message := str(error_payload.get("message", UiText.START_STATUS_BOOTSTRAP_FAILED))
@@ -1156,11 +1165,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		return
 
 	if completed_request_kind == REQUEST_KIND_REFRESH:
-		_abort_loading_state()
-		GameState.clear_auth_session()
-		_api_base_url = _resolve_api_base_url()
-		_sync_logout_button_visibility()
-		_set_status(UiText.START_STATUS_LOGIN_EXPIRED, true)
+		_handle_session_expired(UiText.START_STATUS_LOGIN_EXPIRED)
 		return
 
 	if completed_request_kind == REQUEST_KIND_GUEST_LOGIN:
@@ -1258,6 +1263,9 @@ func _handle_request_transport_failure(completed_request_kind: String, result: i
 	var message := _describe_http_request_result(result)
 	if completed_request_kind == REQUEST_KIND_BOOTSTRAP or completed_request_kind == REQUEST_KIND_REFRESH:
 		_abort_loading_state()
+		if completed_request_kind == REQUEST_KIND_REFRESH:
+			_handle_session_expired(UiText.START_STATUS_LOGIN_EXPIRED)
+			return
 	elif completed_request_kind == REQUEST_KIND_OAUTH_BEGIN or completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
 		_reset_oauth_state()
 	elif completed_request_kind == REQUEST_KIND_OAUTH_EXCHANGE:
@@ -1275,6 +1283,9 @@ func _handle_request_invalid_response(completed_request_kind: String) -> void:
 	_release_network_loading_overlay()
 	if completed_request_kind == REQUEST_KIND_BOOTSTRAP or completed_request_kind == REQUEST_KIND_REFRESH:
 		_abort_loading_state()
+		if completed_request_kind == REQUEST_KIND_REFRESH:
+			_handle_session_expired(UiText.START_STATUS_LOGIN_EXPIRED)
+			return
 	elif completed_request_kind == REQUEST_KIND_OAUTH_BEGIN or completed_request_kind == REQUEST_KIND_OAUTH_COMPLETE_PROFILE:
 		_reset_oauth_state()
 	elif completed_request_kind == REQUEST_KIND_OAUTH_EXCHANGE:
@@ -1302,6 +1313,28 @@ func _describe_http_request_result(result: int) -> String:
 			return UiText.START_STATUS_TLS_ERROR
 		_:
 			return UiText.START_STATUS_GENERIC_RESULT_ERROR % result
+
+
+func _is_bootstrap_payload_complete(data: Dictionary) -> bool:
+	if data.is_empty():
+		return false
+	if not data.has("catCatalog") or not (data.get("catCatalog") is Array):
+		return false
+	if not data.has("playerCats") or not (data.get("playerCats") is Array):
+		return false
+	if not data.has("playerTeams") or not (data.get("playerTeams") is Array):
+		return false
+	if not data.has("stageOpponentConfig") or not (data.get("stageOpponentConfig") is Dictionary):
+		return false
+	return true
+
+
+func _handle_session_expired(message: String) -> void:
+	_abort_loading_state()
+	GameState.clear_auth_and_player_state()
+	_api_base_url = _resolve_api_base_url()
+	_sync_logout_button_visibility()
+	_set_status(message, true)
 
 
 func _begin_authenticated_bootstrap(status_message: String, reset_retry_count: bool = true) -> void:
