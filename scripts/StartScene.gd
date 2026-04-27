@@ -104,6 +104,8 @@ var _primary_button: Button
 var _secondary_button: Button
 var _guest_button: Button
 var _status_label: Label
+var _audio_debug_overlay: PanelContainer
+var _audio_debug_label: Label
 var _oauth_intro_label: Label
 var _oauth_button_row: VBoxContainer
 var _oauth_google_button: TextureButton
@@ -200,6 +202,13 @@ func _build_ui() -> void:
 	_logout_button = _build_logout_button()
 	layout.add_child(_logout_button)
 	_sync_logout_button_visibility()
+
+	if _should_show_audio_debug_overlay():
+		_audio_debug_overlay = _build_audio_debug_overlay()
+		layout.add_child(_audio_debug_overlay)
+		_refresh_audio_debug_overlay(UiAudio.get_debug_snapshot())
+		if not UiAudio.debug_state_changed.is_connected(_refresh_audio_debug_overlay):
+			UiAudio.debug_state_changed.connect(_refresh_audio_debug_overlay)
 
 
 func _build_title_block() -> PanelContainer:
@@ -426,6 +435,48 @@ func _build_loading_block() -> Control:
 	content.add_child(_loading_percent_label)
 
 	return block
+
+
+func _build_audio_debug_overlay() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.anchor_left = 1.0
+	panel.anchor_top = 1.0
+	panel.anchor_right = 1.0
+	panel.anchor_bottom = 1.0
+	panel.offset_left = -300.0
+	panel.offset_top = -188.0
+	panel.offset_right = -16.0
+	panel.offset_bottom = -16.0
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.10, 0.08, 0.07, 0.90)
+	style.corner_radius_top_left = 16
+	style.corner_radius_top_right = 16
+	style.corner_radius_bottom_right = 16
+	style.corner_radius_bottom_left = 16
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(0.86, 0.72, 0.52, 0.75)
+	panel.add_theme_stylebox_override("panel", style)
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+
+	_audio_debug_label = Label.new()
+	_audio_debug_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_audio_debug_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	UiFonts.apply_noto(_audio_debug_label, 13)
+	_audio_debug_label.add_theme_color_override("font_color", Color(0.98, 0.95, 0.88, 1.0))
+	margin.add_child(_audio_debug_label)
+
+	return panel
 
 
 func _build_tap_hint() -> Label:
@@ -1603,6 +1654,41 @@ func _set_status(message: String, is_error: bool) -> void:
 		return
 	_status_label.text = message
 	_status_label.add_theme_color_override("font_color", Color("7d2f2f") if is_error else Color("46613d"))
+
+
+func _refresh_audio_debug_overlay(snapshot: Dictionary) -> void:
+	if _audio_debug_label == null:
+		return
+	var lines: Array[String] = []
+	lines.append("Audio Debug")
+	lines.append("web=%s" % str(snapshot.get("is_web_runtime", false)))
+	lines.append("policy=%s" % str(snapshot.get("autoplay_policy", "")))
+	lines.append("unlocked=%s" % str(snapshot.get("web_audio_unlocked", false)))
+	lines.append("bgm_playing=%s" % str(snapshot.get("bgm_playing", false)))
+	lines.append("pending_restart=%s" % str(snapshot.get("pending_bgm_restart", false)))
+	lines.append("retry=%s active=%s" % [str(snapshot.get("retry_attempts", 0)), str(snapshot.get("retry_timer_active", false))])
+	lines.append("current=%s" % _short_audio_debug_path(str(snapshot.get("current_bgm_path", ""))))
+	lines.append("pending=%s" % _short_audio_debug_path(str(snapshot.get("pending_bgm_path", ""))))
+	_audio_debug_label.text = "\n".join(lines)
+
+
+func _short_audio_debug_path(path: String) -> String:
+	if path == "":
+		return "-"
+	var slash_index: int = path.rfind("/")
+	if slash_index == -1:
+		return path
+	return path.substr(slash_index + 1)
+
+
+func _should_show_audio_debug_overlay() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	if not ClassDB.class_exists("JavaScriptBridge"):
+		return false
+	var raw_flag: Variant = JavaScriptBridge.eval("(() => { const params = new URLSearchParams(window.location.search); return params.get('audio_debug') || params.get('audioDebug') || ''; })()", true)
+	var normalized: String = str(raw_flag).strip_edges().to_lower()
+	return normalized == "1" or normalized == "true" or normalized == "yes"
 
 
 func _retain_network_loading_overlay(_message: String) -> void:

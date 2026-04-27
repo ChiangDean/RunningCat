@@ -6,12 +6,18 @@ const UI_BUTTON_CLICK_SFX := preload("res://assets/audio/sfx/ui/battle_scene.mp3
 const MASTER_BUS_NAME := "Master"
 const BGM_BUS_NAME := "BGM"
 const SFX_BUS_NAME := "SFX"
+const WEB_UNLOCK_RETRY_INTERVAL_SEC := 0.1
+const WEB_UNLOCK_RETRY_MAX_ATTEMPTS := 12
 
 var _bgm_player: AudioStreamPlayer
 var _current_bgm_path: String = ""
 var _web_audio_unlocked: bool = false
 var _pending_bgm_stream: AudioStream
 var _pending_bgm_restart: bool = false
+var _web_unlock_retry_timer: Timer
+var _web_unlock_retry_attempts: int = 0
+
+signal debug_state_changed(snapshot: Dictionary)
 
 
 func _ready() -> void:
@@ -20,7 +26,13 @@ func _ready() -> void:
 	_bgm_player.bus = BGM_BUS_NAME
 	_bgm_player.stream_paused = false
 	add_child(_bgm_player)
+	_web_unlock_retry_timer = Timer.new()
+	_web_unlock_retry_timer.one_shot = true
+	_web_unlock_retry_timer.wait_time = WEB_UNLOCK_RETRY_INTERVAL_SEC
+	_web_unlock_retry_timer.timeout.connect(_on_web_unlock_retry_timeout)
+	add_child(_web_unlock_retry_timer)
 	_install_web_audio_unlock_hooks()
+	_notify_debug_state_changed()
 
 
 func should_play_for_button(button: BaseButton) -> bool:
@@ -47,13 +59,17 @@ func unlock_from_user_gesture(play_feedback: bool = false) -> void:
 	if _is_web_runtime():
 		_web_audio_unlocked = _resume_web_audio_contexts()
 		if _web_audio_unlocked:
+			_stop_web_unlock_retry()
 			_retry_pending_bgm_after_unlock()
+		else:
+			_schedule_web_audio_unlock_retry()
 	if UI_BUTTON_CLICK_SFX == null:
 		return
 	if should_prime_silently:
 		play_sfx(UI_BUTTON_CLICK_SFX, -80.0, 1.0)
 	elif play_feedback:
 		play_sfx(UI_BUTTON_CLICK_SFX, 0.0, 1.0)
+	_notify_debug_state_changed()
 
 
 func ensure_audio_buses() -> void:
@@ -66,6 +82,7 @@ func apply_settings(settings: Dictionary) -> void:
 	_apply_bus_settings(MASTER_BUS_NAME, float(settings.get("masterVolume", 1.0)), bool(settings.get("masterMuted", false)))
 	_apply_bus_settings(BGM_BUS_NAME, float(settings.get("bgmVolume", 1.0)), bool(settings.get("bgmMuted", false)))
 	_apply_bus_settings(SFX_BUS_NAME, float(settings.get("sfxVolume", 1.0)), bool(settings.get("sfxMuted", false)))
+	_notify_debug_state_changed()
 
 
 func play_sfx(stream: AudioStream, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
@@ -73,6 +90,10 @@ func play_sfx(stream: AudioStream, volume_db: float = 0.0, pitch_scale: float = 
 		return
 	if _is_web_runtime() and not _web_audio_unlocked:
 		_web_audio_unlocked = _resume_web_audio_contexts()
+		if _web_audio_unlocked:
+			_stop_web_unlock_retry()
+		else:
+			_schedule_web_audio_unlock_retry()
 	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	player.bus = SFX_BUS_NAME
 	player.stream = stream
@@ -81,6 +102,7 @@ func play_sfx(stream: AudioStream, volume_db: float = 0.0, pitch_scale: float = 
 	add_child(player)
 	player.finished.connect(player.queue_free)
 	player.play()
+	_notify_debug_state_changed()
 
 
 func play_bgm(stream: AudioStream, restart: bool = false) -> void:
@@ -92,7 +114,9 @@ func play_bgm(stream: AudioStream, restart: bool = false) -> void:
 	if _is_web_runtime() and not _web_audio_unlocked:
 		_web_audio_unlocked = _resume_web_audio_contexts()
 		if not _web_audio_unlocked:
+			_schedule_web_audio_unlock_retry()
 			return
+		_stop_web_unlock_retry()
 	if _bgm_player == null:
 		_bgm_player = AudioStreamPlayer.new()
 		_bgm_player.bus = BGM_BUS_NAME
@@ -112,6 +136,7 @@ func play_bgm(stream: AudioStream, restart: bool = false) -> void:
 	_bgm_player.stream = playback_stream
 	_bgm_player.play()
 	_pending_bgm_restart = false
+	_notify_debug_state_changed()
 
 
 func stop_bgm() -> void:
@@ -121,6 +146,21 @@ func stop_bgm() -> void:
 	_current_bgm_path = ""
 	_pending_bgm_stream = null
 	_pending_bgm_restart = false
+	_notify_debug_state_changed()
+
+
+func get_debug_snapshot() -> Dictionary:
+	return {
+		"is_web_runtime": _is_web_runtime(),
+		"web_audio_unlocked": _web_audio_unlocked,
+		"pending_bgm_path": _resource_path_of(_pending_bgm_stream),
+		"pending_bgm_restart": _pending_bgm_restart,
+		"current_bgm_path": _current_bgm_path,
+		"bgm_playing": _bgm_player != null and _bgm_player.playing,
+		"retry_attempts": _web_unlock_retry_attempts,
+		"retry_timer_active": _web_unlock_retry_timer != null and not _web_unlock_retry_timer.is_stopped(),
+		"autoplay_policy": _get_web_autoplay_policy()
+	}
 
 
 func _ensure_bus(bus_name: String, send_bus_name: String) -> void:
@@ -262,3 +302,59 @@ func _retry_pending_bgm_after_unlock() -> void:
 	if _bgm_player.playing and not _pending_bgm_restart:
 		return
 	play_bgm(_pending_bgm_stream, _pending_bgm_restart)
+
+
+func _schedule_web_audio_unlock_retry() -> void:
+	if not _is_web_runtime():
+		return
+	if _web_audio_unlocked:
+		return
+	if _web_unlock_retry_timer == null:
+		return
+	if not _web_unlock_retry_timer.is_stopped():
+		return
+	_web_unlock_retry_attempts = 0
+	_web_unlock_retry_timer.start()
+	_notify_debug_state_changed()
+
+
+func _stop_web_unlock_retry() -> void:
+	if _web_unlock_retry_timer == null:
+		return
+	_web_unlock_retry_timer.stop()
+	_web_unlock_retry_attempts = 0
+	_notify_debug_state_changed()
+
+
+func _on_web_unlock_retry_timeout() -> void:
+	if _web_audio_unlocked:
+		_stop_web_unlock_retry()
+		return
+	_web_unlock_retry_attempts += 1
+	_web_audio_unlocked = _resume_web_audio_contexts()
+	if _web_audio_unlocked:
+		_stop_web_unlock_retry()
+		_retry_pending_bgm_after_unlock()
+		return
+	if _web_unlock_retry_attempts < WEB_UNLOCK_RETRY_MAX_ATTEMPTS:
+		_web_unlock_retry_timer.start()
+	_notify_debug_state_changed()
+
+
+func _notify_debug_state_changed() -> void:
+	debug_state_changed.emit(get_debug_snapshot())
+
+
+func _resource_path_of(stream: AudioStream) -> String:
+	if stream == null:
+		return ""
+	return str(stream.resource_path)
+
+
+func _get_web_autoplay_policy() -> String:
+	if not _is_web_runtime():
+		return "non-web"
+	if not ClassDB.class_exists("JavaScriptBridge"):
+		return "no-js-bridge"
+	var raw_policy: Variant = JavaScriptBridge.eval("(() => { if (!navigator.getAutoplayPolicy) return 'unsupported'; try { return navigator.getAutoplayPolicy('audiocontext'); } catch (_err) { return 'error'; } })()", true)
+	return str(raw_policy)
