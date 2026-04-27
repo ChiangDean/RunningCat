@@ -205,6 +205,8 @@ func _install_web_audio_unlock_hooks() -> void:
 	const bootstrap = window.__mpdAudioUnlock || {
 		contexts: new Set(),
 		installed: false,
+		userActivated: false,
+		fallbackContext: null,
 		registerContext(value) {
 			if (!value) return;
 			const hasResume = typeof value.resume === 'function';
@@ -228,6 +230,22 @@ func _install_web_audio_unlock_hooks() -> void:
 					this.inspectValue(window[key]);
 				} catch (_err) {}
 			}
+			this.ensureFallbackContext();
+		},
+		ensureFallbackContext() {
+			if (this.fallbackContext) {
+				this.registerContext(this.fallbackContext);
+				return this.fallbackContext;
+			}
+			const Ctor = window.AudioContext || window.webkitAudioContext;
+			if (typeof Ctor !== 'function') return null;
+			try {
+				this.fallbackContext = new Ctor();
+				this.registerContext(this.fallbackContext);
+			} catch (_err) {
+				this.fallbackContext = null;
+			}
+			return this.fallbackContext;
 		},
 		installConstructorHook(name) {
 			const Original = window[name];
@@ -257,13 +275,19 @@ func _install_web_audio_unlock_hooks() -> void:
 					unlocked = true;
 				}
 			}
+			this.userActivated = this.userActivated || unlocked;
 			return unlocked;
+		},
+		notifyUserGesture() {
+			this.userActivated = true;
+			this.ensureFallbackContext();
+			return this.resumeAllContexts() || this.userActivated;
 		},
 		install() {
 			if (this.installed) return;
 			this.installConstructorHook('AudioContext');
 			this.installConstructorHook('webkitAudioContext');
-			const resume = () => this.resumeAllContexts();
+			const resume = () => this.notifyUserGesture();
 			['click', 'touchend', 'pointerup', 'keydown'].forEach((eventName) => {
 				document.addEventListener(eventName, resume, { capture: true, passive: true });
 			});
@@ -288,7 +312,7 @@ func _resume_web_audio_contexts() -> bool:
 	if not ClassDB.class_exists("JavaScriptBridge"):
 		return false
 	_install_web_audio_unlock_hooks()
-	var resume_result: Variant = JavaScriptBridge.eval("(() => window.__mpdAudioUnlock ? window.__mpdAudioUnlock.resumeAllContexts() : false)()", true)
+	var resume_result: Variant = JavaScriptBridge.eval("(() => window.__mpdAudioUnlock ? window.__mpdAudioUnlock.notifyUserGesture() : false)()", true)
 	if resume_result is bool:
 		return resume_result
 	return str(resume_result).to_lower() == "true"
