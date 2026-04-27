@@ -112,6 +112,7 @@ var _cat_picker_cards: Dictionary = {}  # cat_key -> Control
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiAudio.play_menu_bgm()
 	_onboarding_player_name = _resolve_onboarding_player_name()
 	_player_name_input = _onboarding_player_name
 	_build_dialogue_beats()

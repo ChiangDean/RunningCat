@@ -1,5 +1,7 @@
 extends Node
 
+const MENU_BGM := preload("res://assets/audio/bgm/menu/purring_menu_waltz.mp3")
+const BATTLE_BGM := preload("res://assets/audio/bgm/battle/paw_parade_clash.mp3")
 const UI_BUTTON_CLICK_SFX := preload("res://assets/audio/sfx/ui/battle_scene.mp3")
 const MASTER_BUS_NAME := "Master"
 const BGM_BUS_NAME := "BGM"
@@ -8,6 +10,8 @@ const SFX_BUS_NAME := "SFX"
 var _bgm_player: AudioStreamPlayer
 var _current_bgm_path: String = ""
 var _web_audio_unlocked: bool = false
+var _pending_bgm_stream: AudioStream
+var _pending_bgm_restart: bool = false
 
 
 func _ready() -> void:
@@ -29,11 +33,21 @@ func play_ui_click() -> void:
 	unlock_from_user_gesture(true)
 
 
+func play_menu_bgm(restart: bool = false) -> void:
+	play_bgm(MENU_BGM, restart)
+
+
+func play_battle_bgm(restart: bool = false) -> void:
+	play_bgm(BATTLE_BGM, restart)
+
+
 func unlock_from_user_gesture(play_feedback: bool = false) -> void:
 	ensure_audio_buses()
 	var should_prime_silently: bool = _is_web_runtime() and not _web_audio_unlocked and not play_feedback
 	if _is_web_runtime():
 		_web_audio_unlocked = _resume_web_audio_contexts()
+		if _web_audio_unlocked:
+			_retry_pending_bgm_after_unlock()
 	if UI_BUTTON_CLICK_SFX == null:
 		return
 	if should_prime_silently:
@@ -73,8 +87,12 @@ func play_bgm(stream: AudioStream, restart: bool = false) -> void:
 	if stream == null:
 		return
 	ensure_audio_buses()
+	_pending_bgm_stream = stream
+	_pending_bgm_restart = restart
 	if _is_web_runtime() and not _web_audio_unlocked:
 		_web_audio_unlocked = _resume_web_audio_contexts()
+		if not _web_audio_unlocked:
+			return
 	if _bgm_player == null:
 		_bgm_player = AudioStreamPlayer.new()
 		_bgm_player.bus = BGM_BUS_NAME
@@ -93,6 +111,7 @@ func play_bgm(stream: AudioStream, restart: bool = false) -> void:
 	_current_bgm_path = stream_path
 	_bgm_player.stream = playback_stream
 	_bgm_player.play()
+	_pending_bgm_restart = false
 
 
 func stop_bgm() -> void:
@@ -100,6 +119,8 @@ func stop_bgm() -> void:
 		return
 	_bgm_player.stop()
 	_current_bgm_path = ""
+	_pending_bgm_stream = null
+	_pending_bgm_restart = false
 
 
 func _ensure_bus(bus_name: String, send_bus_name: String) -> void:
@@ -231,3 +252,13 @@ func _resume_web_audio_contexts() -> bool:
 	if resume_result is bool:
 		return resume_result
 	return str(resume_result).to_lower() == "true"
+
+
+func _retry_pending_bgm_after_unlock() -> void:
+	if _pending_bgm_stream == null:
+		return
+	if _bgm_player == null:
+		return
+	if _bgm_player.playing and not _pending_bgm_restart:
+		return
+	play_bgm(_pending_bgm_stream, _pending_bgm_restart)

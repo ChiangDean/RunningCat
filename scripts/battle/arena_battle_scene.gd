@@ -44,6 +44,7 @@ func _ready() -> void:
 	_build_tablet_decor()
 	_sync_adaptive_layout()
 	get_viewport().size_changed.connect(_sync_adaptive_layout)
+	UiAudio.play_battle_bgm()
 	_opponent = GameState.arena_opponent
 	_build_scene()
 	_start_battle()

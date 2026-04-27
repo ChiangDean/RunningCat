@@ -131,7 +131,7 @@ var _guest_account_exists_recovery_attempted := false
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	UiAudio.stop_bgm()
+	UiAudio.play_menu_bgm()
 	_hero_image = load(HERO_IMAGE_PATH) as Texture2D
 	var resolved_api_base_url: String = _resolve_api_base_url()
 	_api_base_url = resolved_api_base_url

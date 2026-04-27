@@ -147,6 +147,11 @@ const IDLE_CLAIM_RED_DOT_THRESHOLD_SECONDS := 4 * 3600
 const IDLE_REWARD_GRID_COLUMNS := 5
 const IDLE_REWARD_SLOT_SCALE := 0.24
 const IDLE_REWARD_SLOT_CELL_SIZE := Vector2(122.0, 122.0)
+const BATTLE_MUSIC_OVERLAY_SCENES: Array[String] = [
+	"res://scenes/ArenaScene.tscn",
+	"res://scenes/DungeonScene.tscn",
+	"res://scenes/CombatTrialScene.tscn",
+]
 const RESULT_OVERLAY_OFFSET_Y := -200.0
 const RESULT_OVERLAY_START_SCALE := 0.56
 const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
@@ -290,7 +295,7 @@ func _ready() -> void:
 	_build_scene()
 	call_deferred("_show_pending_combat_power_change")
 	_refresh_home_red_dots()
-	UiAudio.stop_bgm()
+	_sync_music_state()
 	_start_battle()
 	call_deferred("_show_startup_idle_rewards_dialog_if_needed")
 	# Update the idle button text every second.
@@ -343,6 +348,7 @@ func _process(_delta: float) -> void:
 		_last_overlay_scene_path = overlay_scene_path
 		_refresh_main_nav_state()
 		_refresh_overlay_fx_state()
+		_sync_music_state()
 		_refresh_home_red_dots()
 		_refresh_sandbox_btn()
 
@@ -2359,6 +2365,20 @@ func _refresh_overlay_fx_state() -> void:
 		_hide_team_skill_bubbles()
 
 
+func _sync_music_state() -> void:
+	var active_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
+	if _should_use_battle_bgm(active_scene_path):
+		UiAudio.play_battle_bgm()
+		return
+	UiAudio.play_menu_bgm()
+
+
+func _should_use_battle_bgm(active_scene_path: String) -> bool:
+	if active_scene_path == "":
+		return true
+	return BATTLE_MUSIC_OVERLAY_SCENES.has(active_scene_path)
+
+
 func _hide_team_skill_bubbles() -> void:
 	for team_node: Node2D in [_player_team, _enemy_team]:
 		if team_node == null:
@@ -2663,6 +2683,7 @@ func _toggle_overlay_scene(scene_path: String) -> void:
 	_last_overlay_scene_path = SceneNavigator.get_current_overlay_scene_path()
 	_refresh_main_nav_state()
 	_refresh_overlay_fx_state()
+	_sync_music_state()
 	_refresh_home_red_dots()
 	_refresh_sandbox_btn()
 

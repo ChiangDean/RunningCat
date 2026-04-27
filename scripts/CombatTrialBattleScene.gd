@@ -38,6 +38,7 @@ var _water_overlay: ColorRect
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiAudio.play_battle_bgm()
 	_payload = GameState.get_combat_trial_battle_payload()
 	if _payload.is_empty():
 		SceneNavigator.open_overlay_scene("res://scenes/CombatTrialScene.tscn")

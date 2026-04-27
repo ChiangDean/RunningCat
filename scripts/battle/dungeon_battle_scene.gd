@@ -51,6 +51,7 @@ func _ready() -> void:
 	_build_tablet_decor()
 	_sync_adaptive_layout()
 	get_viewport().size_changed.connect(_sync_adaptive_layout)
+	UiAudio.play_battle_bgm()
 	_dungeon_id = GameState.dungeon_battle_id
 	_dungeon_key = GameState.dungeon_battle_key
 	_dungeon_level = GameState.dungeon_battle_level
