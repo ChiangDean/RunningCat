@@ -311,6 +311,7 @@ func _build_auth_block() -> PanelContainer:
 	_primary_button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("9aae8b"), 10))
 	_primary_button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("a8bc98"), 10))
 	_primary_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("869a79"), 8))
+	_primary_button.pressed.connect(UiAudio.play_ui_click)
 	_primary_button.pressed.connect(_on_primary_pressed)
 	button_row.add_child(_primary_button)
 
@@ -321,6 +322,7 @@ func _build_auth_block() -> PanelContainer:
 	_secondary_button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("d4b593"), 10))
 	_secondary_button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("ddc19f"), 10))
 	_secondary_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("c59f78"), 8))
+	_secondary_button.pressed.connect(UiAudio.play_ui_click)
 	_secondary_button.pressed.connect(_on_secondary_pressed)
 	button_row.add_child(_secondary_button)
 
@@ -332,6 +334,7 @@ func _build_auth_block() -> PanelContainer:
 	_guest_button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("88a9bb"), 10))
 	_guest_button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("96b6c7"), 10))
 	_guest_button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("7698aa"), 8))
+	_guest_button.pressed.connect(UiAudio.play_ui_click)
 	_guest_button.pressed.connect(_on_guest_pressed)
 	content.add_child(_guest_button)
 
@@ -357,10 +360,12 @@ func _build_auth_block() -> PanelContainer:
 		content.add_child(_oauth_button_row)
 
 		_oauth_google_button = _build_oauth_button(OAUTH_GOOGLE_BUTTON_TEXTURE)
+		_oauth_google_button.pressed.connect(UiAudio.play_ui_click)
 		_oauth_google_button.pressed.connect(_on_oauth_google_pressed)
 		_oauth_button_row.add_child(_oauth_google_button)
 
 		_oauth_apple_button = _build_oauth_button(OAUTH_APPLE_BUTTON_TEXTURE)
+		_oauth_apple_button.pressed.connect(UiAudio.play_ui_click)
 		_oauth_apple_button.pressed.connect(_on_oauth_apple_pressed)
 		_oauth_button_row.add_child(_oauth_apple_button)
 
@@ -369,6 +374,7 @@ func _build_auth_block() -> PanelContainer:
 			OAUTH_LINE_BUTTON_HOVER_TEXTURE,
 			OAUTH_LINE_BUTTON_PRESS_TEXTURE
 		)
+		_oauth_line_button.pressed.connect(UiAudio.play_ui_click)
 		_oauth_line_button.pressed.connect(_on_oauth_line_pressed)
 		_oauth_button_row.add_child(_oauth_line_button)
 
@@ -516,6 +522,7 @@ func _build_logout_button() -> Button:
 	button.add_theme_stylebox_override("normal", _make_button_stylebox(Color("c4574d"), 10))
 	button.add_theme_stylebox_override("hover", _make_button_stylebox(Color("d4685d"), 10))
 	button.add_theme_stylebox_override("pressed", _make_button_stylebox(Color("a6473e"), 8))
+	button.pressed.connect(UiAudio.play_ui_click)
 	button.pressed.connect(_on_logout_pressed)
 	return button
 
