@@ -26,6 +26,7 @@ var _skill_bubble_panel: PanelContainer
 var _skill_bubble_label: Label
 var _skill_bubble_tail: Polygon2D
 var _skill_bubble_tween: Tween
+var _skill_bubble_float_offset_y: float = 0.0
 var _active_animation: String = ""
 var _move_tween: Tween
 var _revert_timer: SceneTreeTimer
@@ -95,6 +96,8 @@ func setup(id: int, team_name: String, name_str: String, hp: int, file_id: Strin
 func _process(_delta: float) -> void:
 	if _skill_bubble_root != null and _skill_bubble_root.visible and not SceneNavigator.get_current_overlay_scene_path().is_empty():
 		_hide_skill_bubble()
+	elif _skill_bubble_root != null and _skill_bubble_root.visible:
+		_update_skill_bubble_position()
 
 
 func reset_for_spawn() -> void:
@@ -416,7 +419,8 @@ func show_skill_bubble(skill_name: String) -> void:
 	_skill_bubble_label.position = Vector2(SKILL_BUBBLE_H_PADDING, 5.0)
 	_skill_bubble_label.size = Vector2(bubble_width - SKILL_BUBBLE_H_PADDING * 2.0, SKILL_BUBBLE_HEIGHT - 10.0)
 	_skill_bubble_tail.position = Vector2(0.0, SKILL_BUBBLE_TAIL_GAP - SKILL_BUBBLE_TAIL_HEIGHT - SKILL_BUBBLE_TAIL_VERTICAL_NUDGE_UP)
-	_skill_bubble_root.global_position = global_position + Vector2(0.0, -SKILL_BUBBLE_OFFSET_Y + SKILL_BUBBLE_VERTICAL_NUDGE_DOWN)
+	_skill_bubble_float_offset_y = 0.0
+	_update_skill_bubble_position()
 	_skill_bubble_root.scale = Vector2(0.92, 0.92)
 	_skill_bubble_root.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	_skill_bubble_root.visible = true
@@ -427,7 +431,7 @@ func show_skill_bubble(skill_name: String) -> void:
 	_skill_bubble_tween.tween_property(_skill_bubble_root, "scale", Vector2.ONE, SKILL_BUBBLE_POP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_skill_bubble_tween.chain().tween_interval(SKILL_BUBBLE_HOLD_TIME)
 	_skill_bubble_tween.chain().tween_property(_skill_bubble_root, "modulate:a", 0.0, SKILL_BUBBLE_FADE_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	_skill_bubble_tween.parallel().tween_property(_skill_bubble_root, "global_position:y", _skill_bubble_root.global_position.y - 12.0, SKILL_BUBBLE_FADE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	_skill_bubble_tween.parallel().tween_property(self, "_skill_bubble_float_offset_y", -12.0, SKILL_BUBBLE_FADE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	_skill_bubble_tween.chain().tween_callback(Callable(self, "_hide_skill_bubble"))
 
 
@@ -603,7 +607,8 @@ func _hide_skill_bubble() -> void:
 	_skill_bubble_tween = null
 	if _skill_bubble_root != null and is_instance_valid(_skill_bubble_root):
 		_skill_bubble_root.visible = false
-		_skill_bubble_root.global_position = global_position + Vector2(0.0, -SKILL_BUBBLE_OFFSET_Y + SKILL_BUBBLE_VERTICAL_NUDGE_DOWN)
+		_skill_bubble_float_offset_y = 0.0
+		_update_skill_bubble_position()
 		_skill_bubble_root.scale = Vector2.ONE
 		_skill_bubble_root.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
@@ -620,6 +625,15 @@ func _ensure_skill_bubble_root() -> void:
 	_skill_bubble_label = null
 	_skill_bubble_tail = null
 	_build_skill_bubble()
+
+
+func _update_skill_bubble_position() -> void:
+	if _skill_bubble_root == null or not is_instance_valid(_skill_bubble_root):
+		return
+	_skill_bubble_root.global_position = global_position + Vector2(
+		0.0,
+		-SKILL_BUBBLE_OFFSET_Y + SKILL_BUBBLE_VERTICAL_NUDGE_DOWN + _skill_bubble_float_offset_y
+	)
 
 
 func _play_loop(animation_name: String) -> void:
