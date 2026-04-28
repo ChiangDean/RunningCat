@@ -20,6 +20,10 @@ var _spinner_time := 0.0
 var _loading_text_phase := 0
 var _loading_text_elapsed := 0.0
 
+## Accumulated daily-task event counts keyed by event_key.
+## Flushed in batch when the player opens the daily-tasks dialog.
+var _pending_daily_task_events: Dictionary = {}
+
 
 func _ready() -> void:
 	for i in range(POOL_SIZE):
@@ -181,7 +185,40 @@ func claim_daily_task(task_key: String, callback: Callable) -> void:
 
 
 func record_daily_task_event(event_key: String, callback: Callable = Callable()) -> void:
-	_api_post_tracked("daily-tasks/events", {"eventKey": event_key, "count": 1}, callback, false)
+	var key := event_key.strip_edges()
+	if key.is_empty():
+		return
+	_pending_daily_task_events[key] = int(_pending_daily_task_events.get(key, 0)) + 1
+	GameState.set_daily_task_events_pending(true)
+
+
+func has_pending_daily_task_events() -> bool:
+	return not _pending_daily_task_events.is_empty()
+
+
+func flush_daily_task_events(callback: Callable) -> void:
+	if _pending_daily_task_events.is_empty():
+		callback.call(false, {}, {})
+		return
+	var events_to_flush: Dictionary = _pending_daily_task_events.duplicate()
+	_pending_daily_task_events.clear()
+	GameState.set_daily_task_events_pending(false)
+	_flush_daily_task_events_sequential(events_to_flush.keys(), events_to_flush, 0, callback)
+
+
+func _flush_daily_task_events_sequential(keys: Array, counts: Dictionary, index: int, final_callback: Callable) -> void:
+	if index >= keys.size():
+		if _can_invoke_callable(final_callback):
+			final_callback.call(true, {}, {})
+		return
+	var event_key: String = keys[index]
+	var count: int = int(counts[event_key])
+	_api_post_tracked("daily-tasks/events", {"eventKey": event_key, "count": count},
+		Callable(self, "_on_flush_daily_task_event_done").bind(keys, counts, index, final_callback), false)
+
+
+func _on_flush_daily_task_event_done(ok: bool, data: Variant, err: Dictionary, keys: Array, counts: Dictionary, index: int, final_callback: Callable) -> void:
+	_flush_daily_task_events_sequential(keys, counts, index + 1, final_callback)
 
 
 func get_profile_me(callback: Callable) -> void:

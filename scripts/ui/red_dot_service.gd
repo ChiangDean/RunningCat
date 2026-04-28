@@ -251,8 +251,15 @@ static func has_enhance_red_dot() -> bool:
 	return false
 
 
+static func has_daily_task_red_dot() -> bool:
+	var game_state: Node = _get_game_state()
+	if game_state == null:
+		return false
+	return bool(game_state.daily_task_events_pending)
+
+
 static func has_more_menu_red_dot() -> bool:
-	return has_mail_red_dot() or has_friend_red_dot() or has_party_red_dot()
+	return has_mail_red_dot() or has_friend_red_dot() or has_party_red_dot() or has_daily_task_red_dot()
 
 
 static func has_party_chat_red_dot() -> bool:
