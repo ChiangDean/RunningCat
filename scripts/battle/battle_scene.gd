@@ -24,6 +24,19 @@ const HOME_NAV_BUTTON_DEFAULT_TEXTURE := preload("res://assets/sprites/ui/home/v
 const HOME_NAV_BUTTON_ACTIVE_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_active.png")
 const HOME_MORE_BUTTON_DEFAULT_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_default.png")
 const HOME_MORE_BUTTON_ACTIVE_TEXTURE := preload("res://assets/sprites/ui/home/v2/slices/main_buttons/main_button_active.png")
+const HOME_SIDE_SHORTCUT_ANNOUNCEMENTS_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_announcements.png")
+const HOME_SIDE_SHORTCUT_DAILY_TASKS_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_daily_tasks.png")
+const HOME_SIDE_SHORTCUT_BACKPACK_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_backpack.png")
+const HOME_SIDE_SHORTCUT_LINEUP_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_lineup.png")
+const HOME_SIDE_SHORTCUT_PARTY_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_party.png")
+const HOME_SIDE_SHORTCUT_STATS_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_stats.png")
+const HOME_SIDE_SHORTCUT_CHAT_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_chat.png")
+const HOME_SIDE_SHORTCUT_FRIEND_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_friend.png")
+const HOME_SIDE_SHORTCUT_MAIL_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_shortcut_mail.png")
+const HOME_SIDE_SHORTCUT_TOGGLE_TAB_TEXTURE := preload("res://assets/sprites/ui/home/side_shortcuts/side_toggle_tab.png")
+const HOME_SIDE_SHORTCUT_TOGGLE_ARROW_PATH := "res://assets/sprites/ui/home/side_shortcuts/side_toggle_arrow.png"
+const HOME_IDLE_REWARD_BUTTON_PATH := "res://assets/sprites/ui/home/action_buttons/idle_reward_button.png"
+const HOME_BATTLE_SPEED_BUTTON_PATH := "res://assets/sprites/ui/home/action_buttons/battle_speed_button.png"
 const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
 const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
 const BOSS_WARNING_TEXTURE := preload("res://assets/sprites/ui/warning/boss_warning_compact_overlay_v1.png")
@@ -85,6 +98,31 @@ const HOME_NAV_LABEL_MORE_PAD_Y := -2.0
 const HOME_NAV_LABEL_MAIN_EXTRA_H := 6.0
 const HOME_NAV_LABEL_MORE_EXTRA_H := 4.0
 const HOME_NAV_LABEL_PRESSED_OFFSET_Y := 2.0
+const HOME_SIDE_SHORTCUT_BUTTON_SIZE := Vector2(96.0, 96.0)
+const HOME_SIDE_SHORTCUT_LEFT_X := 2.0
+const HOME_SIDE_SHORTCUT_RIGHT_X := SW - HOME_SIDE_SHORTCUT_BUTTON_SIZE.x - 2.0
+const HOME_SIDE_SHORTCUT_TOP_Y := 236.0
+const HOME_SIDE_SHORTCUT_ROW_GAP_Y := -18.0
+const HOME_SIDE_SHORTCUT_ICON_OFFSET := Vector2(16.0, 4.0)
+const HOME_SIDE_SHORTCUT_ICON_SIZE := Vector2(64.0, 58.0)
+const HOME_SIDE_SHORTCUT_LABEL_OFFSET := Vector2(0.0, 36.0)
+const HOME_SIDE_SHORTCUT_LABEL_SIZE := Vector2(96.0, 34.0)
+const HOME_SIDE_SHORTCUT_LABEL_FONT_SIZE := 16
+const HOME_SIDE_SHORTCUT_LABEL_FONT_SIZE_TWO_CHAR := 18
+const HOME_SIDE_SHORTCUT_LABEL_COLOR := Color(1.0, 0.98, 0.90, 1.0)
+const HOME_SIDE_SHORTCUT_LABEL_OUTLINE := Color(0.18, 0.07, 0.02, 1.0)
+const HOME_SIDE_SHORTCUT_TOGGLE_SIZE := Vector2(60.0, 117.0)
+const HOME_SIDE_SHORTCUT_TOGGLE_Y := HOME_SIDE_SHORTCUT_TOP_Y - 8.0
+const HOME_SIDE_SHORTCUT_TOGGLE_LEFT_X := HOME_SIDE_SHORTCUT_LEFT_X - 30.0
+const HOME_SIDE_SHORTCUT_TOGGLE_RIGHT_X := HOME_SIDE_SHORTCUT_RIGHT_X + HOME_SIDE_SHORTCUT_BUTTON_SIZE.x - 30.0
+const HOME_SIDE_SHORTCUT_TOGGLE_ARROW_SIZE := Vector2(42.0, 42.0)
+const HOME_ACTION_BUTTON_TEXTURE_SIZE := Vector2(87.0, 75.0)
+const HOME_ACTION_BUTTON_ROOT_SIZE := Vector2(126.0, 122.0)
+const HOME_ACTION_BUTTON_LABEL_OFFSET_Y := 50.0
+const HOME_ACTION_BUTTON_LABEL_SIZE := Vector2(126.0, 46.0)
+const HOME_ACTION_BUTTON_LABEL_FONT_SIZE := 18
+const HOME_ACTION_BUTTON_TOP_OFFSET_Y := -58.0
+const HOME_ACTION_BUTTON_IDLE_GAP_X := 107.0
 const SKILL_MODE_LABEL_IDLE := Color(0.37, 0.24, 0.12, 1.0)
 const SKILL_MODE_LABEL_ACTIVE := Color(0.23, 0.14, 0.06, 1.0)
 const SKILL_MODE_LABEL_PRESSED := Color(0.61, 0.34, 0.11, 1.0)
@@ -117,6 +155,7 @@ const SKILL_PANEL_H := NAV_Y - SKILL_PANEL_Y
 const SKILL_PANEL_ALL_H := NAV_Y - SKILL_PANEL_Y
 const DEFAULT_FREE_SPEED_BOOST_MULT: float = 1.2
 const FREE_SPEED_BOOST_DURATION_SECONDS: int = 30 * 60
+const FREE_SPEED_BOOST_MAX_USES: int = 2
 const ENHANCE_APPLY_DISABLED_BG := Color(0.24, 0.21, 0.18, 0.86)
 const ENHANCE_APPLY_DISABLED_FG := Color(0.72, 0.69, 0.64, 1.0)
 const ENHANCE_DETAIL_TAB_ACTIVE_FILL := Color(0.43, 0.31, 0.14, 0.98)
@@ -205,14 +244,17 @@ var _skill_top_glow: ColorRect
 var _skill_header_rule: ColorRect
 var _skill_bar: Control      # Skill bar container
 var _sandbox_btn: Button     # Idle rewards action button
-var _mail_btn: TextureButton
+var _idle_reward_visual_root: Control
+var _idle_reward_visual_btn: TextureButton
+var _idle_reward_status_label: Label
+var _mail_btn: Control
 var _mail_badge: Label
 
-var _friend_btn: TextureButton
-var _party_btn: TextureButton
-var _chat_btn: TextureButton
-var _backpack_btn: TextureButton
-var _lineup_btn: TextureButton
+var _friend_btn: Control
+var _party_btn: Control
+var _chat_btn: Control
+var _backpack_btn: Control
+var _lineup_btn: Control
 var _chat_badge: Label
 var _chat_mode_badge: Label
 var _home_lower_mainmenu_bg: TextureRect
@@ -243,6 +285,9 @@ var _home_scoop_cd_label: Label
 var _home_scoop_count_debug_frame: PanelContainer
 var _home_scoop_count_label: Label
 var _home_auto_scoop_toggle_button: TextureButton
+var _speed_boost_visual_root: Control
+var _speed_boost_visual_btn: TextureButton
+var _speed_boost_status_label: Label
 var _home_auto_scoop_enabled: bool = false
 var _home_scoop_frames: Array[Texture2D] = []
 var _home_scoop_animation_active: bool = false
@@ -263,14 +308,20 @@ var _party_cheer_coupon_cooldown_buttons: Array[Button] = []
 var _nav_buttons: Dictionary = {}
 var _nav_canvas: CanvasLayer
 var _nav_more_button: TextureButton
+var _home_side_shortcuts_layer: Control
+var _home_side_shortcut_buttons: Dictionary = {}
+var _home_side_toggle_buttons: Dictionary = {}
+var _home_side_collapsed: Dictionary = {"left": false, "right": false}
+var _home_side_toggle_arrow_texture: Texture2D
+var _runtime_texture_cache: Dictionary = {}
 var _home_more_buttons_layer: Control
 var _home_more_dismiss_button: Button
 var _home_more_buttons: Dictionary = {}
 var _home_more_button_order: Array[String] = []
 var _home_more_menu_expanded: bool = false
 var _last_overlay_scene_path: String = ""
-var _announcement_btn: TextureButton
-var _stats_btn: TextureButton
+var _announcement_btn: Control
+var _stats_btn: Control
 var _bottom_hud_layout: Control
 var _skill_filter_mode: String = "scoop"
 var _home_mini_chat_panel: HomeMiniChatPanel
@@ -278,7 +329,7 @@ var _startup_idle_rewards_dialog_checked: bool = false
 var _current_speed_mult: float = 1.0
 var _free_speed_boost_end_unix: int = 0
 var _free_speed_boost_mult: float = 1.0
-var _free_speed_boost_used: bool = false
+var _free_speed_boost_remaining_uses: int = FREE_SPEED_BOOST_MAX_USES
 var _boss_warning_flash_tween: Tween
 var _boss_warning_pulse_tween: Tween
 var _current_enemy_cats: Array = []
@@ -862,9 +913,15 @@ func _build_ui() -> void:
 	_speed_2x = null
 	_speed_3x = null
 	_speed_1x.pressed.connect(_cycle_speed)
+	_speed_1x.visible = false
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 	_refresh_skill_mode_buttons()
+	var speed_visual_parts: Array = _build_home_action_visual_button(HOME_BATTLE_SPEED_BUTTON_PATH, Callable(self, "_cycle_speed"))
+	_speed_boost_visual_root = speed_visual_parts[0] as Control
+	_speed_boost_visual_btn = speed_visual_parts[1] as TextureButton
+	_speed_boost_status_label = speed_visual_parts[2] as Label
+	_skill_panel.add_child(_speed_boost_visual_root)
 
 	_sandbox_btn = _make_button(
 		UiText.HOME_IDLE_TIMER_PLACEHOLDER,
@@ -874,6 +931,12 @@ func _build_ui() -> void:
 	_apply_bottom_hud_font_size(_sandbox_btn, "SkillPanel/SandboxButton", 14)
 	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
 	_skill_panel.add_child(_sandbox_btn)
+	_sandbox_btn.visible = false
+	var idle_visual_parts: Array = _build_home_action_visual_button(HOME_IDLE_REWARD_BUTTON_PATH, Callable(self, "_show_sandbox_dialog"))
+	_idle_reward_visual_root = idle_visual_parts[0] as Control
+	_idle_reward_visual_btn = idle_visual_parts[1] as TextureButton
+	_idle_reward_status_label = idle_visual_parts[2] as Label
+	_skill_panel.add_child(_idle_reward_visual_root)
 	_layout_sandbox_btn()
 
 	_home_mini_chat_panel = HomeMiniChatPanelScript.new()
@@ -948,6 +1011,12 @@ func _build_ui() -> void:
 	_nav_canvas.offset = _adaptive_content_origin
 	add_child(_nav_canvas)
 
+	_home_side_shortcuts_layer = Control.new()
+	_home_side_shortcuts_layer.name = "HomeSideShortcutsLayer"
+	_home_side_shortcuts_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_home_side_shortcuts_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_nav_canvas.add_child(_home_side_shortcuts_layer)
+
 	_home_more_buttons_layer = Control.new()
 	_home_more_buttons_layer.name = "HomeMoreButtonsLayer"
 	_home_more_buttons_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -992,7 +1061,8 @@ func _build_ui() -> void:
 		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper, "MainNav/ScooperButton"],
 		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance, "MainNav/EnhanceButton"],
 		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity, "MainNav/ActivityButton"],
-		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop, "MainNav/ShopButton"],
+		[UiText.NAV_BACKPACK, "res://scenes/BackpackScene.tscn", _on_nav_backpack, "MainNav/ShopButton"],
+		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop, "MainNav/MoreButton"],
 	]
 	for i in range(nav_items.size()):
 		var nav_rect: Rect2 = nav_layouts.get(
@@ -1010,23 +1080,8 @@ func _build_ui() -> void:
 		_apply_home_nav_button_style(nav_btn, false)
 		_nav_canvas.add_child(nav_btn)
 		_nav_buttons[String(nav_items[i][1])] = nav_btn
-
-	var more_rect: Rect2 = nav_layouts.get("MainNav/MoreButton", Rect2(Vector2(574.0, HOME_NAV_BUTTON_ROW_Y), HOME_NAV_BUTTON_SIZE))
-	_nav_more_button = _build_home_nav_button(
-		UiText.NAV_MORE,
-		more_rect.position,
-		more_rect.size,
-		"MainNav/MoreButton/Label"
-	)
-	_apply_texture_button_label_rect(_nav_more_button, nav_label_rect)
-	_nav_more_button.pressed.connect(_toggle_home_more_menu)
-	_apply_home_more_button_style(false)
-	_nav_canvas.add_child(_nav_more_button)
-
-	_build_home_more_buttons()
-	_home_more_buttons_layer.add_child(_mail_badge)
-	_home_more_buttons_layer.add_child(_chat_badge)
-	_refresh_home_more_badge_positions()
+	_nav_more_button = null
+	_build_home_side_shortcuts()
 
 	_refresh_main_nav_state()
 	_refresh_home_more_menu_visibility()
@@ -1241,7 +1296,7 @@ func _apply_skill_bar_layout() -> void:
 		_speed_1x.position = _get_bottom_hud_position("SkillPanel/SpeedButton", _speed_1x.position)
 	_layout_sandbox_btn()
 	if _sandbox_btn != null:
-		_sandbox_btn.visible = true
+		_sandbox_btn.visible = false
 	if _home_scoop_panel != null:
 		_home_scoop_panel.visible = is_scoop_mode
 	if _home_mini_chat_panel != null:
@@ -1351,11 +1406,19 @@ func _layout_sandbox_btn() -> void:
 	var sandbox_control: Control = _get_bottom_hud_control("SkillPanel/SandboxButton")
 	if sandbox_control != null:
 		_sandbox_btn.position = sandbox_control.position
-		return
-	_sandbox_btn.position = Vector2(
-		_speed_1x.position.x - _sandbox_btn.size.x - 8.0,
-		_speed_1x.position.y
-	)
+	else:
+		_sandbox_btn.position = Vector2(
+			_speed_1x.position.x - _sandbox_btn.size.x - 8.0,
+			_speed_1x.position.y
+		)
+	if _speed_boost_visual_root != null:
+		var speed_right_x: float = HOME_SIDE_SHORTCUT_RIGHT_X + HOME_SIDE_SHORTCUT_BUTTON_SIZE.x - HOME_ACTION_BUTTON_ROOT_SIZE.x
+		_speed_boost_visual_root.position = Vector2(speed_right_x, _speed_1x.position.y + HOME_ACTION_BUTTON_TOP_OFFSET_Y)
+	if _idle_reward_visual_root != null:
+		if _speed_boost_visual_root != null:
+			_idle_reward_visual_root.position = _speed_boost_visual_root.position + Vector2(-HOME_ACTION_BUTTON_IDLE_GAP_X, 0.0)
+		else:
+			_idle_reward_visual_root.position = _sandbox_btn.position + Vector2((_sandbox_btn.size.x - HOME_ACTION_BUTTON_ROOT_SIZE.x) * 0.5, HOME_ACTION_BUTTON_TOP_OFFSET_Y)
 
 
 func _refresh_skill_mode_buttons() -> void:
@@ -1450,6 +1513,56 @@ func _make_button(txt: String, pos: Vector2, sz: Vector2) -> Button:
 	btn.modulate = Color(0.97, 0.93, 0.88, 1.0)
 	btn.pressed.connect(UiAudio.play_ui_click)
 	return btn
+
+
+func _load_runtime_texture(path: String) -> Texture2D:
+	if _runtime_texture_cache.has(path):
+		return _runtime_texture_cache[path] as Texture2D
+	var image: Image = Image.load_from_file(ProjectSettings.globalize_path(path))
+	if image == null or image.is_empty():
+		return null
+	var texture: Texture2D = ImageTexture.create_from_image(image)
+	_runtime_texture_cache[path] = texture
+	return texture
+
+
+func _build_home_action_visual_button(texture_path: String, action: Callable) -> Array:
+	var root: Control = Control.new()
+	root.size = HOME_ACTION_BUTTON_ROOT_SIZE
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var button: TextureButton = TextureButton.new()
+	button.position = Vector2((HOME_ACTION_BUTTON_ROOT_SIZE.x - HOME_ACTION_BUTTON_TEXTURE_SIZE.x) * 0.5, 8.0)
+	button.size = HOME_ACTION_BUTTON_TEXTURE_SIZE
+	button.focus_mode = Control.FOCUS_NONE
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.ignore_texture_size = true
+	button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	button.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	button.texture_normal = _load_runtime_texture(texture_path)
+	button.texture_hover = button.texture_normal
+	button.texture_pressed = button.texture_normal
+	button.texture_disabled = button.texture_normal
+	button.pressed.connect(UiAudio.play_ui_click)
+	if action.is_valid():
+		button.pressed.connect(action)
+	root.add_child(button)
+
+	var status_label: Label = Label.new()
+	status_label.position = Vector2(0.0, HOME_ACTION_BUTTON_LABEL_OFFSET_Y)
+	status_label.size = HOME_ACTION_BUTTON_LABEL_SIZE
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.add_theme_constant_override("line_spacing", -1)
+	status_label.add_theme_font_size_override("font_size", HOME_ACTION_BUTTON_LABEL_FONT_SIZE)
+	status_label.add_theme_color_override("font_color", HOME_SIDE_SHORTCUT_LABEL_COLOR)
+	status_label.add_theme_color_override("font_outline_color", HOME_SIDE_SHORTCUT_LABEL_OUTLINE)
+	status_label.add_theme_constant_override("outline_size", 5)
+	UiFonts.apply_noto(status_label, HOME_ACTION_BUTTON_LABEL_FONT_SIZE)
+	root.add_child(status_label)
+	return [root, button, status_label]
 
 
 func _build_home_nav_background() -> Control:
@@ -1602,74 +1715,10 @@ func _get_main_nav_label_paths() -> Array[String]:
 
 
 func _get_home_more_button_defs() -> Array[Dictionary]:
-	return [
-		{
-			"key": "announcements",
-			"text": UiText.HOME_ANNOUNCEMENTS,
-			"callback": Callable(self, "_on_nav_announcements"),
-			"button_path": "QuickButtons/AnnouncementsButton",
-			"label_path": "QuickButtons/AnnouncementsButton/Label",
-		},
-		{
-			"key": "daily_tasks",
-			"text": UiText.HOME_DAILY_TASKS,
-			"callback": Callable(self, "_on_nav_daily_tasks"),
-			"button_path": "QuickButtons/DailyTasksButton",
-			"label_path": "QuickButtons/DailyTasksButton/Label",
-		},
-		{
-			"key": "backpack",
-			"text": UiText.NAV_BACKPACK,
-			"callback": Callable(self, "_on_nav_backpack"),
-			"button_path": "QuickButtons/BackpackButton",
-			"label_path": "QuickButtons/BackpackButton/Label",
-		},
-		{
-			"key": "lineup",
-			"text": UiText.NAV_CONFIG,
-			"callback": Callable(self, "_on_nav_config"),
-			"button_path": "QuickButtons/LineupButton",
-			"label_path": "QuickButtons/LineupButton/Label",
-		},
-		{
-			"key": "party",
-			"text": UiText.HOME_PARTY,
-			"callback": Callable(self, "_open_party"),
-			"button_path": "QuickButtons/PartyButton",
-			"label_path": "QuickButtons/PartyButton/Label",
-		},
-		{
-			"key": "stats",
-			"text": UiText.STATS_BTN_LABEL,
-			"callback": Callable(self, "_on_stats_btn_pressed"),
-			"button_path": "QuickButtons/StatsButton",
-			"label_path": "QuickButtons/StatsButton/Label",
-		},
-		{
-			"key": "chat",
-			"text": UiText.HOME_CHAT,
-			"callback": Callable(self, "_open_chat"),
-			"button_path": "QuickButtons/ChatButton",
-			"label_path": "QuickButtons/ChatButton/Label",
-		},
-		{
-			"key": "friend",
-			"text": UiText.HOME_FRIEND,
-			"callback": Callable(self, "_open_friend"),
-			"button_path": "QuickButtons/FriendButton",
-			"label_path": "QuickButtons/FriendButton/Label",
-		},
-		{
-			"key": "mail",
-			"text": UiText.HOME_MAIL,
-			"callback": Callable(self, "_on_nav_mail"),
-			"button_path": "QuickButtons/MailButton",
-			"label_path": "QuickButtons/MailButton/Label",
-		},
-	]
+	return []
 
 
-func _assign_home_more_button_reference(key: String, button: TextureButton) -> void:
+func _assign_home_more_button_reference(key: String, button: Control) -> void:
 	match key:
 		"mail":
 			_mail_btn = button
@@ -1687,6 +1736,250 @@ func _assign_home_more_button_reference(key: String, button: TextureButton) -> v
 			_backpack_btn = button
 		"lineup":
 			_lineup_btn = button
+
+
+func _get_home_side_shortcut_defs() -> Array[Dictionary]:
+	return [
+		{
+			"key": "announcements",
+			"text": UiText.HOME_ANNOUNCEMENTS,
+			"callback": Callable(self, "_on_nav_announcements"),
+			"texture": HOME_SIDE_SHORTCUT_ANNOUNCEMENTS_TEXTURE,
+			"side": "left",
+			"row": 0,
+		},
+		{
+			"key": "daily_tasks",
+			"text": UiText.HOME_DAILY_TASKS,
+			"callback": Callable(self, "_on_nav_daily_tasks"),
+			"texture": HOME_SIDE_SHORTCUT_DAILY_TASKS_TEXTURE,
+			"side": "left",
+			"row": 1,
+		},
+		{
+			"key": "lineup",
+			"text": UiText.NAV_CONFIG,
+			"callback": Callable(self, "_on_nav_config"),
+			"texture": HOME_SIDE_SHORTCUT_LINEUP_TEXTURE,
+			"side": "left",
+			"row": 2,
+		},
+		{
+			"key": "mail",
+			"text": UiText.HOME_MAIL,
+			"callback": Callable(self, "_on_nav_mail"),
+			"texture": HOME_SIDE_SHORTCUT_MAIL_TEXTURE,
+			"side": "left",
+			"row": 3,
+		},
+		{
+			"key": "party",
+			"text": UiText.HOME_PARTY,
+			"callback": Callable(self, "_open_party"),
+			"texture": HOME_SIDE_SHORTCUT_PARTY_TEXTURE,
+			"side": "right",
+			"row": 0,
+		},
+		{
+			"key": "friend",
+			"text": UiText.HOME_FRIEND,
+			"callback": Callable(self, "_open_friend"),
+			"texture": HOME_SIDE_SHORTCUT_FRIEND_TEXTURE,
+			"side": "right",
+			"row": 1,
+		},
+		{
+			"key": "chat",
+			"text": UiText.HOME_CHAT,
+			"callback": Callable(self, "_open_chat"),
+			"texture": HOME_SIDE_SHORTCUT_CHAT_TEXTURE,
+			"side": "right",
+			"row": 2,
+		},
+		{
+			"key": "stats",
+			"text": UiText.STATS_BTN_LABEL,
+			"callback": Callable(self, "_on_stats_btn_pressed"),
+			"texture": HOME_SIDE_SHORTCUT_STATS_TEXTURE,
+			"side": "right",
+			"row": 3,
+		},
+	]
+
+
+func _build_home_side_shortcut_button(def: Dictionary) -> Button:
+	var row: int = int(def.get("row", 0))
+	var side: String = str(def.get("side", "left"))
+	var x: float = HOME_SIDE_SHORTCUT_LEFT_X if side == "left" else HOME_SIDE_SHORTCUT_RIGHT_X
+	var y: float = HOME_SIDE_SHORTCUT_TOP_Y + float(row) * (HOME_SIDE_SHORTCUT_BUTTON_SIZE.y + HOME_SIDE_SHORTCUT_ROW_GAP_Y)
+	var button: Button = Button.new()
+	button.position = Vector2(x, y)
+	button.size = HOME_SIDE_SHORTCUT_BUTTON_SIZE
+	button.focus_mode = Control.FOCUS_NONE
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.flat = true
+	button.text = ""
+	button.clip_contents = false
+	button.modulate = Color(1.0, 1.0, 1.0, 0.92)
+	button.pressed.connect(UiAudio.play_ui_click)
+	var callback: Callable = def.get("callback", Callable())
+	if callback.is_valid():
+		button.pressed.connect(callback)
+
+	var icon_rect: TextureRect = TextureRect.new()
+	icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_rect.position = HOME_SIDE_SHORTCUT_ICON_OFFSET
+	icon_rect.size = HOME_SIDE_SHORTCUT_ICON_SIZE
+	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	icon_rect.texture = def.get("texture", null) as Texture2D
+	button.add_child(icon_rect)
+
+	var label: Label = Label.new()
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.position = HOME_SIDE_SHORTCUT_LABEL_OFFSET
+	label.size = HOME_SIDE_SHORTCUT_LABEL_SIZE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var label_text: String = str(def.get("text", "")).strip_edges()
+	label.text = label_text
+	var visible_char_count: int = label_text.length()
+	var label_font_size: int = HOME_SIDE_SHORTCUT_LABEL_FONT_SIZE_TWO_CHAR if visible_char_count == 2 else HOME_SIDE_SHORTCUT_LABEL_FONT_SIZE
+	var label_outline_size: int = 5 if visible_char_count == 2 else 4
+	label.add_theme_font_size_override("font_size", label_font_size)
+	label.add_theme_color_override("font_color", HOME_SIDE_SHORTCUT_LABEL_COLOR)
+	label.add_theme_color_override("font_outline_color", HOME_SIDE_SHORTCUT_LABEL_OUTLINE)
+	label.add_theme_constant_override("outline_size", label_outline_size)
+	label.add_theme_color_override("font_shadow_color", Color(0.10, 0.04, 0.02, 0.95))
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	UiFonts.apply_noto(label, label_font_size)
+	button.add_child(label)
+	button.set_meta("label_node", label)
+	button.set_meta("shortcut_side", side)
+	return button
+
+
+func _build_home_side_toggle_button(side: String) -> Button:
+	var button: Button = Button.new()
+	var x: float = HOME_SIDE_SHORTCUT_TOGGLE_LEFT_X if side == "left" else HOME_SIDE_SHORTCUT_TOGGLE_RIGHT_X
+	button.position = Vector2(x, HOME_SIDE_SHORTCUT_TOGGLE_Y)
+	button.size = HOME_SIDE_SHORTCUT_TOGGLE_SIZE
+	button.focus_mode = Control.FOCUS_NONE
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.flat = true
+	button.text = ""
+	button.modulate = Color(1.0, 1.0, 1.0, 0.96)
+	button.pressed.connect(UiAudio.play_ui_click)
+	button.pressed.connect(Callable(self, "_toggle_home_side_shortcuts").bind(side))
+
+	var bg: TextureRect = TextureRect.new()
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.texture = HOME_SIDE_SHORTCUT_TOGGLE_TAB_TEXTURE
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	bg.pivot_offset = HOME_SIDE_SHORTCUT_TOGGLE_SIZE * 0.5
+	bg.rotation_degrees = -90.0 if side == "left" else 90.0
+	if side == "right":
+		bg.flip_h = true
+	button.add_child(bg)
+
+	var arrow_rect: TextureRect = TextureRect.new()
+	arrow_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arrow_rect.anchor_left = 0.5
+	arrow_rect.anchor_top = 0.5
+	arrow_rect.anchor_right = 0.5
+	arrow_rect.anchor_bottom = 0.5
+	arrow_rect.offset_left = -HOME_SIDE_SHORTCUT_TOGGLE_ARROW_SIZE.x * 0.5
+	arrow_rect.offset_top = -HOME_SIDE_SHORTCUT_TOGGLE_ARROW_SIZE.y * 0.5
+	arrow_rect.offset_right = HOME_SIDE_SHORTCUT_TOGGLE_ARROW_SIZE.x * 0.5
+	arrow_rect.offset_bottom = HOME_SIDE_SHORTCUT_TOGGLE_ARROW_SIZE.y * 0.5
+	arrow_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	arrow_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	arrow_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	arrow_rect.texture = _get_home_side_toggle_arrow_texture()
+	button.add_child(arrow_rect)
+
+	button.set_meta("arrow_rect_node", arrow_rect)
+	button.set_meta("shortcut_side", side)
+	return button
+
+
+func _get_home_side_toggle_arrow_texture() -> Texture2D:
+	if _home_side_toggle_arrow_texture != null:
+		return _home_side_toggle_arrow_texture
+	var arrow_image: Image = Image.load_from_file(ProjectSettings.globalize_path(HOME_SIDE_SHORTCUT_TOGGLE_ARROW_PATH))
+	if arrow_image == null or arrow_image.is_empty():
+		return null
+	_home_side_toggle_arrow_texture = ImageTexture.create_from_image(arrow_image)
+	return _home_side_toggle_arrow_texture
+
+
+func _refresh_home_side_toggle_button(side: String) -> void:
+	var button: Button = _home_side_toggle_buttons.get(side) as Button
+	if button == null:
+		return
+	var arrow_rect: TextureRect = button.get_meta("arrow_rect_node", null) as TextureRect
+	if arrow_rect == null:
+		return
+	var is_collapsed: bool = bool(_home_side_collapsed.get(side, false))
+	var points_right: bool = false
+	if side == "left":
+		points_right = is_collapsed
+	else:
+		points_right = not is_collapsed
+	arrow_rect.flip_h = not points_right
+
+
+func _toggle_home_side_shortcuts(side: String) -> void:
+	var is_collapsed: bool = bool(_home_side_collapsed.get(side, false))
+	_home_side_collapsed[side] = not is_collapsed
+	_refresh_home_side_shortcut_visibility()
+
+
+func _build_home_side_shortcuts() -> void:
+	if _home_side_shortcuts_layer == null:
+		return
+	for child: Node in _home_side_shortcuts_layer.get_children():
+		child.queue_free()
+	_home_side_shortcut_buttons.clear()
+	_home_side_toggle_buttons.clear()
+	for def: Dictionary in _get_home_side_shortcut_defs():
+		var button: Button = _build_home_side_shortcut_button(def)
+		_home_side_shortcuts_layer.add_child(button)
+		var key: String = str(def.get("key", ""))
+		_home_side_shortcut_buttons[key] = button
+		_assign_home_more_button_reference(key, button)
+	for side: String in ["left", "right"]:
+		var toggle_button: Button = _build_home_side_toggle_button(side)
+		_home_side_shortcuts_layer.add_child(toggle_button)
+		_home_side_toggle_buttons[side] = toggle_button
+	_refresh_home_side_shortcut_visibility()
+
+
+func _refresh_home_side_shortcut_visibility() -> void:
+	if _home_side_shortcuts_layer == null:
+		return
+	var is_home_visible: bool = SceneNavigator.get_current_overlay_scene_path().is_empty()
+	_home_side_shortcuts_layer.visible = is_home_visible
+	for side_variant: Variant in _home_side_toggle_buttons.keys():
+		var side: String = str(side_variant)
+		var toggle_button: Button = _home_side_toggle_buttons.get(side) as Button
+		if toggle_button != null:
+			toggle_button.visible = is_home_visible
+			_refresh_home_side_toggle_button(side)
+	for button_variant: Variant in _home_side_shortcut_buttons.values():
+		var button: Button = button_variant as Button
+		if button == null:
+			continue
+		var side: String = str(button.get_meta("shortcut_side", ""))
+		var is_collapsed: bool = bool(_home_side_collapsed.get(side, false))
+		button.visible = is_home_visible and not is_collapsed
 
 
 func _build_home_more_buttons() -> void:
@@ -1853,11 +2146,10 @@ func _refresh_home_red_dots() -> void:
 	RedDotService.refresh_dot(_nav_buttons.get("res://scenes/EnhanceScene.tscn") as Control, RedDotService.has_enhance_red_dot())
 	RedDotService.refresh_dot(_nav_buttons.get("res://scenes/ActivityScene.tscn") as Control, RedDotService.has_activity_red_dot())
 	RedDotService.refresh_dot(_nav_buttons.get("res://scenes/ShopScene.tscn") as Control, RedDotService.has_shop_red_dot())
-	RedDotService.refresh_dot(_nav_more_button, RedDotService.has_more_menu_red_dot())
-	RedDotService.refresh_dot(_home_more_buttons.get("mail") as Control, RedDotService.has_mail_red_dot())
-	RedDotService.refresh_dot(_home_more_buttons.get("friend") as Control, RedDotService.has_friend_red_dot())
-	RedDotService.refresh_dot(_home_more_buttons.get("party") as Control, RedDotService.has_party_red_dot())
-	RedDotService.refresh_dot(_home_more_buttons.get("daily_tasks") as Control, RedDotService.has_daily_task_red_dot())
+	RedDotService.refresh_dot(_home_side_shortcut_buttons.get("mail") as Control, RedDotService.has_mail_red_dot())
+	RedDotService.refresh_dot(_home_side_shortcut_buttons.get("friend") as Control, RedDotService.has_friend_red_dot())
+	RedDotService.refresh_dot(_home_side_shortcut_buttons.get("party") as Control, RedDotService.has_party_red_dot())
+	RedDotService.refresh_dot(_home_side_shortcut_buttons.get("daily_tasks") as Control, RedDotService.has_daily_task_red_dot())
 	_refresh_mail_badge()
 
 
@@ -2136,11 +2428,11 @@ func _set_speed(mult: float, active_btn: Button) -> void:
 
 
 func _cycle_speed() -> void:
-	if _is_free_speed_boost_active() or _free_speed_boost_used:
+	if _is_free_speed_boost_active() or _free_speed_boost_remaining_uses <= 0:
 		return
 	_free_speed_boost_mult = _get_free_speed_boost_mult()
 	_free_speed_boost_end_unix = int(Time.get_unix_time_from_system()) + FREE_SPEED_BOOST_DURATION_SECONDS
-	_free_speed_boost_used = true
+	_free_speed_boost_remaining_uses -= 1
 	_set_speed(_free_speed_boost_mult, _speed_1x)
 
 
@@ -2194,14 +2486,19 @@ func _refresh_speed_boost_button() -> void:
 		return
 	if _is_free_speed_boost_active():
 		var remaining_seconds: int = _free_speed_boost_end_unix - int(Time.get_unix_time_from_system())
-		_speed_1x.text = UiText.BATTLE_SPEED_BOOSTING_FORMAT % [_format_speed_label(_free_speed_boost_mult), _format_countdown_time(remaining_seconds)]
+		_speed_1x.text = "戰鬥加速\n%s" % _format_countdown_time(remaining_seconds)
 		_speed_1x.disabled = true
-	elif _free_speed_boost_used:
-		_speed_1x.text = UiText.BATTLE_SPEED_BOOSTED
+	elif _free_speed_boost_remaining_uses <= 0:
+		_speed_1x.text = "戰鬥加速\n(0/%d)" % FREE_SPEED_BOOST_MAX_USES
 		_speed_1x.disabled = true
 	else:
-		_speed_1x.text = UiText.HOME_SPEED_BOOST
+		_speed_1x.text = "戰鬥加速\n(%d/%d)" % [_free_speed_boost_remaining_uses, FREE_SPEED_BOOST_MAX_USES]
 		_speed_1x.disabled = false
+	if _speed_boost_visual_btn != null:
+		_speed_boost_visual_btn.disabled = _speed_1x.disabled
+		_speed_boost_visual_btn.modulate = Color(1.0, 1.0, 1.0, 0.58) if _speed_1x.disabled and not _is_free_speed_boost_active() else Color(1.0, 1.0, 1.0, 1.0)
+	if _speed_boost_status_label != null:
+		_speed_boost_status_label.text = _speed_1x.text
 	_highlight_speed_btn(_speed_1x if _is_free_speed_boost_active() else null)
 	_apply_skill_speed_button_style(_speed_1x, _is_free_speed_boost_active() or not _speed_1x.disabled)
 
@@ -2267,17 +2564,28 @@ func _refresh_sandbox_btn() -> void:
 	var elapsed := GameState.get_idle_elapsed_seconds()
 	var claimable_minutes: int = floori(float(elapsed) / 60.0)
 	_sandbox_btn.disabled = false
+	var status_text: String = ""
 	if claimable_minutes < 1:
 		_sandbox_btn.text = UiText.HOME_IDLE_NOT_READY
+		status_text = "掛機便便\n00:00:00"
 		UiPalette.apply_button_kind(_sandbox_btn, "neutral")
 	else:
 		var h: int = floori(float(elapsed) / 3600.0)
 		var m: int = floori(float(elapsed % 3600) / 60.0)
 		var s := elapsed % 60
 		_sandbox_btn.text = "%s %02d:%02d:%02d" % [UiText.HOME_IDLE_READY, h, m, s]
+		status_text = "掛機便便\n%02d:%02d:%02d" % [h, m, s]
 		UiPalette.apply_button_kind(_sandbox_btn, "primary")
+	if _idle_reward_status_label != null:
+		_idle_reward_status_label.text = status_text
+	if _idle_reward_visual_btn != null:
+		_idle_reward_visual_btn.disabled = false
+		_idle_reward_visual_btn.modulate = Color(1.0, 1.0, 1.0, 0.72) if claimable_minutes < 1 else Color(1.0, 1.0, 1.0, 1.0)
 	var has_coupon_red_dot: bool = GameState.get_party_cheer_coupon_count() > 0
-	RedDotService.refresh_dot(_sandbox_btn, not overlay_open and (has_coupon_red_dot or _has_idle_claim_red_dot()), 1)
+	var idle_red_dot_target: Control = _sandbox_btn
+	if _idle_reward_visual_btn != null:
+		idle_red_dot_target = _idle_reward_visual_btn
+	RedDotService.refresh_dot(idle_red_dot_target, not overlay_open and (has_coupon_red_dot or _has_idle_claim_red_dot()), 1)
 
 
 func _refresh_home_scoop_panel() -> void:
@@ -2349,6 +2657,7 @@ func _refresh_main_nav_state() -> void:
 		var is_active: bool = scene_path == active_scene_path
 		_apply_home_nav_button_style(btn, is_active)
 	_apply_home_more_button_style(_home_more_menu_expanded)
+	_refresh_home_side_shortcut_visibility()
 
 
 func get_damage_fx_host() -> Node2D:
@@ -3743,7 +4052,7 @@ func _refresh_chat_badge() -> void:
 	if _chat_mode_badge != null:
 		_chat_mode_badge.visible = false
 	if _chat_badge != null and _chat_btn != null:
-		if _home_more_menu_expanded and unread > 0:
+		if _home_side_shortcut_buttons.has("chat") and _chat_btn.visible and unread > 0:
 			BadgeOverlay.add_count(_chat_btn, unread)
 		else:
 			BadgeOverlay.remove(_chat_btn)
