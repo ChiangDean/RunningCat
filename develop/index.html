@@ -92,7 +92,7 @@ body {
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-<script>!function(){var o=window.AudioContext||window.webkitAudioContext;if(!o)return;var s=new Set,r=function(){s.forEach(function(c){try{if(c.state!=='running')c.resume()}catch(e){}})};['click','touchend','pointerup','keydown'].forEach(function(e){document.addEventListener(e,r,{capture:true,passive:true})});function W(){o.apply(this,arguments);s.add(this)}W.prototype=o.prototype;Object.setPrototypeOf(W,o);window.AudioContext=W;if(window.webkitAudioContext)window.webkitAudioContext=W}();</script>
+<script>!function(){var o=window.AudioContext||window.webkitAudioContext;if(!o)return;var s=new Set,r=function(){s.forEach(function(c){try{if(c.state!=='running')c.resume()}catch(e){}})};['click','touchend','pointerup','keydown'].forEach(function(e){document.addEventListener(e,r,{capture:true,passive:true})});class W extends o{constructor(){super();s.add(this)}}Object.setPrototypeOf(W,o);window.AudioContext=W;if(window.webkitAudioContext)window.webkitAudioContext=W}();</script>
 	</head>
 	<body>
 		<canvas id="canvas">
