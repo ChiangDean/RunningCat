@@ -115,6 +115,7 @@ func clear_persisted_player_state() -> void:
 	party_red_dot_summary = {}
 	_pending_combat_power_change = {}
 	_suppress_combat_power_notifications = true
+	daily_task_events_pending = false
 	clear_chat_state()
 	set_party_cheer_coupon_count(0)
 	_emit_red_dot_state_changed()
@@ -150,6 +151,13 @@ func clear_party_red_dot_summary() -> void:
 	if party_red_dot_summary.is_empty():
 		return
 	party_red_dot_summary = {}
+	_emit_red_dot_state_changed()
+
+
+func set_daily_task_events_pending(value: bool) -> void:
+	if daily_task_events_pending == value:
+		return
+	daily_task_events_pending = value
 	_emit_red_dot_state_changed()
 
 
@@ -705,6 +713,7 @@ var party_cheer_status_data: Dictionary = {}
 var party_applications_data: Array = []
 var party_my_applications_data: Array = []
 var party_red_dot_summary: Dictionary = {}
+var daily_task_events_pending: bool = false
 var combat_trial_battle_payload: Dictionary = {}
 
 

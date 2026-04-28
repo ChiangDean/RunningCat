@@ -1857,6 +1857,7 @@ func _refresh_home_red_dots() -> void:
 	RedDotService.refresh_dot(_home_more_buttons.get("mail") as Control, RedDotService.has_mail_red_dot())
 	RedDotService.refresh_dot(_home_more_buttons.get("friend") as Control, RedDotService.has_friend_red_dot())
 	RedDotService.refresh_dot(_home_more_buttons.get("party") as Control, RedDotService.has_party_red_dot())
+	RedDotService.refresh_dot(_home_more_buttons.get("daily_tasks") as Control, RedDotService.has_daily_task_red_dot())
 	_refresh_mail_badge()
 
 
@@ -3166,6 +3167,13 @@ func _on_nav_announcements() -> void:
 
 func _on_nav_daily_tasks() -> void:
 	_close_home_more_menu()
+	if ApiClient.has_pending_daily_task_events():
+		ApiClient.flush_daily_task_events(Callable(self, "_on_daily_task_events_flushed"))
+		return
+	ApiClient.get_daily_tasks(Callable(self, "_on_daily_tasks_loaded"))
+
+
+func _on_daily_task_events_flushed(_ok: bool, _data: Variant, _err: Dictionary) -> void:
 	ApiClient.get_daily_tasks(Callable(self, "_on_daily_tasks_loaded"))
 
 
