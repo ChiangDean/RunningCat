@@ -433,6 +433,52 @@ text = "背包"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="AnnouncementsButton" type="TextureRect" parent="QuickButtons"]
+layout_mode = 0
+offset_left = 169.0
+offset_top = 1035.0
+offset_right = 303.16382
+offset_bottom = 1114.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/AnnouncementsButton"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 9.0
+offset_right = 126.0
+offset_bottom = 70.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "公告"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DailyTasksButton" type="TextureRect" parent="QuickButtons"]
+layout_mode = 0
+offset_left = 33.0
+offset_top = 1035.0
+offset_right = 167.16382
+offset_bottom = 1114.0
+texture = ExtResource("6")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="QuickButtons/DailyTasksButton"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 9.0
+offset_right = 126.0
+offset_bottom = 70.0
+theme_override_colors/font_color = Color(0.92, 0.86, 0.76, 0.96)
+theme_override_colors/font_outline_color = Color(0.17, 0.09, 0.04, 0.98)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "每日任務"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="EditorGuides" type="Control" parent="." unique_id=1506359553]
 visible = false
 anchors_preset = 0
