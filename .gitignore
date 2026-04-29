@@ -3,6 +3,7 @@
 /android/
 *.import
 !assets/fonts/*.import
+!assets/audio/**/*.import
 
 # Mono / C#
 .mono/
