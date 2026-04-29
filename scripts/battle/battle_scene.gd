@@ -2780,7 +2780,6 @@ func _start_battle_internal() -> void:
 		if data:
 			data.max_hp  = roundi(data.max_hp  * diff_mult)
 			data.atk     = roundi(data.atk     * diff_mult)
-			data.defense = roundi(data.defense * diff_mult)
 			data.weight  = roundi(data.weight  * diff_mult)
 			enemy_cats.append(data)
 		else:
@@ -4008,6 +4007,55 @@ func _on_idle_scoop_completed(
 	if scoop_btn != null:
 		scoop_btn.disabled = remaining <= 0
 	_refresh_ui()
+
+	var pending_events: Variant = result.get("pendingEvents", [])
+	if pending_events is Array and not (pending_events as Array).is_empty():
+		GameState.pending_temporary_events = pending_events
+		_process_next_main_event()
+
+
+func _process_next_main_event() -> void:
+	if GameState.pending_temporary_events.is_empty():
+		return
+
+	var event: Variant = GameState.pending_temporary_events.pop_front()
+	if not (event is Dictionary):
+		_process_next_main_event()
+		return
+
+	var event_dict: Dictionary = event
+	var event_id: String = str(event_dict.get("eventId", ""))
+	var speaker_name: String = str(event_dict.get("speakerName", "???"))
+	var message: String = str(event_dict.get("message", ""))
+	var reward_type: String = str(event_dict.get("rewardType", ""))
+	var reward_amount: int = int(event_dict.get("rewardAmount", 0))
+	var reward_label: String = _get_event_reward_label(reward_type)
+	var reward_text: String = "%s x%d" % [reward_label, reward_amount]
+	var body: String = "%s\n\n%s" % [message, reward_text]
+
+	DialogManager.show_confirm(
+		speaker_name,
+		body,
+		func(): ApiClient.claim_temporary_event(event_id, func(_ok: bool, _d: Variant, _e: Dictionary): _process_next_main_event()),
+		Callable(self, "_process_next_main_event"),
+		UiText.COMMON_CANCEL,
+		UiText.COMMON_CONFIRM
+	)
+
+
+static func _get_event_reward_label(reward_type: String) -> String:
+	match reward_type:
+		"poop":                   return "便便"
+		"cat_food":               return "普通貓糧"
+		"special_cat_food":       return "高級貓糧"
+		"diamonds":               return "鑽石"
+		"gold":                   return "金幣"
+		"memory_shard":           return "記憶碎片"
+		"whisker_shard":          return "鬍鬚碎片"
+		"gold_dungeon_ticket":    return "金幣地下城券"
+		"diamond_dungeon_ticket": return "鑽石地下城券"
+		"whisker_dungeon_ticket": return "鬍鬚地下城券"
+		_: return reward_type
 
 
 func _close_overlay_dialog_ref(close_ref: Array) -> void:
