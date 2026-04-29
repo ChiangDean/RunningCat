@@ -16,7 +16,7 @@ const CATEGORY_CONFIGS := [
 	{"key": TAB_VALUE, "label": "SHOP_SUBMENU_VALUE", "category_type": "valuepack"},
 	{"key": TAB_COLLISION_COIN, "label": "SHOP_SUBMENU_COLLISION_COIN"},
 	{"key": TAB_DIAMOND_STORE, "label": "SHOP_SUBMENU_DIAMOND_STORE"},
-	{"key": TAB_POINT, "label": "SHOP_SUBMENU_POINT", "category_type": "pointpack"},
+	{"key": TAB_POINT, "label": "SHOP_SUBMENU_POINT", "category_type": "trappointshop"},
 ]
 
 const COLLISION_COIN_ITEMS := [
