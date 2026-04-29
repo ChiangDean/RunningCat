@@ -2032,7 +2032,13 @@ func get_level_display() -> String:
 	return BossStage.get_level_display(current_global_stage, boss_config)
 
 func get_difficulty_multiplier() -> float:
-	return BossStage.get_difficulty_multiplier(current_global_stage, boss_config)
+	return BossStage.get_difficulty_hp_multiplier(current_global_stage, boss_config)
+
+func get_difficulty_hp_multiplier() -> float:
+	return BossStage.get_difficulty_hp_multiplier(current_global_stage, boss_config)
+
+func get_difficulty_atk_multiplier() -> float:
+	return BossStage.get_difficulty_atk_multiplier(current_global_stage, boss_config)
 
 func get_enemy_ids() -> Array:
 	return BossStage.get_enemy_ids(current_global_stage, boss_config, stage_opponent_config)
