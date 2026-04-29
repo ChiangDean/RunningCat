@@ -73,7 +73,10 @@ static func calculate_rewards(dungeon_cfg: Dictionary, level: int) -> Dictionary
 		rewards["special_cat_food"] = special_food
 
 	var dia_per_level: int = int(r.get("diamonds_per_level", 0))
-	var diamonds: int = (base if dia_per_level > 0 else 0) + dia_per_level * level
+	var dia_div: int = int(r.get("diamond_divisor", 0))
+	var diamonds: int = (base if (dia_per_level > 0 or dia_div > 0) else 0) \
+		+ dia_per_level * level \
+		+ (roundi(float(level) / float(dia_div) + 0.5) if dia_div > 0 else 0)
 	if diamonds > 0:
 		rewards["diamonds"] = diamonds
 

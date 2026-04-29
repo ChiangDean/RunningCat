@@ -430,13 +430,13 @@ static func _calculate_rewards(dungeon_key: String, local_cfg: Dictionary, level
 	match dungeon_key:
 		"cat_food":
 			return {
-				"cat_food": 50 + level * 5,
-				"special_cat_food": level,
+				"cat_food": 30 + level * 2,
+				"diamonds": 30 + roundi(float(level) / 2.0 + 0.5),
 			}
 		"diamond":
 			return {
-				"diamonds": 5 + level * 2,
-				"trap_cages": roundi(float(level) / 5.0 + 0.5),
+				"diamonds": 300 + level * 5,
+				"trap_cages": roundi(float(level) / 20.0 + 0.5),
 			}
 		"whisker":
 			return {
@@ -477,8 +477,8 @@ static func _build_shell_summary_left(scene, dungeon_key: String) -> String:
 			return "%s %d / %s %d" % [
 				UiText.REWARD_CAT_FOOD,
 				scene.GameState.player_data.cat_food,
-				UiText.REWARD_SPECIAL_CAT_FOOD,
-				scene.GameState.player_data.special_cat_food,
+				UiText.REWARD_DIAMONDS,
+				scene.GameState.player_data.diamonds,
 			]
 		"diamond":
 			return "%s %d / %s %d" % [
