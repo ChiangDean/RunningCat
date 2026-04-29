@@ -123,6 +123,10 @@ static func show_reward_popup(header: String, level: int, rewards: Dictionary) -
 		lines.append(UiText.DUNGEON_REWARD_TRAP_CAGE_FORMAT % int(rewards.get("trapCages", 0)))
 	if int(rewards.get("whiskerShards", 0)) > 0:
 		lines.append(UiText.DUNGEON_REWARD_WHISKER_FORMAT % int(rewards.get("whiskerShards", 0)))
+	if int(rewards.get("poopCount", 0)) > 0:
+		lines.append(UiText.DUNGEON_REWARD_POOP_FORMAT % int(rewards.get("poopCount", 0)))
+	if int(rewards.get("gold", 0)) > 0:
+		lines.append(UiText.DUNGEON_REWARD_GOLD_FORMAT % int(rewards.get("gold", 0)))
 
 	DialogManager.show_info(header, "\n".join(lines))
 

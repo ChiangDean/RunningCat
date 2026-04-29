@@ -174,7 +174,7 @@ func _resolve_display_score(value: int) -> int:
 		return value
 	var direction: int = 1 if _to_score >= _from_score else -1
 	var remaining: int = abs(_to_score - value)
-	var jitter_cap: int = maxi(1, remaining / 18)
+	var jitter_cap: int = maxi(1, floori(float(remaining) / 18.0))
 	var jitter: int = _rng.randi_range(0, jitter_cap) * direction
 	var candidate: int = value + jitter
 	if direction > 0:

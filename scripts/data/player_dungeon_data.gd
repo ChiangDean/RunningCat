@@ -61,8 +61,10 @@ func grant_ad_ticket(dungeon_id: String, ad_per_type: int, daily_free: int) -> b
 static func calculate_rewards(dungeon_cfg: Dictionary, level: int) -> Dictionary:
 	var r: Dictionary = dungeon_cfg.get("rewards", {})
 	var rewards: Dictionary = {}
+	var base: int = int(r.get("base_reward_amount", 0))
 
-	var cat_food: int = int(r.get("cat_food_per_level", 0)) * level
+	var cf_per_level: int = int(r.get("cat_food_per_level", 0))
+	var cat_food: int = (base if cf_per_level > 0 else 0) + cf_per_level * level
 	if cat_food > 0:
 		rewards["cat_food"] = cat_food
 
@@ -70,7 +72,8 @@ static func calculate_rewards(dungeon_cfg: Dictionary, level: int) -> Dictionary
 	if special_food > 0:
 		rewards["special_cat_food"] = special_food
 
-	var diamonds: int = int(r.get("diamonds_per_level", 0)) * level
+	var dia_per_level: int = int(r.get("diamonds_per_level", 0))
+	var diamonds: int = (base if dia_per_level > 0 else 0) + dia_per_level * level
 	if diamonds > 0:
 		rewards["diamonds"] = diamonds
 
@@ -80,7 +83,17 @@ static func calculate_rewards(dungeon_cfg: Dictionary, level: int) -> Dictionary
 
 	var shard_div: int = int(r.get("whisker_shard_divisor", 0))
 	if shard_div > 0:
-		rewards["whisker_shards"] = roundi(float(level) / float(shard_div) + 0.5)
+		rewards["whisker_shards"] = base + roundi(float(level) / float(shard_div) + 0.5)
+
+	var poop_per_level: int = int(r.get("poop_count_per_level", 0))
+	var poop: int = (base if poop_per_level > 0 else 0) + poop_per_level * level
+	if poop > 0:
+		rewards["poop_count"] = poop
+
+	var gold_per_level: int = int(r.get("gold_per_level", 0))
+	var gold: int = (base if gold_per_level > 0 else 0) + gold_per_level * level
+	if gold > 0:
+		rewards["gold"] = gold
 
 	return rewards
 
@@ -89,6 +102,7 @@ static func apply_rewards(pd: PlayerData, rewards: Dictionary) -> void:
 	pd.cat_food += rewards.get("cat_food", 0)
 	pd.special_cat_food += rewards.get("special_cat_food", 0)
 	pd.diamonds += rewards.get("diamonds", 0)
+	pd.gold += rewards.get("gold", 0)
 	pd.trap_cages += rewards.get("trap_cages", 0)
 	pd.whisker_shards += rewards.get("whisker_shards", 0)
 

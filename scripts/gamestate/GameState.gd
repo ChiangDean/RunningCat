@@ -22,6 +22,11 @@ var _is_applying_bootstrap: bool = false
 var _pending_combat_power_change: Dictionary = {}
 var _suppress_combat_power_notifications: bool = true
 
+## Stage clear debounce state
+var _stage_clear_debounce_version: int = 0
+var _stage_clear_pending_stage: int = -1
+var _stage_clear_pending_boss: bool = false
+
 signal achievements_changed
 signal chat_connection_state_changed(state: String)
 signal chat_messages_changed(channel_key: String)
@@ -371,6 +376,9 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	dungeon_config = dungeon_cfg if dungeon_cfg is Dictionary else {}
 	CacheIO.save_config("dungeon_static", dungeon_config)
 
+	var temp_events_variant: Variant = data.get("temporaryEvents", [])
+	temporary_event_configs = temp_events_variant if temp_events_variant is Array else []
+
 	var boss_cfg: Variant = data.get("bossConfig", {})
 	boss_config = boss_cfg if boss_cfg is Dictionary else {}
 	CacheIO.save_config("boss_static", boss_config)
@@ -649,6 +657,11 @@ var dungeon_data: PlayerDungeonData
 var dungeon_overview_data: Array = []
 ## Dungeon global config (loaded once at startup, shared across all scenes)
 var dungeon_config: Dictionary = {}
+
+## 臨時事件配置（bootstrap 載入，用於前端顯示）
+var temporary_event_configs: Array = []
+## 待領取的臨時事件隊列（dungeon challenge 完成後填入）
+var pending_temporary_events: Array = []
 
 # ── Boss stage global config ─────────────────────────
 var boss_config: Dictionary = {}
@@ -1715,8 +1728,10 @@ func apply_dungeon_overview(data: Dictionary) -> void:
 	player_data.cat_food = int(data.get("catFood", player_data.cat_food))
 	player_data.special_cat_food = int(data.get("specialCatFood", player_data.special_cat_food))
 	player_data.diamonds = int(data.get("diamonds", player_data.diamonds))
+	player_data.gold = int(data.get("gold", player_data.gold))
 	player_data.trap_cages = int(data.get("trapCages", player_data.trap_cages))
 	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
+	player_data.poop_count = int(data.get("poopCount", player_data.poop_count))
 	var dungeons: Variant = data.get("dungeons", [])
 	if dungeons is Array:
 		update_dungeon_overview(dungeons)
@@ -2036,11 +2051,21 @@ func advance_after_win() -> void:
 		player_data.save()
 		return
 
+	var cleared_stage := current_global_stage
+	var was_boss := is_current_boss()
 	boss_available = false
 	current_global_stage += 1
 	player_data.current_stage = current_global_stage
 	refresh_achievements()
 	player_data.save()
+
+	# Accumulate for debounce — multiple clears within 2 s become one API call
+	_stage_clear_pending_stage = maxi(_stage_clear_pending_stage, cleared_stage)
+	if was_boss:
+		_stage_clear_pending_boss = true
+	_stage_clear_debounce_version += 1
+	var version := _stage_clear_debounce_version
+	get_tree().create_timer(10.0).timeout.connect(func() -> void: _flush_stage_clear_reward(version))
 
 ## On Boss loss: revert to the last encounter for that Boss stage and show the "Challenge Boss" button
 func on_boss_fail() -> void:
@@ -2103,6 +2128,27 @@ func get_pending_idle_rewards() -> Dictionary:
 	if poop_multiplier > 1.0:
 		rewards["poop"] = int(float(rewards.get("poop", 0)) * poop_multiplier)
 	return rewards
+
+## Callback for stage_clear_silent — silently apply wallet snapshot when rewards are granted
+func _on_stage_clear_reward(ok: bool, data: Variant, _err: Dictionary) -> void:
+	if not ok or not (data is Dictionary):
+		return
+	var wallet_snapshot: Variant = (data as Dictionary).get("walletSnapshot", {})
+	if wallet_snapshot is Dictionary:
+		apply_wallet_snapshot(wallet_snapshot as Dictionary)
+
+## Fire the stage-clear API call; ignored if a newer version has superseded it
+func _flush_stage_clear_reward(version: int) -> void:
+	if version != _stage_clear_debounce_version:
+		return
+	if _stage_clear_pending_stage < 0:
+		return
+	var stage := _stage_clear_pending_stage
+	var is_boss := _stage_clear_pending_boss
+	_stage_clear_pending_stage = -1
+	_stage_clear_pending_boss = false
+	_stage_clear_debounce_version = 0
+	ApiClient.stage_clear_silent(stage, is_boss, _on_stage_clear_reward)
 
 ## Claim idle rewards: add resources to the player and roll back last_quit_time by the remainder seconds
 func claim_idle_rewards() -> void:

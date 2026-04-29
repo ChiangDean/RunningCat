@@ -80,6 +80,10 @@ func claim_idle_rewards(callback: Callable) -> void:
 	_api_post("scooper/profile/claim-idle", {}, _with_daily_task_event(callback, "claim_idle_rewards"))
 
 
+func stage_clear_silent(cleared_stage: int, is_boss: bool, callback: Callable) -> void:
+	_api_post_tracked("scooper/profile/stage-clear", {"clearedStage": cleared_stage, "isBoss": is_boss}, callback, false)
+
+
 func get_equipment_list(callback: Callable) -> void:
 	_api_get("scooper/equipment", callback)
 
@@ -184,7 +188,7 @@ func claim_daily_task(task_key: String, callback: Callable) -> void:
 	_api_post("daily-tasks/%s/claim" % task_key.uri_encode(), {}, callback)
 
 
-func record_daily_task_event(event_key: String, callback: Callable = Callable()) -> void:
+func record_daily_task_event(event_key: String, _callback: Callable = Callable()) -> void:
 	var key := event_key.strip_edges()
 	if key.is_empty():
 		return
@@ -217,7 +221,7 @@ func _flush_daily_task_events_sequential(keys: Array, counts: Dictionary, index:
 		Callable(self, "_on_flush_daily_task_event_done").bind(keys, counts, index, final_callback), false)
 
 
-func _on_flush_daily_task_event_done(ok: bool, data: Variant, err: Dictionary, keys: Array, counts: Dictionary, index: int, final_callback: Callable) -> void:
+func _on_flush_daily_task_event_done(_ok: bool, _data: Variant, _err: Dictionary, keys: Array, counts: Dictionary, index: int, final_callback: Callable) -> void:
 	_flush_daily_task_events_sequential(keys, counts, index + 1, final_callback)
 
 
@@ -580,6 +584,10 @@ func complete_dungeon_challenge(dungeon_id: int, target_floor: int, callback: Ca
 	_api_post("dungeon/%d/challenge" % dungeon_id, {"targetFloor": target_floor}, _with_daily_task_event(callback, _get_daily_dungeon_event_key(dungeon_id)))
 
 
+func claim_temporary_event(event_id: String, callback: Callable) -> void:
+	_api_post_tracked("events/%s/claim" % event_id, {}, callback, false)
+
+
 func upgrade_cat_food(player_cat_id: int, callback: Callable) -> void:
 	_api_post("enhance/%d/food" % player_cat_id, {}, _with_daily_task_event(callback, "upgrade_cat"))
 
@@ -624,12 +632,14 @@ func _on_daily_task_wrapped_callback(ok: bool, data: Variant, err: Dictionary, c
 
 func _get_daily_dungeon_event_key(dungeon_id: int) -> String:
 	match dungeon_id:
-		1:
-			return "dungeon_gold"
 		2:
 			return "dungeon_diamond"
 		3:
 			return "dungeon_whisker"
+		4:
+			return "dungeon_poop"
+		5:
+			return "dungeon_gold"
 		_:
 			return ""
 

@@ -389,7 +389,7 @@ func _start_battle() -> void:
 	var base_atk: float = _dungeon_cfg.get("base_atk", 15.0)
 	var base_def: float = _dungeon_cfg.get("base_def", 5.0)
 
-	var enemy := CatData.from_json_file("test_enemy.json")
+	var enemy := CatData.from_json_file("silver_cat.json")
 	if enemy:
 		enemy.max_hp = roundi(base_hp * mult)
 		enemy.atk = roundi(base_atk * mult)
@@ -442,6 +442,9 @@ func _on_complete_challenge(success: bool, data: Variant, error: Dictionary) -> 
 			GameState.apply_dungeon_overview(overview)
 		var rewards: Variant = payload.get("reward", {})
 		_show_reward_popup(_dungeon_level, rewards if rewards is Dictionary else {})
+		# Queue temporary events returned by backend
+		var events_variant: Variant = payload.get("pendingEvents", [])
+		GameState.pending_temporary_events = events_variant if events_variant is Array else []
 		return
 
 	var message: String = str(error.get("message", UiText.DUNGEON_CHALLENGE_SETTLE_FAILED_BODY))
@@ -464,12 +467,60 @@ func _show_reward_popup(level: int, rewards: Dictionary) -> void:
 		lines.append(UiText.DUNGEON_REWARD_TRAP_CAGE_FORMAT % int(rewards.get("trapCages", 0)))
 	if int(rewards.get("whiskerShards", 0)) > 0:
 		lines.append(UiText.DUNGEON_REWARD_WHISKER_FORMAT % int(rewards.get("whiskerShards", 0)))
+	if int(rewards.get("poopCount", 0)) > 0:
+		lines.append(UiText.DUNGEON_REWARD_POOP_FORMAT % int(rewards.get("poopCount", 0)))
+	if int(rewards.get("gold", 0)) > 0:
+		lines.append(UiText.DUNGEON_REWARD_GOLD_FORMAT % int(rewards.get("gold", 0)))
 
 	DialogManager.show_info(
 		UiText.DUNGEON_CHALLENGE_COMPLETE,
 		"\n".join(lines),
-		Callable(self, "_return_to_dungeon_scene")
+		Callable(self, "_after_reward_dialog")
 	)
+
+
+func _after_reward_dialog() -> void:
+	_process_next_temporary_event()
+
+
+func _process_next_temporary_event() -> void:
+	if GameState.pending_temporary_events.is_empty():
+		_return_to_dungeon_scene()
+		return
+
+	var event: Variant = GameState.pending_temporary_events.pop_front()
+	if not (event is Dictionary):
+		_process_next_temporary_event()
+		return
+
+	var event_dict: Dictionary = event
+	var event_id: String = str(event_dict.get("eventId", ""))
+	var speaker_name: String = str(event_dict.get("speakerName", "???"))
+	var message: String = str(event_dict.get("message", ""))
+	var reward_type: String = str(event_dict.get("rewardType", ""))
+	var reward_amount: int = int(event_dict.get("rewardAmount", 0))
+
+	var reward_text: String = "%s x%d" % [reward_type, reward_amount]
+	var body: String = "%s\n\n%s" % [message, reward_text]
+
+	DialogManager.show_confirm(
+		speaker_name,
+		body,
+		Callable(self, "_claim_temporary_event").bind(event_id),
+		Callable(self, "_process_next_temporary_event"),
+		UiText.COMMON_CANCEL,
+		UiText.COMMON_CONFIRM
+	)
+
+
+func _claim_temporary_event(event_id: String) -> void:
+	ApiClient.claim_temporary_event(event_id, Callable(self, "_on_temporary_event_claimed"))
+
+
+func _on_temporary_event_claimed(success: bool, _data: Variant, _error: Dictionary) -> void:
+	if not success:
+		pass  # silently skip failed claims
+	_process_next_temporary_event()
 
 
 func _return_to_dungeon_scene() -> void:
