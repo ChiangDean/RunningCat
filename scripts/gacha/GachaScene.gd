@@ -477,11 +477,11 @@ func _show_results(results: Array) -> void:
 	panel.setup(results)
 	scroll.add_child(panel)
 
+	DialogManager.show_info_node(UiText.GACHA_RESULT_TITLE, scroll)
+
 
 func _sort_gacha_technique_levels(a: Dictionary, b: Dictionary) -> bool:
 	return int(a.get("level", 0)) < int(b.get("level", 0))
-
-	DialogManager.show_info_node(UiText.GACHA_RESULT_TITLE, scroll)
 
 
 func _format_rarity_name(rarity_key: String) -> String:
