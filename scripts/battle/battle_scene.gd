@@ -2773,14 +2773,15 @@ func _start_battle_internal() -> void:
 		else:
 			push_error("BattleScene: failed to load player cat " + cat_id)
 
-	var diff_mult: float = GameState.get_difficulty_multiplier()
+	var hp_mult: float = GameState.get_difficulty_hp_multiplier()
+	var atk_mult: float = GameState.get_difficulty_atk_multiplier()
 	for cat_id: String in GameState.get_enemy_ids():
 		var path := cat_id + ".json"
 		var data := CatData.from_json_file(path)
 		if data:
-			data.max_hp  = roundi(data.max_hp  * diff_mult)
-			data.atk     = roundi(data.atk     * diff_mult)
-			data.weight  = roundi(data.weight  * diff_mult)
+			data.max_hp  = roundi(data.max_hp  * hp_mult)
+			data.atk     = roundi(data.atk     * atk_mult)
+			data.weight  = roundi(data.weight  * hp_mult)
 			enemy_cats.append(data)
 		else:
 			push_error("BattleScene: failed to load enemy cat " + cat_id)

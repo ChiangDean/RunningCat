@@ -104,16 +104,70 @@ static func _get_zone_suffix(z: int, boss_cfg: Dictionary) -> String:
 
 # ── Difficulty calculation ───────────────────────────────
 
-## Return the enemy stat multiplier for the current stage
-## Regular encounters: +0.3% compound growth per stage (Stage track)
-## Boss battles: +2% compound growth per Boss (Boss track)
-static func get_difficulty_multiplier(current_stage: int, boss_cfg: Dictionary) -> float:
-	var stage_growth: float = float(boss_cfg.get("stage_growth", 1.003))
-	var boss_growth: float  = float(boss_cfg.get("boss_growth", 1.02))
+## Return the enemy stat multiplier for the current stage.
+## Return the enemy HP stat multiplier for the current stage.
+static func get_difficulty_hp_multiplier(current_stage: int, boss_cfg: Dictionary) -> float:
 	if is_current_boss(current_stage, boss_cfg):
-		return pow(boss_growth, get_boss_stage_number(current_stage, boss_cfg))
+		return _calc_boss_multiplier(get_boss_stage_number(current_stage, boss_cfg), boss_cfg, "hp_rate")
 	else:
+		return _calc_encounter_multiplier(current_stage, boss_cfg, "hp_rate")
+
+
+## Return the enemy ATK stat multiplier for the current stage.
+static func get_difficulty_atk_multiplier(current_stage: int, boss_cfg: Dictionary) -> float:
+	if is_current_boss(current_stage, boss_cfg):
+		return _calc_boss_multiplier(get_boss_stage_number(current_stage, boss_cfg), boss_cfg, "atk_rate")
+	else:
+		return _calc_encounter_multiplier(current_stage, boss_cfg, "atk_rate")
+
+
+## Legacy single-multiplier accessor — returns hp multiplier for backward compatibility.
+static func get_difficulty_multiplier(current_stage: int, boss_cfg: Dictionary) -> float:
+	return get_difficulty_hp_multiplier(current_stage, boss_cfg)
+
+
+## Calculate the encounter difficulty multiplier using segmented rates.
+## stat_key: "hp_rate" or "atk_rate"; falls back to "rate" then to default.
+## Falls back to pow(stage_growth, stage-1) when growth_segments is missing.
+static func _calc_encounter_multiplier(current_stage: int, boss_cfg: Dictionary, stat_key: String = "hp_rate") -> float:
+	var segments: Array = boss_cfg.get("growth_segments", [])
+	if segments.is_empty():
+		var stage_growth: float = float(boss_cfg.get("stage_growth", 1.001))
 		return pow(stage_growth, current_stage - 1)
+	var mult: float = 1.0
+	var prev_stage: int = 1
+	for seg: Dictionary in segments:
+		var until: int = int(seg.get("until_stage", 999999))
+		var rate: float = float(seg.get(stat_key, seg.get("rate", 1.001)))
+		var apply_to: int = mini(current_stage, until + 1)
+		var stages_in_seg: int = maxi(0, apply_to - prev_stage)
+		mult *= pow(rate, stages_in_seg)
+		prev_stage = until + 1
+		if current_stage <= until:
+			break
+	return mult
+
+
+## Calculate the boss difficulty multiplier using segmented rates.
+## stat_key: "hp_rate" or "atk_rate"; falls back to "rate" then to default.
+## Falls back to pow(boss_growth, boss_number) when boss_growth_segments is missing.
+static func _calc_boss_multiplier(boss_number: int, boss_cfg: Dictionary, stat_key: String = "hp_rate") -> float:
+	var segments: Array = boss_cfg.get("boss_growth_segments", [])
+	if segments.is_empty():
+		var boss_growth: float = float(boss_cfg.get("boss_growth", 1.02))
+		return pow(boss_growth, boss_number)
+	var mult: float = 1.0
+	var prev_boss: int = 0
+	for seg: Dictionary in segments:
+		var until: int = int(seg.get("until_boss", 999999))
+		var rate: float = float(seg.get(stat_key, seg.get("rate", 1.02)))
+		var apply_to: int = mini(boss_number, until + 1)
+		var bosses_in_seg: int = maxi(0, apply_to - prev_boss)
+		mult *= pow(rate, bosses_in_seg)
+		prev_boss = until + 1
+		if boss_number <= until:
+			break
+	return mult
 
 
 # ── Enemy generation ───────────────────────────────
