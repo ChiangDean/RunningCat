@@ -50,7 +50,7 @@
 | `rankId` / `rankKey` / `rankName` | 目前牌位 |
 | `tickets` | 競技券數量 |
 | `seasonDisplayName` / `seasonEndDate` | 當前賽季資訊 |
-| `ranks[]` | 牌位獎勵清單 |
+| `ranks[]` | 牌位獎勵清單（含 `settlementRewards[]` 結算郵件獎勵預覽） |
 | `opponents[]` | 推薦對手清單 |
 
 `opponents[].defenseMembers[]` 目前會回傳：
