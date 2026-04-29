@@ -72,8 +72,10 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	var memory_id: int = int(item.get("memoryId", 0))
 	var api_locked: bool = _is_api_locked(scene)
 	var unlocked: bool = bool(item.get("isUnlocked", false))
+	var unlock_level: int = int(item.get("unlockLevel", 1))
+	var level_locked: bool = scene.GameState.player_data.scooper_level < unlock_level
 	var cost: int = int(item.get("unlockCost", 0))
-	var can_unlock: bool = (not unlocked) and scene.GameState.player_data.memory_shards >= cost
+	var can_unlock: bool = (not unlocked) and (not level_locked) and scene.GameState.player_data.memory_shards >= cost
 	var accent: Color = _get_memory_placeholder_color(item)
 	var current_shards: int = mini(scene.GameState.player_data.memory_shards, cost)
 
@@ -103,6 +105,10 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 
 	if unlocked:
 		action_btn.text = UiText.SCOOPER_MEMORY_UNLOCKED_BUTTON
+		action_btn.disabled = true
+		UiPalette.apply_button_kind(action_btn, "neutral")
+	elif level_locked:
+		action_btn.text = UiText.SCOOPER_MEMORY_LEVEL_LOCKED % unlock_level
 		action_btn.disabled = true
 		UiPalette.apply_button_kind(action_btn, "neutral")
 	elif can_unlock and not api_locked:
