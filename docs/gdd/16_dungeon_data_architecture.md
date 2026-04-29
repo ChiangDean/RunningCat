@@ -88,8 +88,10 @@
 | `catFood` | 玩家普通乾糧 |
 | `specialCatFood` | 玩家特殊乾糧 |
 | `diamonds` | 玩家鑽石 |
+| `gold` | 玩家金幣 |
 | `trapCages` | 玩家誘捕籠 |
 | `whiskerShards` | 玩家鬍鬚碎片 |
+| `poopCount` | 玩家便便數量 |
 | `dungeons` | 地下城清單 |
 
 #### `POST /api/dungeon/{id}/sweep`、`POST /api/dungeon/{id}/challenge`
@@ -101,7 +103,7 @@
 | `runType` | `Sweep` / `Challenge` |
 | `resultType` | `SweepSuccess` / `Win` |
 | `targetFloor` | 本次處理的樓層 |
-| `reward` | 本次獎勵內容 |
+| `reward` | 本次獎勵內容（`DungeonRewardResponse`，含 `catFood`、`specialCatFood`、`diamonds`、`gold`、`trapCages`、`whiskerShards`、`poopCount`） |
 | `overview` | 更新後的 `DungeonOverviewResponse` |
 
 前端收到後：
