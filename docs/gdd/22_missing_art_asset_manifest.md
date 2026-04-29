@@ -13,7 +13,9 @@
 本次盤點結論：
 
 - 黑貓素材已經開始補齊，故本文件不重複列黑貓。
-- 其餘 5 隻正式貓咪角色，仍缺完整角色定稿、頭像、戰鬥動畫。
+- 本批 18 隻新版正式貓咪已補角色參考圖、頭像與戰鬥動畫，並已接到 `AssetResolver`；其中有技能 FX / 特效素材的角色也已落檔：
+  `abyssinian_cat` / `american_shorthair_cat` / `bengal_cat` / `british_shorthair_cat` / `cream_cat` / `maine_coon_cat` / `munchkin_cat` / `norwegian_forest_cat` / `persian_cat` / `ragdoll_cat` / `russian_blue_cat` / `scottish_fold_cat` / `siamese_cat` / `smoke_cat` / `sphinx_cat` / `tabby_cat` / `tortoiseshell_cat` / `white_cat`。
+- 其餘正式貓咪角色仍需依本文件補齊完整角色定稿、頭像、戰鬥動畫。
 - client runtime 已補戰鬥動畫 fallback；當 `collide / knockback / stagger / skill / death_fly` 缺圖時，會先回退到現有 `run / idle` 類動畫，避免正式流程出現空動畫。
 - 多數功能頁仍為純色背景，缺 UI 背景圖。
 - API / DB 已經定義 `image_path` 的 catalog 圖資，目前前端多數尚未補圖或尚未實際套用。
@@ -58,7 +60,7 @@
 
 ### DB 目前 seed 的 catalog 內容
 
-- 貓咪：`black_cat` `calico_cat` `cow_cat` `milk_cat` `ninja_cat` `orange_cat` `tuxedo_cat`
+- 貓咪：`black_cat` `calico_cat` `cow_cat` `cream_cat` `milk_cat` `ninja_cat` `orange_cat` `smoke_cat` `tabby_cat` `tuxedo_cat`
 - 額外預設敵人：`silver_cat`
 - 地城：`cat_food` `diamond` `whisker`
 - 牌位：`bronze_3` 到 `elite`
@@ -92,6 +94,7 @@
 
 - 角色風格固定為：像素風、可愛擬人化貓咪、雙腳站立、Q 版比例、頭大身小、適合手機遊戲戰鬥 sprite。
 - 角色圖請維持同一角色辨識度，不可每張換長相。
+- 實際匯入位置以 `assets/sprites/cdn/ui/character_refs/<cat_id>/` 為主；舊版 prompt 若仍寫 `assets/sprites/ui/character_refs/<cat_id>/`，落檔時請改放 CDN character_refs 路徑。
 - 背景要求：
   - 定稿 / icon / pose / sprite sheet 一律透明背景。
 - Sprite sheet 規格：
@@ -503,6 +506,126 @@
 16. 存放位置：`assets/sprites/battle/cats/tuxedo_cat/`
     檔名：`tuxedo_cat_death_fly_right.png`
     Prompt：`請生成透明背景橫向 sprite sheet，6 格動畫，每格 160x160，總尺寸 960x160；角色朝右；角色是一隻可愛的賓士擬人化貓咪，雙腳站立，黑白相間毛皮，表情聰明冷靜，帶有優雅決鬥者氣質；動作是死亡擊飛，要求被打飛後翻滾或騰空，誇張但不血腥；6 格維持同一隻角色；風格必須是像素風、Q版。`
+
+### 已補：`smoke_cat`
+
+- 角色參考圖與頭像已落在 `assets/sprites/cdn/ui/character_refs/smoke_cat/`。
+- 戰鬥動畫已落在 `assets/sprites/battle/cats/smoke_cat/`：
+  - `smoke_cat_idle_right.png`
+  - `smoke_cat_run_right.png`
+  - `smoke_cat_collide_right.png`
+  - `smoke_cat_knockback_right.png`
+  - `smoke_cat_stagger_right.png`
+  - `smoke_cat_skill_right.png`
+  - `smoke_cat_death_fly_right.png`
+- 技能 FX 已落在 `assets/sprites/battle/skill_fx/smoke_cat/`：
+  - `smoke_cat_charged_critical_right.png`
+  - `smoke_cat_charged_critical_right.gif`
+- Runtime 連接：
+  - `AssetResolver.CAT_ICONS`
+  - `AssetResolver.CAT_SHOWCASE_TEXTURES`
+  - `AssetResolver.CAT_BATTLE_STATIC_ARTS`
+  - `AssetResolver.BATTLE_SPEC_PROFILE_BY_CHARACTER`
+
+### 已補：`tabby_cat`
+
+- 角色參考圖與頭像已落在 `assets/sprites/cdn/ui/character_refs/tabby_cat/`。
+- 戰鬥動畫已落在 `assets/sprites/battle/cats/tabby_cat/`：
+  - `tabby_cat_idle_right.png`
+  - `tabby_cat_run_right.png`
+  - `tabby_cat_collide_right.png`
+  - `tabby_cat_knockback_right.png`
+  - `tabby_cat_stagger_right.png`
+  - `tabby_cat_skill_right.png`
+  - `tabby_cat_death_fly_right.png`
+- 技能 FX 已落在 `assets/sprites/battle/skill_fx/tabby_cat/`：
+  - `tabby_cat_holy_shield_right.png`
+  - `tabby_cat_holy_shield_right.gif`
+- Runtime 連接：
+  - `AssetResolver.CAT_ICONS`
+  - `AssetResolver.CAT_SHOWCASE_TEXTURES`
+  - `AssetResolver.CAT_BATTLE_STATIC_ARTS`
+  - `AssetResolver.BATTLE_SPEC_PROFILE_BY_CHARACTER`
+
+### 已補：`cream_cat`
+
+- 角色參考圖與頭像已落在 `assets/sprites/cdn/ui/character_refs/cream_cat/`。
+- 戰鬥動畫已落在 `assets/sprites/battle/cats/cream_cat/`：
+  - `cream_cat_idle_right.png`
+  - `cream_cat_run_right.png`
+  - `cream_cat_collide_right.png`
+  - `cream_cat_knockback_right.png`
+  - `cream_cat_stagger_right.png`
+  - `cream_cat_skill_right.png`
+  - `cream_cat_death_fly_right.png`
+- 技能 FX 已落在 `assets/sprites/battle/skill_fx/cream_cat/`：
+  - `cream_cat_battlefield_support_right.png`
+  - `cream_cat_battlefield_support_right.gif`
+- Runtime 連接：
+  - `AssetResolver.CAT_ICONS`
+  - `AssetResolver.CAT_SHOWCASE_TEXTURES`
+  - `AssetResolver.CAT_BATTLE_STATIC_ARTS`
+  - `AssetResolver.BATTLE_SPEC_PROFILE_BY_CHARACTER`
+
+### 已補：`white_cat`
+
+- 角色參考圖與頭像已落在 `assets/sprites/cdn/ui/character_refs/white_cat/`。
+- 戰鬥動畫已落在 `assets/sprites/battle/cats/white_cat/`：
+  - `white_cat_idle_right.png`
+  - `white_cat_run_right.png`
+  - `white_cat_collide_right.png`
+  - `white_cat_knockback_right.png`
+  - `white_cat_stagger_right.png`
+  - `white_cat_skill_right.png`
+  - `white_cat_death_fly_right.png`
+- 技能 FX 已落在 `assets/sprites/battle/skill_fx/white_cat/`：
+  - `white_cat_full_heal_right.png`
+  - `white_cat_full_heal_right.gif`
+- Runtime 連接：
+  - `AssetResolver.CAT_ICONS`
+  - `AssetResolver.CAT_SHOWCASE_TEXTURES`
+  - `AssetResolver.CAT_BATTLE_STATIC_ARTS`
+  - `AssetResolver.BATTLE_SPEC_PROFILE_BY_CHARACTER`
+
+### 已補：`british_shorthair_cat`
+
+- 角色參考圖與頭像已落在 `assets/sprites/cdn/ui/character_refs/british_shorthair_cat/`。
+- 戰鬥動畫已落在 `assets/sprites/battle/cats/british_shorthair_cat/`：
+  - `british_shorthair_cat_idle_right.png`
+  - `british_shorthair_cat_run_right.png`
+  - `british_shorthair_cat_collide_right.png`
+  - `british_shorthair_cat_knockback_right.png`
+  - `british_shorthair_cat_stagger_right.png`
+  - `british_shorthair_cat_skill_right.png`
+  - `british_shorthair_cat_death_fly_right.png`
+- 技能 FX 已落在 `assets/sprites/battle/skill_fx/british_shorthair_cat/`：
+  - `british_shorthair_cat_holy_shield_right.png`
+  - `british_shorthair_cat_holy_shield_right.gif`
+- Runtime 連接：
+  - `AssetResolver.CAT_ICONS`
+  - `AssetResolver.CAT_SHOWCASE_TEXTURES`
+  - `AssetResolver.CAT_BATTLE_STATIC_ARTS`
+  - `AssetResolver.BATTLE_SPEC_PROFILE_BY_CHARACTER`
+
+### 已補：`munchkin_cat`
+
+- 角色參考圖與頭像已落在 `assets/sprites/cdn/ui/character_refs/munchkin_cat/`。
+- 戰鬥動畫已落在 `assets/sprites/battle/cats/munchkin_cat/`：
+  - `munchkin_cat_idle_right.png`
+  - `munchkin_cat_run_right.png`
+  - `munchkin_cat_collide_right.png`
+  - `munchkin_cat_knockback_right.png`
+  - `munchkin_cat_stagger_right.png`
+  - `munchkin_cat_skill_right.png`
+  - `munchkin_cat_death_fly_right.png`
+- 技能 FX 已落在 `assets/sprites/battle/skill_fx/munchkin_cat/`：
+  - `munchkin_cat_healing_luck_right.png`
+  - `munchkin_cat_healing_luck_right.gif`
+- Runtime 連接：
+  - `AssetResolver.CAT_ICONS`
+  - `AssetResolver.CAT_SHOWCASE_TEXTURES`
+  - `AssetResolver.CAT_BATTLE_STATIC_ARTS`
+  - `AssetResolver.BATTLE_SPEC_PROFILE_BY_CHARACTER`
 
 ## B. 主功能頁背景圖
 
