@@ -379,6 +379,15 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	var temp_events_variant: Variant = data.get("temporaryEvents", [])
 	temporary_event_configs = temp_events_variant if temp_events_variant is Array else []
 
+	var feature_unlocks_variant: Variant = data.get("featureUnlocks", [])
+	feature_unlock_levels = {}
+	if feature_unlocks_variant is Array:
+		for item: Variant in feature_unlocks_variant:
+			if item is Dictionary:
+				var key: String = str(item.get("featureKey", ""))
+				if not key.is_empty():
+					feature_unlock_levels[key] = int(item.get("unlockLevel", 1))
+
 	var boss_cfg: Variant = data.get("bossConfig", {})
 	boss_config = boss_cfg if boss_cfg is Dictionary else {}
 	CacheIO.save_config("boss_static", boss_config)
@@ -660,6 +669,8 @@ var dungeon_config: Dictionary = {}
 
 ## 臨時事件配置（bootstrap 載入，用於前端顯示）
 var temporary_event_configs: Array = []
+## 功能解鎖等級配置（feature_key -> unlock_level）
+var feature_unlock_levels: Dictionary = {}
 ## 待領取的臨時事件隊列（dungeon challenge 完成後填入）
 var pending_temporary_events: Array = []
 
@@ -2723,6 +2734,15 @@ func get_equipment_bonuses() -> Array:
 
 # ── Utilities ──────────────────────────────────
 
+
+## 檢查指定功能是否已解鎖（依據 scooper_level）
+func is_feature_unlocked(feature_key: String) -> bool:
+	var required: int = int(feature_unlock_levels.get(feature_key, 1))
+	return player_data.scooper_level >= required
+
+## 取得指定功能的解鎖等級，未定義時回傳 1
+func get_feature_unlock_level(feature_key: String) -> int:
+	return int(feature_unlock_levels.get(feature_key, 1))
 
 func format_number(value: int) -> String:
 	var negative := value < 0

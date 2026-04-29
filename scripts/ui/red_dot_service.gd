@@ -96,6 +96,11 @@ static func has_party_review_red_dot() -> bool:
 
 
 static func has_party_red_dot() -> bool:
+	var game_state: Node = _get_game_state()
+	if game_state == null:
+		return false
+	if not game_state.is_feature_unlocked("party"):
+		return false
 	return has_party_free_cheer_red_dot() or has_party_review_red_dot() or has_party_chat_red_dot()
 
 
@@ -179,8 +184,8 @@ static func has_dungeon_red_dot() -> bool:
 static func has_arena_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null:
-		return false
-	var ranks_variant: Variant = game_state.arena_overview_data.get("ranks", [])
+		return false	if not game_state.is_feature_unlocked("friends"):
+		return false	var ranks_variant: Variant = game_state.arena_overview_data.get("ranks", [])
 	if not (ranks_variant is Array):
 		return false
 	for item_variant: Variant in ranks_variant:
@@ -254,6 +259,8 @@ static func has_enhance_red_dot() -> bool:
 static func has_daily_task_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null:
+		return false
+	if not game_state.is_feature_unlocked("daily_tasks"):
 		return false
 	return bool(game_state.daily_task_events_pending)
 
