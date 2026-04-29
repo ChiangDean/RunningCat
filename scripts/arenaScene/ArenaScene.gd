@@ -859,6 +859,47 @@ func _build_reward_card(rank: Dictionary) -> Control:
 		locked_label.visible = true
 		locked_label.text = UiText.ARENA_REQUIRE_SCORE_FORMAT % int(rank.get("scoreMin", 0))
 
+	# 結算獎勵區塊
+	var settlement_rewards: Array = rank.get("settlementRewards", [])
+	if settlement_rewards.size() > 0:
+		var settlement_section: VBoxContainer = VBoxContainer.new()
+		settlement_section.add_theme_constant_override("separation", 4)
+
+		var section_label: Label = Label.new()
+		section_label.text = UiText.ARENA_SETTLEMENT_REWARD_LABEL
+		section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_CAPTION)
+		section_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		settlement_section.add_child(section_label)
+
+		var slots_row: HBoxContainer = HBoxContainer.new()
+		slots_row.add_theme_constant_override("separation", 6)
+		settlement_section.add_child(slots_row)
+
+		var settlement_entries: Array[Dictionary] = Helpers.get_reward_entries(settlement_rewards)
+		for entry: Dictionary in settlement_entries:
+			var slot: VBoxContainer = VBoxContainer.new()
+			slot.add_theme_constant_override("separation", 2)
+
+			var icon: TextureRect = TextureRect.new()
+			icon.custom_minimum_size = Vector2(32.0, 32.0)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			var tex: Texture2D = AssetResolver.resolve_catalog_texture(str(entry.get("path", "")))
+			if tex != null:
+				icon.texture = tex
+			slot.add_child(icon)
+
+			var qty_lbl: Label = Label.new()
+			qty_lbl.text = "x%d" % int(entry.get("qty", 0))
+			qty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_CAPTION)
+			qty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			slot.add_child(qty_lbl)
+
+			slots_row.add_child(slot)
+
+		shell.add_child(settlement_section)
+
 	return shell
 
 
