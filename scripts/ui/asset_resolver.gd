@@ -69,13 +69,14 @@ const CAT_ICONS := {
 	"black_cat": UI_CDN_CHARACTER_REF_ROOT + "black_cat/black_cat_icon_v1.png",
 	"calico_cat": UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_icon_v1.png",
 	"chihuahua": UI_CDN_CHARACTER_REF_ROOT + "boss/chihuahua/chihuahua_icon_v1.png",
+	"cow_cat": UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_icon_v1.png",
 	"crazy_neighbor_boy": UI_CDN_CHARACTER_REF_ROOT + "boss/crazy_neighbor_boy/crazy_neighbor_boy_icon_v1.png",
 	"grandma": UI_CDN_CHARACTER_REF_ROOT + "boss/grandma/grandma_icon_v1.png",
 	"milk_cat": UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_icon_v1.png",
 	"ninja_cat": UI_CDN_CHARACTER_REF_ROOT + "ninja_cat/ninja_cat_icon_v1.png",
 	"orange_cat": UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_icon_v1.png",
 	"schoolgirl": UI_CDN_CHARACTER_REF_ROOT + "boss/schoolgirl/schoolgirl_icon_v1.png",
-	"test_enemy": UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_icon_v1.png",
+	"silver_cat": UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_icon_v1.png",
 	"tuxedo_cat": UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_icon_v1.png",
 }
 
@@ -138,6 +139,12 @@ const CAT_SHOWCASE_TEXTURES := {
 		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_ref_front_v1.png",
 		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_icon_v1.png",
 	],
+	"cow_cat": [
+		UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_icon_v1.png",
+	],
 	"milk_cat": [
 		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_three_quarter_v1.png",
 		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_right_v1.png",
@@ -154,11 +161,11 @@ const CAT_SHOWCASE_TEXTURES := {
 		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_ref_front_v1.png",
 		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_icon_v1.png",
 	],
-	"test_enemy": [
-		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_three_quarter_v1.png",
-		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_right_v1.png",
-		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_front_v1.png",
-		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_icon_v1.png",
+	"silver_cat": [
+		UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_icon_v1.png",
 	],
 	"tuxedo_cat": [
 		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_ref_three_quarter_v1.png",
@@ -203,6 +210,12 @@ const CAT_BATTLE_STATIC_ARTS := {
 		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_ref_front_v1.png",
 		UI_CDN_CHARACTER_REF_ROOT + "calico_cat/calico_cat_icon_v1.png",
 	],
+	"cow_cat": [
+		UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "cow_cat/cow_cat_icon_v1.png",
+	],
 	"milk_cat": [
 		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_right_v1.png",
 		UI_CDN_CHARACTER_REF_ROOT + "milk_cat/milk_cat_ref_three_quarter_v1.png",
@@ -219,11 +232,11 @@ const CAT_BATTLE_STATIC_ARTS := {
 		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_ref_front_v1.png",
 		UI_CDN_CHARACTER_REF_ROOT + "orange_cat/orange_cat_icon_v1.png",
 	],
-	"test_enemy": [
-		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_right_v1.png",
-		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_three_quarter_v1.png",
-		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_ref_front_v1.png",
-		UI_CDN_CHARACTER_REF_ROOT + "test_enemy/test_enemy_icon_v1.png",
+	"silver_cat": [
+		UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_ref_right_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_ref_three_quarter_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_ref_front_v1.png",
+		UI_CDN_CHARACTER_REF_ROOT + "silver_cat/silver_cat_icon_v1.png",
 	],
 	"tuxedo_cat": [
 		UI_CDN_CHARACTER_REF_ROOT + "tuxedo_cat/tuxedo_cat_ref_right_v1.png",
@@ -339,6 +352,7 @@ const BATTLE_SPEC_PROFILE_BY_CHARACTER := {
 	"black_cat": "standard_256",
 	"calico_cat": "small_128",
 	"chihuahua": "boss_standard_128",
+	"cow_cat": "standard_256",
 	"crazy_neighbor_boy": "boss_standard_128",
 	"cucumber": "boss_standard_128",
 	"grandma": "boss_standard_128",
@@ -353,7 +367,7 @@ const BATTLE_SPEC_PROFILE_BY_CHARACTER := {
 	"remote_control": "standard_256",
 	"robot_vacuum": "boss_standard_128",
 	"schoolgirl": "boss_standard_128",
-	"test_enemy": "standard_256",
+	"silver_cat": "standard_256",
 	"toilet_paper": "standard_256",
 	"tuxedo_cat": "standard_256",
 }

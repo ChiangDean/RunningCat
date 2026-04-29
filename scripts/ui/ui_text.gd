@@ -377,6 +377,8 @@ const DUNGEON_REWARD_SPECIAL_FOOD_FORMAT := "  特殊乾糧 ×%d"
 const DUNGEON_REWARD_DIAMONDS_FORMAT := "  鑽石 ×%d"
 const DUNGEON_REWARD_TRAP_CAGE_FORMAT := "  誘捕籠 ×%d"
 const DUNGEON_REWARD_WHISKER_FORMAT := "  鬍鬚碎片 ×%d"
+const DUNGEON_REWARD_POOP_FORMAT := "  便便 ×%d"
+const DUNGEON_REWARD_GOLD_FORMAT := "  金幣 ×%d"
 
 # Arena scene labels
 const ARENA_BATTLE_RETURN_BUTTON := "返回競技場"
@@ -1228,7 +1230,7 @@ const ARENA_RANK_ELITE := "菁英"
 # Dungeon battle error messages
 const DUNGEON_BATTLE_ERROR_CAT_NOT_FOUND_FORMAT := "找不到 playerCatId %d 對應的貓咪資料。"
 const DUNGEON_BATTLE_ERROR_CAT_LOAD_FAILED_FORMAT := "無法載入玩家貓咪 %s。"
-const DUNGEON_BATTLE_ERROR_ENEMY_LOAD_FAILED := "無法載入 test_enemy。"
+const DUNGEON_BATTLE_ERROR_ENEMY_LOAD_FAILED := "無法載入銀貓。"
 const DUNGEON_BATTLE_ERROR_INSUFFICIENT_CATS := "戰鬥角色數量不足。"
 
 # Chat scene error fallbacks

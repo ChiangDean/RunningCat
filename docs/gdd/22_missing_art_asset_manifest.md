@@ -58,8 +58,8 @@
 
 ### DB 目前 seed 的 catalog 內容
 
-- 貓咪：`black_cat` `calico_cat` `milk_cat` `ninja_cat` `orange_cat` `tuxedo_cat`
-- 額外測試敵人：`test_enemy`
+- 貓咪：`black_cat` `calico_cat` `cow_cat` `milk_cat` `ninja_cat` `orange_cat` `tuxedo_cat`
+- 額外預設敵人：`silver_cat`
 - 地城：`cat_food` `diamond` `whisker`
 - 牌位：`bronze_3` 到 `elite`
 - 回憶：5 張
@@ -70,7 +70,7 @@
 
 ### P0 立刻要補
 
-- 其餘 5 隻貓角色完整圖包
+- 其餘新版貓角色完整圖包
 - 各主功能頁背景
 - 地城縮圖
 - 牌位徽章
@@ -865,4 +865,3 @@
   - 檔名
   - 中文 prompt
   - 對應前端使用場景
-

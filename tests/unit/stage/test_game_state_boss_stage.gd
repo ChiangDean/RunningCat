@@ -128,15 +128,15 @@ func test_difficulty_custom_growth_rates() -> void:
 
 # ── get_enemy_ids ─────────────────────────────────────────────────
 
-func test_enemy_ids_stage_1_returns_one_enemy() -> void:
+func test_resolved_enemy_ids_stage_1_returns_one_enemy() -> void:
 	assert_eq(GameStateBossStage.get_enemy_ids(1, _cfg).size(), 1)
 
-func test_enemy_ids_count_does_not_exceed_5() -> void:
+func test_resolved_enemy_ids_count_does_not_exceed_5() -> void:
 	for stage in [1, 5, 50, 100, 999]:
 		var ids := GameStateBossStage.get_enemy_ids(stage, _cfg)
 		assert_lte(ids.size(), 5, "stage %d should not exceed 5 enemies" % stage)
 
-func test_enemy_ids_count_is_at_least_1() -> void:
+func test_resolved_enemy_ids_count_is_at_least_1() -> void:
 	for stage in [1, 5, 50, 100]:
 		var ids := GameStateBossStage.get_enemy_ids(stage, _cfg)
 		assert_gte(ids.size(), 1, "stage %d should have at least 1 enemy" % stage)

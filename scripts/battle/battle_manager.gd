@@ -1146,9 +1146,10 @@ func _refresh_skill_bar_display() -> void:
 func _get_display_skill_slots() -> Array:
 	if _skill_bar_filter == "all":
 		var display_slots: Array = []
-		for i in range(SKILL_SLOT_DISPLAY_CAP / 2):
+		var side_slot_cap: int = floori(float(SKILL_SLOT_DISPLAY_CAP) / 2.0)
+		for i in range(side_slot_cap):
 			display_slots.append(_player_skill_slots[i] if i < _player_skill_slots.size() else null)
-		for i in range(SKILL_SLOT_DISPLAY_CAP / 2):
+		for i in range(side_slot_cap):
 			display_slots.append(_enemy_skill_slots[i] if i < _enemy_skill_slots.size() else null)
 		return display_slots	
 	return []

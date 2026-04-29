@@ -119,7 +119,7 @@ static func get_difficulty_multiplier(current_stage: int, boss_cfg: Dictionary) 
 # ── Enemy generation ───────────────────────────────
 
 ## Returns enemy_key strings for the current stage using 3-layer priority.
-## Falls back to ["test_enemy"] when opponent_cfg is empty (pre-bootstrap).
+## Falls back to ["silver_cat"] when opponent_cfg is empty (pre-bootstrap).
 static func get_enemy_ids(current_stage: int, boss_cfg: Dictionary, opponent_cfg: Dictionary = {}) -> Array:
 	if opponent_cfg.is_empty():
 		return _placeholder_ids(current_stage, boss_cfg)
@@ -156,7 +156,7 @@ static func _resolve_encounter_keys(current_stage: int, boss_cfg: Dictionary, op
 				and int(ec.get("encounterIndex", 0)) == enc_idx:
 			return _keys_from_members(ec.get("members", []), opponent_cfg)
 
-	return ["test_enemy"]
+	return ["silver_cat"]
 
 
 static func _resolve_boss_key(current_stage: int, boss_cfg: Dictionary, opponent_cfg: Dictionary) -> String:
@@ -194,19 +194,19 @@ static func _resolve_boss_key(current_stage: int, boss_cfg: Dictionary, opponent
 				if m is Dictionary and int(m.get("bossPosition", 0)) == boss_pos:
 					return _key_from_enemy_id(int(m.get("enemyId", 0)), opponent_cfg)
 
-	return "test_enemy"
+	return "silver_cat"
 
 
 static func _keys_from_encounter_id(config_id: int, opponent_cfg: Dictionary) -> Array:
 	for ec: Variant in opponent_cfg.get("encounterConfigs", []):
 		if ec is Dictionary and int(ec.get("id", 0)) == config_id:
 			return _keys_from_members(ec.get("members", []), opponent_cfg)
-	return ["test_enemy"]
+	return ["silver_cat"]
 
 
 static func _keys_from_members(members: Variant, opponent_cfg: Dictionary) -> Array:
 	if not (members is Array):
-		return ["test_enemy"]
+		return ["silver_cat"]
 	var sorted: Array = (members as Array).duplicate()
 	sorted.sort_custom(func(a: Variant, b: Variant) -> bool:
 		return int((a as Dictionary).get("slotNo", 0)) < int((b as Dictionary).get("slotNo", 0)))
@@ -216,14 +216,14 @@ static func _keys_from_members(members: Variant, opponent_cfg: Dictionary) -> Ar
 			var k: String = _key_from_enemy_id(int(m.get("enemyId", 0)), opponent_cfg)
 			if not k.is_empty():
 				keys.append(k)
-	return keys if not keys.is_empty() else ["test_enemy"]
+	return keys if not keys.is_empty() else ["silver_cat"]
 
 
 static func _key_from_enemy_id(enemy_id: int, opponent_cfg: Dictionary) -> String:
 	for e: Variant in opponent_cfg.get("enemies", []):
 		if e is Dictionary and int(e.get("id", 0)) == enemy_id:
 			return str(e.get("enemyKey", ""))
-	return "test_enemy"
+	return "silver_cat"
 
 
 static func _placeholder_ids(current_stage: int, boss_cfg: Dictionary) -> Array:
@@ -235,7 +235,7 @@ static func _placeholder_ids(current_stage: int, boss_cfg: Dictionary) -> Array:
 		count = mini(1 + floori(float(boss_stage - 1) / 3.0), 5)
 	var ids: Array = []
 	for i: int in range(maxi(count, 1)):
-		ids.append("test_enemy")
+		ids.append("silver_cat")
 	return ids
 
 
