@@ -30,7 +30,10 @@ const SKILL_TYPE_OPTIONS := [
 const SKILL_EFFECT_TYPE_OPTIONS := [
 	["None", "未知"], ["Damage", "傷害"], ["Heal", "治療"], ["Shield", "護盾"],
 	["BuffStat", "增益"], ["DebuffStat", "減益"], ["StatBoost", "能力提升"],
-	["DamageReduction", "減傷"], ["CooldownReduction", "冷卻縮減"], ["Reflect", "反傷"],
+	["DamageReduction", "減傷"], ["CooldownReduction", "冷卻縮減(≤40%)"], ["Reflect", "反傷"],
+	["HealOverTime", "持續回血"], ["Counter", "反擊"], ["Revive", "復活"],
+	["NextAttackBuff", "下次攻擊增幅"], ["DamageShare", "傷害分攤"], ["CDReset", "CD重置/縮減"],
+	["Mark", "標記(受傷+%)"], ["Execute", "斬殺(SSR/SP)"], ["Invincibility", "無敵"],
 ]
 
 const SPECIAL_ABILITY_EFFECT_OPTIONS := [
@@ -79,6 +82,12 @@ const STAT_TYPE_OPTIONS := [
 	["DamageReduction", "減傷"],
 	["CooldownReduction", "冷卻縮減"],
 	["IdlePoopPercent", "放置便便%"],
+	["Weight", "體重"],
+	["ArmorPen", "護甲穿透"],
+	["Evasion", "閃避率"],
+	["Accuracy", "命中率"],
+	["MultiHitRate", "連擊率"],
+	["MultiHitDamage", "連擊傷害"],
 ]
 
 const VALUE_MODE_OPTIONS := [
@@ -102,6 +111,9 @@ const TARGET_SCOPE_OPTIONS := [
 	["Speed", "速度型"],
 	["Assassin", "刺客"],
 	["Defensive", "防禦型"],
+	["AllyLowestHp", "我方血量最少"],
+	["EnemyBack", "敵方後排"],
+	["RandomEnemy", "隨機敵方"],
 ]
 
 const GACHA_RARITY_OPTIONS := [
