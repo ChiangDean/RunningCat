@@ -1,2 +1,12 @@
 # Normalize EOL for all files that Git considers text files.
 * text=auto eol=lf
+
+# Keep binary game assets byte-for-byte stable on every checkout.
+*.gif -text
+*.jpeg -text
+*.jpg -text
+*.mp3 -text
+*.otf -text
+*.png -text
+*.ttf -text
+*.webp -text
