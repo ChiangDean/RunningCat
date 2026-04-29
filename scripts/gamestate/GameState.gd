@@ -847,8 +847,9 @@ func _build_memory_config() -> Dictionary:
 			"display_name": str(row.get("displayName", "")),
 			"description": str(row.get("description", "")),
 			"image_path": str(row.get("imagePath", "")),
+			"unlock_level": int(row.get("unlockLevel", 1)),
 			"unlock_cost": int(row.get("unlockCost", 0)),
-			"bonus_stat": _to_snake_case(str(row.get("bonusStatType", ""))),
+			"bonus_stat": _to_snake_case(str(row.get("bonusStatType", ""))),			
 			"bonus_target": _to_snake_case(str(row.get("bonusTarget", "All"))),
 			"bonus_value": float(row.get("bonusValue", 0.0)),
 		})

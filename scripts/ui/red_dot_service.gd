@@ -279,6 +279,8 @@ static func can_unlock_scooper_memory(item: Dictionary, memory_shards_override: 
 		return false
 	if bool(item.get("isUnlocked", false)):
 		return false
+	if int(game_state.player_data.scooper_level) < int(item.get("unlockLevel", 1)):
+		return false
 	var memory_shards: int = memory_shards_override
 	if memory_shards < 0:
 		memory_shards = int(game_state.player_data.memory_shards)
