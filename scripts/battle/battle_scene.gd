@@ -1742,6 +1742,7 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 	return [
 		{
 			"key": "announcements",
+			"feature_key": "",
 			"text": UiText.HOME_ANNOUNCEMENTS,
 			"callback": Callable(self, "_on_nav_announcements"),
 			"texture": HOME_SIDE_SHORTCUT_ANNOUNCEMENTS_TEXTURE,
@@ -1750,6 +1751,7 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 		},
 		{
 			"key": "daily_tasks",
+			"feature_key": "daily_tasks",
 			"text": UiText.HOME_DAILY_TASKS,
 			"callback": Callable(self, "_on_nav_daily_tasks"),
 			"texture": HOME_SIDE_SHORTCUT_DAILY_TASKS_TEXTURE,
@@ -1758,6 +1760,7 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 		},
 		{
 			"key": "lineup",
+			"feature_key": "",
 			"text": UiText.NAV_CONFIG,
 			"callback": Callable(self, "_on_nav_config"),
 			"texture": HOME_SIDE_SHORTCUT_LINEUP_TEXTURE,
@@ -1766,6 +1769,7 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 		},
 		{
 			"key": "mail",
+			"feature_key": "mail",
 			"text": UiText.HOME_MAIL,
 			"callback": Callable(self, "_on_nav_mail"),
 			"texture": HOME_SIDE_SHORTCUT_MAIL_TEXTURE,
@@ -1774,6 +1778,7 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 		},
 		{
 			"key": "party",
+			"feature_key": "party",
 			"text": UiText.HOME_PARTY,
 			"callback": Callable(self, "_open_party"),
 			"texture": HOME_SIDE_SHORTCUT_PARTY_TEXTURE,
@@ -1782,6 +1787,7 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 		},
 		{
 			"key": "friend",
+			"feature_key": "friends",
 			"text": UiText.HOME_FRIEND,
 			"callback": Callable(self, "_open_friend"),
 			"texture": HOME_SIDE_SHORTCUT_FRIEND_TEXTURE,
@@ -1790,6 +1796,7 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 		},
 		{
 			"key": "chat",
+			"feature_key": "chat",
 			"text": UiText.HOME_CHAT,
 			"callback": Callable(self, "_open_chat"),
 			"texture": HOME_SIDE_SHORTCUT_CHAT_TEXTURE,
@@ -1798,6 +1805,7 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 		},
 		{
 			"key": "stats",
+			"feature_key": "",
 			"text": UiText.STATS_BTN_LABEL,
 			"callback": Callable(self, "_on_stats_btn_pressed"),
 			"texture": HOME_SIDE_SHORTCUT_STATS_TEXTURE,
@@ -1859,6 +1867,7 @@ func _build_home_side_shortcut_button(def: Dictionary) -> Button:
 	button.add_child(label)
 	button.set_meta("label_node", label)
 	button.set_meta("shortcut_side", side)
+	button.set_meta("feature_key", str(def.get("feature_key", "")))
 	return button
 
 
@@ -1979,7 +1988,9 @@ func _refresh_home_side_shortcut_visibility() -> void:
 			continue
 		var side: String = str(button.get_meta("shortcut_side", ""))
 		var is_collapsed: bool = bool(_home_side_collapsed.get(side, false))
-		button.visible = is_home_visible and not is_collapsed
+		var feature_key: String = str(button.get_meta("feature_key", ""))
+		var feature_unlocked: bool = feature_key.is_empty() or GameState.is_feature_unlocked(feature_key)
+		button.visible = is_home_visible and not is_collapsed and feature_unlocked
 
 
 func _build_home_more_buttons() -> void:
@@ -3559,11 +3570,13 @@ func _show_daily_tasks_dialog(data: Dictionary) -> void:
 
 
 func _build_daily_task_card(task: Dictionary, close_ref: Array) -> Control:
+	var unlock_level: int = int(task.get("unlockLevel", 1))
+	var level_locked: bool = GameState.player_data.scooper_level < unlock_level
 	var panel: PanelContainer = PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(0.16, 0.12, 0.09, 0.96)
-	style.border_color = Color(0.76, 0.58, 0.30, 0.78)
+	style.bg_color = Color(0.12, 0.10, 0.08, 0.90) if level_locked else Color(0.16, 0.12, 0.09, 0.96)
+	style.border_color = Color(0.45, 0.38, 0.28, 0.60) if level_locked else Color(0.76, 0.58, 0.30, 0.78)
 	style.border_width_left = 2
 	style.border_width_top = 2
 	style.border_width_right = 2
@@ -3612,10 +3625,17 @@ func _build_daily_task_card(task: Dictionary, close_ref: Array) -> Control:
 	claim_button.custom_minimum_size = Vector2(108.0, 44.0)
 	var is_completed: bool = bool(task.get("isCompleted", false))
 	var is_claimed: bool = bool(task.get("isClaimed", false))
-	claim_button.text = UiText.HOME_DAILY_TASKS_CLAIMED if is_claimed else UiText.HOME_DAILY_TASKS_CLAIM
-	claim_button.disabled = not is_completed or is_claimed
-	UiPalette.apply_button_kind(claim_button, "confirm" if is_completed and not is_claimed else "neutral")
-	claim_button.pressed.connect(Callable(self, "_on_daily_task_claim_pressed").bind(str(task.get("taskKey", "")), claim_button, close_ref))
+	if level_locked:
+		claim_button.text = UiText.HOME_DAILY_TASKS_LEVEL_LOCKED_FORMAT % unlock_level
+		claim_button.disabled = true
+		UiPalette.apply_button_kind(claim_button, "neutral")
+		task_title.add_theme_color_override("font_color", Color(0.60, 0.55, 0.45, 1.0))
+		progress.add_theme_color_override("font_color", Color(0.50, 0.46, 0.38, 1.0))
+	else:
+		claim_button.text = UiText.HOME_DAILY_TASKS_CLAIMED if is_claimed else UiText.HOME_DAILY_TASKS_CLAIM
+		claim_button.disabled = not is_completed or is_claimed
+		UiPalette.apply_button_kind(claim_button, "confirm" if is_completed and not is_claimed else "neutral")
+		claim_button.pressed.connect(Callable(self, "_on_daily_task_claim_pressed").bind(str(task.get("taskKey", "")), claim_button, close_ref))
 	row.add_child(claim_button)
 	return panel
 
