@@ -500,7 +500,8 @@ func _process_next_temporary_event() -> void:
 	var reward_type: String = str(event_dict.get("rewardType", ""))
 	var reward_amount: int = int(event_dict.get("rewardAmount", 0))
 
-	var reward_text: String = "%s x%d" % [reward_type, reward_amount]
+	var reward_label: String = _get_reward_type_label(reward_type)
+	var reward_text: String = "%s x%d" % [reward_label, reward_amount]
 	var body: String = "%s\n\n%s" % [message, reward_text]
 
 	DialogManager.show_confirm(
@@ -521,6 +522,21 @@ func _on_temporary_event_claimed(success: bool, _data: Variant, _error: Dictiona
 	if not success:
 		pass  # silently skip failed claims
 	_process_next_temporary_event()
+
+
+static func _get_reward_type_label(reward_type: String) -> String:
+	match reward_type:
+		"poop":                   return "便便"
+		"cat_food":               return "普通貓糧"
+		"special_cat_food":       return "高級貓糧"
+		"diamonds":               return "鑽石"
+		"gold":                   return "金幣"
+		"memory_shard":           return "記憶碎片"
+		"whisker_shard":          return "鬍鬚碎片"
+		"gold_dungeon_ticket":    return "金幣地下城券"
+		"diamond_dungeon_ticket": return "鑽石地下城券"
+		"whisker_dungeon_ticket": return "鬍鬚地下城券"
+		_: return reward_type
 
 
 func _return_to_dungeon_scene() -> void:
