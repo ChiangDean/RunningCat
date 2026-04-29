@@ -429,6 +429,7 @@ assets/
 - `cdn_roots` 可以是整個資料夾
 - `export_prune_paths` 應該盡量保守，通常是已驗證過的單檔
 - 不要把 still-in-use 的 scene 預設圖整包加進 `export_prune_paths`
+- 若整個 `cdn_roots` 子資料夾已改成 CDN-first / fallback 載入，且 R2 同步白名單包含同一路徑，可以把該 CDN root 放進 `export_prune_paths`，避免 Web `index.pck` 因大量展示圖超過 GitHub Pages 單檔限制。
 
 ### 10.4 什麼情況不能直接加到 `export_prune_paths`
 

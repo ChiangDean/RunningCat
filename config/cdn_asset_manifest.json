@@ -28,15 +28,18 @@
     "assets/sprites/cdn/ui/activity"
   ],
   "export_prune_paths": [
-    "assets/sprites/cdn/ui/activity/arena_background_v1.png",
-    "assets/sprites/cdn/ui/activity/chat_background_v1.png",
-    "assets/sprites/cdn/ui/activity/config_background_v1.png",
-    "assets/sprites/cdn/ui/activity/dungeon_background_v1.png",
-    "assets/sprites/cdn/ui/activity/enhance_background_v1.png",
-    "assets/sprites/cdn/ui/activity/gacha_background_v1.png",
-    "assets/sprites/cdn/ui/activity/mail_background_v1.png",
-    "assets/sprites/cdn/ui/activity/scooper_background_v1.png",
-    "assets/sprites/cdn/ui/activity/shop_background_v1.png"
+    "assets/sprites/cdn/ui/character_refs",
+    "assets/sprites/cdn/ui/memory",
+    "assets/sprites/cdn/ui/cards",
+    "assets/sprites/cdn/ui/gacha",
+    "assets/sprites/cdn/ui/rewards",
+    "assets/sprites/cdn/ui/arena_ranks",
+    "assets/sprites/cdn/ui/dungeon",
+    "assets/sprites/cdn/ui/home",
+    "assets/sprites/cdn/ui/scooper_equipment",
+    "assets/sprites/cdn/ui/scooper_abilities",
+    "assets/sprites/cdn/ui/treasure",
+    "assets/sprites/cdn/ui/activity"
   ],
   "phase1_cdn_roots": [
     "assets/sprites/cdn/ui/character_refs",
