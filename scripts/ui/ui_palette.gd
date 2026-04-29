@@ -61,6 +61,7 @@ const FONT_SIZE_BODY_LG    := 20
 const FONT_SIZE_BODY       := 18
 const FONT_SIZE_LABEL      := 16
 const FONT_SIZE_SMALL      := 14
+const FONT_SIZE_CAPTION    := FONT_SIZE_SMALL
 const FONT_SIZE_TINY       := 12
 
 

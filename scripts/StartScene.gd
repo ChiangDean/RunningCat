@@ -1236,8 +1236,8 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 			_submit_guest_register()
 			return
 		if _guest_account_exists_recovery_attempted and response_code == 401:
-			var guest_login_message: String = str(error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED)
-			_set_status(guest_login_message, true)
+			var recovered_guest_login_message: String = str(error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED)
+			_set_status(recovered_guest_login_message, true)
 			return
 		var guest_login_message: String = str(error_payload.get("message") if error_payload.get("message") != null else UiText.START_STATUS_LOGIN_FAILED)
 		_set_status(guest_login_message, true)

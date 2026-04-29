@@ -43,7 +43,7 @@ const BOSS_WARNING_TEXTURE := preload("res://assets/sprites/ui/warning/boss_warn
 const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png.png")
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
 const RESOURCE_POOP_TEXTURE := preload("res://assets/sprites/ui/rewards/poop_count.png")
-const PROFILE_AVATAR_TEXTURE := preload("res://assets/sprites/cdn/ui/character_refs/black_cat/black_cat_icon_v1.png")
+const PROFILE_AVATAR_TEXTURE_PATH := "res://assets/sprites/cdn/ui/character_refs/black_cat/black_cat_icon_v1.png"
 const REWARD_DEFAULT_SFX := preload("res://assets/audio/sfx/rewards/ui_reward_float_default.mp3")
 const REWARD_SFX_BY_KEY := {
 	"gold": preload("res://assets/audio/sfx/rewards/reward_gold.mp3"),
@@ -744,7 +744,7 @@ func _build_ui() -> void:
 	_top_avatar_rect = top_bar_root.get_node("Avatar") as TextureRect
 	AssetResolver.apply_profile_avatar_texture(_top_avatar_rect, GameState.get_profile_avatar_id())
 	if _top_avatar_rect.texture == null:
-		_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
+		_top_avatar_rect.texture = AssetResolver.load_texture(PROFILE_AVATAR_TEXTURE_PATH)
 	var avatar_circle_material := ShaderMaterial.new()
 	avatar_circle_material.shader = Shader.new()
 	avatar_circle_material.shader.code = "shader_type canvas_item;\nvoid fragment(){\n\tvec2 uv = UV - vec2(0.5);\n\tif (length(uv) > 0.5) {\n\t\tdiscard;\n\t}\n\tCOLOR = texture(TEXTURE, UV) * COLOR;\n}\n"
@@ -2541,7 +2541,7 @@ func _refresh_ui() -> void:
 	if _top_avatar_rect != null:
 		AssetResolver.apply_profile_avatar_texture(_top_avatar_rect, GameState.get_profile_avatar_id())
 		if _top_avatar_rect.texture == null:
-			_top_avatar_rect.texture = PROFILE_AVATAR_TEXTURE
+			_top_avatar_rect.texture = AssetResolver.load_texture(PROFILE_AVATAR_TEXTURE_PATH)
 	if _top_exp_bar != null and _top_progress_value_label != null:
 		var top_profile: Dictionary = GameState.scooper_profile_data
 		var top_scooper_level: int
