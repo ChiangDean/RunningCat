@@ -23,6 +23,7 @@ const ONBOARDING_OWNER_AVATAR_PATH := UI_LOCAL_ROOT + "onboarding/onboarding_own
 const ONBOARDING_GENERIC_CAT_PATH := UI_LOCAL_ROOT + "onboarding/onboarding_generic_cat_v3.png"
 const DEFAULT_ICON_PLACEHOLDER_PATH := CAT_CARD_EMPTY_SILHOUETTE
 const DEFAULT_BACKGROUND_SLOT := "activity"
+const SHARED_OVERLAY_BACKGROUND_PATH := UI_CDN_ACTIVITY_ROOT + "activity_background_v1.png"
 const DEFAULT_GACHA_FRAME_KEY := "common"
 const CAT_CARD_SQUARE_FRAMES := {
 	"common": UI_CDN_CARDS_ROOT + "square/cat_card_square_common.png",
@@ -49,18 +50,18 @@ const CAT_TYPE_ICONS := {
 }
 
 const BACKGROUNDS := {
-	"activity": UI_CDN_ACTIVITY_ROOT + "activity_background_v1.png",
-	"arena": UI_CDN_ACTIVITY_ROOT + "arena_background_v1.png",
-	"chat": UI_CDN_ACTIVITY_ROOT + "chat_background_v1.png",
-	"combat_trial": UI_LOCAL_ROOT + "combat_trial/bath_trial_bg.svg",
-	"config": UI_CDN_ACTIVITY_ROOT + "config_background_v1.png",
-	"dungeon": UI_CDN_ACTIVITY_ROOT + "dungeon_background_v1.png",
-	"enhance": UI_CDN_ACTIVITY_ROOT + "enhance_background_v1.png",
-	"expedition": UI_CDN_ACTIVITY_ROOT + "activity_background_v1.png",
-	"gacha": UI_CDN_ACTIVITY_ROOT + "gacha_background_v1.png",
-	"mail": UI_CDN_ACTIVITY_ROOT + "mail_background_v1.png",
-	"scooper": UI_CDN_ACTIVITY_ROOT + "scooper_background_v1.png",
-	"shop": UI_CDN_ACTIVITY_ROOT + "shop_background_v1.png",
+	"activity": SHARED_OVERLAY_BACKGROUND_PATH,
+	"arena": SHARED_OVERLAY_BACKGROUND_PATH,
+	"chat": SHARED_OVERLAY_BACKGROUND_PATH,
+	"combat_trial": SHARED_OVERLAY_BACKGROUND_PATH,
+	"config": SHARED_OVERLAY_BACKGROUND_PATH,
+	"dungeon": SHARED_OVERLAY_BACKGROUND_PATH,
+	"enhance": SHARED_OVERLAY_BACKGROUND_PATH,
+	"expedition": SHARED_OVERLAY_BACKGROUND_PATH,
+	"gacha": SHARED_OVERLAY_BACKGROUND_PATH,
+	"mail": SHARED_OVERLAY_BACKGROUND_PATH,
+	"scooper": SHARED_OVERLAY_BACKGROUND_PATH,
+	"shop": SHARED_OVERLAY_BACKGROUND_PATH,
 }
 
 const CAT_ICONS := {
