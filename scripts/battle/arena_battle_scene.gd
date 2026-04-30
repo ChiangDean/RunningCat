@@ -3,8 +3,10 @@ extends Node2D
 
 const BATTLE_BG_TEXTURE := preload("res://assets/sprites/ui/battle_background_homey_v1.png")
 const AdaptiveViewportScript = preload("res://scripts/ui/adaptive_viewport.gd")
-const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
-const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
+const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v4.png")
+const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v4.png")
+const RESULT_VICTORY_SHEET_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v4_animation/sheet-transparent.png")
+const RESULT_DEFEAT_SHEET_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v4_animation/sheet-transparent.png")
 
 const MAX_CATS_ON_FIELD := 5
 
@@ -20,6 +22,10 @@ const SKILL_SLOT_H := 90.0
 const RESULT_OVERLAY_OFFSET_Y := -200.0
 const RESULT_OVERLAY_START_SCALE := 0.56
 const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
+const RESULT_ANIMATION_FRAME_SIZE := Vector2i(512, 512)
+const RESULT_ANIMATION_COLUMNS := 3
+const RESULT_ANIMATION_FRAME_COUNT := 6
+const RESULT_ANIMATION_FRAME_DURATION := 0.12
 const BATTLE_START_DELAY_SECONDS := 1.0
 
 var _player_team: Node2D
@@ -527,6 +533,7 @@ func _show_result_overlay(is_win: bool) -> Control:
 	display.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	display.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	overlay.add_child(display)
+	_start_result_overlay_animation(display, RESULT_VICTORY_SHEET_TEXTURE if is_win else RESULT_DEFEAT_SHEET_TEXTURE)
 
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
@@ -534,6 +541,46 @@ func _show_result_overlay(is_win: bool) -> Control:
 	tween.tween_property(overlay, "scale", Vector2(RESULT_OVERLAY_OVERSHOOT_SCALE, RESULT_OVERLAY_OVERSHOOT_SCALE), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_property(overlay, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	return overlay
+
+
+func _build_result_animation_frames(sheet_texture: Texture2D) -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	if sheet_texture == null:
+		return frames
+	for frame_index: int in range(RESULT_ANIMATION_FRAME_COUNT):
+		var atlas_texture: AtlasTexture = AtlasTexture.new()
+		atlas_texture.atlas = sheet_texture
+		var column: int = frame_index % RESULT_ANIMATION_COLUMNS
+		var row: int = floori(float(frame_index) / float(RESULT_ANIMATION_COLUMNS))
+		atlas_texture.region = Rect2(
+			float(column * RESULT_ANIMATION_FRAME_SIZE.x),
+			float(row * RESULT_ANIMATION_FRAME_SIZE.y),
+			float(RESULT_ANIMATION_FRAME_SIZE.x),
+			float(RESULT_ANIMATION_FRAME_SIZE.y)
+		)
+		frames.append(atlas_texture)
+	return frames
+
+
+func _start_result_overlay_animation(display: TextureRect, sheet_texture: Texture2D) -> void:
+	if display == null or sheet_texture == null:
+		return
+	var frames: Array[Texture2D] = _build_result_animation_frames(sheet_texture)
+	if frames.is_empty():
+		return
+	_set_result_overlay_animation_frame(display, frames, 0)
+	var animation_tween: Tween = create_tween()
+	animation_tween.bind_node(display)
+	for frame_index: int in range(frames.size()):
+		animation_tween.tween_callback(Callable(self, "_set_result_overlay_animation_frame").bind(display, frames, frame_index))
+		animation_tween.tween_interval(RESULT_ANIMATION_FRAME_DURATION)
+
+
+func _set_result_overlay_animation_frame(display: TextureRect, frames: Array[Texture2D], frame_index: int) -> void:
+	if display == null or not is_instance_valid(display) or frames.is_empty():
+		return
+	var safe_index: int = clampi(frame_index, 0, frames.size() - 1)
+	display.texture = frames[safe_index]
 
 
 func _on_retreat_pressed() -> void:

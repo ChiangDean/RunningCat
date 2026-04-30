@@ -37,8 +37,10 @@ const HOME_SIDE_SHORTCUT_TOGGLE_TAB_TEXTURE := preload("res://assets/sprites/ui/
 const HOME_SIDE_SHORTCUT_TOGGLE_ARROW_PATH := "res://assets/sprites/ui/home/side_shortcuts/side_toggle_arrow.png"
 const HOME_IDLE_REWARD_BUTTON_PATH := "res://assets/sprites/ui/home/action_buttons/idle_reward_button.png"
 const HOME_BATTLE_SPEED_BUTTON_PATH := "res://assets/sprites/ui/home/action_buttons/battle_speed_button.png"
-const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v1.png")
-const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v1.png")
+const RESULT_VICTORY_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v4.png")
+const RESULT_DEFEAT_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v4.png")
+const RESULT_VICTORY_SHEET_TEXTURE := preload("res://assets/sprites/ui/results/victory_overlay_v4_animation/sheet-transparent.png")
+const RESULT_DEFEAT_SHEET_TEXTURE := preload("res://assets/sprites/ui/results/defeat_overlay_v4_animation/sheet-transparent.png")
 const BOSS_WARNING_TEXTURE := preload("res://assets/sprites/ui/warning/boss_warning_compact_overlay_v1.png")
 const RESOURCE_GOLD_TEXTURE := preload("res://assets/sprites/ui/rewards/gold.png.png")
 const RESOURCE_DIAMOND_TEXTURE := preload("res://assets/sprites/ui/rewards/diamonds.png")
@@ -195,6 +197,10 @@ const RESULT_OVERLAY_OFFSET_Y := -200.0
 const RESULT_OVERLAY_START_SCALE := 0.56
 const RESULT_OVERLAY_OVERSHOOT_SCALE := 1.10
 const RESULT_OVERLAY_DISPLAY_SCALE := 0.8
+const RESULT_ANIMATION_FRAME_SIZE := Vector2i(512, 512)
+const RESULT_ANIMATION_COLUMNS := 3
+const RESULT_ANIMATION_FRAME_COUNT := 6
+const RESULT_ANIMATION_FRAME_DURATION := 0.12
 const BOSS_WARNING_DURATION_SECONDS := 3.0
 const BOSS_WARNING_DISPLAY_W := 700.0
 const BOSS_WARNING_DISPLAY_H := 468.0
@@ -333,6 +339,7 @@ var _free_speed_boost_mult: float = 1.0
 var _free_speed_boost_remaining_uses: int = FREE_SPEED_BOOST_MAX_USES
 var _boss_warning_flash_tween: Tween
 var _boss_warning_pulse_tween: Tween
+var _result_animation_tween: Tween
 var _current_enemy_cats: Array = []
 var _adaptive_content_origin: Vector2 = Vector2.ZERO
 
@@ -2738,6 +2745,7 @@ func _start_battle() -> void:
 
 
 func _start_battle_internal() -> void:
+	_stop_result_overlay_animation()
 	if _result_display != null:
 		_result_display.texture = null
 		_result_display.visible = false
@@ -2850,13 +2858,15 @@ func _show_result_overlay(is_win: bool) -> void:
 		return
 
 	var overlay_texture: Texture2D = RESULT_VICTORY_TEXTURE if is_win else RESULT_DEFEAT_TEXTURE
-	_show_center_overlay(overlay_texture, true)
+	var overlay_sheet: Texture2D = RESULT_VICTORY_SHEET_TEXTURE if is_win else RESULT_DEFEAT_SHEET_TEXTURE
+	_show_center_overlay(overlay_texture, true, overlay_sheet)
 
 
-func _show_center_overlay(texture: Texture2D, fill_screen: bool = false) -> void:
+func _show_center_overlay(texture: Texture2D, fill_screen: bool = false, animation_sheet: Texture2D = null) -> void:
 	if _result_backdrop == null or _result_display == null or texture == null:
 		return
 
+	_stop_result_overlay_animation()
 	_stop_boss_warning_overlay_fx()
 	_set_boss_warning_overlay_content_visible(not fill_screen)
 	if fill_screen:
@@ -2868,6 +2878,7 @@ func _show_center_overlay(texture: Texture2D, fill_screen: bool = false) -> void
 			RESULT_OVERLAY_OFFSET_Y + ((SH - result_overlay_size.y) * 0.5)
 		)
 		_result_display.visible = true
+		_start_result_overlay_animation(_result_display, animation_sheet)
 		if _boss_warning_overlay != null:
 			_boss_warning_overlay.visible = false
 	else:
@@ -2899,6 +2910,52 @@ func _play_boss_warning_overlay() -> void:
 	_show_center_overlay(BOSS_WARNING_TEXTURE, false)
 	_refresh_boss_warning_overlay_content()
 	_start_boss_warning_overlay_fx()
+
+
+func _build_result_animation_frames(sheet_texture: Texture2D) -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	if sheet_texture == null:
+		return frames
+	for frame_index: int in range(RESULT_ANIMATION_FRAME_COUNT):
+		var atlas_texture: AtlasTexture = AtlasTexture.new()
+		atlas_texture.atlas = sheet_texture
+		var column: int = frame_index % RESULT_ANIMATION_COLUMNS
+		var row: int = floori(float(frame_index) / float(RESULT_ANIMATION_COLUMNS))
+		atlas_texture.region = Rect2(
+			float(column * RESULT_ANIMATION_FRAME_SIZE.x),
+			float(row * RESULT_ANIMATION_FRAME_SIZE.y),
+			float(RESULT_ANIMATION_FRAME_SIZE.x),
+			float(RESULT_ANIMATION_FRAME_SIZE.y)
+		)
+		frames.append(atlas_texture)
+	return frames
+
+
+func _start_result_overlay_animation(display: TextureRect, sheet_texture: Texture2D) -> void:
+	if display == null or sheet_texture == null:
+		return
+	var frames: Array[Texture2D] = _build_result_animation_frames(sheet_texture)
+	if frames.is_empty():
+		return
+	_set_result_overlay_animation_frame(display, frames, 0)
+	_result_animation_tween = create_tween()
+	_result_animation_tween.bind_node(display)
+	for frame_index: int in range(frames.size()):
+		_result_animation_tween.tween_callback(Callable(self, "_set_result_overlay_animation_frame").bind(display, frames, frame_index))
+		_result_animation_tween.tween_interval(RESULT_ANIMATION_FRAME_DURATION)
+
+
+func _set_result_overlay_animation_frame(display: TextureRect, frames: Array[Texture2D], frame_index: int) -> void:
+	if display == null or not is_instance_valid(display) or frames.is_empty():
+		return
+	var safe_index: int = clampi(frame_index, 0, frames.size() - 1)
+	display.texture = frames[safe_index]
+
+
+func _stop_result_overlay_animation() -> void:
+	if _result_animation_tween != null:
+		_result_animation_tween.kill()
+		_result_animation_tween = null
 
 
 func _refresh_boss_warning_overlay_content() -> void:
@@ -2958,6 +3015,7 @@ func _stop_boss_warning_overlay_fx() -> void:
 
 
 func _hide_center_overlay() -> void:
+	_stop_result_overlay_animation()
 	_stop_boss_warning_overlay_fx()
 	if _result_backdrop != null:
 		_result_backdrop.visible = false
