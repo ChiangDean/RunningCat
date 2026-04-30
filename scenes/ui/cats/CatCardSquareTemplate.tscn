@@ -28,10 +28,10 @@ stretch_mode = 6
 
 [node name="TypeIcon" type="TextureRect" parent="." unique_id=858657682]
 layout_mode = 0
-offset_left = 394.0
-offset_top = 64.0
-offset_right = 478.0
-offset_bottom = 148.0
+offset_left = 354.0
+offset_top = 21.0
+offset_right = 514.0
+offset_bottom = 181.0
 mouse_filter = 2
 texture = ExtResource("3")
 expand_mode = 1
@@ -40,66 +40,66 @@ stretch_mode = 5
 [node name="RarityLabel" type="Label" parent="." unique_id=227261098]
 layout_mode = 0
 offset_left = 38.0
-offset_top = 50.0
+offset_top = 22.0
 offset_right = 160.0
-offset_bottom = 170.0
+offset_bottom = 159.0
 theme_override_colors/font_color = Color(1, 0.93, 0.72, 1)
 theme_override_colors/font_outline_color = Color(0.12, 0.08, 0.05, 0.95)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 39
+theme_override_constants/outline_size = 15
+theme_override_font_sizes/font_size = 60
 text = "N"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="LevelLabel" type="Label" parent="." unique_id=960751155]
 layout_mode = 0
-offset_left = 176.0
-offset_top = 70.0
-offset_right = 354.0
-offset_bottom = 125.0
+offset_left = 180.0
+offset_top = 64.0
+offset_right = 344.0
+offset_bottom = 119.0
 theme_override_colors/font_color = Color(1, 0.93, 0.72, 1)
 theme_override_colors/font_outline_color = Color(0.12, 0.08, 0.05, 0.95)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 32
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 36
 text = "Lv.120"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Portrait" type="TextureRect" parent="." unique_id=108537395]
 layout_mode = 0
-offset_left = 80.0
-offset_top = 205.0
-offset_right = 440.0
-offset_bottom = 565.0
+offset_left = 48.0
+offset_top = 185.0
+offset_right = 472.0
+offset_bottom = 584.0
 mouse_filter = 2
 texture = ExtResource("2")
 stretch_mode = 5
 
 [node name="NameLabel" type="Label" parent="." unique_id=865579714]
 layout_mode = 0
-offset_left = 126.0
-offset_top = 674.0
-offset_right = 394.0
-offset_bottom = 735.0
+offset_left = 78.0
+offset_top = 657.0
+offset_right = 441.0
+offset_bottom = 739.0
 theme_override_colors/font_color = Color(1, 0.93, 0.72, 1)
 theme_override_colors/font_outline_color = Color(0.12, 0.08, 0.05, 0.95)
-theme_override_constants/outline_size = 6
+theme_override_constants/outline_size = 12
 theme_override_fonts/font = SubResource("FontVariation_card_name_bold")
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 50
 text = "Milk Cat"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="RankLabel" type="Label" parent="." unique_id=582830414]
 layout_mode = 0
-offset_left = 130.0
-offset_top = 574.0
-offset_right = 205.0
-offset_bottom = 630.0
+offset_left = 118.0
+offset_top = 579.0
+offset_right = 204.0
+offset_bottom = 661.0
 theme_override_colors/font_color = Color(1, 0.93, 0.72, 1)
 theme_override_colors/font_outline_color = Color(0.12, 0.08, 0.05, 0.95)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 34
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 40
 text = "30"
 horizontal_alignment = 1
 vertical_alignment = 1
