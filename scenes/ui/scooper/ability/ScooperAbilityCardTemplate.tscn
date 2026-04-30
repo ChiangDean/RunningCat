@@ -3,7 +3,7 @@
 [ext_resource type="Theme" uid="uid://b2vhdk7k3wwmo" path="res://resources/default_theme.tres" id="1"]
 [ext_resource type="Texture2D" uid="uid://cxuk30ilrjkb7" path="res://assets/sprites/ui/common/content_s_default_uncheck_v1.png" id="2"]
 [ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="3"]
-[ext_resource type="Texture2D" uid="uid://3ispmsnkb4cm" path="res://assets/sprites/cdn/ui/scooper_abilities/triple_speed.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/sprites/cdn/ui/scooper_abilities/triple_speed.png" id="4"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.19, 0.17, 0.15, 0)

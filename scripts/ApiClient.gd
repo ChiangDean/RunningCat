@@ -26,6 +26,11 @@ var _pending_daily_task_events: Dictionary = {}
 
 
 func _ready() -> void:
+	if GameState.api_base_url.strip_edges().is_empty():
+		var resolved_api_base_url: String = RuntimeConfig.get_api_base_url("")
+		if not resolved_api_base_url.is_empty():
+			GameState.api_base_url = resolved_api_base_url
+
 	for i in range(POOL_SIZE):
 		var http := HTTPRequest.new()
 		http.timeout = REQUEST_TIMEOUT

@@ -5,13 +5,13 @@
 [ext_resource type="Texture2D" uid="uid://d3t6ulbaubpos" path="res://assets/sprites/ui/common/content_m2_default_v1.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://c4xrlbul504g4" path="res://assets/sprites/ui/common/button_m_default_v1.png" id="4"]
 [ext_resource type="Texture2D" uid="uid://b3j1goddylwph" path="res://assets/sprites/ui/common/function_bar_m_v1.png" id="4_vb5tr"]
-[ext_resource type="Texture2D" uid="uid://c3nd53fjl233k" path="res://assets/sprites/cdn/ui/dungeon/cat_food.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/cdn/ui/dungeon/cat_food.png" id="5"]
 [ext_resource type="Texture2D" uid="uid://dqvpwaof3j1ld" path="res://assets/sprites/ui/rewards/item_slot_frame_wood.png" id="6"]
 [ext_resource type="Texture2D" uid="uid://bgnlujru3nkkk" path="res://assets/sprites/ui/rewards/item_slot_overlay_mask.png" id="7"]
-[ext_resource type="Texture2D" uid="uid://c3js2wqott8ic" path="res://assets/sprites/cdn/ui/rewards/cat_food.png" id="8"]
-[ext_resource type="Texture2D" uid="uid://cf1k0vs51rj6g" path="res://assets/sprites/cdn/ui/rewards/special_cat_food.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/sprites/cdn/ui/rewards/cat_food.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/sprites/cdn/ui/rewards/special_cat_food.png" id="9"]
 [ext_resource type="Texture2D" uid="uid://bakdwyhnhd6rl" path="res://assets/sprites/ui/rewards/diamonds.png" id="10"]
-[ext_resource type="Texture2D" uid="uid://xhh112x8cax4" path="res://assets/sprites/cdn/ui/rewards/trap_cages.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/sprites/cdn/ui/rewards/trap_cages.png" id="11"]
 
 [node name="DungeonContentEditor" type="Control" unique_id=701516299]
 layout_mode = 3

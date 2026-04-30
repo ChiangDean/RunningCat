@@ -40,7 +40,7 @@ func open_overlay_scene(scene_path: String) -> void:
 		_home_shell.call_deferred("show_overlay_scene", scene_path)
 		return
 	_pending_overlay_scene_path = scene_path
-	get_tree().change_scene_to_file(HOME_SHELL_SCENE_PATH)
+	call_deferred("_change_to_home_shell_for_pending_overlay")
 
 
 func toggle_overlay_scene(scene_path: String) -> void:
@@ -61,3 +61,9 @@ func return_to_battle() -> void:
 
 func get_current_overlay_scene_path() -> String:
 	return _current_overlay_scene_path
+
+
+func _change_to_home_shell_for_pending_overlay() -> void:
+	if _pending_overlay_scene_path == "":
+		return
+	get_tree().change_scene_to_file(HOME_SHELL_SCENE_PATH)

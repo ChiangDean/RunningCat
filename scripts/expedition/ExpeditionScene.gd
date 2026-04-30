@@ -23,7 +23,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	var now_unix: int = Time.get_unix_time_from_system()
+	var now_unix: int = int(Time.get_unix_time_from_system())
 	var should_refresh: bool = false
 	for zone_key_variant: Variant in _countdown_labels.keys():
 		var entry_variant: Variant = _countdown_labels.get(zone_key_variant, {})
@@ -167,7 +167,7 @@ func _get_active_expedition_count() -> int:
 
 func _get_claimable_expedition_count() -> int:
 	var claimable_count: int = 0
-	var now_unix: int = Time.get_unix_time_from_system()
+	var now_unix: int = int(Time.get_unix_time_from_system())
 	for expedition_variant: Variant in GameState.expedition_data:
 		if not (expedition_variant is Dictionary):
 			continue
@@ -262,7 +262,7 @@ func _make_zone_card(zone: Dictionary) -> Control:
 		"completesAtUnixSeconds": int(expedition.get("completesAtUnixSeconds", 0)),
 	}
 
-	action_button.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - Time.get_unix_time_from_system(), 0))
+	action_button.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - int(Time.get_unix_time_from_system()), 0))
 	action_button.disabled = true
 	UiPalette.apply_button_kind(action_button, "neutral")
 	return card
@@ -612,8 +612,8 @@ func _get_cat_display_name(cat_id: String) -> String:
 
 
 func _format_remaining_time(seconds_left: int) -> String:
-	var hours: int = seconds_left / 3600
-	var minutes: int = (seconds_left % 3600) / 60
+	var hours: int = floori(float(seconds_left) / 3600.0)
+	var minutes: int = floori(float(seconds_left % 3600) / 60.0)
 	var seconds: int = seconds_left % 60
 	return UiText.EXPEDITION_TIME_FORMAT % [hours, minutes, seconds]
 

@@ -257,7 +257,6 @@ static func _ensure_card_hit_button(card: Control) -> Button:
 	var action_texture: TextureRect = card.get_node("ActionButton") as TextureRect
 	var button: Button = Button.new()
 	button.name = "HitButton"
-	button.layout_mode = 0
 	button.offset_left = action_texture.offset_left
 	button.offset_top = action_texture.offset_top
 	button.offset_right = action_texture.offset_right
