@@ -81,6 +81,9 @@ func _build_ui() -> void:
 	var shell_root: Control = SHELL_SCENE.instantiate() as Control
 	add_child(shell_root)
 
+	var background: TextureRect = shell_root.get_node("Background") as TextureRect
+	var dim: ColorRect = shell_root.get_node("Dim") as ColorRect
+	var top_mask: ColorRect = shell_root.get_node("TopMask") as ColorRect
 	var content_root: Control = shell_root.get_node("ContentRoot") as Control
 	var content_frame: TextureRect = shell_root.get_node("ContentRoot/Frame") as TextureRect
 	var submenu_root: Control = shell_root.get_node("SubmenuBarRoot") as Control
@@ -90,6 +93,7 @@ func _build_ui() -> void:
 	_tab_header_desc = shell_root.get_node("ContentRoot/SubmenuDescription") as Label
 	_resource_label = shell_root.get_node("ContentRoot/SummaryLeft") as Label
 	_tab_header_summary = shell_root.get_node("ContentRoot/SummaryRight") as Label
+	OverlaySceneChrome.apply_submenu_shell_background(background, dim, top_mask, "scooper")
 	_refresh_resource_label()
 
 	tab_host.clip_contents = true

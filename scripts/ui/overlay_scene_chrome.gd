@@ -126,9 +126,7 @@ static func _build_submenu_shell(scene: Control, background_slot: String, back_p
 	var summary_left_label: Label = shell_root.get_node("ContentRoot/SummaryLeft") as Label
 	var summary_right_label: Label = shell_root.get_node("ContentRoot/SummaryRight") as Label
 
-	_apply_shell_background(background, background_slot)
-	dim.color = Color(0.03, 0.02, 0.03, 0.56)
-	top_mask.color = Color(0.03, 0.03, 0.04, 0.62)
+	apply_submenu_shell_background(background, dim, top_mask, background_slot)
 	_apply_shell_header(title_label, desc_label, summary_left_label, summary_right_label, options)
 
 	var show_header: bool = _should_show_shell_header(options)
@@ -220,7 +218,7 @@ static func make_card_panel(accent: Color = CARD_BORDER, fill: Color = CARD_FILL
 	return panel
 
 
-static func _apply_shell_background(background: TextureRect, slot: String) -> void:
+static func apply_submenu_shell_background(background: TextureRect, dim: ColorRect, top_mask: ColorRect, slot: String) -> void:
 	if background == null:
 		return
 	AssetResolver.apply_background_texture(background, slot)
@@ -232,6 +230,10 @@ static func _apply_shell_background(background: TextureRect, slot: String) -> vo
 	material.shader = AssetResolver.BACKGROUND_SHADER
 	material.set_shader_parameter("desaturate_strength", 0.42)
 	background.material = material
+	if dim != null:
+		dim.color = Color(0.03, 0.02, 0.03, 0.56)
+	if top_mask != null:
+		top_mask.color = Color(0.03, 0.03, 0.04, 0.62)
 
 
 static func _should_show_shell_header(options: Dictionary) -> bool:
