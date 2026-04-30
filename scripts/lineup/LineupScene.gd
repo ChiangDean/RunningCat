@@ -348,7 +348,8 @@ func _make_team_slot_card(_slot_index: int, member: Dictionary, host_size: Vecto
 		"frame_margin": 0,
 		"card_border": Color(0.0, 0.0, 0.0, 0.0),
 		"selected_card_border": Color(0.0, 0.0, 0.0, 0.0),
-		"title_color": Color(0.42, 0.28, 0.15, 1.0) if is_filled else EMPTY_SLOT_TEXT_COLOR,
+		"title_color": CatRosterCard.TITLE_COLOR if is_filled else EMPTY_SLOT_TEXT_COLOR,
+		"title_outline_color": CatRosterCard.TITLE_OUTLINE,
 		"title_font_size": 13,
 		"show_type_icon": is_filled,
 		"show_rarity_label": is_filled,
@@ -435,7 +436,8 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 		"frame_margin": 0,
 		"card_border": Color(0.0, 0.0, 0.0, 0.0),
 		"selected_card_border": Color(0.0, 0.0, 0.0, 0.0),
-		"title_color": Color(0.42, 0.28, 0.15, 1.0),
+		"title_color": CatRosterCard.TITLE_COLOR,
+		"title_outline_color": CatRosterCard.TITLE_OUTLINE,
 	})
 	card.custom_minimum_size = Vector2(146.0, 168.0)
 	card.size_flags_horizontal = 0

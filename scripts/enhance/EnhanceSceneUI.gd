@@ -121,7 +121,7 @@ static func build_ui(scene) -> void:
 	scene._cat_hscroll.resized.connect(Callable(scene, "_refresh_cat_card_sizes"))
 
 	scene._cats_container = GridContainer.new()
-	scene._cats_container.columns = 4
+	scene._cats_container.columns = 3
 	scene._cats_container.add_theme_constant_override("separation", 12)
 	scene._cats_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scene._cat_hscroll.add_child(scene._cats_container)
@@ -140,7 +140,7 @@ static func build_ui(scene) -> void:
 	scene._catalog_hscroll.resized.connect(Callable(scene, "_refresh_catalog_card_sizes"))
 
 	scene._catalog_container = GridContainer.new()
-	scene._catalog_container.columns = 4
+	scene._catalog_container.columns = 3
 	scene._catalog_container.add_theme_constant_override("separation", 12)
 	scene._catalog_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scene._catalog_hscroll.add_child(scene._catalog_container)
@@ -652,12 +652,13 @@ static func _make_cat_card(scene, cat_id: String, player_cat: PlayerCatData, is_
 		"cat_type": cat_data.cat_type if cat_data != null else "base",
 		"rarity_key": cat_data.rarity if cat_data != null else "common",
 		"whole_card_pressed": Callable(scene, "_on_cat_button_pressed").bind(cat_id),
-		"card_height": 232.0,
+		"card_height": 284.0,
 		"icon_size": Vector2(110.0, 110.0),
 		"frame_margin": 0,
 		"card_border": Color(0.0, 0.0, 0.0, 0.0),
 		"selected_card_border": Color(0.0, 0.0, 0.0, 0.0),
-		"title_color": Color(0.42, 0.28, 0.15, 1.0),
+		"title_color": CatRosterCard.TITLE_COLOR,
+		"title_outline_color": CatRosterCard.TITLE_OUTLINE,
 	})
 	RedDotService.refresh_dot(CatRosterCard.get_badge_target(card), RedDotService.can_rank_up_cat(player_cat))
 	return card
@@ -676,12 +677,13 @@ static func _make_catalog_cat_card(scene, cat_id: String, cat_data: CatData) -> 
 		"cat_type": cat_data.cat_type,
 		"rarity_key": cat_data.rarity,
 		"whole_card_pressed": Callable(scene, "_on_cat_button_pressed").bind(cat_id),
-		"card_height": 232.0,
+		"card_height": 284.0,
 		"icon_size": Vector2(110.0, 110.0),
 		"frame_margin": 0,
 		"card_border": Color(0.0, 0.0, 0.0, 0.0),
 		"selected_card_border": Color(0.0, 0.0, 0.0, 0.0),
-		"title_color": Color(0.42, 0.28, 0.15, 1.0),
+		"title_color": CatRosterCard.TITLE_COLOR,
+		"title_outline_color": CatRosterCard.TITLE_OUTLINE,
 	})
 
 
@@ -704,17 +706,18 @@ static func _refresh_grid_card_sizes(scroll: ScrollContainer, grid: GridContaine
 		viewport_width -= scrollbar.size.x
 	if viewport_width <= 0.0:
 		return
-	var card_side: float = floor((viewport_width - spacing * float(columns - 1)) / float(columns))
-	card_side = maxf(120.0, card_side)
+	var card_width: float = floor((viewport_width - spacing * float(columns - 1)) / float(columns))
+	card_width = maxf(112.0, card_width)
+	var card_height: float = floor(card_width / CatRosterCard.CARD_RATIO)
 	grid.custom_minimum_size = Vector2(
-		card_side * float(columns) + spacing * float(columns - 1),
+		card_width * float(columns) + spacing * float(columns - 1),
 		0.0
 	)
 	for child: Node in grid.get_children():
 		var card := child as Control
 		if card == null:
 			continue
-		card.custom_minimum_size = Vector2(card_side, card_side)
+		card.custom_minimum_size = Vector2(card_width, card_height)
 		card.update_minimum_size()
 	grid.queue_sort()
 	grid.update_minimum_size()

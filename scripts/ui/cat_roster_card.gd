@@ -6,10 +6,10 @@ const LineupTeamTemplateScene = preload("res://scenes/ui/lineup/CatCardLineupTea
 const LineupOwnedTemplateScene = preload("res://scenes/ui/lineup/CatCardLineupOwnedTemplate.tscn")
 const EnhanceListTemplateScene = preload("res://scenes/ui/cats/CatCardEnhanceListTemplate.tscn")
 
-const CARD_RATIO := 1.0
+const CARD_RATIO := 0.6666667
 const FRAME_MARGIN := 6.0
-const TITLE_COLOR := Color(0.42, 0.28, 0.15, 1.0)
-const TITLE_OUTLINE := Color(0.96, 0.92, 0.81, 0.86)
+const TITLE_COLOR := Color(1.0, 0.93, 0.72, 1.0)
+const TITLE_OUTLINE := Color(0.12, 0.08, 0.05, 0.95)
 const BADGE_TARGET_META_KEY := "_badge_target"
 
 
@@ -78,7 +78,7 @@ static func build(options: Dictionary) -> PanelContainer:
 		"rarity_text": _format_rarity_label(rarity_key),
 		"level_text": "Lv.%d" % level_value,
 		"name_text": title_text,
-		"rank_text": "R%d" % rank_value,
+		"rank_text": str(rank_value),
 		"title_color": title_color,
 		"title_outline": title_outline,
 		"show_type_icon": show_type_icon,
@@ -191,7 +191,18 @@ static func _measure_template_size(template: Control) -> Vector2:
 
 
 static func _format_rarity_label(rarity_key: String) -> String:
-	var text: String = rarity_key.strip_edges()
-	if text == "":
-		return "COMMON"
-	return text.to_upper()
+	var normalized: String = rarity_key.strip_edges().to_lower()
+	match normalized:
+		"n", "common":
+			return "N"
+		"r", "rare", "uncommon":
+			return "R"
+		"sr", "epic", "fine", "special":
+			return "SR"
+		"ssr", "legendary", "precious", "excellent":
+			return "SSR"
+		"sp", "master":
+			return "SP"
+	if normalized == "":
+		return "N"
+	return normalized.to_upper()
