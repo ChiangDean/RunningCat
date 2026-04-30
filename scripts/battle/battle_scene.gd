@@ -234,6 +234,7 @@ var _boss_btn: Button
 var _result_display: TextureRect
 var _result_backdrop: Control
 var _boss_warning_overlay: Control
+var _boss_warning_frame: TextureRect
 var _boss_warning_icon: TextureRect
 var _boss_warning_text_label: Label
 var _skill_panel: Control
@@ -1003,6 +1004,7 @@ func _build_ui() -> void:
 	)
 	_boss_warning_overlay.visible = false
 	_result_backdrop.add_child(_boss_warning_overlay)
+	_boss_warning_frame = _boss_warning_overlay.get_node("WarningFrame") as TextureRect
 	_boss_warning_icon = _boss_warning_overlay.get_node("Icon") as TextureRect
 	_boss_warning_text_label = _boss_warning_overlay.get_node("TextLabel") as Label
 
@@ -2927,11 +2929,15 @@ func _start_boss_warning_overlay_fx() -> void:
 	_stop_boss_warning_overlay_fx()
 	_boss_warning_overlay.scale = Vector2.ONE
 	_boss_warning_overlay.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	if _boss_warning_frame != null:
+		_boss_warning_frame.texture = BOSS_WARNING_TEXTURE
+		_boss_warning_frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
-	_boss_warning_flash_tween = create_tween()
-	_boss_warning_flash_tween.set_loops()
-	_boss_warning_flash_tween.tween_property(_boss_warning_overlay, "modulate:a", BOSS_WARNING_FLASH_ALPHA, BOSS_WARNING_FLASH_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_boss_warning_flash_tween.tween_property(_boss_warning_overlay, "modulate:a", 1.0, BOSS_WARNING_FLASH_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if _boss_warning_frame != null:
+		_boss_warning_flash_tween = create_tween()
+		_boss_warning_flash_tween.set_loops()
+		_boss_warning_flash_tween.tween_property(_boss_warning_frame, "modulate", Color(1.0, 0.55, 0.45, BOSS_WARNING_FLASH_ALPHA), BOSS_WARNING_FLASH_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		_boss_warning_flash_tween.tween_property(_boss_warning_frame, "modulate", Color(1.0, 1.0, 1.0, 1.0), BOSS_WARNING_FLASH_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	_boss_warning_pulse_tween = create_tween()
 	_boss_warning_pulse_tween.set_loops()
@@ -2946,6 +2952,9 @@ func _stop_boss_warning_overlay_fx() -> void:
 	if _boss_warning_pulse_tween != null:
 		_boss_warning_pulse_tween.kill()
 		_boss_warning_pulse_tween = null
+	if _boss_warning_frame != null:
+		_boss_warning_frame.texture = BOSS_WARNING_TEXTURE
+		_boss_warning_frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
 func _hide_center_overlay() -> void:
