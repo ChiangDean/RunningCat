@@ -197,11 +197,11 @@ static func _format_rarity_label(rarity_key: String) -> String:
 			return "N"
 		"r", "rare", "uncommon":
 			return "R"
-		"sr", "epic", "fine", "special":
+		"sr", "super_rare", "epic", "fine":
 			return "SR"
-		"ssr", "legendary", "precious", "excellent":
+		"ssr", "ultra_rare", "legendary", "precious", "excellent":
 			return "SSR"
-		"sp", "master":
+		"sp", "special", "master":
 			return "SP"
 	if normalized == "":
 		return "N"

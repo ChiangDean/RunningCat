@@ -18,47 +18,49 @@ offset_right = 520.0
 offset_bottom = 780.0
 
 [node name="TypeIcon" parent="." index="1" unique_id=858657682]
-offset_left = 394.0
-offset_top = 64.0
-offset_right = 478.0
-offset_bottom = 148.0
+offset_left = 354.0
+offset_top = 21.0
+offset_right = 514.0
+offset_bottom = 181.0
 
 [node name="RarityLabel" parent="." index="2" unique_id=227261098]
 offset_left = 38.0
-offset_top = 50.0
+offset_top = 22.0
 offset_right = 160.0
-offset_bottom = 170.0
-theme_override_font_sizes/font_size = 39
+offset_bottom = 159.0
+theme_override_constants/outline_size = 15
+theme_override_font_sizes/font_size = 60
 
 [node name="LevelLabel" parent="." index="3" unique_id=960751155]
-offset_left = 176.0
-offset_top = 70.0
-offset_right = 354.0
-offset_bottom = 125.0
-theme_override_font_sizes/font_size = 32
+offset_left = 180.0
+offset_top = 64.0
+offset_right = 344.0
+offset_bottom = 119.0
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 36
 
 [node name="Portrait" parent="." index="4" unique_id=108537395]
-offset_left = 80.0
-offset_top = 205.0
-offset_right = 440.0
-offset_bottom = 565.0
+offset_left = 48.0
+offset_top = 185.0
+offset_right = 472.0
+offset_bottom = 584.0
 texture = SubResource("CompressedTexture2D_a3w5j")
 expand_mode = 0
 
 [node name="NameLabel" parent="." index="5" unique_id=865579714]
-offset_left = 126.0
-offset_top = 674.0
-offset_right = 394.0
-offset_bottom = 735.0
-theme_override_constants/outline_size = 6
+offset_left = 78.0
+offset_top = 657.0
+offset_right = 441.0
+offset_bottom = 739.0
+theme_override_constants/outline_size = 12
 theme_override_fonts/font = SubResource("FontVariation_enhance_name_bold")
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 50
 text = "三花貓"
 
 [node name="RankLabel" parent="." index="6" unique_id=582830414]
-offset_left = 130.0
-offset_top = 574.0
-offset_right = 205.0
-offset_bottom = 630.0
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 34
+offset_left = 118.0
+offset_top = 579.0
+offset_right = 204.0
+offset_bottom = 661.0
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 40
