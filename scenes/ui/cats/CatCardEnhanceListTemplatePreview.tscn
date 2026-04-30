@@ -14,51 +14,51 @@ base_font = ExtResource("3")
 [node name="CatCardEnhanceListTemplate" unique_id=816321270 instance=ExtResource("1")]
 
 [node name="CardFrame" parent="." index="0" unique_id=406829292]
-offset_right = 710.0
-offset_bottom = 816.91113
+offset_right = 520.0
+offset_bottom = 780.0
 
 [node name="TypeIcon" parent="." index="1" unique_id=858657682]
-offset_left = -19.0
-offset_top = 39.0
-offset_right = 173.0
-offset_bottom = 231.0
+offset_left = 394.0
+offset_top = 64.0
+offset_right = 478.0
+offset_bottom = 148.0
 
 [node name="RarityLabel" parent="." index="2" unique_id=227261098]
-offset_left = 141.0
-offset_top = 94.0
-offset_right = 563.0
-offset_bottom = 162.0
-theme_override_font_sizes/font_size = 42
+offset_left = 38.0
+offset_top = 50.0
+offset_right = 160.0
+offset_bottom = 170.0
+theme_override_font_sizes/font_size = 39
 
 [node name="LevelLabel" parent="." index="3" unique_id=960751155]
-offset_left = 102.0
-offset_top = 702.0
-offset_right = 203.0
-offset_bottom = 759.0
-theme_override_font_sizes/font_size = 42
+offset_left = 176.0
+offset_top = 70.0
+offset_right = 354.0
+offset_bottom = 125.0
+theme_override_font_sizes/font_size = 32
 
 [node name="Portrait" parent="." index="4" unique_id=108537395]
-offset_left = 74.0
-offset_top = 177.0
-offset_right = 628.0
-offset_bottom = 686.0
+offset_left = 80.0
+offset_top = 205.0
+offset_right = 440.0
+offset_bottom = 565.0
 texture = SubResource("CompressedTexture2D_a3w5j")
 expand_mode = 0
 
 [node name="NameLabel" parent="." index="5" unique_id=865579714]
-offset_left = 98.0
-offset_top = 690.0
-offset_right = 575.0
-offset_bottom = 763.0
-theme_override_constants/outline_size = 10
+offset_left = 126.0
+offset_top = 674.0
+offset_right = 394.0
+offset_bottom = 735.0
+theme_override_constants/outline_size = 6
 theme_override_fonts/font = SubResource("FontVariation_enhance_name_bold")
-theme_override_font_sizes/font_size = 50
+theme_override_font_sizes/font_size = 30
 text = "三花貓"
 
 [node name="RankLabel" parent="." index="6" unique_id=582830414]
-offset_left = 566.0
-offset_top = 636.0
-offset_right = 696.0
-offset_bottom = 761.0
-theme_override_constants/outline_size = 10
-theme_override_font_sizes/font_size = 50
+offset_left = 130.0
+offset_top = 574.0
+offset_right = 205.0
+offset_bottom = 630.0
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 34
