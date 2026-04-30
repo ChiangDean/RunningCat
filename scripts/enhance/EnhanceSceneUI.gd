@@ -204,7 +204,7 @@ static func populate_catalog_buttons(scene) -> void:
 	if scene._selected_cat_id == "" and cat_ids.size() > 0:
 		scene._selected_cat_id = cat_ids[0]
 	if scene._selected_cat_id != "" and not cat_ids.has(scene._selected_cat_id):
-		scene._selected_cat_id = cat_ids[0]
+		scene._selected_cat_id = cat_ids[0] if cat_ids.size() > 0 else ""
 
 	if cat_ids.is_empty():
 		var empty_label := Label.new()
