@@ -125,6 +125,12 @@ const HOME_ACTION_BUTTON_LABEL_SIZE := Vector2(126.0, 46.0)
 const HOME_ACTION_BUTTON_LABEL_FONT_SIZE := 18
 const HOME_ACTION_BUTTON_TOP_OFFSET_Y := -58.0
 const HOME_ACTION_BUTTON_IDLE_GAP_X := 107.0
+const HOME_ACTION_SLOT_ROOT_SIZE := Vector2(106.0, 59.0)
+const HOME_ACTION_SLOT_LABEL_OFFSET_Y := 25.0
+const HOME_ACTION_SLOT_LABEL_SIZE := Vector2(106.0, 34.0)
+const HOME_ACTION_SLOT_LABEL_FONT_SIZE := 10
+const HOME_ACTION_SLOT_FOUR_FALLBACK := Vector2(429.0, 38.0)
+const HOME_ACTION_SLOT_FIVE_FALLBACK := Vector2(551.0, 38.0)
 const SKILL_MODE_LABEL_IDLE := Color(0.37, 0.24, 0.12, 1.0)
 const SKILL_MODE_LABEL_ACTIVE := Color(0.23, 0.14, 0.06, 1.0)
 const SKILL_MODE_LABEL_PRESSED := Color(0.61, 0.34, 0.11, 1.0)
@@ -925,7 +931,7 @@ func _build_ui() -> void:
 	_apply_speed_unlocks()
 	_highlight_speed_btn(_speed_1x)
 	_refresh_skill_mode_buttons()
-	var speed_visual_parts: Array = _build_home_action_visual_button(HOME_BATTLE_SPEED_BUTTON_PATH, Callable(self, "_cycle_speed"))
+	var speed_visual_parts: Array = _build_home_action_slot_button(HOME_BATTLE_SPEED_BUTTON_PATH, Callable(self, "_cycle_speed"))
 	_speed_boost_visual_root = speed_visual_parts[0] as Control
 	_speed_boost_visual_btn = speed_visual_parts[1] as TextureButton
 	_speed_boost_status_label = speed_visual_parts[2] as Label
@@ -940,7 +946,7 @@ func _build_ui() -> void:
 	_sandbox_btn.pressed.connect(_show_sandbox_dialog)
 	_skill_panel.add_child(_sandbox_btn)
 	_sandbox_btn.visible = false
-	var idle_visual_parts: Array = _build_home_action_visual_button(HOME_IDLE_REWARD_BUTTON_PATH, Callable(self, "_show_sandbox_dialog"))
+	var idle_visual_parts: Array = _build_home_action_slot_button(HOME_IDLE_REWARD_BUTTON_PATH, Callable(self, "_show_sandbox_dialog"))
 	_idle_reward_visual_root = idle_visual_parts[0] as Control
 	_idle_reward_visual_btn = idle_visual_parts[1] as TextureButton
 	_idle_reward_status_label = idle_visual_parts[2] as Label
@@ -1421,13 +1427,21 @@ func _layout_sandbox_btn() -> void:
 			_speed_1x.position.y
 		)
 	if _speed_boost_visual_root != null:
-		var speed_right_x: float = HOME_SIDE_SHORTCUT_RIGHT_X + HOME_SIDE_SHORTCUT_BUTTON_SIZE.x - HOME_ACTION_BUTTON_ROOT_SIZE.x
-		_speed_boost_visual_root.position = Vector2(speed_right_x, _speed_1x.position.y + HOME_ACTION_BUTTON_TOP_OFFSET_Y)
+		_speed_boost_visual_root.position = _get_home_action_slot_position(2, HOME_ACTION_SLOT_FIVE_FALLBACK)
 	if _idle_reward_visual_root != null:
-		if _speed_boost_visual_root != null:
-			_idle_reward_visual_root.position = _speed_boost_visual_root.position + Vector2(-HOME_ACTION_BUTTON_IDLE_GAP_X, 0.0)
-		else:
-			_idle_reward_visual_root.position = _sandbox_btn.position + Vector2((_sandbox_btn.size.x - HOME_ACTION_BUTTON_ROOT_SIZE.x) * 0.5, HOME_ACTION_BUTTON_TOP_OFFSET_Y)
+		_idle_reward_visual_root.position = _get_home_action_slot_position(1, HOME_ACTION_SLOT_FOUR_FALLBACK)
+
+
+func _get_home_action_slot_position(slot_offset: int, fallback: Vector2) -> Vector2:
+	var skill_filter_control: Control = _get_bottom_hud_control("SkillPanel/SkillFilterButton")
+	if skill_filter_control == null:
+		return fallback
+	var slot_step_x: float = 122.0
+	var chat_control: Control = _get_bottom_hud_control("SkillPanel/ChatModeButton")
+	var scoop_control: Control = _get_bottom_hud_control("SkillPanel/ScoopButton")
+	if chat_control != null and scoop_control != null:
+		slot_step_x = scoop_control.position.x - chat_control.position.x
+	return skill_filter_control.position + Vector2(slot_step_x * float(slot_offset), 0.0)
 
 
 func _refresh_skill_mode_buttons() -> void:
@@ -1570,6 +1584,46 @@ func _build_home_action_visual_button(texture_path: String, action: Callable) ->
 	status_label.add_theme_color_override("font_outline_color", HOME_SIDE_SHORTCUT_LABEL_OUTLINE)
 	status_label.add_theme_constant_override("outline_size", 5)
 	UiFonts.apply_noto(status_label, HOME_ACTION_BUTTON_LABEL_FONT_SIZE)
+	root.add_child(status_label)
+	return [root, button, status_label]
+
+
+func _build_home_action_slot_button(texture_path: String, action: Callable) -> Array:
+	var root: Control = Control.new()
+	root.size = HOME_ACTION_SLOT_ROOT_SIZE
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var button: TextureButton = TextureButton.new()
+	button.position = Vector2.ZERO
+	button.size = HOME_ACTION_SLOT_ROOT_SIZE
+	button.focus_mode = Control.FOCUS_NONE
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.ignore_texture_size = true
+	button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	button.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	button.texture_normal = _load_runtime_texture(texture_path)
+	button.texture_hover = button.texture_normal
+	button.texture_pressed = button.texture_normal
+	button.texture_disabled = button.texture_normal
+	button.pressed.connect(UiAudio.play_ui_click)
+	if action.is_valid():
+		button.pressed.connect(action)
+	root.add_child(button)
+
+	var status_label: Label = Label.new()
+	status_label.position = Vector2(0.0, HOME_ACTION_SLOT_LABEL_OFFSET_Y)
+	status_label.size = HOME_ACTION_SLOT_LABEL_SIZE
+	status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.add_theme_constant_override("line_spacing", -2)
+	status_label.add_theme_font_size_override("font_size", HOME_ACTION_SLOT_LABEL_FONT_SIZE)
+	status_label.add_theme_color_override("font_color", HOME_SIDE_SHORTCUT_LABEL_COLOR)
+	status_label.add_theme_color_override("font_outline_color", HOME_SIDE_SHORTCUT_LABEL_OUTLINE)
+	status_label.add_theme_constant_override("outline_size", 4)
+	UiFonts.apply_noto(status_label, HOME_ACTION_SLOT_LABEL_FONT_SIZE)
 	root.add_child(status_label)
 	return [root, button, status_label]
 
