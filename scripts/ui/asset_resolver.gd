@@ -739,12 +739,51 @@ const SCOOPER_EQUIPMENT := {
 }
 
 const SCOOPER_ABILITIES := {
-	1: UI_CDN_SCOOPER_ABILITIES_ROOT + "diligent_scooper.png",
-	2: UI_CDN_SCOOPER_ABILITIES_ROOT + "golden_scooper.png",
-	3: UI_CDN_SCOOPER_ABILITIES_ROOT + "overtime_photo.png",
-	4: UI_CDN_SCOOPER_ABILITIES_ROOT + "double_speed.png",
-	5: UI_CDN_SCOOPER_ABILITIES_ROOT + "triple_speed.png",
 	6: UI_CDN_SCOOPER_ABILITIES_ROOT + "instant_finish.png",
+	7: UI_CDN_SCOOPER_ABILITIES_ROOT + "scaled_scoop_by_level.png",
+	8: UI_CDN_SCOOPER_ABILITIES_ROOT + "diamond_scoop_slot.png",
+	9: UI_CDN_SCOOPER_ABILITIES_ROOT + "battle_speed_charge.png",
+	10: UI_CDN_SCOOPER_ABILITIES_ROOT + "battle_speed_rate_upgrade.png",
+	11: UI_CDN_SCOOPER_ABILITIES_ROOT + "idle_time_license.png",
+	12: UI_CDN_SCOOPER_ABILITIES_ROOT + "idle_reward_license.png",
+	13: UI_CDN_SCOOPER_ABILITIES_ROOT + "ad_free.png",
+	14: UI_CDN_SCOOPER_ABILITIES_ROOT + "friend_capacity_license.png",
+	15: UI_CDN_SCOOPER_ABILITIES_ROOT + "lifetime_privilege.png",
+	16: UI_CDN_SCOOPER_ABILITIES_ROOT + "monthly_privilege.png",
+	17: UI_CDN_SCOOPER_ABILITIES_ROOT + "unlock_team_slot_2.png",
+	18: UI_CDN_SCOOPER_ABILITIES_ROOT + "unlock_team_slot_3.png",
+	19: UI_CDN_SCOOPER_ABILITIES_ROOT + "unlock_team_slot_4.png",
+	20: UI_CDN_SCOOPER_ABILITIES_ROOT + "unlock_team_slot_5.png",
+}
+
+const SCOOPER_ABILITY_KEY_TO_ID := {
+	"battle_skip": 6,
+	"instant_finish": 6,
+	"scaled_scoop_by_level": 7,
+	"diamond_scoop_slot": 8,
+	"battle_speed_charge": 9,
+	"battle_speed_rate_upgrade": 10,
+	"idle_time_license": 11,
+	"idle_reward_license": 12,
+	"ad_free": 13,
+	"friend_capacity_license": 14,
+	"lifetime_privilege": 15,
+	"monthly_privilege": 16,
+	"unlock_team_slot_2": 17,
+	"unlock_team_slot_3": 18,
+	"unlock_team_slot_4": 19,
+	"unlock_team_slot_5": 20,
+}
+
+const ACHIEVEMENT_SPECIAL_ABILITY_REWARDS := {
+	1: 7,
+	4: 8,
+	170: 17,
+	171: 18,
+	172: 9,
+	173: 10,
+	174: 19,
+	175: 20,
 }
 
 const SHOP_BUNDLES := {
@@ -905,11 +944,13 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 		match folder:
 			"currency", "consumable":
 				if key == "gold":
-					return UI_LOCAL_ROOT + "rewards/gold.png.png"
+					return UI_LOCAL_ROOT + "rewards/money.png"
 				if key == "diamonds":
 					return UI_LOCAL_ROOT + "rewards/diamonds.png"
 				if key == "collision_coin":
 					return UI_LOCAL_ROOT + "rewards/collision_coin.png"
+				if key == "trap_points":
+					return UI_CDN_REWARDS_ROOT + "trap_points.png"
 				if key == "evil_cat_power_icon":
 					return UI_LOCAL_ROOT + "rewards/evil_cat_power_icon.png"
 				if key == "poop_count":
@@ -923,6 +964,8 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 				return UI_CDN_ARENA_RANKS_ROOT + "%s.png" % key
 			"memory":
 				return UI_CDN_MEMORY_ROOT + "%s.png" % key
+			"scooper_ability", "special_ability":
+				return _resolve_scooper_ability_path(key)
 			"treasure":
 				return UI_CDN_TREASURE_ROOT + "%s.png" % key
 			"cat":
@@ -1115,6 +1158,18 @@ static func _get_character_ref_roots(cat_id: String) -> Array[String]:
 	return roots
 
 
+static func _resolve_scooper_ability_path(key_or_id: String) -> String:
+	var normalized: String = key_or_id.strip_edges().to_lower()
+	if normalized == "":
+		return ""
+	if normalized.is_valid_int():
+		return str(SCOOPER_ABILITIES.get(int(normalized), ""))
+	var ability_id: int = int(SCOOPER_ABILITY_KEY_TO_ID.get(normalized, 0))
+	if ability_id <= 0:
+		return ""
+	return str(SCOOPER_ABILITIES.get(ability_id, ""))
+
+
 static func resolve_gacha_frame(result: Dictionary) -> Texture2D:
 	var rarity_key := str(result.get("rarityKey", "")).to_lower()
 	if rarity_key == "":
@@ -1131,7 +1186,47 @@ static func resolve_equipment_icon(item: Dictionary) -> Texture2D:
 
 
 static func resolve_ability_icon(item: Dictionary) -> Texture2D:
-	return resolve_texture_or_placeholder(str(SCOOPER_ABILITIES.get(int(item.get("abilityId", 0)), "")))
+	return resolve_texture_or_placeholder(resolve_ability_icon_path(item))
+
+
+static func resolve_ability_icon_path(item: Dictionary) -> String:
+	for id_key: String in ["abilityId", "ability_id", "id", "rewardReferenceId", "targetCatalogId", "itemId"]:
+		var ability_id: int = int(item.get(id_key, 0))
+		if ability_id > 0:
+			var id_path: String = str(SCOOPER_ABILITIES.get(ability_id, ""))
+			if id_path != "":
+				return id_path
+
+	for key_key: String in ["abilityKey", "ability_key", "key", "catalogKey"]:
+		var ability_key: String = str(item.get(key_key, "")).strip_edges().to_lower()
+		var key_path: String = _resolve_scooper_ability_path(ability_key)
+		if key_path != "":
+			return key_path
+	return ""
+
+
+static func resolve_achievement_special_ability_icon_path(achievement_id: int) -> String:
+	var ability_id: int = int(ACHIEVEMENT_SPECIAL_ABILITY_REWARDS.get(achievement_id, 0))
+	if ability_id <= 0:
+		return ""
+	return str(SCOOPER_ABILITIES.get(ability_id, ""))
+
+
+static func resolve_reward_icon_path(reward: Dictionary) -> String:
+	var raw_path: String = resolve_catalog_path(str(reward.get("imagePath", "")))
+	if raw_path != "":
+		return raw_path
+
+	var reward_type: String = str(reward.get("rewardType", "")).strip_edges().to_lower()
+	match reward_type:
+		"diamond":
+			return resolve_catalog_path("catalog/currency/diamonds")
+		"trapcage":
+			return resolve_catalog_path("catalog/consumable/trap_cages")
+		"specialability":
+			return resolve_ability_icon_path(reward)
+		_:
+			return ""
 
 
 static func resolve_bundle_art(bundle: Dictionary) -> Texture2D:

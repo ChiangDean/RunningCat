@@ -333,6 +333,7 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	player_data.gold = int(data.get("gold", player_data.gold))
 	player_data.diamonds = int(data.get("diamonds", player_data.diamonds))
 	player_data.trap_points = int(data.get("trapPoints", player_data.trap_points))
+	player_data.collision_coin = int(data.get("collisionCoin", player_data.collision_coin))
 	player_data.trap_cages = int(data.get("trapCages", player_data.trap_cages))
 	player_data.whisker_shards = int(data.get("whiskerShards", player_data.whisker_shards))
 	player_data.last_quit_time = int(data.get("lastQuitTimeUnixSeconds", player_data.last_quit_time))
@@ -1100,6 +1101,7 @@ func apply_wallet_snapshot(data: Dictionary) -> void:
 	player_data.gold = int(data.get("gold", player_data.gold))
 	player_data.diamonds = int(data.get("diamonds", player_data.diamonds))
 	player_data.trap_points = int(data.get("trapPoints", player_data.trap_points))
+	player_data.collision_coin = int(data.get("collisionCoin", player_data.collision_coin))
 	player_data.cat_food = int(data.get("catFood", player_data.cat_food))
 	player_data.special_cat_food = int(data.get("specialCatFood", player_data.special_cat_food))
 	player_data.trap_cages = int(data.get("trapCages", player_data.trap_cages))
@@ -1673,6 +1675,7 @@ func update_shop(data: Dictionary) -> void:
 		return
 	player_data.diamonds = int(shop_data.get("diamonds", player_data.diamonds))
 	player_data.trap_points = int(shop_data.get("trapPoints", player_data.trap_points))
+	player_data.collision_coin = int(shop_data.get("collisionCoin", player_data.collision_coin))
 	player_data.trap_cages = int(shop_data.get("trapCages", player_data.trap_cages))
 	var purchase_counts: Dictionary = {}
 	var bundles_variant: Variant = shop_data.get("bundles", [])

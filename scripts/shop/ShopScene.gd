@@ -9,6 +9,7 @@ const TAB_COLLISION_COIN := "collision_coin"
 const TAB_DIAMOND_STORE := "diamond_store"
 const TAB_POINT := "point_bundle"
 const TRAP_POINTS_CURRENCY_ID := 3
+const COLLISION_COIN_CURRENCY_ID := 4
 const COLLISION_COIN_ICON_PATH := "res://assets/sprites/ui/rewards/collision_coin.png"
 const ARENA_TICKET_ICON_PATH := "res://assets/sprites/cdn/ui/rewards/arena_ticket.png"
 
@@ -639,11 +640,19 @@ func _resolve_bundle_price_info(bundle: Dictionary) -> Dictionary:
 		return {
 			"iconPath": AssetResolver.resolve_catalog_path("catalog/currency/diamonds"),
 			"amount": price_amount,
+			"currencyName": UiText.REWARD_DIAMONDS,
 		}
-	if currency_type == "trappoints":
+	if currency_type == "trappoints" or int(bundle.get("priceCurrencyId", 0)) == TRAP_POINTS_CURRENCY_ID:
+		return {
+			"iconPath": AssetResolver.resolve_catalog_path("catalog/currency/trap_points"),
+			"amount": price_amount,
+			"currencyName": UiText.BACKPACK_TRAP_POINTS,
+		}
+	if currency_type == "collisioncoin" or int(bundle.get("priceCurrencyId", 0)) == COLLISION_COIN_CURRENCY_ID:
 		return {
 			"iconPath": COLLISION_COIN_ICON_PATH,
 			"amount": price_amount,
+			"currencyName": UiText.SHOP_SUBMENU_COLLISION_COIN,
 		}
 	return {
 		"prefixText": SHOP_PRICE_LABEL_NTD,
@@ -711,18 +720,7 @@ func _set_bundle_action_button_content(button: Button, label_text: String, icon_
 
 
 func _resolve_shop_reward_image_path(reward: Dictionary) -> String:
-	var raw_path: String = AssetResolver.resolve_catalog_path(str(reward.get("imagePath", "")))
-	if raw_path != "":
-		return raw_path
-
-	var reward_type: String = str(reward.get("rewardType", "")).to_lower()
-	match reward_type:
-		"diamond":
-			return AssetResolver.resolve_catalog_path("catalog/currency/diamonds")
-		"trapcage":
-			return AssetResolver.resolve_catalog_path("catalog/consumable/trap_cages")
-		_:
-			return ""
+	return AssetResolver.resolve_reward_icon_path(reward)
 
 
 func _build_collision_coin_card(item: Dictionary) -> Control:
@@ -924,7 +922,7 @@ func _confirm_collision_coin_purchase(item: Dictionary) -> void:
 
 
 func _purchase_collision_coin(amount: int) -> void:
-	_api_client.purchase_trap_points(amount, Callable(self, "_on_purchase_collision_coin_completed").bind(amount))
+	_api_client.purchase_collision_coin(amount, Callable(self, "_on_purchase_collision_coin_completed").bind(amount))
 
 
 func _on_purchase_collision_coin_completed(success: bool, data: Variant, error: Dictionary, amount: int) -> void:
@@ -959,9 +957,11 @@ func _on_purchase_arena_tickets_completed(success: bool, data: Variant, error: D
 func _confirm_bundle_purchase(bundle: Dictionary) -> void:
 	var bundle_id: int = int(bundle.get("bundleId", 0))
 	var bundle_name: String = str(bundle.get("displayName", UiText.SHOP_BUNDLE_DEFAULT_NAME))
-	var price_amount: int = int(bundle.get("priceAmount", 0))
+	var price_info: Dictionary = _resolve_bundle_price_info(bundle)
+	var price_amount: int = int(price_info.get("amount", int(bundle.get("priceAmount", 0))))
+	var currency_name: String = str(price_info.get("currencyName", UiText.SHOP_SUBMENU_COLLISION_COIN))
 	_pending_bundle_purchase = bundle.duplicate(true)
-	var message: String = UiText.SHOP_BUNDLE_PURCHASE_CONFIRM_BODY % [price_amount, bundle_name]
+	var message: String = UiText.SHOP_BUNDLE_PURCHASE_CONFIRM_BODY % [price_amount, currency_name, bundle_name]
 	DialogManager.show_confirm(
 		UiText.SHOP_PURCHASE_BUNDLE_TITLE,
 		message,
@@ -1016,7 +1016,7 @@ func _should_redirect_to_collision_coin_store(error: Dictionary) -> bool:
 		return false
 	if str(error.get("code", "")) != "SHOP.NOT_ENOUGH_PAYMENT_CURRENCY":
 		return false
-	return int(_pending_bundle_purchase.get("priceCurrencyId", 0)) == TRAP_POINTS_CURRENCY_ID
+	return int(_pending_bundle_purchase.get("priceCurrencyId", 0)) == COLLISION_COIN_CURRENCY_ID
 
 
 func _get_bundles_for_tab(tab_key: String) -> Array:
@@ -1237,7 +1237,7 @@ func _is_bundle_visible(bundle: Dictionary) -> bool:
 		return true
 	var price_currency_type: String = str(bundle.get("priceCurrencyType", "")).to_lower()
 	var price_currency_id: int = int(bundle.get("priceCurrencyId", 0))
-	return price_currency_type != "trappoints" and price_currency_id != TRAP_POINTS_CURRENCY_ID
+	return price_currency_type != "collisioncoin" and price_currency_id != COLLISION_COIN_CURRENCY_ID
 
 
 func _is_daily_free_bundle(bundle: Dictionary) -> bool:
@@ -1302,7 +1302,7 @@ func _get_shell_summary_left() -> String:
 		]
 	return UiText.SHOP_RESOURCE_WITH_COLLISION_COIN_FORMAT % [
 		GameState.player_data.diamonds,
-		GameState.player_data.trap_points,
+		GameState.player_data.collision_coin,
 		GameState.player_data.trap_cages,
 	]
 

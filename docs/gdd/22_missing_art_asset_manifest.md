@@ -821,7 +821,7 @@
 ## G. 貨幣與消耗品 Icon
 
 1. 存放位置：`assets/sprites/ui/rewards/`
-   檔名：`gold.png`
+   檔名：`money.png`
    Prompt：`請生成 256x256、透明背景的像素風貨幣 icon，主題是 Gold，金幣堆或金色貨幣袋，清楚好辨識。`
 
 2. 存放位置：`assets/sprites/ui/rewards/`
@@ -833,26 +833,54 @@
    Prompt：`請生成 256x256、透明背景的像素風貨幣 icon，主題是 Trap Points，像誘捕代幣或特殊交換幣，與一般金幣有明顯區別。`
 
 4. 存放位置：`assets/sprites/ui/rewards/`
+   檔名：`collision_coin.png`
+   Prompt：`請生成 256x256、透明背景的像素風貨幣 icon，主題是 Collision Coin，付費商店代幣，需與誘捕點數和一般金幣有明顯區別。`
+
+5. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`gold_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是金幣地下城券，參考 arena_ticket.png 的金邊票券風格，中間以金幣或金色爪印識別。`
+
+6. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`diamond_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是鑽石地下城券，參考 arena_ticket.png 的金邊票券風格，中間以藍色鑽石識別。`
+
+7. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`whisker_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是鬍鬚地下城券，參考 arena_ticket.png 的金邊票券風格，中間以貓咪鬍鬚識別。`
+
+8. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`cat_food_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是乾糧地下城券，參考 arena_ticket.png 的金邊票券風格，中間以貓糧碗識別。`
+
+9. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`poop_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是屎堆地下城券，參考 arena_ticket.png 的金邊票券風格，以乾淨可愛的屎堆符號識別。`
+
+10. 存放位置：`assets/sprites/cdn/ui/rewards/`
+    檔名：`battle_speed_ticket.png`
+    Prompt：`請生成 512x512、透明背景的票券 icon，主題是戰鬥加速券，參考 arena_ticket.png 的金邊票券風格，中間以快轉或速度符號識別。`
+
+11. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`cat_food.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Cat Food，飼料顆粒或飼料盆，溫暖可愛。`
 
-5. 存放位置：`assets/sprites/ui/rewards/`
+12. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`special_cat_food.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Special Cat Food，高級貓糧，外觀比一般貓糧更珍貴。`
 
-6. 存放位置：`assets/sprites/ui/rewards/`
+13. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`trap_cages.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Trap Cages，小型誘捕籠，結構簡化、輪廓清楚。`
 
-7. 存放位置：`assets/sprites/ui/rewards/`
+14. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`poop_count.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Poop Count，用幽默、乾淨、不卡髒的可愛方式表現鏟屎資源。`
 
-8. 存放位置：`assets/sprites/ui/rewards/`
+15. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`memory_shards.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Memory Shards，像回憶碎片或照片碎片，柔和、有收藏感。`
 
-9. 存放位置：`assets/sprites/ui/rewards/`
+16. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`whisker_shards.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Whisker Shards，像鬍鬚碎片或纖細碎片，乾淨、高級。`
 
@@ -956,29 +984,27 @@
 
 ## K. Scooper 特殊能力 Icon
 
-1. 存放位置：`assets/sprites/ui/scooper_abilities/`
-   檔名：`diligent_scooper.png`
-   Prompt：`請生成 256x256、透明背景的像素風能力 icon，主題是勤勞鏟屎官，表現效率提升與勤勞感。`
+狀態：已補齊 active 特殊能力 ID 6-20，前端統一透過 `AssetResolver.SCOOPER_ABILITIES` 解析。
 
-2. 存放位置：`assets/sprites/ui/scooper_abilities/`
-   檔名：`golden_scooper.png`
-   Prompt：`請生成 256x256、透明背景的像素風能力 icon，主題是黃金鏟屎官，表現高效率與進階感。`
+存放位置：`assets/sprites/cdn/ui/scooper_abilities/`
 
-3. 存放位置：`assets/sprites/ui/scooper_abilities/`
-   檔名：`overtime_photo.png`
-   Prompt：`請生成 256x256、透明背景的像素風能力 icon，主題是加班執照，表現延長掛機時間。`
-
-4. 存放位置：`assets/sprites/ui/scooper_abilities/`
-   檔名：`double_speed.png`
-   Prompt：`請生成 256x256、透明背景的像素風能力 icon，主題是雙倍推進，表現戰鬥 2x 加速。`
-
-5. 存放位置：`assets/sprites/ui/scooper_abilities/`
-   檔名：`triple_speed.png`
-   Prompt：`請生成 256x256、透明背景的像素風能力 icon，主題是三倍推進，表現戰鬥 3x 加速。`
-
-6. 存放位置：`assets/sprites/ui/scooper_abilities/`
-   檔名：`instant_finish.png`
-   Prompt：`請生成 256x256、透明背景的像素風能力 icon，主題是瞬間收工，表現跳過或快速完成。`
+| ID | ability_key | 檔名 | 顯示名稱 |
+| --- | --- | --- | --- |
+| 6 | battle_skip | `instant_finish.png` | 瞬間收工 |
+| 7 | scaled_scoop_by_level | `scaled_scoop_by_level.png` | 勤勞鏟屎官 |
+| 8 | diamond_scoop_slot | `diamond_scoop_slot.png` | 鏟屎執照 |
+| 9 | battle_speed_charge | `battle_speed_charge.png` | 加速次數執照 |
+| 10 | battle_speed_rate_upgrade | `battle_speed_rate_upgrade.png` | 加速速率執照 |
+| 11 | idle_time_license | `idle_time_license.png` | 加班執照 |
+| 12 | idle_reward_license | `idle_reward_license.png` | 營養執照 |
+| 13 | ad_free | `ad_free.png` | 終生免廣告 |
+| 14 | friend_capacity_license | `friend_capacity_license.png` | 好友上限執照 |
+| 15 | lifetime_privilege | `lifetime_privilege.png` | 終生鏟屎官特權 |
+| 16 | monthly_privilege | `monthly_privilege.png` | 每月鏟屎官特權 |
+| 17 | unlock_team_slot_2 | `unlock_team_slot_2.png` | 2隻貓上陣 |
+| 18 | unlock_team_slot_3 | `unlock_team_slot_3.png` | 3隻貓上陣 |
+| 19 | unlock_team_slot_4 | `unlock_team_slot_4.png` | 4隻貓上陣 |
+| 20 | unlock_team_slot_5 | `unlock_team_slot_5.png` | 5隻貓上陣 |
 
 ## 備註
 

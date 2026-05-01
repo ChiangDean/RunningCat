@@ -553,6 +553,12 @@ func purchase_trap_points(trap_point_amount: int, callback: Callable) -> void:
 	}, callback)
 
 
+func purchase_collision_coin(collision_coin_amount: int, callback: Callable) -> void:
+	_api_post("shop/collision-coin/purchase", {
+		"collisionCoinAmount": collision_coin_amount,
+	}, callback)
+
+
 func get_arena_overview(excluded_opponent_ids: Array, callback: Callable) -> void:
 	var path := "arena"
 	var filtered_ids: Array[String] = []

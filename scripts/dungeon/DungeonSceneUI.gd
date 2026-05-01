@@ -7,6 +7,8 @@ const DEFAULT_DUNGEON_ICON_BY_KEY := {
 	"cat_food": "res://assets/sprites/cdn/ui/dungeon/cat_food.png",
 	"diamond": "res://assets/sprites/cdn/ui/dungeon/diamond.png",
 	"whisker": "res://assets/sprites/cdn/ui/dungeon/whisker.png",
+	"poop": "res://assets/sprites/cdn/ui/dungeon/poop.png",
+	"gold": "res://assets/sprites/cdn/ui/dungeon/gold.png",
 }
 
 const DUNGEON_REWARD_KEYS: Array[String] = [

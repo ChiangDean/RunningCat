@@ -131,7 +131,7 @@ assets/
 - `assets/sprites/cdn/ui/scooper_equipment/**`
 - `assets/sprites/cdn/ui/scooper_abilities/**`
 - `assets/sprites/cdn/ui/treasure/**`
-- `assets/sprites/cdn/ui/rewards/{arena_ticket,cat_food,memory_shards,party_cheer_coupon,special_cat_food,trap_cages,trap_points,whisker_shards}.png`
+- `assets/sprites/cdn/ui/rewards/{arena_ticket,battle_speed_ticket,cat_food,cat_food_dungeon_ticket,diamond_dungeon_ticket,gold_dungeon_ticket,memory_shards,party_cheer_coupon,poop_dungeon_ticket,special_cat_food,trap_cages,trap_points,whisker_dungeon_ticket,whisker_shards}.png`
 
 目前第 3 階段已完成 activity 類背景與 preview 搬移：
 
@@ -185,7 +185,7 @@ assets/
 - `assets/sprites/ui/scooper_equipment/**`
 - `assets/sprites/ui/scooper_abilities/**`
 - `assets/sprites/ui/treasure/**`
-- `assets/sprites/ui/rewards/{arena_ticket,cat_food,memory_shards,party_cheer_coupon,special_cat_food,trap_cages,trap_points,whisker_shards}.png`
+- `assets/sprites/ui/rewards/{arena_ticket,battle_speed_ticket,cat_food,cat_food_dungeon_ticket,diamond_dungeon_ticket,gold_dungeon_ticket,memory_shards,party_cheer_coupon,poop_dungeon_ticket,special_cat_food,trap_cages,trap_points,whisker_dungeon_ticket,whisker_shards}.png`
 - `assets/sprites/ui/activity_background_v1.png`
 - `assets/sprites/ui/arena_background_v1.png`
 - `assets/sprites/ui/chat_background_v1.png`
@@ -203,8 +203,8 @@ assets/
 以下資料夾不能整包搬，必須拆內容：
 
 - `assets/sprites/ui/rewards/**`
-  - 已搬 CDN：`arena_ticket.png`、`cat_food.png`、`memory_shards.png`、`party_cheer_coupon.png`、`special_cat_food.png`、`trap_cages.png`、`trap_points.png`、`whisker_shards.png`
-  - 留本地：`collision_coin.png`、`diamonds.png`、`evil_cat_power_icon.png`、`gold.png.png`、`poop_count.png`、`item_slot_frame_*`、`item_slot_overlay_mask*`
+  - 已搬 CDN：`arena_ticket.png`、`battle_speed_ticket.png`、`cat_food.png`、`cat_food_dungeon_ticket.png`、`diamond_dungeon_ticket.png`、`gold_dungeon_ticket.png`、`memory_shards.png`、`party_cheer_coupon.png`、`poop_dungeon_ticket.png`、`special_cat_food.png`、`trap_cages.png`、`trap_points.png`、`whisker_dungeon_ticket.png`、`whisker_shards.png`
+  - 留本地：`collision_coin.png`、`diamonds.png`、`evil_cat_power_icon.png`、`money.png`、`poop_count.png`、`item_slot_frame_*`、`item_slot_overlay_mask*`
 
 - `assets/sprites/ui/home/**`
   - 可搬：活動入口 preview、展示圖、非首屏裝飾圖

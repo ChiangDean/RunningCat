@@ -169,7 +169,7 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 		claimed_time_lbl.text = UiText.SCOOPER_ACHIEVEMENT_CLAIMED_AT % claimed_time_text
 	var reward_info: Dictionary = _parse_reward_display(entry.get("rewardText", ""))
 	reward_lbl.text = str(reward_info.get("label", ""))
-	reward_icon.texture = _resolve_reward_texture(str(reward_info.get("icon_path", "")))
+	reward_icon.texture = _resolve_reward_texture(_resolve_achievement_reward_icon_path(entry, reward_info))
 	reward_icon.visible = reward_icon.texture != null
 	var reward_amount: int = int(reward_info.get("amount", 0))
 	reward_count_lbl.visible = reward_amount > 0
@@ -439,8 +439,30 @@ func _parse_reward_display(value: Variant) -> Dictionary:
 			return {"label": UiText.REWARD_TRAP_CAGE, "amount": amount, "icon_path": "catalog/consumable/trap_cages"}
 		"poop", "poopcount", UiText.REWARD_KEY_ZH_POOP:
 			return {"label": UiText.REWARD_POOP, "amount": amount, "icon_path": "catalog/consumable/poop_count"}
+		"specialability":
+			return {"label": UiText.SCOOPER_TAB_ABILITY, "amount": amount, "icon_path": ""}
 		_:
 			return {"label": name_text, "amount": amount, "icon_path": ""}
+
+
+func _resolve_achievement_reward_icon_path(entry: Dictionary, reward_info: Dictionary) -> String:
+	var icon_path: String = str(reward_info.get("icon_path", ""))
+	if icon_path != "":
+		return icon_path
+
+	var rewards_variant: Variant = entry.get("rewards", [])
+	var rewards: Array = rewards_variant if rewards_variant is Array else []
+	for reward_variant: Variant in rewards:
+		if not (reward_variant is Dictionary):
+			continue
+		var reward: Dictionary = reward_variant
+		if str(reward.get("rewardType", "")).strip_edges().to_lower() != "specialability":
+			continue
+		var direct_path: String = AssetResolver.resolve_reward_icon_path(reward)
+		if direct_path != "":
+			return direct_path
+		return AssetResolver.resolve_achievement_special_ability_icon_path(int(entry.get("achievementId", 0)))
+	return ""
 
 
 func _resolve_reward_texture(icon_path: String) -> Texture2D:
