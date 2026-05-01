@@ -944,11 +944,13 @@ static func resolve_catalog_path(raw_path: Variant) -> String:
 		match folder:
 			"currency", "consumable":
 				if key == "gold":
-					return UI_LOCAL_ROOT + "rewards/gold.png.png"
+					return UI_LOCAL_ROOT + "rewards/money.png"
 				if key == "diamonds":
 					return UI_LOCAL_ROOT + "rewards/diamonds.png"
 				if key == "collision_coin":
 					return UI_LOCAL_ROOT + "rewards/collision_coin.png"
+				if key == "trap_points":
+					return UI_CDN_REWARDS_ROOT + "trap_points.png"
 				if key == "evil_cat_power_icon":
 					return UI_LOCAL_ROOT + "rewards/evil_cat_power_icon.png"
 				if key == "poop_count":

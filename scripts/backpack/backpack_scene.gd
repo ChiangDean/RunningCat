@@ -192,6 +192,7 @@ func _get_currency_items() -> Array:
 		{"path": "catalog/currency/gold", "name": UiText.REWARD_GOLD, "qty": int(player_data.gold)},
 		{"path": "catalog/currency/diamonds", "name": UiText.REWARD_DIAMONDS, "qty": int(player_data.diamonds)},
 		{"path": "catalog/currency/trap_points", "name": UiText.BACKPACK_TRAP_POINTS, "qty": int(player_data.trap_points)},
+		{"path": "catalog/currency/collision_coin", "name": UiText.BACKPACK_COLLISION_COIN, "qty": int(player_data.collision_coin)},
 	]
 
 
@@ -199,7 +200,7 @@ func _get_ticket_items() -> Array:
 	var items: Array = []
 	var arena_overview: Dictionary = GameState.arena_overview_data if GameState.arena_overview_data is Dictionary else {}
 	items.append({
-		"path": "catalog/arena/bronze_1",
+		"path": "catalog/consumable/arena_ticket",
 		"name": UiText.BACKPACK_ARENA_TICKET,
 		"qty": int(arena_overview.get("tickets", 0)),
 	})

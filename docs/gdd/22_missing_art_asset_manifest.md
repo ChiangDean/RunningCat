@@ -821,7 +821,7 @@
 ## G. 貨幣與消耗品 Icon
 
 1. 存放位置：`assets/sprites/ui/rewards/`
-   檔名：`gold.png`
+   檔名：`money.png`
    Prompt：`請生成 256x256、透明背景的像素風貨幣 icon，主題是 Gold，金幣堆或金色貨幣袋，清楚好辨識。`
 
 2. 存放位置：`assets/sprites/ui/rewards/`
@@ -833,26 +833,54 @@
    Prompt：`請生成 256x256、透明背景的像素風貨幣 icon，主題是 Trap Points，像誘捕代幣或特殊交換幣，與一般金幣有明顯區別。`
 
 4. 存放位置：`assets/sprites/ui/rewards/`
+   檔名：`collision_coin.png`
+   Prompt：`請生成 256x256、透明背景的像素風貨幣 icon，主題是 Collision Coin，付費商店代幣，需與誘捕點數和一般金幣有明顯區別。`
+
+5. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`gold_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是金幣地下城券，參考 arena_ticket.png 的金邊票券風格，中間以金幣或金色爪印識別。`
+
+6. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`diamond_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是鑽石地下城券，參考 arena_ticket.png 的金邊票券風格，中間以藍色鑽石識別。`
+
+7. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`whisker_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是鬍鬚地下城券，參考 arena_ticket.png 的金邊票券風格，中間以貓咪鬍鬚識別。`
+
+8. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`cat_food_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是乾糧地下城券，參考 arena_ticket.png 的金邊票券風格，中間以貓糧碗識別。`
+
+9. 存放位置：`assets/sprites/cdn/ui/rewards/`
+   檔名：`poop_dungeon_ticket.png`
+   Prompt：`請生成 512x512、透明背景的票券 icon，主題是屎堆地下城券，參考 arena_ticket.png 的金邊票券風格，以乾淨可愛的屎堆符號識別。`
+
+10. 存放位置：`assets/sprites/cdn/ui/rewards/`
+    檔名：`battle_speed_ticket.png`
+    Prompt：`請生成 512x512、透明背景的票券 icon，主題是戰鬥加速券，參考 arena_ticket.png 的金邊票券風格，中間以快轉或速度符號識別。`
+
+11. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`cat_food.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Cat Food，飼料顆粒或飼料盆，溫暖可愛。`
 
-5. 存放位置：`assets/sprites/ui/rewards/`
+12. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`special_cat_food.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Special Cat Food，高級貓糧，外觀比一般貓糧更珍貴。`
 
-6. 存放位置：`assets/sprites/ui/rewards/`
+13. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`trap_cages.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Trap Cages，小型誘捕籠，結構簡化、輪廓清楚。`
 
-7. 存放位置：`assets/sprites/ui/rewards/`
+14. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`poop_count.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Poop Count，用幽默、乾淨、不卡髒的可愛方式表現鏟屎資源。`
 
-8. 存放位置：`assets/sprites/ui/rewards/`
+15. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`memory_shards.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Memory Shards，像回憶碎片或照片碎片，柔和、有收藏感。`
 
-9. 存放位置：`assets/sprites/ui/rewards/`
+16. 存放位置：`assets/sprites/ui/rewards/`
    檔名：`whisker_shards.png`
    Prompt：`請生成 256x256、透明背景的像素風消耗品 icon，主題是 Whisker Shards，像鬍鬚碎片或纖細碎片，乾淨、高級。`
 
