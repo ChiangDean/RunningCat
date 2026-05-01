@@ -728,6 +728,14 @@ const SCOOPER_EQUIPMENT := {
 	6: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "warm_pad.png",
 	7: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "cardboard_box.png",
 	8: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "toy_doll.png",
+	9: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "catnip_ball.png",
+	10: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "electric_roller.png",
+	11: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "spring_worm_doll.png",
+	12: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "feather_top.png",
+	13: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "glow_fish_line.png",
+	14: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "fake_lizard.png",
+	15: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "shadow_spider.png",
+	16: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "crystal_music_ball.png",
 }
 
 const SCOOPER_ABILITIES := {
