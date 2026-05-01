@@ -711,18 +711,7 @@ func _set_bundle_action_button_content(button: Button, label_text: String, icon_
 
 
 func _resolve_shop_reward_image_path(reward: Dictionary) -> String:
-	var raw_path: String = AssetResolver.resolve_catalog_path(str(reward.get("imagePath", "")))
-	if raw_path != "":
-		return raw_path
-
-	var reward_type: String = str(reward.get("rewardType", "")).to_lower()
-	match reward_type:
-		"diamond":
-			return AssetResolver.resolve_catalog_path("catalog/currency/diamonds")
-		"trapcage":
-			return AssetResolver.resolve_catalog_path("catalog/consumable/trap_cages")
-		_:
-			return ""
+	return AssetResolver.resolve_reward_icon_path(reward)
 
 
 func _build_collision_coin_card(item: Dictionary) -> Control:
