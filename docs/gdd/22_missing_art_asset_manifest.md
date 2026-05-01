@@ -923,7 +923,7 @@
 ## J. Scooper 裝備 Icon
 
 1. 存放位置：`assets/sprites/ui/scooper_equipment/`
-   檔名：`food_bowl.png`
+   檔名：`straw_sleeve.png`
    Prompt：`請生成 256x256、透明背景的像素風裝備 icon，主題是餵食盆，乾淨、可愛、居家。`
 
 2. 存放位置：`assets/sprites/ui/scooper_equipment/`

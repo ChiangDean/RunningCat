@@ -720,7 +720,7 @@ const GACHA_FRAMES := {
 }
 
 const SCOOPER_EQUIPMENT := {
-	1: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "food_bowl.png",
+	1: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "straw_sleeve.png",
 	2: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "scratcher.png",
 	3: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "teaser_wand.png",
 	4: UI_CDN_SCOOPER_EQUIPMENT_ROOT + "grooming_brush.png",
