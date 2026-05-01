@@ -88,6 +88,12 @@ const STAT_TYPE_OPTIONS := [
 	["Accuracy", "命中率"],
 	["MultiHitRate", "連擊率"],
 	["MultiHitDamage", "連擊傷害"],
+	["DungeonDamageBoost", "副本增傷"],
+	["DungeonDamageReduction", "副本減傷"],
+	["LifeSteal", "吸血比率"],
+	["CounterDamageChance", "反傷機率"],
+	["PhysicalDamageBoost", "物理增傷"],
+	["PhysicalDamageReduction", "物理減傷"],
 ]
 
 const VALUE_MODE_OPTIONS := [

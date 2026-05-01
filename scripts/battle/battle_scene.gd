@@ -132,7 +132,7 @@ const SKILL_MODE_LABEL_OUTLINE := Color(0.98, 0.93, 0.84, 0.98)
 const SKILL_MODE_LABEL_OUTLINE_SIZE := 5
 const SKILL_MODE_LABEL_ACTIVE_OUTLINE_SIZE := 6
 const SKILL_MODE_LABEL_FONT_BOOST := 2
-const BATTLE_START_DELAY_SECONDS := 1.0
+const BATTLE_START_DELAY_SECONDS := 0.0
 
 # Skill bar baseline positioned just below BATTLE_Y.
 const SKILL_BAR_Y := BATTLE_Y + 10.0
@@ -1827,10 +1827,8 @@ func _get_home_side_shortcut_defs() -> Array[Dictionary]:
 func _build_home_side_shortcut_button(def: Dictionary) -> Button:
 	var row: int = int(def.get("row", 0))
 	var side: String = str(def.get("side", "left"))
-	var x: float = HOME_SIDE_SHORTCUT_LEFT_X if side == "left" else HOME_SIDE_SHORTCUT_RIGHT_X
-	var y: float = HOME_SIDE_SHORTCUT_TOP_Y + float(row) * (HOME_SIDE_SHORTCUT_BUTTON_SIZE.y + HOME_SIDE_SHORTCUT_ROW_GAP_Y)
 	var button: Button = Button.new()
-	button.position = Vector2(x, y)
+	_position_home_side_shortcut_button(button, side, row)
 	button.size = HOME_SIDE_SHORTCUT_BUTTON_SIZE
 	button.focus_mode = Control.FOCUS_NONE
 	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
@@ -1878,6 +1876,12 @@ func _build_home_side_shortcut_button(def: Dictionary) -> Button:
 	button.set_meta("shortcut_side", side)
 	button.set_meta("feature_key", str(def.get("feature_key", "")))
 	return button
+
+
+func _position_home_side_shortcut_button(button: Button, side: String, row: int) -> void:
+	var x: float = HOME_SIDE_SHORTCUT_LEFT_X if side == "left" else HOME_SIDE_SHORTCUT_RIGHT_X
+	var y: float = HOME_SIDE_SHORTCUT_TOP_Y + float(row) * (HOME_SIDE_SHORTCUT_BUTTON_SIZE.y + HOME_SIDE_SHORTCUT_ROW_GAP_Y)
+	button.position = Vector2(x, y)
 
 
 func _build_home_side_toggle_button(side: String) -> Button:
@@ -1991,14 +1995,20 @@ func _refresh_home_side_shortcut_visibility() -> void:
 		if toggle_button != null:
 			toggle_button.visible = is_home_visible
 			_refresh_home_side_toggle_button(side)
-	for button_variant: Variant in _home_side_shortcut_buttons.values():
-		var button: Button = button_variant as Button
+	var next_visible_rows: Dictionary = {"left": 0, "right": 0}
+	for def: Dictionary in _get_home_side_shortcut_defs():
+		var key: String = str(def.get("key", ""))
+		var button: Button = _home_side_shortcut_buttons.get(key) as Button
 		if button == null:
 			continue
 		var side: String = str(button.get_meta("shortcut_side", ""))
 		var is_collapsed: bool = bool(_home_side_collapsed.get(side, false))
 		var feature_key: String = str(button.get_meta("feature_key", ""))
 		var feature_unlocked: bool = feature_key.is_empty() or GameState.is_feature_unlocked(feature_key)
+		if feature_unlocked:
+			var visible_row: int = int(next_visible_rows.get(side, 0))
+			_position_home_side_shortcut_button(button, side, visible_row)
+			next_visible_rows[side] = visible_row + 1
 		button.visible = is_home_visible and not is_collapsed and feature_unlocked
 
 

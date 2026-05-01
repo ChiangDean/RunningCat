@@ -186,23 +186,151 @@ func _on_unlock_memory_bootstrap_refreshed(refresh_ok: bool, _refresh_data: Vari
 
 
 func _memory_bonus_desc(item: Dictionary) -> String:
-	var stat: String = str(item.get("bonusStatType", ""))
+	var stat: String = _normalize_stat_key(str(item.get("bonusStatType", "")))
 	var target: String = str(item.get("bonusTarget", "All"))
 	var value: float = float(item.get("bonusValue", 0.0))
 	var target_str: String = UiText.SCOOPER_EQUIPMENT_BONUS_ALL if target.to_lower() == "all" else target
-	var stat_str: String = stat
+	var stat_str: String = _memory_stat_label(stat)
+	if _is_percent_memory_stat(stat):
+		return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, stat_str, value * 100.0]
+	return "%s %s +%s" % [target_str, stat_str, _format_flat_memory_value(value)]
+
+
+func _normalize_stat_key(raw_stat: String) -> String:
+	match raw_stat:
+		"Atk":
+			return "atk"
+		"Def":
+			return "defense"
+		"Hp", "MaxHp":
+			return "max_hp"
+		"Speed":
+			return "speed"
+		"AtkPercent":
+			return "atk_percent"
+		"DefPercent":
+			return "def_percent"
+		"HpPercent", "MaxHpPercent":
+			return "max_hp_percent"
+		"CritRate":
+			return "crit_rate"
+		"CritDamage":
+			return "crit_damage"
+		"DamageReduction":
+			return "damage_reduction"
+		"CooldownReduction":
+			return "cooldown_reduction"
+		"ArmorPen":
+			return "armor_pen"
+		"Evasion":
+			return "evasion"
+		"Accuracy":
+			return "accuracy"
+		"MultiHitRate":
+			return "multi_hit_rate"
+		"MultiHitDamage":
+			return "multi_hit_damage"
+		"DungeonDamageBoost":
+			return "dungeon_damage_boost"
+		"DungeonDamageReduction":
+			return "dungeon_damage_reduction"
+		"LifeSteal":
+			return "life_steal"
+		"CounterDamageChance":
+			return "counter_damage_chance"
+		"PhysicalDamageBoost":
+			return "physical_damage_boost"
+		"PhysicalDamageReduction":
+			return "physical_damage_reduction"
+	var result: String = ""
+	for index: int in range(raw_stat.length()):
+		var ch: String = raw_stat.substr(index, 1)
+		if ch >= "A" and ch <= "Z":
+			if index > 0 and not result.ends_with("_"):
+				result += "_"
+			result += ch.to_lower()
+		else:
+			result += ch.to_lower()
+	return result
+
+
+func _memory_stat_label(stat: String) -> String:
 	match stat:
-		"atk_percent", "AtkPercent":
-			stat_str = "ATK"
-		"def_percent", "DefPercent":
-			stat_str = "DEF"
-		"max_hp_percent", "MaxHpPercent":
-			stat_str = "HP"
-		"crit_rate", "CritRate":
-			stat_str = "CRIT"
-		"crit_damage", "CritDamage":
-			stat_str = "CRIT DMG"
-	return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, stat_str, value * 100.0]
+		"atk":
+			return "固定攻擊"
+		"atk_percent":
+			return "攻擊加成"
+		"defense", "def":
+			return "固定防禦"
+		"def_percent":
+			return "防禦加成"
+		"max_hp", "hp":
+			return "固定生命"
+		"max_hp_percent", "hp_percent":
+			return "生命加成"
+		"speed":
+			return "固定速度"
+		"crit_rate":
+			return "暴擊率"
+		"crit_damage":
+			return "暴擊傷害"
+		"damage_reduction":
+			return "傷害減免"
+		"cooldown_reduction":
+			return "冷卻縮減"
+		"armor_pen":
+			return "護甲穿透"
+		"evasion":
+			return "閃避率"
+		"accuracy":
+			return "命中率"
+		"multi_hit_rate":
+			return "連擊率"
+		"multi_hit_damage":
+			return "連擊傷害"
+		"dungeon_damage_boost":
+			return "副本增傷"
+		"dungeon_damage_reduction":
+			return "副本減傷"
+		"life_steal":
+			return "吸血"
+		"counter_damage_chance":
+			return "反傷機率"
+		"physical_damage_boost":
+			return "物理增傷"
+		"physical_damage_reduction":
+			return "物理減傷"
+	return stat.to_upper()
+
+
+func _is_percent_memory_stat(stat: String) -> bool:
+	return stat in [
+		"atk_percent",
+		"def_percent",
+		"max_hp_percent",
+		"hp_percent",
+		"crit_rate",
+		"crit_damage",
+		"damage_reduction",
+		"cooldown_reduction",
+		"armor_pen",
+		"evasion",
+		"accuracy",
+		"multi_hit_rate",
+		"multi_hit_damage",
+		"dungeon_damage_boost",
+		"dungeon_damage_reduction",
+		"life_steal",
+		"counter_damage_chance",
+		"physical_damage_boost",
+		"physical_damage_reduction",
+	]
+
+
+func _format_flat_memory_value(value: float) -> String:
+	if is_equal_approx(value, roundf(value)):
+		return "%d" % int(roundf(value))
+	return "%.1f" % value
 
 
 func _get_memory_placeholder_color(item: Dictionary) -> Color:

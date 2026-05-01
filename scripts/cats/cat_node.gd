@@ -20,6 +20,9 @@ var _animated_sprite: AnimatedSprite2D
 var _static_sprite: Sprite2D
 var _hp_bar_bg: ColorRect
 var _hp_bar_fill: ColorRect
+var _hp_value_label: Label
+var _skill_bar_bg: ColorRect
+var _skill_bar_fill: ColorRect
 var _name_label: Label
 var _skill_bubble_root: Node2D
 var _skill_bubble_panel: PanelContainer
@@ -38,6 +41,8 @@ const BODY_W := 56.0
 const BODY_H := 72.0
 const HP_BAR_W := 64.0
 const HP_BAR_H := 8.0
+const SKILL_BAR_W := 64.0
+const SKILL_BAR_H := 5.0
 const PLAYER_SPRITE_TARGET_SIZE := Vector2(128.0, 128.0)
 const ENEMY_SPRITE_TARGET_SIZE := Vector2(160.0, 160.0)
 const SPRITE_VERTICAL_OFFSET_Y := 10.0
@@ -47,6 +52,8 @@ const SHADOW_OFFSET_Y := -10.0
 const SHADOW_POINT_COUNT := 20
 const SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.22)
 const HP_BAR_OFFSET_Y := 170.0
+const PLAYER_SKILL_BAR_OFFSET_Y := 158.0
+const ENEMY_HP_BAR_OFFSET_Y := 10.0
 const NAME_LABEL_OFFSET_Y := 198.0
 const DAMAGE_DIGIT_SPACING := 18.0
 const DAMAGE_POP_BASE_Y := 172.0
@@ -91,6 +98,7 @@ func setup(id: int, team_name: String, name_str: String, hp: int, file_id: Strin
 	_damage_rng.randomize()
 	_build_visuals()
 	reset_for_spawn()
+	update_hp(current_hp)
 
 
 func _process(_delta: float) -> void:
@@ -126,6 +134,14 @@ func reset_for_spawn() -> void:
 	if _hp_bar_fill != null:
 		_hp_bar_fill.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		_hp_bar_fill.scale = Vector2.ONE
+	if _hp_value_label != null:
+		_hp_value_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	if _skill_bar_bg != null:
+		_skill_bar_bg.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_skill_bar_bg.scale = Vector2.ONE
+	if _skill_bar_fill != null:
+		_skill_bar_fill.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_skill_bar_fill.scale = Vector2.ONE
 	if _name_label != null:
 		_name_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	if _shadow_polygon != null:
@@ -138,8 +154,8 @@ func _build_visuals() -> void:
 
 	_hp_bar_bg = ColorRect.new()
 	_hp_bar_bg.size = Vector2(HP_BAR_W, HP_BAR_H)
-	_hp_bar_bg.position = Vector2(-HP_BAR_W / 2.0, -HP_BAR_OFFSET_Y)
-	_hp_bar_bg.color = Color(0.2, 0.2, 0.2, 1.0)
+	_hp_bar_bg.position = _get_hp_bar_position()
+	_hp_bar_bg.color = Color(0.08, 0.08, 0.08, 0.92)
 	add_child(_hp_bar_bg)
 
 	_hp_bar_fill = ColorRect.new()
@@ -147,8 +163,34 @@ func _build_visuals() -> void:
 	_hp_bar_fill.position = _hp_bar_bg.position
 	_hp_bar_fill.color = Color(0.2, 0.9, 0.3, 1.0)
 	add_child(_hp_bar_fill)
-	_hp_bar_bg.visible = false
-	_hp_bar_fill.visible = false
+	_hp_bar_bg.visible = true
+	_hp_bar_fill.visible = true
+
+	_hp_value_label = Label.new()
+	_hp_value_label.position = _hp_bar_bg.position + Vector2(0.0, -4.0)
+	_hp_value_label.size = Vector2(HP_BAR_W, 16.0)
+	_hp_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hp_value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_hp_value_label.add_theme_font_override("font", DAMAGE_NUMBER_FONT)
+	_hp_value_label.add_theme_font_size_override("font_size", 9)
+	_hp_value_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	_hp_value_label.add_theme_color_override("font_outline_color", Color(0.08, 0.04, 0.02, 1.0))
+	_hp_value_label.add_theme_constant_override("outline_size", 3)
+	add_child(_hp_value_label)
+
+	_skill_bar_bg = ColorRect.new()
+	_skill_bar_bg.size = Vector2(SKILL_BAR_W, SKILL_BAR_H)
+	_skill_bar_bg.position = _get_skill_bar_position()
+	_skill_bar_bg.color = Color(0.05, 0.10, 0.20, 0.9)
+	add_child(_skill_bar_bg)
+
+	_skill_bar_fill = ColorRect.new()
+	_skill_bar_fill.size = Vector2(0.0, SKILL_BAR_H)
+	_skill_bar_fill.position = _skill_bar_bg.position
+	_skill_bar_fill.color = Color(0.28, 0.74, 1.0, 1.0)
+	add_child(_skill_bar_fill)
+	_skill_bar_bg.visible = team == "player"
+	_skill_bar_fill.visible = team == "player"
 
 	_name_label = Label.new()
 	_name_label.text = cat_display_name
@@ -320,9 +362,38 @@ func _get_texture_visible_rect(texture: Texture2D) -> Rect2:
 
 func update_hp(hp: int) -> void:
 	current_hp = maxi(0, hp)
-	var ratio := float(current_hp) / float(max_hp) if max_hp > 0 else 0.0
+	var ratio: float = float(current_hp) / float(max_hp) if max_hp > 0 else 0.0
 	_hp_bar_fill.size.x = HP_BAR_W * ratio
 	_hp_bar_fill.color = Color(1.0 - ratio, ratio * 0.9, 0.1, 1.0)
+	if _hp_value_label != null:
+		_hp_value_label.text = "%d/%d" % [current_hp, max_hp]
+
+
+func update_skill_charge(max_cooldown: float, remaining_cooldown: float) -> void:
+	if _skill_bar_bg == null or _skill_bar_fill == null:
+		return
+	var should_show: bool = team == "player" and max_cooldown > 0.0 and current_hp > 0
+	_skill_bar_bg.visible = should_show
+	_skill_bar_fill.visible = should_show
+	if not should_show:
+		_skill_bar_fill.size.x = 0.0
+		return
+	var progress: float = clampf(1.0 - (remaining_cooldown / max_cooldown), 0.0, 1.0)
+	_skill_bar_fill.size.x = SKILL_BAR_W * progress
+
+
+func clear_skill_charge() -> void:
+	update_skill_charge(0.0, 0.0)
+
+
+func _get_hp_bar_position() -> Vector2:
+	if team == "enemy":
+		return Vector2(-HP_BAR_W / 2.0, ENEMY_HP_BAR_OFFSET_Y)
+	return Vector2(-HP_BAR_W / 2.0, -HP_BAR_OFFSET_Y)
+
+
+func _get_skill_bar_position() -> Vector2:
+	return Vector2(-SKILL_BAR_W / 2.0, -PLAYER_SKILL_BAR_OFFSET_Y)
 
 
 func show_damage_number(damage: int) -> void:

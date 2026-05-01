@@ -816,6 +816,15 @@ func _build_equipment_config() -> Dictionary:
 		if not (item is Dictionary):
 			continue
 		var row: Dictionary = item
+		var raw_effects: Array = row.get("effects", [])
+		var effects: Array = []
+		for e: Variant in raw_effects:
+			if e is Dictionary:
+				effects.append({
+					"stat_type": _to_snake_case(str(e.get("statType", ""))),
+					"target_scope": _to_snake_case(str(e.get("targetScope", "all"))),
+					"base_value": float(e.get("baseValue", 0.0)),
+				})
 		items.append({
 			"id": str(row.get("equipmentId", "")),
 			"display_name": str(row.get("displayName", "")),
@@ -826,6 +835,7 @@ func _build_equipment_config() -> Dictionary:
 			"bonus_stat": _to_snake_case(str(row.get("bonusStat", ""))),
 			"bonus_target": _to_snake_case(str(row.get("bonusTarget", "All"))),
 			"bonus_per_level": float(row.get("bonusPerLevel", 0.0)),
+			"effects": effects,
 		})
 	return {"items": items}
 
@@ -2488,13 +2498,24 @@ func apply_player_combat_bonuses(data: CatData) -> void:
 		if target != "all" and target != data.cat_type:
 			continue
 		var value: float = float(bonus.get("value", 0.0))
-		match bonus.get("stat", ""):
+		var stat: String = str(bonus.get("stat", ""))
+		match stat:
+			"atk":
+				data.atk += int(value)
 			"atk_percent":
 				data.atk = int(data.atk * (1.0 + value))
+			"def", "defense":
+				data.defense += int(value)
 			"def_percent":
 				data.defense = int(data.defense * (1.0 + value))
-			"max_hp_percent":
+			"speed":
+				data.speed += value
+			"weight":
+				data.weight += value
+			"max_hp_percent", "hp_percent":
 				data.max_hp = int(data.max_hp * (1.0 + value))
+			"hp", "max_hp":
+				data.max_hp += int(value)
 			"crit_rate":
 				data.set_meta("crit_rate", minf(float(data.get_meta("crit_rate", 0.0)) + value, 1.0))
 			"crit_damage":
@@ -2505,6 +2526,11 @@ func apply_player_combat_bonuses(data: CatData) -> void:
 						minf(float(data.get_meta("damage_reduction_bonus", 0.0)) + value, 0.9))
 			"cooldown_reduction":
 				data.set_meta("cdr", minf(float(data.get_meta("cdr", 0.0)) + value, 0.5))
+			_:
+				if stat in ["armor_pen", "evasion", "accuracy", "multi_hit_rate", "multi_hit_damage",
+						"dungeon_damage_boost", "dungeon_damage_reduction", "life_steal",
+						"counter_damage_chance", "physical_damage_boost", "physical_damage_reduction"]:
+					data.set_meta(stat, maxf(0.0, float(data.get_meta(stat, 0.0)) + value))
 
 
 # ── Treasure system ──────────────────────────────────
@@ -2711,12 +2737,24 @@ func get_equipment_bonuses() -> Array:
 			var level: int = int(item.get("level", 0))
 			if level <= 0:
 				continue
-			var bonus_per_level: float = float(item.get("bonusPerLevel", 0.0))
-			live_result.append({
-				"target": _to_snake_case(str(item.get("bonusTarget", "All"))),
-				"stat":   _to_snake_case(str(item.get("bonusStat", ""))),
-				"value":  bonus_per_level * level,
-			})
+			var effects: Array = item.get("effects", [])
+			if effects.is_empty():
+				var bonus_per_level: float = float(item.get("bonusPerLevel", 0.0))
+				live_result.append({
+					"target": _to_snake_case(str(item.get("bonusTarget", "All"))),
+					"stat":   _to_snake_case(str(item.get("bonusStat", ""))),
+					"value":  bonus_per_level * level,
+				})
+				continue
+			for effect_variant: Variant in effects:
+				if not (effect_variant is Dictionary):
+					continue
+				var effect: Dictionary = effect_variant
+				live_result.append({
+					"target": _to_snake_case(str(effect.get("target_scope", effect.get("targetScope", "All")))),
+					"stat":   _to_snake_case(str(effect.get("stat_type", effect.get("statType", "")))),
+					"value":  float(effect.get("base_value", effect.get("baseValue", 0.0))) * level,
+				})
 		return live_result
 	# Fallback: local config
 	var fallback_result: Array = []
@@ -2767,5 +2805,9 @@ func format_number(value: int) -> String:
 
 
 func _is_combat_bonus_stat(stat: String) -> bool:
-	return stat in ["atk_percent", "def_percent", "max_hp_percent",
-			"crit_rate", "crit_damage", "damage_reduction", "cooldown_reduction"]
+	return stat in ["atk", "atk_percent", "def", "defense", "def_percent", "speed", "weight",
+			"hp", "max_hp", "max_hp_percent", "hp_percent", "crit_rate", "crit_damage",
+			"damage_reduction", "cooldown_reduction", "armor_pen", "evasion", "accuracy",
+			"multi_hit_rate", "multi_hit_damage", "dungeon_damage_boost",
+			"dungeon_damage_reduction", "life_steal", "counter_damage_chance",
+			"physical_damage_boost", "physical_damage_reduction"]

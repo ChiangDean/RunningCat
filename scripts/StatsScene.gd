@@ -536,13 +536,28 @@ func _format_passive_aggregate_lines(aggregate: Dictionary) -> Array[String]:
 
 func _is_combat_bonus_stat(stat: String) -> bool:
 	return _canonicalize_stat_key(stat) in [
+		"atk",
 		"atk_percent",
+		"defense",
 		"def_percent",
+		"speed",
+		"max_hp",
 		"max_hp_percent",
 		"crit_rate",
 		"crit_damage",
 		"damage_reduction",
 		"cooldown_reduction",
+		"armor_pen",
+		"evasion",
+		"accuracy",
+		"multi_hit_rate",
+		"multi_hit_damage",
+		"dungeon_damage_boost",
+		"dungeon_damage_reduction",
+		"life_steal",
+		"counter_damage_chance",
+		"physical_damage_boost",
+		"physical_damage_reduction",
 	]
 
 
@@ -700,17 +715,19 @@ func _to_percent_stat_key(stat: String) -> String:
 func _stat_label(stat: String) -> String:
 	match stat:
 		"atk":
-			return UiText.STATS_STAT_ATK
+			return "固定攻擊"
 		"atk_percent":
-			return UiText.STATS_STAT_ATK
+			return "攻擊加成"
 		"defense":
-			return UiText.STATS_STAT_DEF
+			return "固定防禦"
 		"def_percent":
-			return UiText.STATS_STAT_DEF
+			return "防禦加成"
 		"max_hp":
-			return "HP"
+			return "固定生命"
 		"max_hp_percent":
-			return "HP"
+			return "生命加成"
+		"speed":
+			return "固定速度"
 		"crit_rate":
 			return UiText.STATS_STAT_CRIT_RATE
 		"crit_damage":
@@ -719,8 +736,30 @@ func _stat_label(stat: String) -> String:
 			return UiText.STATS_STAT_DMG_REDUCTION
 		"cooldown_reduction":
 			return UiText.STATS_STAT_COOLDOWN
+		"armor_pen":
+			return "護甲穿透"
+		"evasion":
+			return "閃避率"
+		"accuracy":
+			return "命中率"
+		"multi_hit_rate":
+			return "連擊率"
+		"multi_hit_damage":
+			return "連擊傷害"
 		"idle_poop_percent":
 			return UiText.STATS_STAT_POOP
+		"dungeon_damage_boost":
+			return "副本增傷"
+		"dungeon_damage_reduction":
+			return "副本減傷"
+		"life_steal":
+			return "吸血比率"
+		"counter_damage_chance":
+			return "反傷機率"
+		"physical_damage_boost":
+			return "物理增傷"
+		"physical_damage_reduction":
+			return "物理減傷"
 		_:
 			return stat
 
@@ -728,13 +767,13 @@ func _stat_label(stat: String) -> String:
 func _passive_stat_label(stat: String) -> String:
 	match stat:
 		"atk":
-			return UiText.STATS_STAT_ATK
+			return "固定攻擊"
 		"defense":
-			return UiText.STATS_STAT_DEF
+			return "固定防禦"
 		"max_hp":
-			return "HP"
+			return "固定生命"
 		"speed":
-			return UiText.STATS_STAT_SPEED
+			return "固定速度"
 		_:
 			return _stat_label(stat)
 
@@ -768,7 +807,18 @@ func _format_stat_value(stat: String, value: float) -> String:
 		"crit_damage",
 		"damage_reduction",
 		"cooldown_reduction",
+		"armor_pen",
+		"evasion",
+		"accuracy",
+		"multi_hit_rate",
+		"multi_hit_damage",
 		"idle_poop_percent",
+		"dungeon_damage_boost",
+		"dungeon_damage_reduction",
+		"life_steal",
+		"counter_damage_chance",
+		"physical_damage_boost",
+		"physical_damage_reduction",
 	]:
 		return "%+.0f%%" % (value * 100.0)
 	return "%+d" % int(value)
