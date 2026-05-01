@@ -2,6 +2,14 @@ extends RefCounted
 
 const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/equipment/ScooperEquipmentCardTemplate.tscn")
 const ACTION_COOLDOWN: float = 0.5
+const EFFECT_COLUMN_X: Array[float] = [173.0, 318.0, 463.0]
+const EFFECT_ROW_Y: Array[float] = [65.0, 86.0, 107.0]
+const EFFECT_COLUMN_W: float = 136.0
+const EFFECT_ROW_H: float = 21.0
+const FILTER_AVAILABLE: String = "available"
+const FILTER_LOCKED: String = "locked"
+const FILTER_MAXED: String = "maxed"
+const EQUIPMENT_MAX_LEVEL: int = 10
 
 
 func build(scene: Control) -> void:
@@ -24,6 +32,8 @@ func build(scene: Control) -> void:
 		summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		summary_row.add_child(summary)
 		scene._level_label = summary
+
+	_add_equipment_filter_row(scene)
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -95,11 +105,93 @@ func _refresh_equipment_tab(scene: Control) -> void:
 		scene._equip_list.add_child(empty_lbl)
 		return
 
-	var sorted_items: Array = items.duplicate()
+	var current_filter: String = _get_current_filter(scene)
+	var scooper_lv: int = int(scene.GameState.player_data.scooper_level)
+	var sorted_items: Array = []
+	for item_variant: Variant in items:
+		if not (item_variant is Dictionary):
+			continue
+		var item: Dictionary = item_variant
+		if _get_equipment_filter_bucket(item, scooper_lv) == current_filter:
+			sorted_items.append(item)
 	sorted_items.sort_custom(_sort_scooper_items)
+
+	if sorted_items.is_empty():
+		var filter_empty_lbl: Label = Label.new()
+		filter_empty_lbl.text = _get_filter_empty_text(current_filter)
+		filter_empty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		filter_empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		scene._equip_list.add_child(filter_empty_lbl)
+		return
 
 	for item: Dictionary in sorted_items:
 		scene._equip_list.add_child(_make_equip_card(scene, item))
+
+
+func _add_equipment_filter_row(scene: Control) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scene._tab_content.add_child(row)
+
+	var group: ButtonGroup = ButtonGroup.new()
+	var options: Array[Dictionary] = [
+		{"key": FILTER_AVAILABLE, "text": UiText.SCOOPER_EQUIPMENT_FILTER_AVAILABLE},
+		{"key": FILTER_LOCKED, "text": UiText.SCOOPER_EQUIPMENT_FILTER_LOCKED},
+		{"key": FILTER_MAXED, "text": UiText.SCOOPER_EQUIPMENT_FILTER_MAXED},
+	]
+	for option: Dictionary in options:
+		var button: Button = Button.new()
+		button.text = str(option.get("text", ""))
+		button.toggle_mode = true
+		button.button_group = group
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size = Vector2(0.0, 36.0)
+		button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
+		UiPalette.apply_button_kind(button, "confirm" if str(option.get("key", "")) == _get_current_filter(scene) else "neutral")
+		button.button_pressed = str(option.get("key", "")) == _get_current_filter(scene)
+		button.pressed.connect(Callable(self, "_set_equipment_filter").bind(scene, str(option.get("key", ""))))
+		row.add_child(button)
+
+
+func _set_equipment_filter(scene: Control, filter_key: String) -> void:
+	if not _is_scene_alive(scene):
+		return
+	scene._equipment_filter = filter_key
+	scene.call("_rebuild_tab_content")
+
+
+func _get_current_filter(scene: Control) -> String:
+	var current_filter: String = str(scene._equipment_filter)
+	if current_filter in [FILTER_AVAILABLE, FILTER_LOCKED, FILTER_MAXED]:
+		return current_filter
+	return FILTER_AVAILABLE
+
+
+func _get_equipment_filter_bucket(item: Dictionary, scooper_lv: int) -> String:
+	var owned: bool = bool(item.get("isOwned", false))
+	var level: int = int(item.get("level", 0))
+	var unlock_lv: int = int(item.get("unlockLevel", 1))
+	var locked: bool = (not owned) and scooper_lv < unlock_lv
+	if locked:
+		return FILTER_LOCKED
+	if owned and level >= EQUIPMENT_MAX_LEVEL:
+		return FILTER_MAXED
+	return FILTER_AVAILABLE
+
+
+func _get_filter_empty_text(filter_key: String) -> String:
+	match filter_key:
+		FILTER_LOCKED:
+			return UiText.SCOOPER_EQUIPMENT_FILTER_EMPTY_LOCKED
+		FILTER_MAXED:
+			return UiText.SCOOPER_EQUIPMENT_FILTER_EMPTY_MAXED
+		_:
+			return UiText.SCOOPER_EQUIPMENT_FILTER_EMPTY_AVAILABLE
+
+
+func _format_equipment_title(name_str: String, level: int) -> String:
+	return "%s (%d/%d)" % [name_str, clampi(level, 0, EQUIPMENT_MAX_LEVEL), EQUIPMENT_MAX_LEVEL]
 
 
 func _make_equip_card(scene: Control, item: Dictionary) -> Control:
@@ -117,7 +209,8 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	var sick_cat_name: String = "" if sick_cat_name_variant == null else str(sick_cat_name_variant)
 	var scooper_lv: int = int(item.get("scooperLevel", scene.GameState.player_data.scooper_level))
 	var exp_per_lv: int = int(item.get("expPerLevel", 10))
-	var is_level_capped: bool = level >= scooper_lv
+	var current_level_cap: int = mini(scooper_lv, EQUIPMENT_MAX_LEVEL)
+	var is_level_capped: bool = owned and level >= current_level_cap
 	var locked: bool = (not owned) and scooper_lv < unlock_lv
 	var treat_mode: bool = sick_cat_name != ""
 
@@ -139,8 +232,6 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	var title_lbl: Label = panel.get_node("NameLabel") as Label
 	var desc_lbl: Label = panel.get_node("MetaLabel") as Label
 	var exp_inline_lbl: Label = panel.get_node("CostLabel") as Label
-	var status_badge: Panel = panel.get_node("Badge") as Panel
-	var status_badge_label: Label = panel.get_node("Badge/BadgeLabel") as Label
 	var progress_frame: Panel = panel.get_node("ProgressFrame") as Panel
 	var progress_fill: ColorRect = panel.get_node("ProgressFrame/ProgressFill") as ColorRect
 	var exp_label: Label = panel.get_node("ProgressFrame/ProgressLabel") as Label
@@ -156,18 +247,17 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		icon_rect.visible = equipment_icon != null
 	level_lbl.visible = owned
 	level_lbl.text = str(level)
-	title_lbl.text = name_str
-	desc_lbl.text = _bonus_desc(item, maxi(level, 1) if owned else 1)
+	title_lbl.text = _format_equipment_title(name_str, level if owned else 0)
+	desc_lbl.visible = false
+	_apply_effect_summary_layout(panel, item, maxi(level, 1) if owned else 1)
 	exp_inline_lbl.text = ""
-	_set_badge(status_badge, status_badge_label, "", Color(0.26, 0.32, 0.38, 0.96), Color(0.72, 0.82, 0.95, 0.95))
 
 	if locked:
 		level_lbl.visible = false
-		title_lbl.text = name_str
+		title_lbl.text = _format_equipment_title(name_str, 0)
 		title_lbl.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 1.0))
-		desc_lbl.text = _bonus_desc(item, 0)
+		_apply_effect_summary_layout(panel, item, 0)
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_UNLOCK_AT % unlock_lv
-		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_LOCKED, Color(0.30, 0.30, 0.34, 0.96), Color(0.82, 0.82, 0.86, 1.0))
 		_set_progress_fill(progress_fill, 0.0, 440.0)
 		_set_panel_fill(progress_frame, Color(0.19, 0.17, 0.15, 0.92))
 		exp_label.add_theme_color_override("font_color", Color(0.97, 0.98, 0.94, 1.0))
@@ -179,10 +269,9 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 
 	if not owned:
 		var can_afford_purchase: bool = scene.GameState.player_data.gold >= purchase_cost
-		title_lbl.text = name_str
-		desc_lbl.text = _bonus_desc(item, 1)
+		title_lbl.text = _format_equipment_title(name_str, 0)
+		_apply_effect_summary_layout(panel, item, 1)
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_UNOWNED % purchase_cost if can_afford_purchase else UiText.SCOOPER_EQUIPMENT_COST_INSUFFICIENT % purchase_cost
-		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_UNOWNED, Color(0.31, 0.26, 0.16, 0.96), Color(0.96, 0.87, 0.58, 1.0))
 		_set_progress_fill(progress_fill, 0.0, 440.0)
 		_set_panel_fill(progress_frame, Color(0.19, 0.17, 0.15, 0.92))
 		exp_label.add_theme_color_override("font_color", Color(0.97, 0.98, 0.94, 1.0))
@@ -196,8 +285,8 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		action_btn.pressed.connect(Callable(self, "_show_purchase_confirm").bind(scene, purchase_cost, name_str, equip_id))
 		return panel
 
-	title_lbl.text = name_str
-	desc_lbl.text = _bonus_desc(item, maxi(level, 1))
+	title_lbl.text = _format_equipment_title(name_str, level)
+	_apply_effect_summary_layout(panel, item, maxi(level, 1))
 	exp_inline_lbl.text = ""
 	_set_progress_fill(progress_fill, exp_bar_ratio(exp_val, exp_per_lv, is_level_capped), 440.0)
 	exp_label.add_theme_color_override("font_color", Color(0.97, 0.98, 0.94, 1.0))
@@ -206,7 +295,6 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	if broken:
 		var repair_cost: int = int(item.get("repairCost", 0))
 		var can_afford_repair: bool = scene.GameState.player_data.gold >= repair_cost
-		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_BROKEN, Color(0.37, 0.16, 0.16, 0.96), Color(1.0, 0.80, 0.76, 1.0))
 		title_lbl.add_theme_color_override("font_color", Color(1.0, 0.76, 0.72, 1.0))
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_REPAIR % repair_cost if can_afford_repair else UiText.SCOOPER_EQUIPMENT_COST_INSUFFICIENT % repair_cost
 		if can_afford_repair:
@@ -221,7 +309,6 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	if treat_mode:
 		var treat_cost: int = int(item.get("treatCost", 0))
 		var can_afford_treat: bool = scene.GameState.player_data.gold >= treat_cost
-		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_SICK, Color(0.36, 0.28, 0.12, 0.96), Color(1.0, 0.92, 0.72, 1.0))
 		title_lbl.add_theme_color_override("font_color", Color(1.0, 0.92, 0.70, 1.0))
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_TREAT % treat_cost if can_afford_treat else UiText.SCOOPER_EQUIPMENT_COST_INSUFFICIENT % treat_cost
 		if can_afford_treat:
@@ -234,12 +321,10 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		return panel
 
 	if is_level_capped:
-		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_MAX, Color(0.32, 0.20, 0.38, 0.96), Color(0.92, 0.82, 1.0, 1.0))
 		_set_progress_fill(progress_fill, 1.0, 440.0)
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_MAX
 		_set_action_visual(action_visual, action_label, Color(0.19, 0.17, 0.15, 0.92), Color(1.0, 0.42, 0.42, 1.0), UiText.SCOOPER_EQUIPMENT_LEVEL_MAX)
 	else:
-		_set_badge(status_badge, status_badge_label, UiText.SCOOPER_EQUIPMENT_BADGE_READY, Color(0.14, 0.33, 0.24, 0.96), Color(0.80, 1.0, 0.87, 1.0))
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_UPGRADE % upgrade_cost
 		_set_action_visual(action_visual, action_label, Color(0.80, 0.70, 0.42, 1.0), Color(0.36, 0.21, 0.08, 1.0), UiText.SCOOPER_EQUIPMENT_ACTION_UPGRADE_BUTTON)
 	var can_afford_upgrade: bool = scene.GameState.player_data.gold >= upgrade_cost
@@ -334,7 +419,9 @@ func _on_equipment_action_completed(
 		var reward_entries: Array[Dictionary] = []
 		var gained: int = int(result.get("expGained", 0))
 		if gained > 0:
-			reward_entries.append(scene.make_reward_float_entry(UiText.REWARD_EXP, gained, "exp"))
+			var critical_multiplier: int = int(result.get("expCriticalMultiplier", 1))
+			var exp_label: String = UiText.SCOOPER_EQUIPMENT_EXP_CRITICAL % critical_multiplier if critical_multiplier > 1 else UiText.REWARD_EXP
+			reward_entries.append(scene.make_reward_float_entry(exp_label, gained, "exp"))
 		if not reward_entries.is_empty():
 			scene.queue_home_reward_floats(reward_entries)
 		_start_action_cooldown(scene, equip_id, action)
@@ -397,23 +484,147 @@ func _action_label(action: String) -> String:
 			return action
 
 
-func _bonus_desc(item: Dictionary, level: int) -> String:
-	var stat: String = str(item.get("bonusStat", ""))
-	var target: String = str(item.get("bonusTarget", "All"))
-	var per_lv: float = float(item.get("bonusPerLevel", 0.0))
-	var target_str: String = UiText.SCOOPER_EQUIPMENT_BONUS_ALL if target.to_lower() == "all" else target
-	var stat_str: String = stat
-	match stat:
-		"atk_percent", "AtkPercent":
-			stat_str = "ATK"
-		"def_percent", "DefPercent":
-			stat_str = "DEF"
-		"max_hp_percent", "MaxHpPercent":
-			stat_str = "HP"
+func _apply_effect_summary_layout(panel: Control, item: Dictionary, level: int) -> void:
+	var existing_host: Node = panel.get_node_or_null("EffectSummaryHost")
+	if existing_host != null:
+		existing_host.queue_free()
 
-	if level <= 0:
-		return UiText.SCOOPER_EQUIPMENT_BONUS_PER_LEVEL % [target_str, stat_str, per_lv * 100.0]
-	return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, stat_str, per_lv * float(level) * 100.0]
+	var host: Control = Control.new()
+	host.name = "EffectSummaryHost"
+	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	host.position = Vector2.ZERO
+	host.size = panel.size
+	panel.add_child(host)
+
+	var rows: Array[Dictionary] = _get_equipment_effect_rows(item, level)
+	for index: int in range(rows.size()):
+		var col: int = index % EFFECT_COLUMN_X.size()
+		var row: int = int(floori(float(index) / float(EFFECT_COLUMN_X.size())))
+		if row >= EFFECT_ROW_Y.size():
+			break
+		var effect_label: Label = Label.new()
+		effect_label.name = "Effect%d" % index
+		effect_label.position = Vector2(EFFECT_COLUMN_X[col], EFFECT_ROW_Y[row])
+		effect_label.size = Vector2(EFFECT_COLUMN_W, EFFECT_ROW_H)
+		effect_label.text = _format_effect_summary(rows[index])
+		effect_label.clip_text = true
+		effect_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		effect_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
+		effect_label.add_theme_color_override("font_color", Color(0.9, 0.84, 0.76, 1.0))
+		effect_label.add_theme_color_override("font_outline_color", Color(0.14, 0.06, 0.02, 1.0))
+		effect_label.add_theme_constant_override("outline_size", 2)
+		host.add_child(effect_label)
+
+
+func _bonus_summary(item: Dictionary, level: int) -> String:
+	var rows: Array[Dictionary] = _get_equipment_effect_rows(item, level)
+	var lines: Array[String] = []
+	var pair_buffer: Array[String] = []
+	for row: Dictionary in rows:
+		pair_buffer.append(_format_effect_summary(row))
+		if pair_buffer.size() >= 2:
+			lines.append("  ".join(pair_buffer))
+			pair_buffer.clear()
+	if not pair_buffer.is_empty():
+		lines.append("  ".join(pair_buffer))
+	return "\n".join(lines)
+
+
+func _bonus_desc(item: Dictionary, level: int) -> String:
+	var rows: Array[Dictionary] = _get_equipment_effect_rows(item, level)
+	var lines: Array[String] = []
+	for row: Dictionary in rows:
+		lines.append(_format_effect_summary(row))
+	return "\n".join(lines)
+
+
+func _get_equipment_effect_rows(item: Dictionary, level: int) -> Array[Dictionary]:
+	var effects: Array = item.get("effects", [])
+	if effects.is_empty():
+		# fallback to legacy single-effect fields
+		var stat: String = str(item.get("bonusStat", ""))
+		var per_lv: float = float(item.get("bonusPerLevel", 0.0))
+		effects = [{"stat_type": stat, "base_value": per_lv}]
+
+	var rows: Array[Dictionary] = []
+	var current_level: int = maxi(level, 0)
+	var next_level: int = current_level + 1 if current_level > 0 else 1
+	for e: Variant in effects:
+		if not (e is Dictionary):
+			continue
+		var stat: String = str(e.get("stat_type", e.get("statType", "")))
+		var base_val: float = float(e.get("base_value", e.get("baseValue", 0.0)))
+		var is_percent: bool = stat in [
+			"atk_percent", "AtkPercent", "def_percent", "DefPercent",
+			"max_hp_percent", "MaxHpPercent", "hp_percent", "HpPercent",
+			"crit_rate", "CritRate", "crit_damage", "CritDamage",
+			"damage_reduction", "DamageReduction", "cooldown_reduction", "CooldownReduction",
+			"idle_poop_percent", "IdlePoopPercent", "dungeon_damage_boost", "DungeonDamageBoost",
+			"dungeon_damage_reduction", "DungeonDamageReduction", "life_steal", "LifeSteal",
+			"counter_damage_chance", "CounterDamageChance", "physical_damage_boost", "PhysicalDamageBoost",
+			"physical_damage_reduction", "PhysicalDamageReduction",
+		]
+		var stat_str: String
+		match stat:
+			"atk", "Atk":
+				stat_str = "固定攻擊"
+			"def", "Def":
+				stat_str = "固定防禦"
+			"hp", "Hp":
+				stat_str = "固定生命"
+			"atk_percent", "AtkPercent":
+				stat_str = "攻擊加成"
+			"def_percent", "DefPercent":
+				stat_str = "防禦加成"
+			"max_hp_percent", "MaxHpPercent", "hp_percent", "HpPercent":
+				stat_str = "生命加成"
+			"crit_rate", "CritRate":
+				stat_str = "暴擊率"
+			"crit_damage", "CritDamage":
+				stat_str = "暴擊傷害"
+			"damage_reduction", "DamageReduction":
+				stat_str = "傷害減免"
+			"cooldown_reduction", "CooldownReduction":
+				stat_str = "冷卻縮減"
+			"dungeon_damage_boost", "DungeonDamageBoost":
+				stat_str = "\u526f\u672c\u589e\u50b7"
+			"dungeon_damage_reduction", "DungeonDamageReduction":
+				stat_str = "\u526f\u672c\u6e1b\u50b7"
+			"life_steal", "LifeSteal":
+				stat_str = "\u5438\u8840"
+			"counter_damage_chance", "CounterDamageChance":
+				stat_str = "\u53cd\u50b7\u6a5f\u7387"
+			"physical_damage_boost", "PhysicalDamageBoost":
+				stat_str = "\u7269\u7406\u589e\u50b7"
+			"physical_damage_reduction", "PhysicalDamageReduction":
+				stat_str = "\u7269\u7406\u6e1b\u50b7"
+			"speed", "Speed":
+				stat_str = "固定速度"
+			_:
+				stat_str = stat.to_upper()
+		var display_base_value: float = base_val * 100.0 if is_percent else base_val
+		rows.append({
+			"stat": stat_str,
+			"is_percent": is_percent,
+			"current": display_base_value * float(current_level),
+			"next": display_base_value * float(next_level),
+			"delta": display_base_value,
+		})
+	return rows
+
+
+func _format_effect_summary(row: Dictionary) -> String:
+	return "%s %s (+%s)" % [
+		str(row.get("stat", "")),
+		_format_effect_value(float(row.get("current", 0.0)), bool(row.get("is_percent", false))),
+		_format_effect_value(float(row.get("delta", 0.0)), bool(row.get("is_percent", false))),
+	]
+
+
+func _format_effect_value(value: float, is_percent: bool) -> String:
+	if is_percent:
+		return "%.1f%%" % value
+	return "%.0f" % value
 
 
 func _add_unlock_overlay(_scene: Control, panel: Control, _unlock_cost: int, _equip_id: int, _item_name: String) -> void:
@@ -514,14 +725,6 @@ func _is_scene_alive(scene: Control) -> bool:
 
 func _is_api_locked(scene: Control) -> bool:
 	return bool(scene._api_in_flight)
-
-
-func _set_badge(panel: Panel, label: Label, text: String, bg_color: Color, font_color: Color) -> void:
-	if panel == null or label == null:
-		return
-	_set_panel_fill(panel, bg_color)
-	label.text = text
-	label.add_theme_color_override("font_color", font_color)
 
 
 func _set_panel_fill(panel: Panel, bg_color: Color) -> void:

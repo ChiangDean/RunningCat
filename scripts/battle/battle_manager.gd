@@ -114,6 +114,7 @@ func setup(_events_param: Array, player_cats: Array, enemy_cats: Array,
 	_spawn_initial_cat_nodes()
 	_apply_all_passives()
 	_refresh_initial_skill_slot_cooldowns()
+	_refresh_cat_status_bar_display()
 
 
 func prime_initial_spawn_state() -> void:
@@ -232,6 +233,7 @@ func _process(delta: float) -> void:
 	_tick_runtime_buffs(delta)
 	_check_runtime_battle_end()
 	_refresh_skill_bar_display()
+	_refresh_cat_status_bar_display()
 
 
 func _apply_event(ev: BattleEvent) -> void:
@@ -1193,11 +1195,8 @@ func _refresh_skill_slot_ui(i: int, slot: Dictionary) -> void:
 
 	var cd_label: Label = slot_node.get_node_or_null("CdLabel")
 	if cd_label:
-		if remaining > 0.0:
-			cd_label.text = "%.1f" % remaining
-			cd_label.visible = true
-		else:
-			cd_label.visible = false
+		cd_label.text = ""
+		cd_label.visible = false
 
 	var hp_bar_fill: ColorRect = slot_node.get_node_or_null("HpBarBg/HpBarFill")
 	if hp_bar_fill:
@@ -1209,6 +1208,7 @@ func _refresh_skill_slot_ui(i: int, slot: Dictionary) -> void:
 	var hp_value_label: Label = slot_node.get_node_or_null("HpValueLabel")
 	if hp_value_label:
 		hp_value_label.text = "%s/%s" % [GameState.format_number(max(0, current_hp)), GameState.format_number(max(max_hp, 0))]
+		hp_value_label.visible = true
 
 	var cooldown_bar_fill: ColorRect = slot_node.get_node_or_null("CooldownBarBg/CooldownBarFill")
 	if cooldown_bar_fill:
@@ -1249,6 +1249,7 @@ func _update_skill_slot_spawn_state(cat_id: int, current_hp: int, max_hp: int) -
 	slot["current_hp"] = current_hp
 	slot["max_hp"] = max_hp
 	slot["is_dead"] = false
+	_refresh_cat_status_bar_for_cat(cat_id)
 
 
 func _update_skill_slot_hp(cat_id: int, current_hp: int) -> void:
@@ -1256,6 +1257,7 @@ func _update_skill_slot_hp(cat_id: int, current_hp: int) -> void:
 	if slot.is_empty():
 		return
 	slot["current_hp"] = current_hp
+	_refresh_cat_status_bar_for_cat(cat_id)
 
 
 func _reset_skill_slot_cooldown(cat_id: int) -> void:
@@ -1263,6 +1265,7 @@ func _reset_skill_slot_cooldown(cat_id: int) -> void:
 	if slot.is_empty():
 		return
 	slot["remaining_cd"] = float(slot.get("max_cd", 0.0))
+	_refresh_cat_status_bar_for_cat(cat_id)
 
 
 func _update_skill_slot_buff(cat_id: int, buff_duration: float) -> void:
@@ -1278,3 +1281,22 @@ func _mark_skill_slot_dead(cat_id: int) -> void:
 		return
 	slot["current_hp"] = 0
 	slot["is_dead"] = true
+	_refresh_cat_status_bar_for_cat(cat_id)
+
+
+func _refresh_cat_status_bar_display() -> void:
+	for id_variant: Variant in _cat_nodes.keys():
+		_refresh_cat_status_bar_for_cat(int(id_variant))
+
+
+func _refresh_cat_status_bar_for_cat(cat_id: int) -> void:
+	var node: CatNode = _get_cat_node(cat_id)
+	if node == null:
+		return
+	var slot: Dictionary = _get_skill_slot_entry(cat_id)
+	if slot.is_empty():
+		node.clear_skill_charge()
+		return
+	var max_cd: float = float(slot.get("max_cd", 0.0))
+	var remaining_cd: float = float(slot.get("remaining_cd", 0.0))
+	node.update_skill_charge(max_cd, remaining_cd)

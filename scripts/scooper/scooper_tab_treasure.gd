@@ -104,22 +104,42 @@ func _format_treasure_effect(effect: Dictionary) -> String:
 	var stat: String = str(effect.get("statType", ""))
 	var value: float = float(effect.get("value", 0.0))
 	match stat:
+		"atk", "Atk":
+			return "%s 固定攻擊 +%.0f" % [target_str, value]
+		"def", "Def":
+			return "%s 固定防禦 +%.0f" % [target_str, value]
+		"hp", "Hp", "max_hp", "MaxHp":
+			return "%s 固定生命 +%.0f" % [target_str, value]
+		"speed", "Speed":
+			return "%s 固定速度 +%.0f" % [target_str, value]
 		"atk_percent", "AtkPercent":
-			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "ATK", value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "攻擊加成", value * 100.0]
 		"def_percent", "DefPercent":
-			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "DEF", value * 100.0]
-		"max_hp_percent", "MaxHpPercent":
-			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "HP", value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "防禦加成", value * 100.0]
+		"max_hp_percent", "MaxHpPercent", "hp_percent", "HpPercent":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "生命加成", value * 100.0]
 		"crit_rate", "CritRate":
-			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "CRIT", value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "暴擊率", value * 100.0]
 		"crit_damage", "CritDamage":
-			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "CRIT DMG", value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "暴擊傷害", value * 100.0]
 		"damage_reduction", "DamageReduction":
-			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "DMG RED", value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "傷害減免", value * 100.0]
 		"cooldown_reduction", "CooldownReduction":
-			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "CD RED", value * 100.0]
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "冷卻縮減", value * 100.0]
 		"idle_poop_percent", "IdlePoopPercent":
 			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [UiText.SCOOPER_EQUIPMENT_BONUS_ALL, UiText.REWARD_POOP, value * 100.0]
+		"dungeon_damage_boost", "DungeonDamageBoost":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "副本增傷", value * 100.0]
+		"dungeon_damage_reduction", "DungeonDamageReduction":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "副本減傷", value * 100.0]
+		"life_steal", "LifeSteal":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "吸血比率", value * 100.0]
+		"counter_damage_chance", "CounterDamageChance":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "反傷機率", value * 100.0]
+		"physical_damage_boost", "PhysicalDamageBoost":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "物理增傷", value * 100.0]
+		"physical_damage_reduction", "PhysicalDamageReduction":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "物理減傷", value * 100.0]
 		_:
 			return "%s %s %.2f" % [target_str, stat, value]
 
