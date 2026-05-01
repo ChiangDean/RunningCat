@@ -8,6 +8,7 @@ var special_cat_food: int = 0
 var gold: int = 0
 var diamonds: int = 0
 var trap_points: int = 0
+var collision_coin: int = 0
 var trap_cages: int = 0
 var whisker_shards: int = 0
 var account: String = ""
@@ -102,6 +103,7 @@ static func _from_dict(data: Dictionary) -> PlayerData:
 	p.gold = data.get("gold", 0)
 	p.diamonds = data.get("diamonds", 0)
 	p.trap_points = data.get("trap_points", 0)
+	p.collision_coin = data.get("collision_coin", 0)
 	p.trap_cages = data.get("trap_cages", 0)
 	p.whisker_shards = data.get("whisker_shards", 0)
 	p.last_quit_time = data.get("last_quit_time", 0)
@@ -164,6 +166,7 @@ func _to_dict() -> Dictionary:
 		"gold": gold,
 		"diamonds": diamonds,
 		"trap_points": trap_points,
+		"collision_coin": collision_coin,
 		"trap_cages": trap_cages,
 		"whisker_shards": whisker_shards,
 		"last_quit_time": last_quit_time,

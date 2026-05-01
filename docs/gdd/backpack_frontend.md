@@ -5,7 +5,7 @@
 背包功能以 Overlay 形式開啟，讓玩家統一查看當前持有的所有資源。  
 分為三個區塊，依序顯示：
 
-- **貨幣**：Gold、鑽石、衝撞幣
+- **貨幣**：Gold、鑽石、誘捕點數、衝撞幣
 - **票券**：競技場券、收益券(1小時)、各地下城門票（依地下城數量動態產生）
 - **道具**：所有消耗品（貓糧、特殊乾糧、誘捕籠、屎堆、回憶碎片、鬍鬚碎片）
 
@@ -76,17 +76,18 @@ ItemCard (PanelContainer)                  make_card_panel(accent)
 |---------|--------------|---------|
 | 金幣 | `player_data.gold` | `catalog/currency/gold` |
 | 鑽石 | `player_data.diamonds` | `catalog/currency/diamonds` |
-| 衝撞幣 | `player_data.trap_points` | `catalog/currency/trap_points` |
+| 誘捕點數 | `player_data.trap_points` | `catalog/currency/trap_points` |
+| 衝撞幣 | `player_data.collision_coin` | `catalog/currency/collision_coin` |
 
 ### 票券區塊
 
 | 顯示名稱 | GameState 欄位 | 圖示路徑 |
 |---------|--------------|---------|
-| 競技場券 | `arena_overview_data.get("tickets", 0)` | `catalog/arena/bronze_1` |
+| 競技場券 | `arena_overview_data.get("tickets", 0)` | `catalog/consumable/arena_ticket` |
 | 收益券(1小時) | `get_party_cheer_coupon_count()` | `catalog/consumable/party_cheer_coupon` |
 | 各地下城門票 | `dungeon_overview_data[i].remainingTicketCount` | `catalog/dungeon/{key}` |
 
-收益券(1小時) 為固定票券項目，圖示資產解析到 `assets/sprites/ui/rewards/party_cheer_coupon.png`。
+收益券(1小時) 為固定票券項目，圖示資產解析到 `assets/sprites/cdn/ui/rewards/party_cheer_coupon.png`。
 
 地下城門票依 `dungeon_overview_data` 陣列動態產生，displayName 直接取自資料，key 對應圖示（cat_food / diamond / whisker）。
 
@@ -127,7 +128,7 @@ ItemCard (PanelContainer)                  make_card_panel(accent)
 
 | 資料 | Bootstrap 欄位 |
 |------|--------------|
-| 貨幣 | `gold`, `diamonds`, `trapPoints` |
+| 貨幣 | `gold`, `diamonds`, `trapPoints`, `collisionCoin` |
 | 消耗品 | `catFood`, `specialCatFood`, `trapCages`, `poopCount`, `memoryShards`, `whiskerShards` |
 | 收益券資料 | `partyCheerCouponCount` |
 | 競技場資料 | `arenaData` → `arena_overview_data` |

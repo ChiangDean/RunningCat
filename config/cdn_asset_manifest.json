@@ -69,12 +69,18 @@
   ],
   "phase2_completed_reward_files": [
     "assets/sprites/cdn/ui/rewards/arena_ticket.png",
+    "assets/sprites/cdn/ui/rewards/battle_speed_ticket.png",
     "assets/sprites/cdn/ui/rewards/cat_food.png",
+    "assets/sprites/cdn/ui/rewards/cat_food_dungeon_ticket.png",
+    "assets/sprites/cdn/ui/rewards/diamond_dungeon_ticket.png",
+    "assets/sprites/cdn/ui/rewards/gold_dungeon_ticket.png",
     "assets/sprites/cdn/ui/rewards/memory_shards.png",
     "assets/sprites/cdn/ui/rewards/party_cheer_coupon.png",
+    "assets/sprites/cdn/ui/rewards/poop_dungeon_ticket.png",
     "assets/sprites/cdn/ui/rewards/special_cat_food.png",
     "assets/sprites/cdn/ui/rewards/trap_cages.png",
     "assets/sprites/cdn/ui/rewards/trap_points.png",
+    "assets/sprites/cdn/ui/rewards/whisker_dungeon_ticket.png",
     "assets/sprites/cdn/ui/rewards/whisker_shards.png"
   ],
   "phase3_completed_roots": [
@@ -97,19 +103,25 @@
     "assets/sprites/ui/rewards": {
       "cdn": [
         "arena_ticket.png",
+        "battle_speed_ticket.png",
         "cat_food.png",
+        "cat_food_dungeon_ticket.png",
+        "diamond_dungeon_ticket.png",
+        "gold_dungeon_ticket.png",
         "memory_shards.png",
         "party_cheer_coupon.png",
+        "poop_dungeon_ticket.png",
         "special_cat_food.png",
         "trap_cages.png",
         "trap_points.png",
+        "whisker_dungeon_ticket.png",
         "whisker_shards.png"
       ],
       "local": [
         "collision_coin.png",
         "diamonds.png",
         "evil_cat_power_icon.png",
-        "gold.png.png",
+        "money.png",
         "item_slot_frame_*",
         "item_slot_overlay_mask*",
         "poop_count.png"
