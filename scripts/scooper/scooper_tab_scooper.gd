@@ -9,6 +9,7 @@ const EFFECT_ROW_H: float = 21.0
 const FILTER_AVAILABLE: String = "available"
 const FILTER_LOCKED: String = "locked"
 const FILTER_MAXED: String = "maxed"
+const EQUIPMENT_MAX_LEVEL: int = 10
 
 
 func build(scene: Control) -> void:
@@ -174,7 +175,7 @@ func _get_equipment_filter_bucket(item: Dictionary, scooper_lv: int) -> String:
 	var locked: bool = (not owned) and scooper_lv < unlock_lv
 	if locked:
 		return FILTER_LOCKED
-	if owned and level >= scooper_lv:
+	if owned and level >= EQUIPMENT_MAX_LEVEL:
 		return FILTER_MAXED
 	return FILTER_AVAILABLE
 
@@ -187,6 +188,10 @@ func _get_filter_empty_text(filter_key: String) -> String:
 			return UiText.SCOOPER_EQUIPMENT_FILTER_EMPTY_MAXED
 		_:
 			return UiText.SCOOPER_EQUIPMENT_FILTER_EMPTY_AVAILABLE
+
+
+func _format_equipment_title(name_str: String, level: int) -> String:
+	return "%s (%d/%d)" % [name_str, clampi(level, 0, EQUIPMENT_MAX_LEVEL), EQUIPMENT_MAX_LEVEL]
 
 
 func _make_equip_card(scene: Control, item: Dictionary) -> Control:
@@ -204,7 +209,8 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	var sick_cat_name: String = "" if sick_cat_name_variant == null else str(sick_cat_name_variant)
 	var scooper_lv: int = int(item.get("scooperLevel", scene.GameState.player_data.scooper_level))
 	var exp_per_lv: int = int(item.get("expPerLevel", 10))
-	var is_level_capped: bool = level >= scooper_lv
+	var current_level_cap: int = mini(scooper_lv, EQUIPMENT_MAX_LEVEL)
+	var is_level_capped: bool = owned and level >= current_level_cap
 	var locked: bool = (not owned) and scooper_lv < unlock_lv
 	var treat_mode: bool = sick_cat_name != ""
 
@@ -241,14 +247,14 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		icon_rect.visible = equipment_icon != null
 	level_lbl.visible = owned
 	level_lbl.text = str(level)
-	title_lbl.text = name_str
+	title_lbl.text = _format_equipment_title(name_str, level if owned else 0)
 	desc_lbl.visible = false
 	_apply_effect_summary_layout(panel, item, maxi(level, 1) if owned else 1)
 	exp_inline_lbl.text = ""
 
 	if locked:
 		level_lbl.visible = false
-		title_lbl.text = name_str
+		title_lbl.text = _format_equipment_title(name_str, 0)
 		title_lbl.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 1.0))
 		_apply_effect_summary_layout(panel, item, 0)
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_UNLOCK_AT % unlock_lv
@@ -263,7 +269,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 
 	if not owned:
 		var can_afford_purchase: bool = scene.GameState.player_data.gold >= purchase_cost
-		title_lbl.text = name_str
+		title_lbl.text = _format_equipment_title(name_str, 0)
 		_apply_effect_summary_layout(panel, item, 1)
 		exp_inline_lbl.text = UiText.SCOOPER_EQUIPMENT_COST_UNOWNED % purchase_cost if can_afford_purchase else UiText.SCOOPER_EQUIPMENT_COST_INSUFFICIENT % purchase_cost
 		_set_progress_fill(progress_fill, 0.0, 440.0)
@@ -279,7 +285,7 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 		action_btn.pressed.connect(Callable(self, "_show_purchase_confirm").bind(scene, purchase_cost, name_str, equip_id))
 		return panel
 
-	title_lbl.text = name_str
+	title_lbl.text = _format_equipment_title(name_str, level)
 	_apply_effect_summary_layout(panel, item, maxi(level, 1))
 	exp_inline_lbl.text = ""
 	_set_progress_fill(progress_fill, exp_bar_ratio(exp_val, exp_per_lv, is_level_capped), 440.0)

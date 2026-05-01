@@ -51,8 +51,8 @@ const SHADOW_RADIUS_Y := 9.0
 const SHADOW_OFFSET_Y := -10.0
 const SHADOW_POINT_COUNT := 20
 const SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.22)
-const HP_BAR_OFFSET_Y := 170.0
-const PLAYER_SKILL_BAR_OFFSET_Y := 158.0
+const HP_BAR_OFFSET_Y := 150.0
+const PLAYER_SKILL_BAR_OFFSET_Y := 138.0
 const ENEMY_HP_BAR_OFFSET_Y := 10.0
 const NAME_LABEL_OFFSET_Y := 198.0
 const DAMAGE_DIGIT_SPACING := 18.0
@@ -177,6 +177,7 @@ func _build_visuals() -> void:
 	_hp_value_label.add_theme_color_override("font_outline_color", Color(0.08, 0.04, 0.02, 1.0))
 	_hp_value_label.add_theme_constant_override("outline_size", 3)
 	add_child(_hp_value_label)
+	_hp_value_label.visible = false
 
 	_skill_bar_bg = ColorRect.new()
 	_skill_bar_bg.size = Vector2(SKILL_BAR_W, SKILL_BAR_H)
@@ -366,9 +367,8 @@ func update_hp(hp: int) -> void:
 	_hp_bar_fill.size.x = HP_BAR_W * ratio
 	_hp_bar_fill.color = Color(1.0 - ratio, ratio * 0.9, 0.1, 1.0)
 	if _hp_value_label != null:
-		_hp_value_label.text = "%d/%d" % [current_hp, max_hp]
-
-
+			_hp_value_label.text = ""
+			_hp_value_label.visible = false
 func update_skill_charge(max_cooldown: float, remaining_cooldown: float) -> void:
 	if _skill_bar_bg == null or _skill_bar_fill == null:
 		return
