@@ -58,10 +58,11 @@ func _refresh_achievement_tab(scene: Control) -> void:
 		var is_claimed: bool = bool(item.get("isClaimed", false))
 		if is_claimed:
 			claimed.append(item)
+		elif is_completed:
+			claimable_count += 1
+			active.insert(0, item)
 		else:
 			active.append(item)
-			if is_completed:
-				claimable_count += 1
 
 	if scene._achievement_summary_label != null:
 		scene._achievement_summary_label.text = UiText.SCOOPER_ACHIEVEMENT_SUMMARY_FORMAT % [claimable_count]
@@ -168,7 +169,16 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 	if claimed_time_lbl.visible:
 		claimed_time_lbl.text = UiText.SCOOPER_ACHIEVEMENT_CLAIMED_AT % claimed_time_text
 	var reward_info: Dictionary = _parse_reward_display(entry.get("rewardText", ""))
-	reward_lbl.text = str(reward_info.get("label", ""))
+	var reward_display_name: String = str(entry.get("rewardDisplayName", ""))
+	var reward_description: String = str(entry.get("rewardDescription", ""))
+	if reward_display_name != "":
+		var display_parts: PackedStringArray = PackedStringArray()
+		display_parts.append(reward_display_name)
+		if reward_description != "":
+			display_parts.append(reward_description)
+		reward_lbl.text = "\n".join(display_parts)
+	else:
+		reward_lbl.text = str(reward_info.get("label", ""))
 	reward_icon.texture = _resolve_reward_texture(_resolve_achievement_reward_icon_path(entry, reward_info))
 	reward_icon.visible = reward_icon.texture != null
 	var reward_amount: int = int(reward_info.get("amount", 0))
@@ -224,7 +234,6 @@ func _claim_next_achievement(scene: Control, pending_ids: Array[int], reward_ent
 	if pending_ids.is_empty():
 		if not reward_entries.is_empty():
 			scene.queue_home_reward_floats(reward_entries)
-		_set_feedback(scene, UiText.SCOOPER_ACHIEVEMENT_CLAIM_SUCCESS)
 		_refresh_achievements_after_claim(scene)
 		return
 
@@ -315,11 +324,6 @@ func _on_refresh_achievements_completed(
 
 func _apply_claim_result(scene: Control, result: Dictionary) -> void:
 	_apply_claim_profile(scene)
-	var texts: Array[String] = _extract_granted_reward_texts(result)
-	if texts.is_empty():
-		_set_feedback(scene, UiText.SCOOPER_ACHIEVEMENT_CLAIM_SUCCESS)
-		return
-	_set_feedback(scene, UiText.SCOOPER_ACHIEVEMENT_CLAIM_SUCCESS + "\n" + "\n".join(texts))
 
 
 func _apply_claim_profile(scene: Control) -> void:
