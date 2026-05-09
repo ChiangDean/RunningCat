@@ -175,7 +175,39 @@ func _make_item_card(item: Dictionary) -> Control:
 	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(slot)
+
+	var btn: Button = Button.new()
+	btn.flat = true
+	btn.set_anchors_preset(Control.PRESET_FULL_RECT)
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.self_modulate = Color(1.0, 1.0, 1.0, 0.0)
+	btn.pressed.connect(_show_item_detail.bind(item))
+	cell.add_child(btn)
 	return cell
+
+
+func _show_item_detail(item: Dictionary) -> void:
+	var item_name: String = str(item.get("name", ""))
+	var qty: int = int(item.get("qty", 0))
+	var desc: String = str(item.get("desc", ""))
+
+	var content: VBoxContainer = VBoxContainer.new()
+	content.add_theme_constant_override("separation", 12)
+
+	var qty_label: Label = Label.new()
+	qty_label.text = UiText.BACKPACK_DETAIL_QTY_FORMAT % GameState.format_number(qty)
+	qty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	qty_label.add_theme_color_override("font_color", Color(0.82, 0.70, 0.42, 1.0))
+	content.add_child(qty_label)
+
+	if desc != "":
+		var desc_label: Label = Label.new()
+		desc_label.text = desc
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		content.add_child(desc_label)
+
+	DialogManager.show_info_node(item_name, content, Callable(), "small")
 
 
 func _get_all_items() -> Array:
@@ -189,10 +221,10 @@ func _get_all_items() -> Array:
 func _get_currency_items() -> Array:
 	var player_data = GameState.player_data
 	return [
-		{"path": "catalog/currency/gold", "name": UiText.REWARD_GOLD, "qty": int(player_data.gold)},
-		{"path": "catalog/currency/diamonds", "name": UiText.REWARD_DIAMONDS, "qty": int(player_data.diamonds)},
-		{"path": "catalog/currency/trap_points", "name": UiText.BACKPACK_TRAP_POINTS, "qty": int(player_data.trap_points)},
-		{"path": "catalog/currency/collision_coin", "name": UiText.BACKPACK_COLLISION_COIN, "qty": int(player_data.collision_coin)},
+		{"path": "catalog/currency/gold", "name": UiText.REWARD_GOLD, "qty": int(player_data.gold), "desc": UiText.BACKPACK_ITEM_DESC_GOLD},
+		{"path": "catalog/currency/diamonds", "name": UiText.REWARD_DIAMONDS, "qty": int(player_data.diamonds), "desc": UiText.BACKPACK_ITEM_DESC_DIAMONDS},
+		{"path": "catalog/currency/trap_points", "name": UiText.BACKPACK_TRAP_POINTS, "qty": int(player_data.trap_points), "desc": UiText.BACKPACK_ITEM_DESC_TRAP_POINTS},
+		{"path": "catalog/currency/collision_coin", "name": UiText.BACKPACK_COLLISION_COIN, "qty": int(player_data.collision_coin), "desc": UiText.BACKPACK_ITEM_DESC_COLLISION_COIN},
 	]
 
 
@@ -203,11 +235,13 @@ func _get_ticket_items() -> Array:
 		"path": "catalog/consumable/arena_ticket",
 		"name": UiText.BACKPACK_ARENA_TICKET,
 		"qty": int(arena_overview.get("tickets", 0)),
+		"desc": UiText.BACKPACK_ITEM_DESC_ARENA_TICKET,
 	})
 	items.append({
 		"path": "catalog/consumable/party_cheer_coupon",
 		"name": UiText.SOCIAL_PARTY_USE_COUPON,
 		"qty": int(GameState.get_party_cheer_coupon_count()),
+		"desc": UiText.BACKPACK_ITEM_DESC_PARTY_CHEER_COUPON,
 	})
 
 	var dungeon_list: Array = GameState.dungeon_overview_data if GameState.dungeon_overview_data is Array else []
@@ -216,10 +250,17 @@ func _get_ticket_items() -> Array:
 			continue
 		var dungeon: Dictionary = dungeon_variant as Dictionary
 		var key: String = str(dungeon.get("key", ""))
+		var ticket_name: String = str(dungeon.get("ticketDisplayName", ""))
+		if ticket_name == "":
+			ticket_name = str(dungeon.get("displayName", UiText.BACKPACK_DUNGEON_TICKET))
+			if not ticket_name.ends_with("券"):
+				ticket_name += "券"
+		var ticket_desc: String = str(dungeon.get("ticketDescription", ""))
 		items.append({
-			"path": "catalog/dungeon/" + key,
-			"name": str(dungeon.get("displayName", UiText.BACKPACK_DUNGEON_TICKET)),
+			"path": "catalog/consumable/" + key + "_dungeon_ticket",
+			"name": ticket_name,
 			"qty": int(dungeon.get("remainingTicketCount", 0)),
+			"desc": ticket_desc,
 		})
 	return items
 
@@ -227,12 +268,12 @@ func _get_ticket_items() -> Array:
 func _get_consumable_items() -> Array:
 	var player_data = GameState.player_data
 	return [
-		{"path": "catalog/consumable/cat_food", "name": UiText.REWARD_CAT_FOOD, "qty": int(player_data.cat_food)},
-		{"path": "catalog/consumable/special_cat_food", "name": UiText.REWARD_SPECIAL_CAT_FOOD, "qty": int(player_data.special_cat_food)},
-		{"path": "catalog/consumable/trap_cages", "name": UiText.REWARD_TRAP_CAGE, "qty": int(player_data.trap_cages)},
-		{"path": "catalog/consumable/poop_count", "name": UiText.REWARD_POOP, "qty": int(player_data.poop_count)},
-		{"path": "catalog/consumable/memory_shards", "name": UiText.REWARD_MEMORY_SHARDS, "qty": int(player_data.memory_shards)},
-		{"path": "catalog/consumable/whisker_shards", "name": UiText.BACKPACK_WHISKER_SHARDS, "qty": int(player_data.whisker_shards)},
+		{"path": "catalog/consumable/cat_food", "name": UiText.REWARD_CAT_FOOD, "qty": int(player_data.cat_food), "desc": UiText.BACKPACK_ITEM_DESC_CAT_FOOD},
+		{"path": "catalog/consumable/special_cat_food", "name": UiText.REWARD_SPECIAL_CAT_FOOD, "qty": int(player_data.special_cat_food), "desc": UiText.BACKPACK_ITEM_DESC_SPECIAL_CAT_FOOD},
+		{"path": "catalog/consumable/trap_cages", "name": UiText.REWARD_TRAP_CAGE, "qty": int(player_data.trap_cages), "desc": UiText.BACKPACK_ITEM_DESC_TRAP_CAGES},
+		{"path": "catalog/consumable/poop_count", "name": UiText.REWARD_POOP, "qty": int(player_data.poop_count), "desc": UiText.BACKPACK_ITEM_DESC_POOP},
+		{"path": "catalog/consumable/memory_shards", "name": UiText.REWARD_MEMORY_SHARDS, "qty": int(player_data.memory_shards), "desc": UiText.BACKPACK_ITEM_DESC_MEMORY_SHARDS},
+		{"path": "catalog/consumable/whisker_shards", "name": UiText.BACKPACK_WHISKER_SHARDS, "qty": int(player_data.whisker_shards), "desc": UiText.BACKPACK_ITEM_DESC_WHISKER_SHARDS},
 	]
 
 
