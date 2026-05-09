@@ -28,6 +28,7 @@ var _equipment_cooldown_equipment_id: int = 0
 var _equipment_cooldown_action: String = ""
 var _equipment_cooldown_nodes: Array[Dictionary] = []
 var _equipment_filter: String = "available"
+var _memory_filter: String = "available"
 var _ability_list: VBoxContainer
 var _equip_list: VBoxContainer
 var _memory_summary_label: Label
