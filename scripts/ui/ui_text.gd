@@ -573,6 +573,8 @@ const SCOOPER_MEMORY_CONFIRM_FAILED_DEFAULT := "無法解鎖回憶"
 const SCOOPER_MEMORY_CONFIRM_SUCCESS := "解鎖成功"
 const SCOOPER_MEMORY_REFRESH_FAILED := "回憶資料刷新失敗"
 const SCOOPER_MEMORY_REFRESH_FAILED_DEFAULT := "無法更新回憶資料"
+const SCOOPER_MEMORY_SECTION_UNLOCKED := "已開放"
+const SCOOPER_MEMORY_SECTION_LOCKED := "未開放"
 
 # Scooper treasure labels
 const SCOOPER_TREASURE_SUMMARY_FORMAT := "寶藏種類：%d    持有總數：%d"

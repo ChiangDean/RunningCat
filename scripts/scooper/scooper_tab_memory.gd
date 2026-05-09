@@ -1,6 +1,8 @@
 extends RefCounted
 
 const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/memory/ScooperMemoryCardTemplate.tscn")
+const FILTER_AVAILABLE: String = "available"
+const FILTER_LOCKED: String = "locked"
 
 
 func build(scene: Control) -> void:
@@ -23,6 +25,8 @@ func build(scene: Control) -> void:
 		summary_row.add_child(scene._memory_summary_label)
 
 		scene._tab_content.add_child(scene._make_separator())
+
+	_add_memory_filter_row(scene)
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -60,12 +64,84 @@ func _refresh_memory_tab(scene: Control) -> void:
 		scene._memory_list.add_child(empty_lbl)
 		return
 
-	var first_item: bool = true
+	var current_filter: String = _get_current_filter(scene)
+	var player_level: int = scene.GameState.player_data.scooper_level
+	var filtered: Array = []
 	for item: Dictionary in items:
+		var unlock_level: int = int(item.get("unlockLevel", 1))
+		var unlocked: bool = bool(item.get("isUnlocked", false))
+		var is_available: bool = unlocked or player_level >= unlock_level
+		if current_filter == FILTER_AVAILABLE and is_available:
+			filtered.append(item)
+		elif current_filter == FILTER_LOCKED and not is_available:
+			filtered.append(item)
+
+	if current_filter == FILTER_AVAILABLE:
+		filtered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			var a_unlocked: bool = bool(a.get("isUnlocked", false))
+			var b_unlocked: bool = bool(b.get("isUnlocked", false))
+			if a_unlocked != b_unlocked:
+				return not a_unlocked
+			return int(a.get("unlockLevel", 1)) < int(b.get("unlockLevel", 1))
+		)
+	else:
+		filtered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			return int(a.get("unlockLevel", 1)) < int(b.get("unlockLevel", 1))
+		)
+
+	if filtered.is_empty():
+		var filter_empty_lbl: Label = Label.new()
+		filter_empty_lbl.text = UiText.SCOOPER_MEMORY_EMPTY
+		filter_empty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		filter_empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		scene._memory_list.add_child(filter_empty_lbl)
+		return
+
+	var first_item: bool = true
+	for item: Dictionary in filtered:
 		if not first_item:
 			scene._memory_list.add_child(scene._make_separator())
 		scene._memory_list.add_child(_make_memory_card(scene, item))
 		first_item = false
+
+
+func _add_memory_filter_row(scene: Control) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scene._tab_content.add_child(row)
+
+	var group: ButtonGroup = ButtonGroup.new()
+	var options: Array[Dictionary] = [
+		{"key": FILTER_AVAILABLE, "text": UiText.SCOOPER_MEMORY_SECTION_UNLOCKED},
+		{"key": FILTER_LOCKED, "text": UiText.SCOOPER_MEMORY_SECTION_LOCKED},
+	]
+	for option: Dictionary in options:
+		var button: Button = Button.new()
+		button.text = str(option.get("text", ""))
+		button.toggle_mode = true
+		button.button_group = group
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size = Vector2(0.0, 36.0)
+		button.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_TINY)
+		UiPalette.apply_button_kind(button, "confirm" if str(option.get("key", "")) == _get_current_filter(scene) else "neutral")
+		button.button_pressed = str(option.get("key", "")) == _get_current_filter(scene)
+		button.pressed.connect(Callable(self, "_set_memory_filter").bind(scene, str(option.get("key", ""))))
+		row.add_child(button)
+
+
+func _set_memory_filter(scene: Control, filter_key: String) -> void:
+	if scene == null or not is_instance_valid(scene):
+		return
+	scene._memory_filter = filter_key
+	scene.call("_rebuild_tab_content")
+
+
+func _get_current_filter(scene: Control) -> String:
+	var current_filter: String = str(scene._memory_filter)
+	if current_filter in [FILTER_AVAILABLE, FILTER_LOCKED]:
+		return current_filter
+	return FILTER_AVAILABLE
 
 
 func _make_memory_card(scene: Control, item: Dictionary) -> Control:
