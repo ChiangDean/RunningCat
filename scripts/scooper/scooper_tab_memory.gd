@@ -174,7 +174,12 @@ func _make_memory_card(scene: Control, item: Dictionary) -> Control:
 	AssetResolver.apply_preview_texture(preview_image, photo_path, "scooper")
 
 	overlay.visible = not unlocked
-	preview_text.text = display_name if unlocked else UiText.SCOOPER_MEMORY_LOCKED
+	if unlocked:
+		preview_text.text = display_name
+	elif level_locked:
+		preview_text.text = UiText.SCOOPER_EQUIPMENT_LOCKED_LEVEL_FORMAT % unlock_level
+	else:
+		preview_text.text = UiText.SCOOPER_MEMORY_LOCKED
 
 	desc.text = str(item.get("description", ""))
 	bonus.text = _memory_bonus_desc(item)

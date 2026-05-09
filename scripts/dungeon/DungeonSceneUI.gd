@@ -17,6 +17,8 @@ const DUNGEON_REWARD_KEYS: Array[String] = [
 	"diamonds",
 	"trap_cages",
 	"whisker_shards",
+	"poop_count",
+	"gold",
 ]
 static func build_ui(scene) -> void:
 	_clear_scene(scene)
@@ -81,7 +83,7 @@ static func _build_submenu_items(scene) -> Array:
 			continue
 		items.append({
 			"key": key,
-			"label": str(dungeon.get("displayName", key)),
+			"label": str(dungeon.get("displayName", key)).replace("地下城", ""),
 			"shell_description": _get_dungeon_description(dungeon),
 			"shell_summary_left": Callable(DungeonSceneUI, "_build_shell_summary_left").bind(scene, key),
 			"shell_summary_right": Callable(DungeonSceneUI, "_build_shell_summary_right").bind(scene, key),
@@ -396,6 +398,10 @@ static func _get_reward_label(reward_key: String) -> String:
 			return UiText.REWARD_TRAP_CAGE
 		"whisker_shards":
 			return UiText.REWARD_WHISKERS
+		"poop_count":
+			return UiText.REWARD_POOP
+		"gold":
+			return UiText.REWARD_GOLD
 		_:
 			return reward_key
 
@@ -412,6 +418,10 @@ static func _get_reward_catalog_path(reward_key: String) -> String:
 			return "catalog/consumable/trap_cages"
 		"whisker_shards":
 			return "catalog/consumable/whisker_shards"
+		"poop_count":
+			return "catalog/consumable/poop_count"
+		"gold":
+			return "catalog/currency/gold"
 		_:
 			return ""
 
