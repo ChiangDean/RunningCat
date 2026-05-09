@@ -67,6 +67,7 @@ var _diamond_store_keypad_close: Callable = Callable()
 var _diamond_store_dialog_close: Callable = Callable()
 var _pending_bundle_purchase: Dictionary = {}
 var _paid_shop_enabled: bool = true
+var _content_scroll: ScrollContainer = null
 
 @onready var _api_client = get_node("/root/ApiClient")
 
@@ -174,6 +175,7 @@ func _rebuild_content() -> void:
 		"content_vertical_scroll_mode": ScrollContainer.SCROLL_MODE_SHOW_ALWAYS,
 	})
 	_secondary_buttons = secondary_submenu.get("secondary_buttons", {})
+	_content_scroll = secondary_submenu.get("content_scroll", null) as ScrollContainer
 	var content_list: VBoxContainer = secondary_submenu.get("content_list")
 
 	if secondary_items.is_empty():
@@ -344,7 +346,8 @@ func _build_shop_reward_slot(reward: Dictionary) -> Control:
 	click_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	click_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	click_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	click_button.pressed.connect(Callable(self, "_show_reward_detail").bind(reward))
+	var pointer_down: Array[bool] = [false]
+	click_button.gui_input.connect(Callable(self, "_on_reward_slot_gui_input").bind(pointer_down, reward))
 	cell.add_child(click_button)
 	cell.mouse_filter = Control.MOUSE_FILTER_STOP
 	return cell
@@ -732,6 +735,26 @@ func _resolve_shop_reward_image_path(reward: Dictionary) -> String:
 	return AssetResolver.resolve_reward_icon_path(reward)
 
 
+func _on_reward_slot_gui_input(event: InputEvent, pointer_down: Array[bool], reward: Dictionary) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if mouse_event.pressed:
+		pointer_down[0] = true
+		return
+	var was_pressed: bool = pointer_down[0]
+	pointer_down[0] = false
+	if not was_pressed:
+		return
+	if _content_scroll != null and _content_scroll.has_meta("inertial_scroller"):
+		var scroller: InertialScroller = _content_scroll.get_meta("inertial_scroller") as InertialScroller
+		if scroller != null and scroller.consume_moved():
+			return
+	_show_reward_detail(reward)
+
+
 func _show_reward_detail(reward: Dictionary) -> void:
 	var display_name: String = str(reward.get("rewardDisplayName", reward.get("rewardType", UiText.SHOP_REWARD_FALLBACK_NAME)))
 	var quantity: int = int(reward.get("quantity", 0))
@@ -766,6 +789,21 @@ func _show_reward_detail(reward: Dictionary) -> void:
 		desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		desc_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		content.add_child(desc_label)
+
+	var effects: Array = reward.get("effects", []) if reward.get("effects", null) is Array else []
+	if not effects.is_empty():
+		var effects_box: VBoxContainer = VBoxContainer.new()
+		effects_box.add_theme_constant_override("separation", 4)
+		for effect_variant: Variant in effects:
+			if effect_variant is Dictionary:
+				var effect_label: Label = Label.new()
+				effect_label.text = _format_reward_effect(effect_variant)
+				effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				effect_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+				effect_label.add_theme_color_override("font_color", Color(0.60, 0.85, 0.55, 1.0))
+				effects_box.add_child(effect_label)
+		content.add_child(effects_box)
 
 	DialogManager.show_info_node(display_name, content, Callable(), "small")
 
@@ -804,6 +842,36 @@ func _get_reward_type_display_name(reward_type: String) -> String:
 			return "消耗品"
 		_:
 			return reward_type
+
+
+func _format_reward_effect(effect: Dictionary) -> String:
+	var target: String = str(effect.get("targetElementType", "all"))
+	var target_str: String = UiText.SCOOPER_EQUIPMENT_BONUS_ALL if target.to_lower() == "all" else target
+	var stat: String = str(effect.get("statType", ""))
+	var value: float = float(effect.get("value", 0.0))
+	match stat:
+		"atk", "Atk":
+			return "%s 固定攻擊 +%.0f" % [target_str, value]
+		"def", "Def":
+			return "%s 固定防禦 +%.0f" % [target_str, value]
+		"hp", "Hp", "max_hp", "MaxHp":
+			return "%s 固定生命 +%.0f" % [target_str, value]
+		"speed", "Speed":
+			return "%s 固定速度 +%.0f" % [target_str, value]
+		"atk_percent", "AtkPercent":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "攻擊加成", value * 100.0]
+		"def_percent", "DefPercent":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "防禦加成", value * 100.0]
+		"max_hp_percent", "MaxHpPercent", "hp_percent", "HpPercent":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "生命加成", value * 100.0]
+		"crit_rate", "CritRate":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "暴擊率", value * 100.0]
+		"crit_damage", "CritDamage":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [target_str, "暴擊傷害", value * 100.0]
+		"idle_poop_percent", "IdlePoopPercent":
+			return UiText.SCOOPER_EQUIPMENT_BONUS_TOTAL % [UiText.SCOOPER_EQUIPMENT_BONUS_ALL, UiText.REWARD_POOP, value * 100.0]
+		_:
+			return "%s %s %.2f" % [target_str, stat, value]
 
 
 func _build_collision_coin_card(item: Dictionary) -> Control:
