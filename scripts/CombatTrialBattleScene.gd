@@ -196,7 +196,7 @@ func _spawn_trial_units() -> void:
 	if GameState.player_team.is_empty():
 		GameState.apply_active_team_from_config("Boss")
 
-	var team_size: int = mini(GameState.player_team.size(), 5)
+	var team_size: int = mini(GameState.player_team.size(), GameState.get_max_team_slots())
 	for index: int in range(team_size):
 		var player_cat_id: int = int(GameState.player_team[index])
 		var cat_id: String = GameState.get_cat_file_id(player_cat_id)

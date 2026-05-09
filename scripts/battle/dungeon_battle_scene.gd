@@ -68,7 +68,7 @@ func _ready() -> void:
 			_dungeon_cfg = cfg
 			break
 
-	MAX_CATS_ON_FIELD = int(GameState.dungeon_config.get("max_team_size", 5))
+	MAX_CATS_ON_FIELD = mini(int(GameState.dungeon_config.get("max_team_size", 5)), GameState.get_max_team_slots())
 	_build_scene()
 	_start_battle()
 

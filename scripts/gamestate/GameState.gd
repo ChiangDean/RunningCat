@@ -39,6 +39,7 @@ signal combat_trial_score_changed
 signal combat_power_changed(previous_score: int, current_score: int)
 signal social_state_changed(domain_key: String)
 signal red_dot_state_changed
+signal temporary_events_received
 
 # Primary player state and runtime caches.
 var player_data: PlayerData
@@ -2164,9 +2165,14 @@ func get_pending_idle_rewards() -> Dictionary:
 func _on_stage_clear_reward(ok: bool, data: Variant, _err: Dictionary) -> void:
 	if not ok or not (data is Dictionary):
 		return
-	var wallet_snapshot: Variant = (data as Dictionary).get("walletSnapshot", {})
+	var dict: Dictionary = data as Dictionary
+	var wallet_snapshot: Variant = dict.get("walletSnapshot", {})
 	if wallet_snapshot is Dictionary:
 		apply_wallet_snapshot(wallet_snapshot as Dictionary)
+	var events: Variant = dict.get("pendingEvents", [])
+	if events is Array and not (events as Array).is_empty():
+		pending_temporary_events = events
+		temporary_events_received.emit()
 
 ## Fire the stage-clear API call; ignored if a newer version has superseded it
 func _flush_stage_clear_reward(version: int) -> void:
@@ -2263,6 +2269,47 @@ func get_special_ability_speed_cap() -> float:
 
 func can_skip_battle() -> bool:
 	return bool(get_special_ability_summary().get("battle_skip_unlocked", false))
+
+
+func has_scaled_scoop_by_level() -> bool:
+	return bool(get_special_ability_summary().get("scaled_scoop_by_level", false))
+
+
+func has_diamond_scoop_slot() -> bool:
+	return bool(get_special_ability_summary().get("diamond_scoop_slot_unlocked", false))
+
+
+func has_battle_speed_charge() -> bool:
+	return bool(get_special_ability_summary().get("battle_speed_charge_unlocked", false))
+
+
+func has_battle_speed_rate_upgrade() -> bool:
+	return bool(get_special_ability_summary().get("battle_speed_rate_upgrade_unlocked", false))
+
+
+func is_ad_free() -> bool:
+	return bool(get_special_ability_summary().get("ad_free", false))
+
+
+func has_friend_capacity_license() -> bool:
+	return bool(get_special_ability_summary().get("friend_capacity_unlocked", false))
+
+
+func has_lifetime_privilege() -> bool:
+	return bool(get_special_ability_summary().get("lifetime_privilege", false))
+
+
+func has_monthly_privilege() -> bool:
+	return bool(get_special_ability_summary().get("monthly_privilege", false))
+
+
+func has_any_privilege() -> bool:
+	var summary := get_special_ability_summary()
+	return bool(summary.get("lifetime_privilege", false)) or bool(summary.get("monthly_privilege", false))
+
+
+func get_max_team_slots() -> int:
+	return maxi(1, int(get_special_ability_summary().get("max_team_slots", 1)))
 
 
 func clear_chat_state() -> void:
