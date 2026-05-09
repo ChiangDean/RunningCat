@@ -238,6 +238,15 @@ func _build_ability_effect_lines() -> Array[String]:
 			"idle_max_hours_bonus": 0,
 			"battle_speed_cap": 1.0,
 			"battle_skip_unlocked": false,
+			"scaled_scoop_by_level": false,
+			"diamond_scoop_slot_unlocked": false,
+			"battle_speed_charge_unlocked": false,
+			"battle_speed_rate_upgrade_unlocked": false,
+			"ad_free": false,
+			"friend_capacity_unlocked": false,
+			"lifetime_privilege": false,
+			"monthly_privilege": false,
+			"max_team_slots": 1,
 		}
 		for entry_variant: Variant in live_entries:
 			if not (entry_variant is Dictionary):
@@ -255,6 +264,24 @@ func _build_ability_effect_lines() -> Array[String]:
 					summary["battle_speed_cap"] = maxf(float(summary.get("battle_speed_cap", 1.0)), effect_value)
 				"unlock_battle_skip":
 					summary["battle_skip_unlocked"] = bool(summary.get("battle_skip_unlocked", false)) or quantity > 0 or bool(effect_value > 0.0)
+				"scaled_scoop_by_level":
+					summary["scaled_scoop_by_level"] = true
+				"unlock_diamond_scoop_slot":
+					summary["diamond_scoop_slot_unlocked"] = true
+				"unlock_battle_speed_charge":
+					summary["battle_speed_charge_unlocked"] = true
+				"unlock_battle_speed_rate_upgrade":
+					summary["battle_speed_rate_upgrade_unlocked"] = true
+				"unlock_ad_free":
+					summary["ad_free"] = true
+				"unlock_friend_capacity_upgrade":
+					summary["friend_capacity_unlocked"] = true
+				"lifetime_privilege":
+					summary["lifetime_privilege"] = true
+				"monthly_privilege":
+					summary["monthly_privilege"] = true
+				"unlock_team_slot":
+					summary["max_team_slots"] = maxi(int(summary.get("max_team_slots", 1)), int(effect_value))
 		return _build_ability_lines_from_summary(summary)
 
 	return _build_ability_lines_from_summary(_game_state.get_special_ability_summary())
@@ -277,6 +304,34 @@ func _build_ability_lines_from_summary(summary: Dictionary) -> Array[String]:
 
 	if bool(summary.get("battle_skip_unlocked", false)):
 		lines.append(UiText.STATS_BATTLE_SKIP_UNLOCKED)
+
+	if bool(summary.get("scaled_scoop_by_level", false)):
+		lines.append(UiText.STATS_SCALED_SCOOP)
+
+	if bool(summary.get("diamond_scoop_slot_unlocked", false)):
+		lines.append(UiText.STATS_DIAMOND_SCOOP_SLOT)
+
+	if bool(summary.get("battle_speed_charge_unlocked", false)):
+		lines.append(UiText.STATS_BATTLE_SPEED_CHARGE)
+
+	if bool(summary.get("battle_speed_rate_upgrade_unlocked", false)):
+		lines.append(UiText.STATS_BATTLE_SPEED_RATE_UPGRADE)
+
+	if bool(summary.get("ad_free", false)):
+		lines.append(UiText.STATS_AD_FREE)
+
+	if bool(summary.get("friend_capacity_unlocked", false)):
+		lines.append(UiText.STATS_FRIEND_CAPACITY)
+
+	if bool(summary.get("lifetime_privilege", false)):
+		lines.append(UiText.STATS_LIFETIME_PRIVILEGE)
+
+	if bool(summary.get("monthly_privilege", false)):
+		lines.append(UiText.STATS_MONTHLY_PRIVILEGE)
+
+	var team_slots: int = int(summary.get("max_team_slots", 1))
+	if team_slots > 1:
+		lines.append(UiText.STATS_TEAM_SLOTS_FORMAT % team_slots)
 
 	return lines
 

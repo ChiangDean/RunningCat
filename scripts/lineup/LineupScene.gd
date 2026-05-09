@@ -242,14 +242,18 @@ func _find_first_empty_slot_index(members: Array) -> int:
 
 
 func _get_max_team_size_for(type_key: String) -> int:
+	var config_max: int
 	match type_key:
 		"boss":
-			return int(GameState.boss_config.get("max_team_size", 5))
+			config_max = int(GameState.boss_config.get("max_team_size", 5))
 		"dungeon":
-			return int(GameState.dungeon_config.get("max_team_size", 5))
+			config_max = int(GameState.dungeon_config.get("max_team_size", 5))
 		"arena_attack", "arena_defense":
-			return int(GameState.arena_config.get("max_team_size", 5))
-	return 5
+			config_max = int(GameState.arena_config.get("max_team_size", 5))
+		_:
+			config_max = 5
+	var ability_max: int = GameState.get_max_team_slots()
+	return mini(config_max, ability_max)
 
 
 func _is_current_team_dirty() -> bool:
@@ -727,14 +731,18 @@ func _get_cat_visual_fallback(cat_name: String) -> String:
 
 
 func _get_max_team_size() -> int:
+	var config_max: int
 	match _current_team_type:
 		"boss":
-			return int(GameState.boss_config.get("max_team_size", 5))
+			config_max = int(GameState.boss_config.get("max_team_size", 5))
 		"dungeon":
-			return int(GameState.dungeon_config.get("max_team_size", 5))
+			config_max = int(GameState.dungeon_config.get("max_team_size", 5))
 		"arena_attack", "arena_defense":
-			return int(GameState.arena_config.get("max_team_size", 5))
-	return 5
+			config_max = int(GameState.arena_config.get("max_team_size", 5))
+		_:
+			config_max = 5
+	var ability_max: int = GameState.get_max_team_slots()
+	return mini(config_max, ability_max)
 
 
 func _get_team_type_description(type_key: String) -> String:

@@ -358,7 +358,8 @@ func _render_friend() -> void:
 	friends_box.add_child(header_row)
 
 	var count_label: Label = Label.new()
-	count_label.text = UiText.SOCIAL_FRIEND_COUNT_FORMAT % [friend_rows.size(), 30]
+	var friend_cap: int = int(_friend_list.get("maxFriends", 30))
+	count_label.text = UiText.SOCIAL_FRIEND_COUNT_FORMAT % [friend_rows.size(), friend_cap]
 	count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	count_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	count_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
@@ -3450,7 +3451,8 @@ func _build_party_cheer_button() -> Button:
 		button = _make_action_button("%s(1/1)" % UiText.SOCIAL_PARTY_FREE_CHEER, "confirm")
 		button.pressed.connect(Callable(self, "_cheer_party").bind(false))
 	elif not has_ad:
-		button = _make_action_button("%s(1/1)" % UiText.SOCIAL_PARTY_AD_CHEER, "secondary")
+		var label: String = UiText.SOCIAL_PARTY_FREE_CHEER if GameState.is_ad_free() else UiText.SOCIAL_PARTY_AD_CHEER
+		button = _make_action_button("%s(1/1)" % label, "secondary")
 		button.pressed.connect(Callable(self, "_cheer_party").bind(true))
 	else:
 		button = _make_action_button("%s(0/1)" % UiText.SOCIAL_PARTY_AD_CHEER, "secondary")
