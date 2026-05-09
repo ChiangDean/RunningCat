@@ -1027,6 +1027,21 @@ func update_scooper_ability(data: Array) -> void:
 	scooper_ability_data = _normalize_image_fields_variant(data)
 	CacheIO.save_scooper("ability", scooper_ability_data)
 
+## Apply upgrade response: update tier/cost of a single ability in cache
+func apply_ability_upgrade(response: Dictionary) -> void:
+	var ability_id: int = int(response.get("abilityId", 0))
+	var new_tier: int = int(response.get("newTier", 0))
+	var next_upgrade_cost = response.get("nextUpgradeCost", null)
+	for i: int in range(scooper_ability_data.size()):
+		var item: Dictionary = scooper_ability_data[i]
+		if int(item.get("abilityId", 0)) == ability_id:
+			item["currentTier"] = new_tier
+			item["quantity"] = new_tier
+			item["nextUpgradeCost"] = next_upgrade_cost
+			scooper_ability_data[i] = item
+			break
+	CacheIO.save_scooper("ability", scooper_ability_data)
+
 ## Update memory cache (memory + local file)
 func update_scooper_memory(data: Array) -> void:
 	scooper_memory_data = _normalize_image_fields_variant(data)

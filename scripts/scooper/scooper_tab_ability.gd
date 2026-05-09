@@ -74,10 +74,35 @@ func _make_ability_card(_scene: Control, item: Dictionary) -> Control:
 	var title: Label = panel.get_node("Margin/ContentCanvas/TitleLabel") as Label
 	var source_chip: Label = panel.get_node("Margin/ContentCanvas/SourceLabel") as Label
 	var desc: Label = panel.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
+	var count_label: Label = panel.get_node("Margin/ContentCanvas/CountLabel") as Label
 	var icon: Texture2D = AssetResolver.resolve_ability_icon(item)
 	icon_rect.texture = icon
 	icon_rect.visible = icon != null
 	title.text = str(item.get("displayName", item.get("display_name", "")))
 	source_chip.text = UiText.SCOOPER_ABILITY_SOURCE_VALUE
 	desc.text = str(item.get("description", ""))
+
+	var current_tier: int = item.get("currentTier", item.get("quantity", 1))
+	var max_tier = item.get("maxTier", null)
+	if max_tier != null and max_tier > 0:
+		count_label.text = "Lv %d / %d" % [current_tier, max_tier]
+	else:
+		count_label.text = "Lv %d" % current_tier
+
+	var next_upgrade_cost = item.get("nextUpgradeCost", null)
+	if next_upgrade_cost != null and next_upgrade_cost > 0:
+		var upgrade_btn: Button = Button.new()
+		upgrade_btn.text = UiText.SCOOPER_ABILITY_UPGRADE_FORMAT % next_upgrade_cost
+		upgrade_btn.add_theme_font_size_override("font_size", 14)
+		upgrade_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var content: Control = panel.get_node("Margin/ContentCanvas") as Control
+		content.add_child(upgrade_btn)
+		upgrade_btn.layout_mode = 0
+		upgrade_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		upgrade_btn.position = Vector2(400.0, 160.0)
+		var ability_id: int = item.get("abilityId", 0)
+		upgrade_btn.pressed.connect(func() -> void:
+			_scene._on_upgrade_ability_pressed(ability_id, next_upgrade_cost)
+		)
+
 	return panel

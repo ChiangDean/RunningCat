@@ -404,3 +404,17 @@ func _get_shell_summary_left() -> String:
 
 func _refresh_shell_submenu(active_key: String) -> void:
 	SceneSubmenuBar.refresh(_tab_btns, active_key)
+
+
+func _on_upgrade_ability_pressed(ability_id: int, expected_cost: int) -> void:
+	var body: Dictionary = {"expectedCost": expected_cost}
+	ApiClient.post_authenticated(
+		"/api/scooper/ability/%d/upgrade" % ability_id,
+		body,
+		func(ok: bool, data: Variant, _err: Dictionary) -> void:
+			if ok and data is Dictionary:
+				GameState.apply_ability_upgrade(data)
+				_rebuild_tab_content()
+			else:
+				ToastManager.show_error(UiText.SCOOPER_ABILITY_UPGRADE_FAILED)
+	)

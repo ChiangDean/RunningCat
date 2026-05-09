@@ -102,16 +102,20 @@ func _execute_trap_cage_purchase(count: int) -> void:
 	_api_client.purchase_trap_cages(count, _on_purchase_completed)
 
 
-func _on_purchase_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+func _on_purchase_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success:
 		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, _extract_error_message(error, UiText.SHOP_TRAP_CAGE_PURCHASE_FAILED_BODY))
 		return
+	var payload: Dictionary = data if data is Dictionary else {}
+	var overview: Dictionary = payload.get("overview", {})
+	if not overview.is_empty():
+		GameState.update_shop(overview)
 	emit_signal("request_refresh")
 	var owner := get_parent()
 	if owner != null and owner.has_method("get_parent"):
 		var scene := owner.get_parent()
-		if scene != null and scene.has_method("refresh_from_bootstrap"):
-			scene.refresh_from_bootstrap(false)
+		if scene != null and scene.has_method("_refresh_content"):
+			scene._refresh_content()
 	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_TRAP_CAGE_PURCHASE_SUCCESS_BODY)
 
 
