@@ -47,6 +47,13 @@ var _achievement_claimed_expanded: bool = false
 var _api_in_flight: bool = false
 
 const TAB_KEYS: Array = ["equipment", "ability", "memory", "treasure", "achievement"]
+const TAB_FEATURE_MAP: Dictionary = {
+	"equipment": "equipment",
+	"ability": "special_ability",
+	"memory": "memory",
+	"treasure": "treasure",
+	"achievement": "achievement",
+}
 
 @onready var GameState = get_node("/root/GameState")
 @onready var ApiClient = get_node("/root/ApiClient")
@@ -60,6 +67,9 @@ var _achievement_tab: RefCounted = preload("res://scripts/scooper/scooper_tab_ac
 
 
 func _ready() -> void:
+	var unlocked_tabs: Array = _get_unlocked_tab_keys()
+	if not unlocked_tabs.has(_current_tab) and not unlocked_tabs.is_empty():
+		_current_tab = str(unlocked_tabs[0])
 	_register_helper_shared_state()
 	_build_ui()
 	GameState.red_dot_state_changed.connect(_refresh_red_dots)
@@ -154,7 +164,7 @@ func _process(delta: float) -> void:
 
 
 func _switch_tab(tab_key: String) -> void:
-	if not TAB_KEYS.has(tab_key):
+	if not _get_unlocked_tab_keys().has(tab_key):
 		return
 	_current_tab = tab_key
 	if _tab_header_summary != null:
@@ -349,9 +359,19 @@ func _on_back_pressed() -> void:
 	SceneNavigator.return_to_battle()
 
 
-func _build_shell_submenu(submenu_root: Control) -> void:
-	var submenu_items: Array = []
+func _get_unlocked_tab_keys() -> Array:
+	var result: Array = []
 	for tab_key: String in TAB_KEYS:
+		var feature_key: String = str(TAB_FEATURE_MAP.get(tab_key, ""))
+		if feature_key.is_empty() or GameState.is_feature_unlocked(feature_key):
+			result.append(tab_key)
+	return result
+
+
+func _build_shell_submenu(submenu_root: Control) -> void:
+	var unlocked_tabs: Array = _get_unlocked_tab_keys()
+	var submenu_items: Array = []
+	for tab_key: String in unlocked_tabs:
 		var tab_meta: Dictionary = _get_tab_meta(tab_key)
 		submenu_items.append({
 			"key": tab_key,

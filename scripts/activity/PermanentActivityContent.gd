@@ -59,6 +59,8 @@ const ENTRY_DEFINITIONS: Array[Dictionary] = [
 
 var _entry_buttons: Dictionary = {}
 
+@onready var GameState: Node = get_node("/root/GameState")
+
 
 func _ready() -> void:
 	if get_child_count() > 0:
@@ -75,9 +77,14 @@ func refresh_red_dots() -> void:
 
 
 func _build_content() -> void:
-	for index: int in range(ENTRY_DEFINITIONS.size()):
-		var entry_data: Dictionary = ENTRY_DEFINITIONS[index]
-		add_child(_make_entry_row(entry_data, index < ENTRY_DEFINITIONS.size() - 1))
+	var visible_entries: Array[Dictionary] = []
+	for entry_data: Dictionary in ENTRY_DEFINITIONS:
+		var key: String = str(entry_data.get("key", ""))
+		if key.is_empty() or GameState.is_feature_unlocked(key):
+			visible_entries.append(entry_data)
+	for index: int in range(visible_entries.size()):
+		var entry_data: Dictionary = visible_entries[index]
+		add_child(_make_entry_row(entry_data, index < visible_entries.size() - 1))
 
 
 func _make_entry_row(entry_data: Dictionary, show_separator: bool) -> Control:

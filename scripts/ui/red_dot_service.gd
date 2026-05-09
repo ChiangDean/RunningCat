@@ -76,6 +76,11 @@ static func has_friend_request_red_dot() -> bool:
 
 
 static func has_friend_red_dot() -> bool:
+	var game_state: Node = _get_game_state()
+	if game_state == null:
+		return false
+	if not game_state.is_feature_unlocked("friends"):
+		return false
 	return has_friend_send_all_gift_red_dot() or has_friend_request_red_dot()
 
 
@@ -126,6 +131,8 @@ static func has_scooper_achievement_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null:
 		return false
+	if not game_state.is_feature_unlocked("achievement"):
+		return false
 	for item_variant: Variant in game_state.scooper_achievement_data:
 		if not (item_variant is Dictionary):
 			continue
@@ -138,6 +145,8 @@ static func has_scooper_achievement_red_dot() -> bool:
 static func has_scooper_memory_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null or game_state.player_data == null:
+		return false
+	if not game_state.is_feature_unlocked("memory"):
 		return false
 	var memory_shards: int = int(game_state.player_data.memory_shards)
 	for item_variant: Variant in game_state.scooper_memory_data:
@@ -152,6 +161,8 @@ static func has_scooper_memory_red_dot() -> bool:
 static func has_scooper_equipment_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null or game_state.player_data == null:
+		return false
+	if not game_state.is_feature_unlocked("equipment"):
 		return false
 	var scooper_level: int = int(game_state.player_data.scooper_level)
 	var gold: int = int(game_state.player_data.gold)
@@ -171,6 +182,8 @@ static func has_scooper_red_dot() -> bool:
 static func has_dungeon_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null:
+		return false
+	if not game_state.is_feature_unlocked("dungeon"):
 		return false
 	for item_variant: Variant in game_state.dungeon_overview_data:
 		if not (item_variant is Dictionary):
@@ -202,6 +215,8 @@ static func has_arena_red_dot() -> bool:
 static func has_expedition_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null:
+		return false
+	if not game_state.is_feature_unlocked("expedition"):
 		return false
 	var now_unix: int = int(Time.get_unix_time_from_system())
 	for item_variant: Variant in game_state.expedition_data:
@@ -240,12 +255,19 @@ static func has_shop_free_bundle_red_dot() -> bool:
 
 
 static func has_shop_red_dot() -> bool:
+	var game_state: Node = _get_game_state()
+	if game_state == null:
+		return false
+	if not game_state.is_feature_unlocked("shop"):
+		return false
 	return has_shop_free_bundle_red_dot() or has_gacha_red_dot()
 
 
 static func has_enhance_red_dot() -> bool:
 	var game_state: Node = _get_game_state()
 	if game_state == null:
+		return false
+	if not game_state.is_feature_unlocked("enhance"):
 		return false
 	var owned_cats: Array = game_state.get_owned_cats()
 	for cat_id_variant: Variant in owned_cats:

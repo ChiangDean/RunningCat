@@ -501,6 +501,8 @@ func apply_player_bootstrap(data: Dictionary) -> void:
 	)
 	is_new_player = bool(data.get("isNewPlayer", false))
 	_is_applying_bootstrap = false
+	if is_admin_session():
+		admin_mode_bypass = true
 	recalculate_combat_power()
 	if should_release_combat_power_notifications:
 		_pending_combat_power_change.clear()
@@ -673,6 +675,8 @@ var dungeon_config: Dictionary = {}
 var temporary_event_configs: Array = []
 ## 功能解鎖等級配置（feature_key -> unlock_level）
 var feature_unlock_levels: Dictionary = {}
+## Admin bypass: 開啟後所有功能解鎖檢查一律通過
+var admin_mode_bypass: bool = false
 ## 待領取的臨時事件隊列（dungeon challenge 完成後填入）
 var pending_temporary_events: Array = []
 
@@ -2832,6 +2836,8 @@ func get_equipment_bonuses() -> Array:
 
 ## 檢查指定功能是否已解鎖（依據 scooper_level）
 func is_feature_unlocked(feature_key: String) -> bool:
+	if admin_mode_bypass and is_admin_session():
+		return true
 	var required: int = int(feature_unlock_levels.get(feature_key, 1))
 	return player_data.scooper_level >= required
 
