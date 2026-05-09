@@ -3,11 +3,8 @@ extends Control
 const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/backpack/ItemSlotTemplate.tscn")
 
 const TAB_VALUE := "value_bundle"
-const TAB_DAILY := "daily_bundle"
-const TAB_WEEKLY := "weekly_bundle"
+const TAB_CURRENCY_SHOP := "currency_shop"
 const TAB_DIAMOND_STORE := "diamond_store"
-const TAB_GOLD_STORE := "gold_store"
-const TAB_COLLISION_COIN := "collision_coin"
 const TAB_POINT := "point_bundle"
 const TRAP_POINTS_CURRENCY_ID := 3
 const COLLISION_COIN_CURRENCY_ID := 4
@@ -16,12 +13,9 @@ const ARENA_TICKET_ICON_PATH := "res://assets/sprites/cdn/ui/rewards/arena_ticke
 
 const CATEGORY_CONFIGS := [
 	{"key": TAB_VALUE, "label": "SHOP_SUBMENU_VALUE", "category_type": "valuepack"},
-	{"key": TAB_DAILY, "label": "SHOP_SUBMENU_DAILY", "category_type": "dailypack"},
-	{"key": TAB_WEEKLY, "label": "SHOP_SUBMENU_WEEKLY", "category_type": "weeklypack"},
+	{"key": TAB_CURRENCY_SHOP, "label": "SHOP_SUBMENU_CURRENCY_SHOP", "category_type": "currencyshop"},
 	{"key": TAB_DIAMOND_STORE, "label": "SHOP_SUBMENU_DIAMOND_STORE", "category_type": "diamondshop"},
-	{"key": TAB_GOLD_STORE, "label": "SHOP_SUBMENU_GOLD_STORE", "category_type": "goldshop"},
-	{"key": TAB_COLLISION_COIN, "label": "SHOP_SUBMENU_COLLISION_COIN"},
-	{"key": TAB_POINT, "label": "SHOP_SUBMENU_POINT", "category_type": "trappointshop"},
+	{"key": TAB_POINT, "label": "SHOP_SUBMENU_POINT", "category_type": "pointshop"},
 ]
 
 const COLLISION_COIN_ITEMS := [
@@ -190,8 +184,15 @@ func _build_secondary_items(tab_key: String) -> Array:
 	if not _is_tab_visible(tab_key):
 		return []
 	match tab_key:
-		TAB_COLLISION_COIN:
-			return COLLISION_COIN_ITEMS
+		TAB_CURRENCY_SHOP:
+			# 衝撞幣(NT) group is static (NTD payment); 鑽石(衝撞幣) groups come from API
+			var api_groups: Array = _get_bundle_groups_for_tab(tab_key)
+			var result: Array = [{"key": "currency_shop_nt", "label": UiText.SHOP_SUBMENU_COLLISION_COIN}]
+			for group_variant: Variant in api_groups:
+				if group_variant is Dictionary:
+					var g: Dictionary = group_variant
+					result.append({"key": str(g.get("groupId", "")), "label": str(g.get("displayName", UiText.SHOP_BUNDLE_DEFAULT_NAME))})
+			return result
 		_:
 			var groups: Array = _get_bundle_groups_for_tab(tab_key)
 			if not groups.is_empty():
@@ -230,8 +231,10 @@ func _ensure_active_secondary_key(tab_key: String, items: Array) -> String:
 
 func _build_secondary_detail(tab_key: String, item_key: String) -> Control:
 	match tab_key:
-		TAB_COLLISION_COIN:
-			return _build_collision_coin_card(_get_collision_coin_item(item_key))
+		TAB_CURRENCY_SHOP:
+			if item_key == "currency_shop_nt":
+				return _build_all_collision_coin_cards()
+			return _build_bundle_group_detail(tab_key, item_key)
 		_:
 			if not _get_bundle_groups_for_tab(tab_key).is_empty():
 				return _build_bundle_group_detail(tab_key, item_key)
@@ -874,6 +877,16 @@ func _format_reward_effect(effect: Dictionary) -> String:
 			return "%s %s %.2f" % [target_str, stat, value]
 
 
+func _build_all_collision_coin_cards() -> Control:
+	var root: VBoxContainer = VBoxContainer.new()
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.add_theme_constant_override("separation", 14)
+	for item_variant: Variant in COLLISION_COIN_ITEMS:
+		if item_variant is Dictionary:
+			root.add_child(_build_collision_coin_card(item_variant))
+	return root
+
+
 func _build_collision_coin_card(item: Dictionary) -> Control:
 	var panel: PanelContainer = _make_shop_panel(OverlaySceneChrome.PANEL_BORDER)
 	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(16)
@@ -1052,11 +1065,15 @@ func _purchase_trap_cages(quantity: int) -> void:
 	_api_client.purchase_trap_cages(quantity, _on_purchase_trap_cages_completed)
 
 
-func _on_purchase_trap_cages_completed(success: bool, _data: Variant, error: Dictionary) -> void:
+func _on_purchase_trap_cages_completed(success: bool, data: Variant, error: Dictionary) -> void:
 	if not success:
 		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_TRAP_CAGE_PURCHASE_FAILED_BODY)))
 		return
-	refresh_from_bootstrap(false)
+	var payload: Dictionary = data if data is Dictionary else {}
+	var overview: Dictionary = payload.get("overview", {})
+	if not overview.is_empty():
+		GameState.update_shop(overview)
+	_refresh_content()
 	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_TRAP_CAGE_PURCHASE_SUCCESS_BODY)
 
 
@@ -1096,12 +1113,12 @@ func _on_purchase_arena_tickets_completed(success: bool, data: Variant, error: D
 	if not success:
 		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SHOP_ARENA_TICKET_PURCHASE_FAILED_BODY)))
 		return
-	if data is Dictionary:
-		var response: Dictionary = data
-		var overview: Dictionary = response.get("overview", {})
-		if not overview.is_empty():
-			GameState.update_arena(overview)
-	refresh_from_bootstrap(false)
+	var payload: Dictionary = data if data is Dictionary else {}
+	var overview: Dictionary = payload.get("overview", {})
+	if not overview.is_empty():
+		GameState.update_shop(overview)
+		GameState.update_arena(overview)
+	_refresh_content()
 	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, UiText.SHOP_ARENA_TICKET_TITLE)
 
 
@@ -1138,7 +1155,14 @@ func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictiona
 		return
 	var payload: Dictionary = data if data is Dictionary else {}
 	_pending_bundle_purchase.clear()
-	refresh_from_bootstrap(false)
+
+	var overview: Dictionary = payload.get("overview", {})
+	if not overview.is_empty():
+		GameState.update_shop(overview)
+	var scooper_treasures: Variant = payload.get("scooperTreasures", null)
+	if scooper_treasures is Array and not scooper_treasures.is_empty():
+		GameState.update_scooper_treasure(scooper_treasures)
+	_refresh_content()
 
 	var reward_lines: Array[String] = []
 	var rewards_variant: Variant = payload.get("grantedRewards", [])
@@ -1157,8 +1181,8 @@ func _on_bundle_purchase_completed(success: bool, data: Variant, error: Dictiona
 
 func _redirect_to_collision_coin_store() -> void:
 	_pending_bundle_purchase.clear()
-	_active_tab = TAB_COLLISION_COIN
-	_active_secondary_keys[TAB_COLLISION_COIN] = "coin_33"
+	_active_tab = TAB_CURRENCY_SHOP
+	_active_secondary_keys[TAB_CURRENCY_SHOP] = "currency_shop_nt"
 	_refresh_content()
 
 
@@ -1193,8 +1217,6 @@ func _get_bundle_groups_for_tab(tab_key: String) -> Array:
 			continue
 		var group: Dictionary = group_variant
 		if str(group.get("categoryType", "")).to_lower() != category_type:
-			continue
-		if not _has_visible_bundle_for_group(tab_key, str(group.get("groupId", ""))):
 			continue
 		result.append(group)
 	result.sort_custom(_sort_shop_groups)
@@ -1281,7 +1303,7 @@ func _has_shop_tab_red_dot(tab_key: String) -> bool:
 
 func _has_shop_secondary_red_dot(tab_key: String, item_key: String) -> bool:
 	match tab_key:
-		TAB_COLLISION_COIN:
+		TAB_CURRENCY_SHOP:
 			return false
 		_:
 			pass
@@ -1407,16 +1429,10 @@ func _get_top_label(tab_key: String) -> String:
 	match tab_key:
 		TAB_VALUE:
 			return UiText.SHOP_SUBMENU_VALUE
-		TAB_DAILY:
-			return UiText.SHOP_SUBMENU_DAILY
-		TAB_WEEKLY:
-			return UiText.SHOP_SUBMENU_WEEKLY
+		TAB_CURRENCY_SHOP:
+			return UiText.SHOP_SUBMENU_CURRENCY_SHOP
 		TAB_DIAMOND_STORE:
 			return UiText.SHOP_SUBMENU_DIAMOND_STORE
-		TAB_GOLD_STORE:
-			return UiText.SHOP_SUBMENU_GOLD_STORE
-		TAB_COLLISION_COIN:
-			return UiText.SHOP_SUBMENU_COLLISION_COIN
 		TAB_POINT:
 			return UiText.SHOP_SUBMENU_POINT
 		_:
@@ -1427,16 +1443,10 @@ func _get_tab_meta(tab_key: String) -> Dictionary:
 	match tab_key:
 		TAB_VALUE:
 			return {"title": UiText.SHOP_SUBMENU_VALUE, "description": UiText.SHOP_TAB_DESC_VALUE}
-		TAB_DAILY:
-			return {"title": UiText.SHOP_SUBMENU_DAILY, "description": UiText.SHOP_TAB_DESC_DAILY}
-		TAB_WEEKLY:
-			return {"title": UiText.SHOP_SUBMENU_WEEKLY, "description": UiText.SHOP_TAB_DESC_WEEKLY}
+		TAB_CURRENCY_SHOP:
+			return {"title": UiText.SHOP_SUBMENU_CURRENCY_SHOP, "description": UiText.SHOP_TAB_DESC_CURRENCY_SHOP}
 		TAB_DIAMOND_STORE:
 			return {"title": UiText.SHOP_SUBMENU_DIAMOND_STORE, "description": UiText.SHOP_TAB_DESC_DIAMOND_STORE}
-		TAB_GOLD_STORE:
-			return {"title": UiText.SHOP_SUBMENU_GOLD_STORE, "description": UiText.SHOP_TAB_DESC_GOLD_STORE}
-		TAB_COLLISION_COIN:
-			return {"title": UiText.SHOP_SUBMENU_COLLISION_COIN, "description": UiText.SHOP_TAB_DESC_COLLISION_COIN}
 		TAB_POINT:
 			return {"title": UiText.SHOP_SUBMENU_POINT, "description": UiText.SHOP_TAB_DESC_POINT}
 		_:
