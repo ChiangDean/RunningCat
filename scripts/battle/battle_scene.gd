@@ -1,4 +1,4 @@
-﻿class_name BattleScene
+class_name BattleScene
 extends Node2D
 
 ## Main home scene: battle view plus bottom navigation.
@@ -1073,11 +1073,11 @@ func _build_ui() -> void:
 		var nav_x: float = nav_start_x + float(i) * (nav_button_rect.size.x + nav_gap)
 		nav_layouts[nav_paths[i]] = Rect2(Vector2(nav_x, nav_y), nav_button_rect.size)
 	var nav_items: Array = [
-		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper, "MainNav/ScooperButton"],
-		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance, "MainNav/EnhanceButton"],
-		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity, "MainNav/ActivityButton"],
-		[UiText.NAV_BACKPACK, "res://scenes/BackpackScene.tscn", _on_nav_backpack, "MainNav/ShopButton"],
-		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop, "MainNav/MoreButton"],
+		[UiText.NAV_SCOOPER, "res://scenes/ScooperScene.tscn", _on_nav_scooper, "MainNav/ScooperButton", ""],
+		[UiText.NAV_ENHANCE, "res://scenes/EnhanceScene.tscn", _on_nav_enhance, "MainNav/EnhanceButton", "enhance"],
+		[UiText.NAV_ACTIVITY, "res://scenes/ActivityScene.tscn", _on_nav_activity, "MainNav/ActivityButton", ""],
+		[UiText.NAV_BACKPACK, "res://scenes/BackpackScene.tscn", _on_nav_backpack, "MainNav/ShopButton", ""],
+		[UiText.NAV_SHOP, "res://scenes/ShopScene.tscn", _on_nav_shop, "MainNav/MoreButton", "shop"],
 	]
 	for i in range(nav_items.size()):
 		var nav_rect: Rect2 = nav_layouts.get(
@@ -1092,6 +1092,8 @@ func _build_ui() -> void:
 		)
 		_apply_texture_button_label_rect(nav_btn, nav_label_rect)
 		nav_btn.pressed.connect(nav_items[i][2])
+		var nav_fk: String = str(nav_items[i][4])
+		nav_btn.set_meta("feature_key", nav_fk)
 		_apply_home_nav_button_style(nav_btn, false)
 		_nav_canvas.add_child(nav_btn)
 		_nav_buttons[String(nav_items[i][1])] = nav_btn
@@ -2734,12 +2736,32 @@ func _layout_home_scoop_panel() -> void:
 
 func _refresh_main_nav_state() -> void:
 	var active_scene_path: String = SceneNavigator.get_current_overlay_scene_path()
+	var nav_paths: Array[String] = _get_main_nav_button_paths()
+	var nav_bounds_raw: Rect2 = _get_bottom_hud_bounds_rect(nav_paths, Rect2(36.0, 1197.0, 657.0, 78.0))
+	var nav_button_rect: Rect2 = _get_bottom_hud_average_rect(nav_paths, Rect2(Vector2.ZERO, HOME_NAV_BUTTON_SIZE))
+	var nav_gap: float = maxf(0.0, _get_bottom_hud_average_gap_x(nav_paths, 0.0) + HOME_MAIN_NAV_GAP_X)
+	var nav_y: float = nav_bounds_raw.position.y + HOME_MAIN_NAV_OFFSET_Y + (nav_bounds_raw.size.y - nav_button_rect.size.y) * 0.5
+	var visible_count: int = 0
 	for scene_path: String in _nav_buttons.keys():
 		var btn: TextureButton = _nav_buttons[scene_path] as TextureButton
 		if btn == null:
 			continue
+		var fk: String = str(btn.get_meta("feature_key", ""))
+		var unlocked: bool = fk.is_empty() or GameState.is_feature_unlocked(fk)
+		btn.visible = unlocked
+		if unlocked:
+			visible_count += 1
+	var nav_row_w: float = nav_button_rect.size.x * float(visible_count) + nav_gap * float(maxi(visible_count - 1, 0))
+	var nav_x_start: float = nav_bounds_raw.position.x + (nav_bounds_raw.size.x - nav_row_w) * 0.5
+	var vi: int = 0
+	for scene_path: String in _nav_buttons.keys():
+		var btn: TextureButton = _nav_buttons[scene_path] as TextureButton
+		if btn == null or not btn.visible:
+			continue
+		btn.position = Vector2(nav_x_start + float(vi) * (nav_button_rect.size.x + nav_gap), nav_y)
 		var is_active: bool = scene_path == active_scene_path
 		_apply_home_nav_button_style(btn, is_active)
+		vi += 1
 	_apply_home_more_button_style(_home_more_menu_expanded)
 	_refresh_home_side_shortcut_visibility()
 

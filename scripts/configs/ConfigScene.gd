@@ -341,6 +341,7 @@ var _redeem_button: Button
 var _audio_value_labels: Dictionary = {}
 var _audio_sliders: Dictionary = {}
 var _audio_mute_boxes: Dictionary = {}
+var _admin_bypass_checkbox: CheckBox
 var _active_section: String = "profile"
 var _submenu_buttons: Dictionary = {}
 var _section_content: VBoxContainer
@@ -500,6 +501,7 @@ func _clear_section_control_refs() -> void:
 	_audio_value_labels = {}
 	_audio_sliders = {}
 	_audio_mute_boxes = {}
+	_admin_bypass_checkbox = null
 
 
 func _build_profile_section() -> Control:
@@ -823,9 +825,45 @@ func _build_game_settings_section() -> Control:
 	column.add_child(_build_audio_row("master", UiText.SETTINGS_AUDIO_MASTER))
 	column.add_child(_build_audio_row("bgm", UiText.SETTINGS_AUDIO_BGM))
 	column.add_child(_build_audio_row("sfx", UiText.SETTINGS_AUDIO_SFX))
+
+	if GameState.is_admin_session():
+		column.add_child(HSeparator.new())
+		column.add_child(_build_admin_bypass_row())
+
 	return section
 
 
+func _build_admin_bypass_row() -> Control:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+
+	var text_box: VBoxContainer = VBoxContainer.new()
+	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_box.add_theme_constant_override("separation", 4)
+	row.add_child(text_box)
+
+	var title: Label = Label.new()
+	title.text = UiText.SETTINGS_ADMIN_BYPASS_LABEL
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	text_box.add_child(title)
+
+	var hint: Label = Label.new()
+	hint.text = UiText.SETTINGS_ADMIN_BYPASS_HINT
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	hint.add_theme_color_override("font_color", SECTION_HINT_COLOR)
+	text_box.add_child(hint)
+
+	_admin_bypass_checkbox = CheckBox.new()
+	_admin_bypass_checkbox.button_pressed = GameState.admin_mode_bypass
+	_admin_bypass_checkbox.toggled.connect(_on_admin_bypass_toggled)
+	row.add_child(_admin_bypass_checkbox)
+	return row
+
+
+func _on_admin_bypass_toggled(toggled_on: bool) -> void:
+	GameState.admin_mode_bypass = toggled_on
+	GameState._emit_red_dot_state_changed()
 
 
 func _build_external_link_row(title_text: String, hint_text: String, url: String, callback: Callable) -> Control:

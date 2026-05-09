@@ -3,10 +3,11 @@ extends Control
 const ITEM_SLOT_TEMPLATE = preload("res://scenes/ui/backpack/ItemSlotTemplate.tscn")
 
 const TAB_VALUE := "value_bundle"
-const TAB_GROWTH := "growth_bundle"
 const TAB_DAILY := "daily_bundle"
-const TAB_COLLISION_COIN := "collision_coin"
+const TAB_WEEKLY := "weekly_bundle"
 const TAB_DIAMOND_STORE := "diamond_store"
+const TAB_GOLD_STORE := "gold_store"
+const TAB_COLLISION_COIN := "collision_coin"
 const TAB_POINT := "point_bundle"
 const TRAP_POINTS_CURRENCY_ID := 3
 const COLLISION_COIN_CURRENCY_ID := 4
@@ -15,8 +16,11 @@ const ARENA_TICKET_ICON_PATH := "res://assets/sprites/cdn/ui/rewards/arena_ticke
 
 const CATEGORY_CONFIGS := [
 	{"key": TAB_VALUE, "label": "SHOP_SUBMENU_VALUE", "category_type": "valuepack"},
+	{"key": TAB_DAILY, "label": "SHOP_SUBMENU_DAILY", "category_type": "dailypack"},
+	{"key": TAB_WEEKLY, "label": "SHOP_SUBMENU_WEEKLY", "category_type": "weeklypack"},
+	{"key": TAB_DIAMOND_STORE, "label": "SHOP_SUBMENU_DIAMOND_STORE", "category_type": "diamondshop"},
+	{"key": TAB_GOLD_STORE, "label": "SHOP_SUBMENU_GOLD_STORE", "category_type": "goldshop"},
 	{"key": TAB_COLLISION_COIN, "label": "SHOP_SUBMENU_COLLISION_COIN"},
-	{"key": TAB_DIAMOND_STORE, "label": "SHOP_SUBMENU_DIAMOND_STORE"},
 	{"key": TAB_POINT, "label": "SHOP_SUBMENU_POINT", "category_type": "trappointshop"},
 ]
 
@@ -41,8 +45,9 @@ const SHOP_PANEL_FILL := Color(0.16, 0.15, 0.18, 0.25)
 const SHOP_PAGE_SIDE_MARGIN := 10
 const SHOP_REWARD_SLOT_BASE_SIZE := Vector2(512.0, 512.0)
 const SHOP_REWARD_SLOT_SCALE := 0.20
-const SHOP_REWARD_SLOT_CELL_SIZE := Vector2(118.0, 96.0)
-const SHOP_REWARD_SLOT_GAP := 10
+const SHOP_REWARD_SLOT_CELL_SIZE := Vector2(100.0, 96.0)
+const SHOP_REWARD_SLOT_GAP := 5
+const SHOP_REWARD_SLOT_MAX_COLUMNS := 3
 const SHOP_PRICE_FILL := Color(0.15, 0.17, 0.21, 0.92)
 const SHOP_PRICE_BORDER := Color(0.43, 0.56, 0.68, 0.95)
 const SHOP_DISCOUNT_FILL := Color(0.88, 0.27, 0.25, 0.96)
@@ -185,8 +190,6 @@ func _build_secondary_items(tab_key: String) -> Array:
 	match tab_key:
 		TAB_COLLISION_COIN:
 			return COLLISION_COIN_ITEMS
-		TAB_DIAMOND_STORE:
-			return DIAMOND_STORE_ITEMS
 		_:
 			var groups: Array = _get_bundle_groups_for_tab(tab_key)
 			if not groups.is_empty():
@@ -227,10 +230,6 @@ func _build_secondary_detail(tab_key: String, item_key: String) -> Control:
 	match tab_key:
 		TAB_COLLISION_COIN:
 			return _build_collision_coin_card(_get_collision_coin_item(item_key))
-		TAB_DIAMOND_STORE:
-			if item_key == "arena_ticket":
-				return _build_arena_ticket_card()
-			return _build_trap_cage_card()
 		_:
 			if not _get_bundle_groups_for_tab(tab_key).is_empty():
 				return _build_bundle_group_detail(tab_key, item_key)
@@ -317,12 +316,13 @@ func _build_bundle_reward_grid(bundle: Dictionary) -> Control:
 
 	var wrapper: CenterContainer = CenterContainer.new()
 	wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrapper.clip_contents = true
 
 	var grid: GridContainer = GridContainer.new()
-	grid.columns = 5
+	grid.columns = SHOP_REWARD_SLOT_MAX_COLUMNS
 	grid.add_theme_constant_override("h_separation", SHOP_REWARD_SLOT_GAP)
 	grid.add_theme_constant_override("v_separation", SHOP_REWARD_SLOT_GAP)
-	var visible_columns: int = mini(5, rewards.size())
+	var visible_columns: int = mini(SHOP_REWARD_SLOT_MAX_COLUMNS, rewards.size())
 	grid.custom_minimum_size = Vector2(
 		(SHOP_REWARD_SLOT_CELL_SIZE.x * visible_columns) + (SHOP_REWARD_SLOT_GAP * maxi(0, visible_columns - 1)),
 		0.0
@@ -338,7 +338,16 @@ func _build_shop_reward_slot(reward: Dictionary) -> Control:
 	var texture_path: String = _resolve_shop_reward_image_path(reward)
 	var display_name: String = str(reward.get("rewardDisplayName", reward.get("rewardType", UiText.SHOP_REWARD_FALLBACK_NAME)))
 	var quantity: int = int(reward.get("quantity", 0))
-	return _build_shop_slot_cell(texture_path, display_name, quantity)
+	var cell: Control = _build_shop_slot_cell(texture_path, display_name, quantity)
+	var click_button: Button = Button.new()
+	click_button.flat = true
+	click_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	click_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	click_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	click_button.pressed.connect(Callable(self, "_show_reward_detail").bind(reward))
+	cell.add_child(click_button)
+	cell.mouse_filter = Control.MOUSE_FILTER_STOP
+	return cell
 
 
 func _build_centered_shop_slot(image_path: String, display_name: String, quantity: int) -> Control:
@@ -721,6 +730,80 @@ func _set_bundle_action_button_content(button: Button, label_text: String, icon_
 
 func _resolve_shop_reward_image_path(reward: Dictionary) -> String:
 	return AssetResolver.resolve_reward_icon_path(reward)
+
+
+func _show_reward_detail(reward: Dictionary) -> void:
+	var display_name: String = str(reward.get("rewardDisplayName", reward.get("rewardType", UiText.SHOP_REWARD_FALLBACK_NAME)))
+	var quantity: int = int(reward.get("quantity", 0))
+	var description: String = str(reward.get("description", ""))
+
+	var content: VBoxContainer = VBoxContainer.new()
+	content.add_theme_constant_override("separation", 12)
+
+	var icon_path: String = _resolve_shop_reward_image_path(reward)
+	if icon_path != "":
+		var icon_wrapper: CenterContainer = CenterContainer.new()
+		icon_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var icon: TextureRect = TextureRect.new()
+		icon.custom_minimum_size = Vector2(96.0, 96.0)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture = AssetResolver.resolve_texture_or_placeholder(icon_path)
+		icon_wrapper.add_child(icon)
+		content.add_child(icon_wrapper)
+
+	var qty_label: Label = Label.new()
+	qty_label.text = UiText.SHOP_REWARD_DETAIL_QUANTITY_FORMAT % GameState.format_number(quantity)
+	qty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
+	qty_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	content.add_child(qty_label)
+
+	if description != "":
+		var desc_label: Label = Label.new()
+		desc_label.text = description
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		desc_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		content.add_child(desc_label)
+
+	DialogManager.show_info_node(display_name, content, Callable(), "small")
+
+
+func _get_reward_type_display_name(reward_type: String) -> String:
+	match reward_type.strip_edges().to_lower():
+		"gold":
+			return "金幣"
+		"diamond":
+			return "鑽石"
+		"trappoint":
+			return "誘捕點數"
+		"catfood":
+			return "乾糧"
+		"specialcatfood":
+			return "高級飼料"
+		"trapcage":
+			return "誘捕籠"
+		"poopcount":
+			return "屎堆"
+		"memoryshard":
+			return "回憶碎片"
+		"whiskershard":
+			return "鬍鬚碎片"
+		"specialability":
+			return "特殊能力"
+		"treasure":
+			return "寶物"
+		"memory":
+			return "回憶"
+		"equipment":
+			return "裝備"
+		"cat":
+			return "貓咪"
+		"consumable":
+			return "消耗品"
+		_:
+			return reward_type
 
 
 func _build_collision_coin_card(item: Dictionary) -> Control:
@@ -1130,7 +1213,7 @@ func _has_shop_tab_red_dot(tab_key: String) -> bool:
 
 func _has_shop_secondary_red_dot(tab_key: String, item_key: String) -> bool:
 	match tab_key:
-		TAB_COLLISION_COIN, TAB_DIAMOND_STORE:
+		TAB_COLLISION_COIN:
 			return false
 		_:
 			pass
@@ -1226,18 +1309,12 @@ func _normalize_active_tab() -> void:
 	_active_tab = str(first_visible.get("key", TAB_VALUE))
 
 
-func _is_tab_visible(tab_key: String) -> bool:
-	if _paid_shop_enabled:
-		return true
-	return tab_key != TAB_COLLISION_COIN and tab_key != TAB_POINT
+func _is_tab_visible(_tab_key: String) -> bool:
+	return true
 
 
-func _is_bundle_visible(bundle: Dictionary) -> bool:
-	if _paid_shop_enabled:
-		return true
-	var price_currency_type: String = str(bundle.get("priceCurrencyType", "")).to_lower()
-	var price_currency_id: int = int(bundle.get("priceCurrencyId", 0))
-	return price_currency_type != "collisioncoin" and price_currency_id != COLLISION_COIN_CURRENCY_ID
+func _is_bundle_visible(_bundle: Dictionary) -> bool:
+	return true
 
 
 func _is_daily_free_bundle(bundle: Dictionary) -> bool:
@@ -1262,14 +1339,16 @@ func _get_top_label(tab_key: String) -> String:
 	match tab_key:
 		TAB_VALUE:
 			return UiText.SHOP_SUBMENU_VALUE
-		TAB_GROWTH:
-			return UiText.SHOP_SUBMENU_GROWTH
 		TAB_DAILY:
 			return UiText.SHOP_SUBMENU_DAILY
-		TAB_COLLISION_COIN:
-			return UiText.SHOP_SUBMENU_COLLISION_COIN
+		TAB_WEEKLY:
+			return UiText.SHOP_SUBMENU_WEEKLY
 		TAB_DIAMOND_STORE:
 			return UiText.SHOP_SUBMENU_DIAMOND_STORE
+		TAB_GOLD_STORE:
+			return UiText.SHOP_SUBMENU_GOLD_STORE
+		TAB_COLLISION_COIN:
+			return UiText.SHOP_SUBMENU_COLLISION_COIN
 		TAB_POINT:
 			return UiText.SHOP_SUBMENU_POINT
 		_:
@@ -1280,14 +1359,16 @@ func _get_tab_meta(tab_key: String) -> Dictionary:
 	match tab_key:
 		TAB_VALUE:
 			return {"title": UiText.SHOP_SUBMENU_VALUE, "description": UiText.SHOP_TAB_DESC_VALUE}
-		TAB_GROWTH:
-			return {"title": UiText.SHOP_SUBMENU_GROWTH, "description": UiText.SHOP_TAB_DESC_GROWTH}
 		TAB_DAILY:
 			return {"title": UiText.SHOP_SUBMENU_DAILY, "description": UiText.SHOP_TAB_DESC_DAILY}
-		TAB_COLLISION_COIN:
-			return {"title": UiText.SHOP_SUBMENU_COLLISION_COIN, "description": UiText.SHOP_TAB_DESC_COLLISION_COIN}
+		TAB_WEEKLY:
+			return {"title": UiText.SHOP_SUBMENU_WEEKLY, "description": UiText.SHOP_TAB_DESC_WEEKLY}
 		TAB_DIAMOND_STORE:
 			return {"title": UiText.SHOP_SUBMENU_DIAMOND_STORE, "description": UiText.SHOP_TAB_DESC_DIAMOND_STORE}
+		TAB_GOLD_STORE:
+			return {"title": UiText.SHOP_SUBMENU_GOLD_STORE, "description": UiText.SHOP_TAB_DESC_GOLD_STORE}
+		TAB_COLLISION_COIN:
+			return {"title": UiText.SHOP_SUBMENU_COLLISION_COIN, "description": UiText.SHOP_TAB_DESC_COLLISION_COIN}
 		TAB_POINT:
 			return {"title": UiText.SHOP_SUBMENU_POINT, "description": UiText.SHOP_TAB_DESC_POINT}
 		_:

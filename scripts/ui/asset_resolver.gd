@@ -1219,14 +1219,56 @@ static func resolve_reward_icon_path(reward: Dictionary) -> String:
 
 	var reward_type: String = str(reward.get("rewardType", "")).strip_edges().to_lower()
 	match reward_type:
+		"gold":
+			return resolve_catalog_path("catalog/currency/gold")
 		"diamond":
 			return resolve_catalog_path("catalog/currency/diamonds")
+		"trappoint":
+			return resolve_catalog_path("catalog/currency/trap_points")
+		"catfood":
+			return resolve_catalog_path("catalog/consumable/cat_food")
+		"specialcatfood":
+			return resolve_catalog_path("catalog/consumable/special_cat_food")
 		"trapcage":
 			return resolve_catalog_path("catalog/consumable/trap_cages")
+		"poopcount":
+			return resolve_catalog_path("catalog/consumable/poop_count")
+		"memoryshard":
+			return resolve_catalog_path("catalog/consumable/memory_shards")
+		"whiskershard":
+			return resolve_catalog_path("catalog/consumable/whisker_shards")
 		"specialability":
 			return resolve_ability_icon_path(reward)
+		"consumable":
+			var ref_id: int = int(reward.get("rewardReferenceId", 0))
+			if ref_id > 0:
+				return _resolve_consumable_icon_by_id(ref_id)
+			return ""
 		_:
 			return ""
+
+
+static func _resolve_consumable_icon_by_id(consumable_id: int) -> String:
+	var consumable_image_map: Dictionary = {
+		1: "catalog/consumable/cat_food",
+		2: "catalog/consumable/special_cat_food",
+		3: "catalog/consumable/trap_cages",
+		4: "catalog/consumable/poop_count",
+		5: "catalog/consumable/memory_shards",
+		6: "catalog/consumable/whisker_shards",
+		7: "catalog/consumable/party_cheer_coupon",
+		8: "catalog/consumable/arena_ticket",
+		9: "catalog/consumable/gold_dungeon_ticket",
+		10: "catalog/consumable/diamond_dungeon_ticket",
+		11: "catalog/consumable/whisker_dungeon_ticket",
+		12: "catalog/consumable/cat_food_dungeon_ticket",
+		13: "catalog/consumable/poop_dungeon_ticket",
+		14: "catalog/consumable/battle_speed_ticket",
+	}
+	var path: String = str(consumable_image_map.get(consumable_id, ""))
+	if path != "":
+		return resolve_catalog_path(path)
+	return ""
 
 
 static func resolve_bundle_art(bundle: Dictionary) -> Texture2D:
