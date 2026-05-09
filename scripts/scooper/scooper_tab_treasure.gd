@@ -1,6 +1,13 @@
 extends RefCounted
 
-const CARD_TEMPLATE: PackedScene = preload("res://scenes/ui/scooper/treasure/ScooperTreasureCardTemplate.tscn")
+const ITEM_SLOT_TEMPLATE: PackedScene = preload("res://scenes/ui/backpack/ItemSlotTemplate.tscn")
+
+const GRID_COLS := 5
+const SLOT_TEMPLATE_BASE_SIZE := Vector2(512.0, 512.0)
+const SLOT_SCALE := 0.25
+const SLOT_CELL_SIZE := Vector2(128.0, 128.0)
+const GRID_H_SEPARATION := 2
+const GRID_V_SEPARATION := 10
 
 
 func build(scene: Control) -> void:
@@ -62,33 +69,133 @@ func _refresh_treasure_tab(scene: Control) -> void:
 		scene._treasure_list.add_child(empty_lbl)
 		return
 
-	var first_item: bool = true
+	var grid_width: float = (
+		(SLOT_CELL_SIZE.x * float(GRID_COLS))
+		+ (GRID_H_SEPARATION * float(maxi(GRID_COLS - 1, 0)))
+	)
+	var center: CenterContainer = CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scene._treasure_list.add_child(center)
+
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = GRID_COLS
+	grid.custom_minimum_size = Vector2(grid_width, 0.0)
+	grid.add_theme_constant_override("h_separation", GRID_H_SEPARATION)
+	grid.add_theme_constant_override("v_separation", GRID_V_SEPARATION)
+	center.add_child(grid)
+
 	for item: Dictionary in items:
-		if not first_item:
-			scene._treasure_list.add_child(scene._make_separator())
-		scene._treasure_list.add_child(_make_treasure_card(scene, item))
-		first_item = false
+		grid.add_child(_make_treasure_slot(scene, item))
 
 
-func _make_treasure_card(_scene: Control, item: Dictionary) -> Control:
-	var accent: Color = _get_treasure_placeholder_color(item)
-	var panel: Panel = CARD_TEMPLATE.instantiate() as Panel
-	var icon_rect: TextureRect = panel.get_node("Margin/ContentCanvas/Icon") as TextureRect
-	var title_lbl: Label = panel.get_node("Margin/ContentCanvas/TitleLabel") as Label
-	var qty: Label = panel.get_node("Margin/ContentCanvas/QuantityLabel") as Label
-	var desc: Label = panel.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
-	var bonus: Label = panel.get_node("Margin/ContentCanvas/BonusLabel") as Label
+func _make_treasure_slot(scene: Control, item: Dictionary) -> Control:
+	var qty: int = int(item.get("quantity", 0))
+	var slot: Control = ITEM_SLOT_TEMPLATE.instantiate() as Control
+	var icon: TextureRect = slot.get_node("ItemIcon") as TextureRect
+	var name_label: Label = slot.get_node("ItemNameLabel") as Label
+	var qty_label: Label = slot.get_node("CountLabel") as Label
+	var frame: TextureRect = slot.get_node("Frame") as TextureRect
+	var overlay_mask: TextureRect = slot.get_node("OverlayMask") as TextureRect
+
 	var treasure_texture: Texture2D = AssetResolver.resolve_catalog_texture(item.get("imagePath", ""))
-	icon_rect.texture = treasure_texture
-	icon_rect.visible = treasure_texture != null
-	title_lbl.text = str(item.get("displayName", ""))
-	qty.text = "x%s" % GameState.format_number(int(item.get("quantity", 0)))
-	qty.add_theme_color_override("font_color", accent)
-	desc.text = str(item.get("description", ""))
-	bonus.text = _treasure_bonus_desc(item)
-	bonus.visible = bonus.text.strip_edges() != ""
+	if treasure_texture != null:
+		icon.texture = treasure_texture
+	else:
+		icon.visible = false
 
-	return panel
+	name_label.text = str(item.get("displayName", ""))
+	name_label.tooltip_text = name_label.text
+	qty_label.text = GameState.format_number(qty)
+	qty_label.tooltip_text = qty_label.text
+
+	frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	icon.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	overlay_mask.modulate = Color(1.0, 1.0, 1.0, 0.42)
+
+	slot.scale = Vector2(SLOT_SCALE, SLOT_SCALE)
+
+	var cell: Control = Control.new()
+	cell.custom_minimum_size = SLOT_CELL_SIZE
+	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cell.mouse_filter = Control.MOUSE_FILTER_STOP
+	cell.add_child(slot)
+
+	cell.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+			_show_treasure_detail(scene, item)
+	)
+
+	return cell
+
+
+func _show_treasure_detail(scene: Control, item: Dictionary) -> void:
+	var content: VBoxContainer = VBoxContainer.new()
+	content.custom_minimum_size = Vector2(420.0, 0.0)
+	content.add_theme_constant_override("separation", 16)
+
+	# --- Icon row: ItemSlotTemplate centered ---
+	var icon_center: CenterContainer = CenterContainer.new()
+	content.add_child(icon_center)
+	var detail_slot: Control = ITEM_SLOT_TEMPLATE.instantiate() as Control
+	var detail_icon: TextureRect = detail_slot.get_node("ItemIcon") as TextureRect
+	var detail_name: Label = detail_slot.get_node("ItemNameLabel") as Label
+	var detail_qty: Label = detail_slot.get_node("CountLabel") as Label
+	var detail_frame: TextureRect = detail_slot.get_node("Frame") as TextureRect
+	var detail_overlay: TextureRect = detail_slot.get_node("OverlayMask") as TextureRect
+
+	var treasure_texture: Texture2D = AssetResolver.resolve_catalog_texture(item.get("imagePath", ""))
+	if treasure_texture != null:
+		detail_icon.texture = treasure_texture
+	else:
+		detail_icon.visible = false
+	detail_name.visible = false
+	detail_qty.text = GameState.format_number(int(item.get("quantity", 0)))
+	detail_frame.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	detail_icon.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	detail_overlay.modulate = Color(1.0, 1.0, 1.0, 0.42)
+
+	var detail_scale: float = 0.30
+	detail_slot.scale = Vector2(detail_scale, detail_scale)
+	var slot_cell: Control = Control.new()
+	var cell_size: float = SLOT_TEMPLATE_BASE_SIZE.x * detail_scale
+	slot_cell.custom_minimum_size = Vector2(cell_size, cell_size)
+	slot_cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot_cell.add_child(detail_slot)
+	icon_center.add_child(slot_cell)
+
+	# --- 詳細說明 ---
+	var desc_title: Label = Label.new()
+	desc_title.text = "詳細說明"
+	desc_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	desc_title.add_theme_color_override("font_color", Color(0.82, 0.70, 0.42, 1.0))
+	content.add_child(desc_title)
+
+	var desc_label: Label = Label.new()
+	desc_label.text = str(item.get("description", ""))
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	content.add_child(desc_label)
+
+	# --- 加成 ---
+	var bonus_text: String = _treasure_bonus_desc(item)
+	if bonus_text.strip_edges() != "":
+		var sep: HSeparator = HSeparator.new()
+		content.add_child(sep)
+
+		var bonus_title: Label = Label.new()
+		bonus_title.text = "加成"
+		bonus_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		bonus_title.add_theme_color_override("font_color", Color(0.82, 0.70, 0.42, 1.0))
+		content.add_child(bonus_title)
+
+		var bonus_label: Label = Label.new()
+		bonus_label.text = bonus_text
+		bonus_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		bonus_label.add_theme_font_size_override("font_size", 17)
+		content.add_child(bonus_label)
+
+	var title: String = str(item.get("displayName", ""))
+	scene.DialogManager.show_info_node(title, content, Callable(), "medium")
 
 
 func _treasure_bonus_desc(item: Dictionary) -> String:
