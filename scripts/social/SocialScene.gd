@@ -365,6 +365,12 @@ func _render_friend() -> void:
 	count_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	header_row.add_child(count_label)
 
+	var bonus_label: Label = Label.new()
+	bonus_label.text = UiText.SOCIAL_FRIEND_BONUS_FORMAT % friend_rows.size()
+	bonus_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	bonus_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.45, 1.0))
+	friends_box.add_child(bonus_label)
+
 	var button_row: HBoxContainer = HBoxContainer.new()
 	button_row.add_theme_constant_override("separation", 10)
 	header_row.add_child(button_row)
@@ -430,6 +436,20 @@ func _render_friend_overlay_list(host: VBoxContainer, friend_rows: Array) -> voi
 	title_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	title_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
 	left_group.add_child(title_label)
+
+	var count_label: Label = Label.new()
+	count_label.text = UiText.SOCIAL_FRIEND_LIST_COUNT_FORMAT % friend_rows.size()
+	count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	count_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	count_label.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	left_group.add_child(count_label)
+
+	var bonus_label: Label = Label.new()
+	bonus_label.text = UiText.SOCIAL_FRIEND_BONUS_FORMAT % friend_rows.size()
+	bonus_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	bonus_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
+	bonus_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.45, 1.0))
+	left_group.add_child(bonus_label)
 
 	var add_button: Button = _make_action_button("+", "confirm")
 	_style_party_overlay_button(add_button, Vector2(36.0, 32.0), UiPalette.FONT_SIZE_BODY_LG)

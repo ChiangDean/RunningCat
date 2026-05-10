@@ -7,6 +7,7 @@ const TAB_EQUIPMENT := "equipment"
 const TAB_MEMORY := "memory"
 const TAB_TREASURE := "treasure"
 const TAB_LEVEL := "level"
+const TAB_FRIEND := "friend"
 
 
 
@@ -91,6 +92,7 @@ func _build_tab_items() -> Array:
 		{"key": TAB_MEMORY, "label": UiText.STATS_TAB_MEMORY},
 		{"key": TAB_TREASURE, "label": UiText.STATS_TAB_TREASURE},
 		{"key": TAB_LEVEL, "label": UiText.STATS_TAB_LEVEL},
+		{"key": TAB_FRIEND, "label": UiText.STATS_TAB_FRIEND},
 	]
 
 
@@ -120,6 +122,8 @@ func _refresh_view() -> void:
 			_content_list.add_child(_build_treasure_tab())
 		TAB_LEVEL:
 			_content_list.add_child(_build_level_tab())
+		TAB_FRIEND:
+			_content_list.add_child(_build_friend_tab())
 func _build_all_tab() -> Control:
 	var root: VBoxContainer = VBoxContainer.new()
 	root.add_theme_constant_override("separation", 12)
@@ -203,6 +207,22 @@ func _build_level_tab() -> Control:
 	return root
 
 
+func _build_friend_tab() -> Control:
+	var root: VBoxContainer = VBoxContainer.new()
+	root.add_theme_constant_override("separation", 12)
+
+	var friend_bonuses: Array = _collect_friend_bonuses()
+	var lines: Array[String] = _format_aggregate_lines(friend_bonuses)
+	if lines.is_empty():
+		root.add_child(_make_empty_card(UiText.STATS_SECTION_EMPTY, UiText.STATS_FRIEND_EMPTY_DESC))
+		return root
+
+	var friends: Array = _game_state.friend_list_data.get("friends", [])
+	lines.insert(0, UiText.STATS_FRIEND_BONUS_FORMAT % friends.size())
+	root.add_child(_make_lines_card(UiText.STATS_SECTION_FRIEND, lines, Color(0.50, 0.80, 0.90, 0.95)))
+	return root
+
+
 func _build_level_summary_lines() -> Array[String]:
 	var lines: Array[String] = []
 	lines.append(UiText.STATS_SCOOPER_LEVEL_FORMAT % int(_game_state.player_data.scooper_level))
@@ -216,6 +236,7 @@ func _collect_combat_bonuses() -> Array:
 	bonuses.append_array(_collect_equipment_bonuses())
 	bonuses.append_array(_collect_memory_bonuses())
 	bonuses.append_array(_collect_treasure_combat_bonuses())
+	bonuses.append_array(_collect_friend_bonuses())
 	return bonuses
 
 
@@ -407,6 +428,10 @@ func _collect_treasure_poop_bonuses() -> Array:
 			continue
 		results.append(bonus)
 	return results
+
+
+func _collect_friend_bonuses() -> Array:
+	return _game_state.get_friend_bonuses()
 
 
 func _collect_treasure_bonuses() -> Array:
