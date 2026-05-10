@@ -2561,7 +2561,21 @@ func get_combat_bonuses() -> Array:
 	result.append_array(get_equipment_bonuses())
 	result.append_array(get_memory_bonuses())
 	result.append_array(get_treasure_combat_bonuses())
+	result.append_array(get_friend_bonuses())
 	return result
+
+
+func get_friend_bonuses() -> Array:
+	var friends: Array = friend_list_data.get("friends", [])
+	var count: int = friends.size()
+	if count <= 0:
+		return []
+	var bonus: float = count * 0.01
+	return [
+		{"target": "all", "stat": "max_hp_percent", "value": bonus},
+		{"target": "all", "stat": "atk_percent", "value": bonus},
+		{"target": "all", "stat": "def_percent", "value": bonus},
+	]
 
 
 func apply_player_combat_bonuses(data: CatData) -> void:
