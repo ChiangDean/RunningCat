@@ -105,7 +105,7 @@
 
 ## 7. 2026-04-24 主畫面進入與按鈕可用性更新
 
-- 登入 / bootstrap 完成後第一次進入主畫面時，若 `GameState.has_pending_idle_rewards()` 為 true，`BattleScene` 會自動開啟放置獎勵 Dialog。
+- 登入 / bootstrap 完成後第一次進入主畫面時，只有在已有未領取放置獎勵且累積時間達 `4` 小時以上時，`BattleScene` 才會自動開啟放置獎勵 Dialog。
 - 外層 `清理貓砂盆` / `乾淨貓砂盆` 按鈕不可因累積時間未滿 1 分鐘而 disabled；玩家任何時間都可以自行開啟 Dialog 查看收益券與目前狀態。
 - 未滿 1 分鐘時，Dialog 不顯示 `領取獎勵` CTA，但仍可顯示收益券與清理相關資訊。
 - 放置獎勵 Dialog 的獎勵內容使用 `scenes/ui/ItemSlotTemplate.tscn` 呈現圖示、名稱與數量，獎勵 Grid 每行最多顯示 5 個 slot。
