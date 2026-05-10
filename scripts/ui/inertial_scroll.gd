@@ -36,6 +36,12 @@ var fade_timer: Timer
 var is_scrolling: bool = false
 var _last_haptic_us: int = 0
 var _last_boundary_state: int = 0 # -1 = over top/left, 0 = inside, 1 = over bottom/right
+var _canvas_layer_depth: int = 0
+var _drag_input_device: int = -99  # tracks which device started the drag
+
+# ── Static registry — used for canvas-layer priority ───
+
+static var _instances: Array[WeakRef] = []
 
 # ── Static attach ──────────────────────────────────────
 
@@ -76,15 +82,24 @@ static func detach(scroll: ScrollContainer) -> void:
 # ── Init ───────────────────────────────────────────────
 
 func _init_attach() -> void:
-	set_process_input(true)
 	set_process(true)
 	target.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	# Disable Godot's built-in drag scrolling — InertialScroller owns all drag
+	# positioning. Without this, ScrollContainer._gui_input() also moves the
+	# scroll on every drag event, causing a double-move jump. Setting
+	# scroll_deadzone to INT_MAX makes the native drag threshold unreachable.
+	target.scroll_deadzone = 2147483647
+
 	if not target.gui_input.is_connected(_on_target_gui_input):
 		target.gui_input.connect(_on_target_gui_input)
 
-	# Key: hidden by default, shown automatically during interaction (auto mode)
-	target.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	target.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	# Only override the managed axis; leave the other axis untouched so callers
+	# can explicitly disable horizontal/vertical scrolling before attaching.
+	if axis == "vertical":
+		target.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	else:
+		target.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	
 	fade_timer = Timer.new()
 	fade_timer.wait_time = 0.5
@@ -93,6 +108,36 @@ func _init_attach() -> void:
 	add_child(fade_timer)
 
 	_force_hide_scrollbars()
+
+	# Compute canvas layer depth for priority resolution
+	_canvas_layer_depth = _compute_canvas_layer_depth()
+	_instances.append(weakref(self))
+
+
+func _exit_tree() -> void:
+	# Remove self from the static registry
+	for i in range(_instances.size() - 1, -1, -1):
+		var ref: WeakRef = _instances[i]
+		var inst = ref.get_ref()
+		if inst == null or inst == self:
+			_instances.remove_at(i)
+
+
+func _enter_tree() -> void:
+	# Recompute canvas layer depth when (re-)added to the tree, since the
+	# scroller may have been attached before its ScrollContainer was parented
+	# under the final CanvasLayer (e.g. DialogManager adds content later).
+	_canvas_layer_depth = _compute_canvas_layer_depth()
+
+
+func _compute_canvas_layer_depth() -> int:
+	var depth: int = 0
+	var node: Node = target
+	while node:
+		if node is CanvasLayer:
+			depth = maxi(depth, node.layer)
+		node = node.get_parent()
+	return depth
 
 # ── Helpers ────────────────────────────────────────────
 
@@ -124,13 +169,35 @@ func _event_inside_target(event: InputEvent) -> bool:
 		or event is InputEventScreenTouch \
 		or event is InputEventScreenDrag):
 		return false
-	return target.get_global_rect().has_point(event.position)
+	if not target.get_global_rect().has_point(event.position):
+		return false
+	if not target.is_visible_in_tree():
+		return false
+	return true
+
+
+## Returns true if another visible InertialScroller covers the same point
+## at a higher canvas layer, meaning this scroller should yield.
+func _is_occluded_at(pos: Vector2) -> bool:
+	for ref: WeakRef in _instances:
+		var inst = ref.get_ref() as InertialScroller
+		if inst == null or inst == self:
+			continue
+		if inst.target == null or not inst.target.is_visible_in_tree():
+			continue
+		if inst._canvas_layer_depth <= _canvas_layer_depth:
+			continue
+		if inst.target.get_global_rect().has_point(pos):
+			return true
+	return false
 
 # ── Input ──────────────────────────────────────────────
 
-func _input(event: InputEvent) -> void:
-	_handle_scroll_input(event)
-
+# NOTE: We use ONLY gui_input (not _input) so that event positions are always
+# in the same coordinate space as the ScrollContainer. Using _input() gives
+# viewport-global coordinates which differ from gui_input's CanvasLayer-local
+# coordinates, causing two PRESS events with different _last_pos values and a
+# huge spurious delta on the first MOTION.
 
 func _on_target_gui_input(event: InputEvent) -> void:
 	_handle_scroll_input(event)
@@ -143,10 +210,17 @@ func _handle_scroll_input(event: InputEvent) -> void:
 	if event_id == _last_handled_event_id:
 		return
 
+	# ── Skip touch-emulated mouse events to avoid double processing ──
+	if dragging and _drag_input_device >= 0:
+		if (event is InputEventMouseButton or event is InputEventMouseMotion) and event.device < 0:
+			return
+
 	# press
 	if (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) \
 	or (event is InputEventScreenTouch and event.pressed):
 		if not _event_inside_target(event):
+			return
+		if _is_occluded_at(event.position):
 			return
 
 		_last_handled_event_id = event_id
@@ -157,20 +231,22 @@ func _handle_scroll_input(event: InputEvent) -> void:
 		_drag_accum = 0.0
 		_last_pos = _get_pos(event)
 		_last_ev_time_us = Time.get_ticks_usec()
+		_drag_input_device = event.device
 		_show_scrollbar()
 		return
 
 	# release
 	if (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed) \
 	or (event is InputEventScreenTouch and not event.pressed):
-
 		if not dragging:
 			return
 		_last_handled_event_id = event_id
 		dragging = false
+		_drag_input_device = -99
 		if moved:
 			velocity = clamp(_last_velocity_sample, -MAX_VELOCITY, MAX_VELOCITY)
 			_show_scrollbar()
+			get_viewport().set_input_as_handled()
 		return
 
 	# motion
@@ -193,27 +269,21 @@ func _handle_scroll_input(event: InputEvent) -> void:
 	if _drag_accum > drag_threshold:
 		moved = true
 	else:
-		# Below drag threshold: do not intercept button taps or move the scroll position.
 		return
 
-	# Use desired-scroll to compute overscroll, avoiding direction / max_scroll inference errors
 	var cur_scroll := _get_scroll()
 	var max_s = max(_get_max_scroll(), 0.0)
 	var desired = cur_scroll - delta
 
 	if desired < 0.0:
-		# moved beyond top; clamp scroll
 		_set_scroll(0.0)
 	elif desired > max_s:
-		# moved beyond bottom/right; clamp
 		_set_scroll(max_s)
 	else:
 		_set_scroll(desired)
 
-	# Show scrollbar during active interaction
 	_show_scrollbar()
 
-	# Velocity sampling (improved)
 	if dt > 0.0005:
 		var v_sample = -delta / dt
 		_last_velocity_sample = v_sample
@@ -282,14 +352,23 @@ func _force_hide_scrollbars():
 
 	if vsb:
 		vsb.modulate.a = 0.0
+		vsb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if hsb:
 		hsb.modulate.a = 0.0
+		hsb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _show_scrollbar():
 	if fade_timer == null:
 		return
 	var vsb = target.get_v_scroll_bar()
 	var hsb = target.get_h_scroll_bar()
+
+	# Always keep scrollbars non-interactive — InertialScroller owns scroll positioning.
+	# Scrollbars are visual-only indicators.
+	if vsb:
+		vsb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if hsb:
+		hsb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	if axis == "vertical":
 		if vsb:

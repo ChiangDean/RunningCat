@@ -526,11 +526,13 @@ static func rebuild_detail_panel(scene) -> void:
 
 	var stats_title := Label.new()
 	stats_title.text = UiText.ENHANCE_SPECIAL_ALLOC_TITLE
+	stats_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	stats_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stats_header.add_child(stats_title)
 
 	scene._special_cost_label = Label.new()
+	scene._special_cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene._special_cost_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	scene._special_cost_label.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	stats_header.add_child(scene._special_cost_label)
@@ -558,6 +560,7 @@ static func rebuild_detail_panel(scene) -> void:
 		row.add_child(stat_stack)
 
 		var stat_lbl := Label.new()
+		stat_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		stat_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 		stat_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		scene._stat_labels[stat_key] = stat_lbl
@@ -579,6 +582,7 @@ static func rebuild_detail_panel(scene) -> void:
 	Refresh.refresh_special_buttons(scene, player_cat)
 
 	var special_action_row := HBoxContainer.new()
+	special_action_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	special_action_row.add_theme_constant_override("separation", 8)
 	special_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stats_vbox.add_child(special_action_row)
@@ -785,75 +789,91 @@ static func _compare_catalog_rows(a: Dictionary, b: Dictionary) -> bool:
 static func _build_catalog_detail_panel(scene, cat_data: CatData, preview_cat: PlayerCatData) -> void:
 	var summary_panel := _make_card_panel(OverlaySceneChrome.PANEL_BORDER)
 	summary_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	summary_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene._detail_panel.add_child(summary_panel)
 
 	var summary_margin := _make_content_margin(16)
+	summary_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	summary_panel.add_child(summary_margin)
 
 	var summary_stack := VBoxContainer.new()
+	summary_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	summary_stack.add_theme_constant_override("separation", 12)
 	summary_margin.add_child(summary_stack)
 
 	var catalog_hint := Label.new()
 	catalog_hint.text = UiText.ENHANCE_CATALOG_HINT
+	catalog_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	catalog_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	catalog_hint.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 	catalog_hint.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
 	summary_stack.add_child(catalog_hint)
 
 	var summary_row := HBoxContainer.new()
+	summary_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	summary_row.add_theme_constant_override("separation", 14)
 	summary_stack.add_child(summary_row)
 
 	var left_column := VBoxContainer.new()
+	left_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	left_column.custom_minimum_size = Vector2(152.0, 0.0)
 	left_column.add_theme_constant_override("separation", 8)
 	summary_row.add_child(left_column)
 
 	var icon_shell := PanelContainer.new()
+	icon_shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon_shell.custom_minimum_size = Vector2(152.0, 152.0)
 	icon_shell.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(ART_FILL, ART_BORDER, 14))
 	left_column.add_child(icon_shell)
 
 	var icon_center := CenterContainer.new()
+	icon_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	icon_shell.add_child(icon_center)
 	icon_center.add_child(_make_idle_preview(scene._selected_cat_id, Vector2(120.0, 120.0)))
 
 	var left_meta_row := HBoxContainer.new()
+	left_meta_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	left_meta_row.add_theme_constant_override("separation", 8)
 	left_meta_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	left_column.add_child(left_meta_row)
 
 	var level_label := Label.new()
+	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	level_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 	level_label.add_theme_color_override("font_color", SLOT_NAME_COLOR)
 	level_label.text = UiText.ENHANCE_CAT_LEVEL_FORMAT % [preview_cat.cat_food_level]
 	left_meta_row.add_child(_make_info_chip(level_label, Color(0.20, 0.16, 0.18, 0.92), OverlaySceneChrome.CARD_BORDER))
 
 	var rank_label := Label.new()
+	rank_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rank_label.add_theme_font_size_override("font_size", 17)
 	rank_label.add_theme_color_override("font_color", SLOT_NAME_COLOR)
 	rank_label.text = UiText.ENHANCE_CAT_RANK_FORMAT % [preview_cat.rank]
 	left_meta_row.add_child(_make_info_chip(rank_label, Color(0.20, 0.16, 0.18, 0.92), OverlaySceneChrome.CARD_BORDER))
 
 	var right_column := VBoxContainer.new()
+	right_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	right_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_column.add_theme_constant_override("separation", 12)
 	summary_row.add_child(right_column)
 
 	var skill_panel := _make_card_panel(OverlaySceneChrome.CARD_BORDER)
+	skill_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	skill_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_column.add_child(skill_panel)
 
 	var skill_margin := _make_content_margin(12)
+	skill_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	skill_panel.add_child(skill_margin)
 
 	var skill_box := VBoxContainer.new()
+	skill_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	skill_box.add_theme_constant_override("separation", 10)
 	skill_margin.add_child(skill_box)
 
 	var skill_title := Label.new()
+	skill_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	skill_title.text = UiText.ENHANCE_SKILL_TITLE
 	skill_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	skill_box.add_child(skill_title)
@@ -864,17 +884,21 @@ static func _build_catalog_detail_panel(scene, cat_data: CatData, preview_cat: P
 	scene._detail_panel = skill_root
 
 	var stats_panel := _make_card_panel(ART_BORDER)
+	stats_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stats_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scene._detail_panel.add_child(stats_panel)
 
 	var stats_margin := _make_content_margin(12)
+	stats_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stats_panel.add_child(stats_margin)
 
 	var stats_box := VBoxContainer.new()
+	stats_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stats_box.add_theme_constant_override("separation", 10)
 	stats_margin.add_child(stats_box)
 
 	var stats_title := Label.new()
+	stats_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stats_title.text = UiText.ENHANCE_STATS_TITLE
 	stats_title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	stats_box.add_child(stats_title)
@@ -885,13 +909,16 @@ static func _build_catalog_detail_panel(scene, cat_data: CatData, preview_cat: P
 		{"label": UiText.ENHANCE_STAT_DEF, "value": cat_data.defense},
 	]:
 		var row_card := PanelContainer.new()
+		row_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row_card.add_theme_stylebox_override("panel", OverlaySceneChrome.make_panel_style(Color(0.13, 0.12, 0.14, 0.94), OverlaySceneChrome.CARD_BORDER, 12))
 		stats_box.add_child(row_card)
 
 		var row_margin := _make_content_margin(10)
+		row_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row_card.add_child(row_margin)
 
 		var row_label := Label.new()
+		row_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row_label.text = "%s: %s" % [str(stat_item.get("label", "")), GameState.format_number(int(stat_item.get("value", 0)))]
 		row_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY_LG)
 		row_margin.add_child(row_label)
@@ -973,12 +1000,14 @@ static func _build_stat_overview_panel(scene) -> void:
 
 	var title: Label = Label.new()
 	title.text = UiText.ENHANCE_STAT_OVERVIEW_TITLE
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SUBHEADING)
 	title.add_theme_color_override("font_color", SLOT_NAME_COLOR)
 	header_row.add_child(title)
 
 	var tabs: HBoxContainer = HBoxContainer.new()
+	tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tabs.add_theme_constant_override("separation", 6)
 	header_row.add_child(tabs)
 
@@ -1028,6 +1057,7 @@ static func refresh_stat_overview_tab_state(scene) -> void:
 
 	var desc: Label = Label.new()
 	desc.text = UiText.ENHANCE_STAT_OVERVIEW_EFFECTIVE_DESC if is_effective else UiText.ENHANCE_STAT_OVERVIEW_BASE_DESC
+	desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_SMALL)
 	desc.add_theme_color_override("font_color", MUTED_TEXT_COLOR)
