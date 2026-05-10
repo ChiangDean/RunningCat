@@ -3422,6 +3422,8 @@ func _show_startup_idle_rewards_dialog_if_needed() -> void:
 		return
 	if not GameState.has_pending_idle_rewards():
 		return
+	if GameState.get_idle_elapsed_seconds() < IDLE_CLAIM_RED_DOT_THRESHOLD_SECONDS:
+		return
 	_show_sandbox_dialog()
 
 
