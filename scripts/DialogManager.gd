@@ -37,13 +37,7 @@ func show_info(title: String, text: String, on_close: Callable = Callable(), wid
 
 ## Returns a Callable that can be called externally to close this dialog
 func show_info_node(title: String, content: Control, on_close: Callable = Callable(), width_size: String = "small") -> Callable:
-	# If the content is a ScrollContainer, attach the inertial scroller helper so touch drag has inertia/bounce
-	if content is ScrollContainer:
-		# Prefer calling the registered class; fallback to the preloaded script if needed
-		if typeof(InertialScroller) != TYPE_NIL:
-			InertialScroller.attach(content)
-		elif _INERTIAL_SCROLL != null:
-			_INERTIAL_SCROLL.attach(content)
+	# InertialScroller attachment is handled inside _build for all content types
 	return _build(title, content, false, on_close, Callable(), UiText.COMMON_CONFIRM, UiText.COMMON_CANCEL, width_size)
 
 
@@ -121,6 +115,13 @@ func _build(
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL if content is ScrollContainer else 0
 
+	# Attach inertial scroller when content is a ScrollContainer
+	if content is ScrollContainer:
+		if typeof(InertialScroller) != TYPE_NIL:
+			InertialScroller.attach(content, "vertical")
+		elif _INERTIAL_SCROLL != null:
+			_INERTIAL_SCROLL.attach(content, "vertical")
+
 	var canvas := CanvasLayer.new()
 	canvas.layer = 100
 	add_child(canvas)
@@ -146,6 +147,7 @@ func _build(
 	canvas.add_child(center)
 
 	var dialog_stack := VBoxContainer.new()
+	dialog_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dialog_stack.alignment = BoxContainer.ALIGNMENT_CENTER
 	dialog_stack.add_theme_constant_override("separation", 10)
 	dialog_stack.custom_minimum_size.x = panel_width
@@ -172,12 +174,14 @@ func _build(
 	dialog_stack.add_child(panel)
 
 	var margin := MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.size_flags_vertical = 0
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 16)
 	panel.add_child(margin)
 
 	var vbox := VBoxContainer.new()
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_theme_constant_override("separation", 12)
 	vbox.size_flags_vertical = 0
 	margin.add_child(vbox)
@@ -186,12 +190,14 @@ func _build(
 
 	# Title row
 	var title_row := HBoxContainer.new()
+	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_row.add_theme_constant_override("separation", 8)
 	title_row.size_flags_vertical = 0
 	vbox.add_child(title_row)
 
 	var title_lbl := Label.new()
 	title_lbl.text = title
+	title_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_lbl.add_theme_font_size_override("font_size", _FONT_TITLE)
 	title_row.add_child(title_lbl)
