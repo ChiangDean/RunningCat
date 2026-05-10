@@ -119,7 +119,7 @@ func _build(
 	if content is Label or content is RichTextLabel:
 		content.custom_minimum_size.x = content_width
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content.size_flags_vertical = 0
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL if content is ScrollContainer else 0
 
 	var canvas := CanvasLayer.new()
 	canvas.layer = 100
@@ -249,7 +249,7 @@ func _build(
 	)
 	panel.size = panel.custom_minimum_size
 	dialog_stack.custom_minimum_size = Vector2(panel.custom_minimum_size.x, panel.custom_minimum_size.y + hint_min.y + (10.0 if not is_confirm else 0.0))
-	call_deferred("_fit_dialog_to_content", panel, margin, vbox, dialog_stack, hint_lbl, panel_width)
+	call_deferred("_fit_dialog_to_content", panel, margin, vbox, dialog_stack, hint_lbl, panel_width, content)
 	return Callable(self, "_close_dialog_canvas").bind(canvas_ref)
 
 
@@ -259,19 +259,30 @@ func _fit_dialog_to_content(
 		vbox: VBoxContainer,
 		dialog_stack: VBoxContainer,
 		hint_lbl: Label,
-		panel_width: float
+		panel_width: float,
+		content: Control
 ) -> void:
 	if not is_instance_valid(panel) or not is_instance_valid(margin) or not is_instance_valid(vbox) or not is_instance_valid(dialog_stack):
 		return
 
-	var body_height := vbox.get_combined_minimum_size().y
-	var panel_height := maxf(_PANEL_MIN_H, body_height + 32.0)
-	panel.custom_minimum_size = Vector2(panel_width, panel_height)
-	panel.size = panel.custom_minimum_size
-
-	var hint_height := 0.0
+	var viewport_height: float = get_viewport().get_visible_rect().size.y
+	var hint_height: float = 0.0
 	if is_instance_valid(hint_lbl):
 		hint_height = hint_lbl.get_combined_minimum_size().y + 10.0
+
+	if content is ScrollContainer and is_instance_valid(content):
+		var desired_content_height: float = content.get_combined_minimum_size().y
+		var body_without_content: float = maxf(vbox.get_combined_minimum_size().y - desired_content_height, 0.0)
+		var max_panel_height: float = maxf(360.0, viewport_height - hint_height - 48.0)
+		var max_content_height: float = maxf(220.0, max_panel_height - 32.0 - body_without_content)
+		content.custom_minimum_size.y = minf(desired_content_height, max_content_height)
+		content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		content.update_minimum_size()
+
+	var body_height: float = vbox.get_combined_minimum_size().y
+	var panel_height: float = maxf(_PANEL_MIN_H, minf(body_height + 32.0, viewport_height - hint_height - 48.0))
+	panel.custom_minimum_size = Vector2(panel_width, panel_height)
+	panel.size = panel.custom_minimum_size
 
 	dialog_stack.custom_minimum_size = Vector2(panel_width, panel_height + hint_height)
 

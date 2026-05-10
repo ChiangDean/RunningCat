@@ -30,6 +30,7 @@ var drag_threshold: float = DEFAULT_DRAG_THRESHOLD
 var _last_pos: float = 0.0
 var _drag_accum: float = 0.0
 var _last_ev_time_us: int = 0
+var _last_handled_event_id: int = 0
 var _last_velocity_sample: float = 0.0
 var fade_timer: Timer
 var is_scrolling: bool = false
@@ -78,6 +79,8 @@ func _init_attach() -> void:
 	set_process_input(true)
 	set_process(true)
 	target.mouse_filter = Control.MOUSE_FILTER_STOP
+	if not target.gui_input.is_connected(_on_target_gui_input):
+		target.gui_input.connect(_on_target_gui_input)
 
 	# Key: hidden by default, shown automatically during interaction (auto mode)
 	target.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -126,7 +129,18 @@ func _event_inside_target(event: InputEvent) -> bool:
 # ── Input ──────────────────────────────────────────────
 
 func _input(event: InputEvent) -> void:
+	_handle_scroll_input(event)
+
+
+func _on_target_gui_input(event: InputEvent) -> void:
+	_handle_scroll_input(event)
+
+
+func _handle_scroll_input(event: InputEvent) -> void:
 	if target == null:
+		return
+	var event_id: int = event.get_instance_id()
+	if event_id == _last_handled_event_id:
 		return
 
 	# press
@@ -135,6 +149,7 @@ func _input(event: InputEvent) -> void:
 		if not _event_inside_target(event):
 			return
 
+		_last_handled_event_id = event_id
 		dragging = true
 		velocity = 0.0
 		_last_velocity_sample = 0.0
@@ -151,6 +166,7 @@ func _input(event: InputEvent) -> void:
 
 		if not dragging:
 			return
+		_last_handled_event_id = event_id
 		dragging = false
 		if moved:
 			velocity = clamp(_last_velocity_sample, -MAX_VELOCITY, MAX_VELOCITY)
@@ -162,6 +178,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if not _event_inside_target(event):
 		return
+	_last_handled_event_id = event_id
 
 	var now_us = Time.get_ticks_usec()
 	var dt = float(now_us - _last_ev_time_us) / 1_000_000.0

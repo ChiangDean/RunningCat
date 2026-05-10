@@ -45,6 +45,9 @@ var _detail_tab_btns: Dictionary = {}
 var _detail_upgrade_tab: Control
 var _detail_skill_tab: Control
 var _detail_rank_tab: Control
+var _stat_overview_tab: String = "base"
+var _stat_overview_tab_btns: Dictionary = {}
+var _stat_overview_body: VBoxContainer
 var _action_inflight: bool = false
 var _special_point_draft: Dictionary = {"hp": 0, "atk": 0, "def": 0}
 var _loading_canvas: CanvasLayer
@@ -133,6 +136,8 @@ func _register_helper_shared_state() -> void:
 		_detail_upgrade_tab,
 		_detail_skill_tab,
 		_detail_rank_tab,
+		_stat_overview_tab_btns,
+		_stat_overview_body,
 		_action_inflight,
 		_submenu_btns,
 		_main_section,
@@ -243,6 +248,11 @@ func _switch_detail_tab(tab_key: String) -> void:
 	UI.refresh_detail_tab_state(self)
 
 
+func _switch_stat_overview_tab(tab_key: String) -> void:
+	_stat_overview_tab = tab_key
+	UI.refresh_stat_overview_tab_state(self)
+
+
 func _set_loading_overlay(should_show: bool) -> void:
 	if _loading_overlay != null:
 		_loading_overlay.visible = should_show
@@ -340,6 +350,7 @@ func _get_effective_special_food_held(player_cat: PlayerCatData) -> int:
 
 func _refresh_all_labels() -> void:
 	Refresh.refresh_all_labels(self)
+	UI.refresh_stat_overview_tab_state(self)
 
 
 func _refresh_resource_label() -> void:

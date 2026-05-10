@@ -154,4 +154,4 @@ static func get_scaled_effect_value(base_value: float, per_5_ranks: float, curre
 
 static func _read_rate(data: Dictionary, key: String) -> float:
 	var value: float = float(data.get(key, 0.0))
-	return value / 100.0 if value > 1.0 else value
+	return value / 100.0 if value >= 1.0 else value

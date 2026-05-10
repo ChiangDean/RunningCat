@@ -233,11 +233,13 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 		if skill_d.is_empty():
 			continue
 		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_theme_constant_override("separation", 8)
 		scene._detail_panel.add_child(row)
 
 		var lbl := Label.new()
 		lbl.text = UiText.ENHANCE_PASSIVE_SKILL_FORMAT % [skill_d.get("display_name", sid)]
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		row.add_child(lbl)
@@ -245,6 +247,7 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 		if rank >= 5:
 			var rank_lbl := Label.new()
 			rank_lbl.text = UiText.ENHANCE_SKILL_RANK_BONUS_FORMAT % [floori(float(rank) / 5.0)]
+			rank_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			rank_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
 			row.add_child(rank_lbl)
@@ -257,11 +260,13 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 
 	for skill_d: Dictionary in cat_data.active_skills_data:
 		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_theme_constant_override("separation", 8)
 		scene._detail_panel.add_child(row)
 
 		var lbl := Label.new()
 		lbl.text = UiText.ENHANCE_ACTIVE_SKILL_FORMAT % [skill_d.get("display_name", ""), skill_d.get("cooldown", 0.0)]
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
 		row.add_child(lbl)
@@ -269,6 +274,7 @@ static func build_skill_section(scene, cat_data: CatData, player_cat: PlayerCatD
 		if rank >= 5:
 			var rank_lbl := Label.new()
 			rank_lbl.text = UiText.ENHANCE_SKILL_RANK_BONUS_FORMAT % [floori(float(rank) / 5.0)]
+			rank_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			rank_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
 			rank_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 1.0))
 			row.add_child(rank_lbl)
@@ -366,6 +372,339 @@ static func stat_display_name(stat_key: String) -> String:
 		"def":
 			return UiText.ENHANCE_STAT_DEF
 	return stat_key
+
+
+static func build_base_stat_rows(cat_data: CatData) -> Array[Dictionary]:
+	return _build_stat_rows(cat_data)
+
+
+static func build_effective_stat_rows(scene, cat_data: CatData, player_cat: PlayerCatData) -> Array[Dictionary]:
+	var effective_cat: CatData = _build_effective_cat(scene, cat_data.id, player_cat)
+	if effective_cat == null:
+		return []
+	return _build_stat_rows(effective_cat)
+
+
+static func _build_effective_cat(scene, cat_id: String, player_cat: PlayerCatData) -> CatData:
+	var effective_cat: CatData = CatData.from_json_file(cat_id + ".json")
+	if effective_cat == null:
+		return null
+	var preview_cat: PlayerCatData = PlayerCatData.new()
+	preview_cat.cat_id = player_cat.cat_id
+	preview_cat.cat_food_level = player_cat.cat_food_level
+	preview_cat.rank = player_cat.rank
+	preview_cat.cat_shards = player_cat.cat_shards
+	preview_cat.active_skill_settings = player_cat.active_skill_settings.duplicate(true)
+	preview_cat.special_food_points = scene._get_effective_special_points(player_cat)
+	effective_cat.apply_enhancement(preview_cat)
+	effective_cat.apply_rank_bonus(preview_cat)
+	scene.GameState.apply_player_combat_bonuses(effective_cat)
+	_apply_overview_passive_bonuses(scene, effective_cat, player_cat)
+	return effective_cat
+
+
+static func _build_stat_rows(cat_data: CatData) -> Array[Dictionary]:
+	return [
+		_build_stat_row("max_hp", "生命", float(cat_data.max_hp), _format_flat_number(float(cat_data.max_hp)), cat_data),
+		_build_stat_row("atk", "攻擊", float(cat_data.atk), _format_flat_number(float(cat_data.atk)), cat_data),
+		_build_stat_row("defense", "防禦", float(cat_data.defense), _format_flat_number(float(cat_data.defense)), cat_data),
+		_build_stat_row("speed", "速度", float(cat_data.speed), _format_decimal_number(float(cat_data.speed)), cat_data),
+		_build_stat_row("weight", "重量", float(cat_data.weight), _format_decimal_number(float(cat_data.weight)), cat_data),
+		_build_stat_row("crit_rate", "暴擊率", float(cat_data.crit_rate), _format_percent_value(float(cat_data.crit_rate)), cat_data),
+		_build_stat_row("crit_damage", "暴擊傷害", float(cat_data.crit_damage_bonus), _format_percent_value(float(cat_data.crit_damage_bonus)), cat_data),
+		_build_stat_row("evasion", "閃避率", float(cat_data.evasion), _format_percent_value(float(cat_data.evasion)), cat_data),
+		_build_stat_row("accuracy", "命中率", float(cat_data.accuracy), _format_percent_value(float(cat_data.accuracy)), cat_data),
+		_build_stat_row("armor_pen", "護甲穿透", float(cat_data.armor_pen), _format_percent_value(float(cat_data.armor_pen)), cat_data),
+		_build_stat_row("damage_reduction", "傷害減免", float(cat_data.damage_reduction), _format_percent_value(float(cat_data.damage_reduction)), cat_data),
+		_build_stat_row("cooldown_reduction", "冷卻縮減", float(cat_data.cooldown_reduction), _format_percent_value(float(cat_data.cooldown_reduction)), cat_data),
+		_build_stat_row("multi_hit_rate", "連擊率", float(cat_data.multi_hit_rate), _format_percent_value(float(cat_data.multi_hit_rate)), cat_data),
+		_build_stat_row("multi_hit_damage", "連擊傷害", float(cat_data.multi_hit_damage), _format_percent_value(float(cat_data.multi_hit_damage)), cat_data),
+		_build_stat_row("counter_damage_chance", "反傷機率", float(cat_data.counter_damage_chance), _format_percent_value(float(cat_data.counter_damage_chance)), cat_data),
+		_build_stat_row("dungeon_damage_boost", "副本增傷", float(cat_data.get_meta("dungeon_damage_boost", 0.0)), _format_percent_value(float(cat_data.get_meta("dungeon_damage_boost", 0.0))), cat_data),
+		_build_stat_row("dungeon_damage_reduction", "副本減傷", float(cat_data.get_meta("dungeon_damage_reduction", 0.0)), _format_percent_value(float(cat_data.get_meta("dungeon_damage_reduction", 0.0))), cat_data),
+		_build_stat_row("life_steal", "吸血比率", float(cat_data.get_meta("life_steal", 0.0)), _format_percent_value(float(cat_data.get_meta("life_steal", 0.0))), cat_data),
+		_build_stat_row("physical_damage_boost", "物理增傷", float(cat_data.get_meta("physical_damage_boost", 0.0)), _format_percent_value(float(cat_data.get_meta("physical_damage_boost", 0.0))), cat_data),
+		_build_stat_row("physical_damage_reduction", "物理減傷", float(cat_data.get_meta("physical_damage_reduction", 0.0)), _format_percent_value(float(cat_data.get_meta("physical_damage_reduction", 0.0))), cat_data),
+	]
+
+
+static func _build_stat_row(stat_key: String, label: String, raw_value: float, display_value: String, cat_data: CatData) -> Dictionary:
+	return {
+		"key": stat_key,
+		"label": label,
+		"value": display_value,
+		"raw_value": raw_value,
+		"description": _build_stat_description(stat_key, raw_value, cat_data),
+	}
+
+
+static func _build_stat_description(stat_key: String, value: float, cat_data: CatData) -> String:
+	var lines: Array[String] = []
+	match stat_key:
+		"max_hp":
+			lines.append("生命越高，能承受的總傷害越多。歸零時會退場。")
+			_append_rank_note(lines, cat_data, "生命")
+		"atk":
+			lines.append("攻擊會作為基礎傷害，實際造成傷害仍會被目標防禦與減傷影響。")
+			_append_rank_note(lines, cat_data, "攻擊")
+		"defense":
+			var reduction: float = CatStats.calc_def_reduction(value)
+			lines.append("防禦採遞減式物理減傷：防禦 / (防禦 + 100)。")
+			lines.append("目前防禦 %s 約等於 %.1f%% 物理減傷。" % [_format_decimal_number(value), reduction * 100.0])
+			_append_rank_note(lines, cat_data, "防禦")
+		"speed":
+			lines.append("速度影響戰鬥中的左右移動、接敵節奏，以及擊退後回到戰線的速度。")
+		"weight":
+			lines.append("重量影響碰撞與被擊退距離。越重越不容易被推遠，也更容易推開較輕的目標。")
+		"crit_rate":
+			var normal_rate: float = minf(value, 1.0)
+			var overflow: float = maxf(0.0, value - 1.0)
+			lines.append("暴擊率決定攻擊變成暴擊的機率。100%% 以內代表暴擊機率，目前為 %.1f%%。" % (normal_rate * 100.0))
+			if overflow > 0.0:
+				lines.append("超過 100%% 的 %.1f%% 會列為暴擊傷害溢出參考。" % (overflow * 100.0))
+			lines.append("基礎暴擊傷害倍率為 1.5 倍，再加上暴擊傷害屬性。")
+		"crit_damage":
+			lines.append("暴擊傷害會加在基礎 1.5 倍暴擊倍率上。")
+			lines.append("目前暴擊時約造成 %.2f 倍傷害。" % (1.5 + value))
+		"evasion":
+			lines.append("閃避率越高，越有機會避開敵方命中判定。")
+		"accuracy":
+			lines.append("命中率用來對抗敵方閃避，命中越高越不容易打空。")
+		"armor_pen":
+			lines.append("護甲穿透會削弱目標可用於減傷公式的防禦。")
+		"damage_reduction":
+			lines.append("傷害減免會在防禦之外再降低受到的傷害，目前為 %.1f%%。" % (value * 100.0))
+		"cooldown_reduction":
+			lines.append("冷卻縮減會縮短技能循環時間，目前為 %.1f%%。" % (value * 100.0))
+		"multi_hit_rate":
+			lines.append("連擊率越高，攻擊時越容易追加連擊段數。")
+		"multi_hit_damage":
+			lines.append("連擊傷害會提升追加連擊造成的傷害。")
+		"counter_damage_chance":
+			lines.append("反傷機率越高，受到攻擊時越有機會觸發反擊或反傷效果。")
+		"dungeon_damage_boost":
+			lines.append("副本增傷只影響副本相關戰鬥，會提高造成的副本傷害。")
+		"dungeon_damage_reduction":
+			lines.append("副本減傷只影響副本相關戰鬥，會降低受到的副本傷害。")
+		"life_steal":
+			lines.append("吸血比率會把造成傷害的一部分轉回自身生命。")
+		"physical_damage_boost":
+			lines.append("物理增傷會提高物理攻擊造成的傷害。")
+		"physical_damage_reduction":
+			lines.append("物理減傷會在防禦之外降低受到的物理傷害。")
+		_:
+			lines.append("此能力會影響角色在戰鬥中的表現。")
+	return "\n".join(lines)
+
+
+static func _append_rank_note(lines: Array[String], cat_data: CatData, stat_label: String) -> void:
+	if cat_data.rank <= 0:
+		return
+	var key: String = ""
+	match stat_label:
+		"生命":
+			key = "hp_percent"
+		"攻擊":
+			key = "atk_percent"
+		"防禦":
+			key = "def_percent"
+	if key == "":
+		return
+	var rank_bonus: float = float(cat_data.rank) * float(cat_data.rank_growth.get(key, 1.0))
+	lines.append("加成後能力已包含目前品階 +%d 的 %s +%.1f%%。" % [cat_data.rank, stat_label, rank_bonus])
+
+
+static func _apply_overview_passive_bonuses(scene, target_cat: CatData, target_player_cat: PlayerCatData) -> void:
+	var caster_ids: Array[String] = _collect_overview_passive_caster_ids(scene, target_cat.id)
+	var target_in_team: bool = _is_cat_in_player_team(scene, target_cat.id)
+	for caster_id: String in caster_ids:
+		var caster_cat: CatData = target_cat if caster_id == target_cat.id else CatData.from_json_file(caster_id + ".json")
+		if caster_cat == null:
+			continue
+		var caster_player: PlayerCatData = target_player_cat if caster_id == target_cat.id else scene.GameState.get_player_cat(caster_id)
+		_apply_passive_bonuses_from_caster(target_cat, caster_cat, caster_id, int(caster_player.rank), target_in_team)
+
+
+static func _collect_overview_passive_caster_ids(scene, selected_cat_id: String) -> Array[String]:
+	var result: Array[String] = []
+	if selected_cat_id != "":
+		result.append(selected_cat_id)
+	for player_cat_id_variant: Variant in scene.GameState.player_team:
+		var player_cat_id: int = int(player_cat_id_variant)
+		if player_cat_id <= 0:
+			continue
+		var cat_file_id: String = scene.GameState.get_cat_file_id(player_cat_id)
+		if cat_file_id == "" or result.has(cat_file_id):
+			continue
+		result.append(cat_file_id)
+	return result
+
+
+static func _is_cat_in_player_team(scene, cat_id: String) -> bool:
+	for player_cat_id_variant: Variant in scene.GameState.player_team:
+		var player_cat_id: int = int(player_cat_id_variant)
+		if player_cat_id <= 0:
+			continue
+		if scene.GameState.get_cat_file_id(player_cat_id) == cat_id:
+			return true
+	return false
+
+
+static func _apply_passive_bonuses_from_caster(target_cat: CatData, caster_cat: CatData, caster_id: String, caster_rank: int, target_in_team: bool) -> void:
+	for passive_variant: Variant in caster_cat.passive_skills_data:
+		if not (passive_variant is Dictionary):
+			continue
+		var passive: Dictionary = passive_variant
+		var effects: Array = passive.get("effects", [])
+		var scaling: Array = passive.get("rank_scaling", [])
+		for index: int in range(effects.size()):
+			var effect_variant: Variant = effects[index]
+			if not (effect_variant is Dictionary):
+				continue
+			var effect: Dictionary = effect_variant
+			var target: String = _normalize_key(str(effect.get("target", "team")))
+			if not _passive_effect_targets_cat(target, caster_id, target_cat, target_in_team):
+				continue
+			var value: float = float(effect.get("value", 0.0)) + _passive_scaling_value(scaling, index, caster_rank)
+			var effect_type: String = _normalize_key(str(effect.get("type", "")))
+			match effect_type:
+				"stat_boost":
+					_apply_stat_bonus_to_cat(target_cat, _canonicalize_stat_key(str(effect.get("stat", ""))), value, _normalize_key(str(effect.get("value_type", "percent"))))
+				"damage_reduction", "cooldown_reduction":
+					_apply_stat_bonus_to_cat(target_cat, effect_type, value, "flat")
+
+
+static func _passive_effect_targets_cat(target: String, caster_id: String, target_cat: CatData, target_in_team: bool) -> bool:
+	match target:
+		"", "self":
+			return caster_id == target_cat.id
+		"all", "team", "ally_all":
+			return target_in_team or caster_id == target_cat.id
+		"tank", "crusader", "assassin", "striker", "support", "defensive", "speed":
+			return target_cat.cat_type == target
+		_:
+			return false
+
+
+static func _apply_stat_bonus_to_cat(cat_data: CatData, stat: String, value: float, value_type: String) -> void:
+	var is_percent: bool = value_type == "percent"
+	if stat in ["max_hp_percent", "atk_percent", "def_percent"]:
+		is_percent = true
+	match stat:
+		"max_hp", "max_hp_percent":
+			cat_data.max_hp = int(float(cat_data.max_hp) * (1.0 + value)) if is_percent else cat_data.max_hp + int(value)
+		"atk", "atk_percent":
+			cat_data.atk = int(float(cat_data.atk) * (1.0 + value)) if is_percent else cat_data.atk + int(value)
+		"defense", "def_percent":
+			cat_data.defense = int(float(cat_data.defense) * (1.0 + value)) if is_percent else cat_data.defense + int(value)
+		"speed":
+			cat_data.speed = cat_data.speed * (1.0 + value) if is_percent else cat_data.speed + value
+		"crit_rate":
+			cat_data.crit_rate = maxf(0.0, cat_data.crit_rate + value)
+		"crit_damage":
+			cat_data.crit_damage_bonus = maxf(0.0, cat_data.crit_damage_bonus + value)
+		"damage_reduction":
+			cat_data.damage_reduction = minf(0.9, cat_data.damage_reduction + value)
+		"cooldown_reduction":
+			cat_data.cooldown_reduction = minf(0.5, cat_data.cooldown_reduction + value)
+		"armor_pen":
+			cat_data.armor_pen = maxf(0.0, cat_data.armor_pen + value)
+		"evasion":
+			cat_data.evasion = maxf(0.0, cat_data.evasion + value)
+		"accuracy":
+			cat_data.accuracy = maxf(0.0, cat_data.accuracy + value)
+		"multi_hit_rate":
+			cat_data.multi_hit_rate = maxf(0.0, cat_data.multi_hit_rate + value)
+		"multi_hit_damage":
+			cat_data.multi_hit_damage = maxf(0.0, cat_data.multi_hit_damage + value)
+		"counter_damage_chance":
+			cat_data.counter_damage_chance = maxf(0.0, cat_data.counter_damage_chance + value)
+		"dungeon_damage_boost", "dungeon_damage_reduction", "life_steal", "physical_damage_boost", "physical_damage_reduction":
+			cat_data.set_meta(stat, maxf(0.0, float(cat_data.get_meta(stat, 0.0)) + value))
+
+
+static func _passive_scaling_value(scaling: Array, effect_index: int, rank: int) -> float:
+	var total: float = 0.0
+	for row_variant: Variant in scaling:
+		if not (row_variant is Dictionary):
+			continue
+		var row: Dictionary = row_variant
+		if int(row.get("effect_index", -1)) != effect_index:
+			continue
+		total += floorf(float(rank) / 5.0) * float(row.get("per_5_ranks", 0.0))
+	return total
+
+
+static func _canonicalize_stat_key(raw_stat: String) -> String:
+	match _normalize_key(raw_stat):
+		"hp", "max_hp":
+			return "max_hp"
+		"hp_percent", "max_hp_percent":
+			return "max_hp_percent"
+		"atk", "attack":
+			return "atk"
+		"atk_percent", "attack_percent":
+			return "atk_percent"
+		"def", "defense":
+			return "defense"
+		"def_percent", "defense_percent":
+			return "def_percent"
+		"crit_dmg", "crit_damage", "crit_damage_bonus":
+			return "crit_damage"
+		"armor_pen", "armor_penetration", "ignore_armor", "ignore_def", "ignore_defense", "def_ignore", "defense_ignore":
+			return "armor_pen"
+		"dmg_reduction", "damage_reduction":
+			return "damage_reduction"
+		"cdr", "cooldown_reduction":
+			return "cooldown_reduction"
+		"multi_hit_dmg", "multi_hit_damage":
+			return "multi_hit_damage"
+		"counter_damage", "counter_damage_rate", "counter_damage_chance":
+			return "counter_damage_chance"
+		"physical_dmg_boost", "physical_damage_boost":
+			return "physical_damage_boost"
+		"physical_dmg_red", "physical_dmg_reduction", "physical_damage_reduction":
+			return "physical_damage_reduction"
+		"dungeon_dmg_boost", "dungeon_damage_boost":
+			return "dungeon_damage_boost"
+		"dungeon_dmg_red", "dungeon_dmg_reduction", "dungeon_damage_reduction":
+			return "dungeon_damage_reduction"
+		"life_steal", "lifesteal":
+			return "life_steal"
+		_:
+			return _normalize_key(raw_stat)
+
+
+static func _normalize_key(raw_value: String) -> String:
+	var raw: String = raw_value.strip_edges()
+	var result: String = ""
+	for index: int in range(raw.length()):
+		var ch: String = raw.substr(index, 1)
+		if ch >= "A" and ch <= "Z":
+			if index > 0 and not result.ends_with("_"):
+				result += "_"
+			result += ch.to_lower()
+		else:
+			result += ch.to_lower()
+	result = result.replace(" ", "_").replace("-", "_")
+	while result.find("__") >= 0:
+		result = result.replace("__", "_")
+	return result
+
+
+static func _format_percent_value(value: float) -> String:
+	return "%.1f%%" % (value * 100.0)
+
+
+static func _format_flat_number(value: float) -> String:
+	return GameState.format_number(int(roundf(value)))
+
+
+static func _format_decimal_number(value: float) -> String:
+	var rounded: float = snappedf(value, 0.1)
+	if is_equal_approx(rounded, roundf(rounded)):
+		return GameState.format_number(int(roundf(rounded)))
+	return "%.1f" % rounded
 
 
 static func make_separator() -> HSeparator:
