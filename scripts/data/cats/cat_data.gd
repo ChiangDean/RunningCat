@@ -9,10 +9,29 @@ var atk: int = 10
 var defense: int = 0
 var speed: float = 100.0
 var weight: float = 100.0
+var crit_rate: float = 0.0
+var crit_damage_bonus: float = 0.0
+var evasion: float = 0.0
+var accuracy: float = 0.0
+var armor_pen: float = 0.0
+var multi_hit_rate: float = 0.0
+var multi_hit_damage: float = 0.0
+var damage_reduction: float = 0.0
+var cooldown_reduction: float = 0.0
+var counter_damage_chance: float = 0.0
 var rarity: String = "common"
 var gacha_available: bool = false
 var enhancement_growth: Dictionary = {"hp": 1.5, "atk": 1.0, "def": 0.5}
-var rank_growth: Dictionary = {"hp_percent": 1.0, "atk_percent": 1.0, "def_percent": 1.0}
+var rank_growth: Dictionary = {
+	"hp_percent": 1.0,
+	"atk_percent": 1.0,
+	"def_percent": 1.0,
+	"crit_rate": 0.0,
+	"crit_damage": 0.0,
+	"evasion": 0.0,
+	"accuracy": 0.0,
+	"multi_hit_rate": 0.0,
+}
 var rank: int = 0
 var passive_skill_ids: Array = []
 var active_skill_configs: Array = []
@@ -41,6 +60,12 @@ static func _from_catalog(data: Dictionary) -> CatData:
 	cat.defense = int(data.get("base_def", 0))
 	cat.speed = float(data.get("base_speed", 100.0))
 	cat.weight = float(data.get("weight", 100.0))
+	cat.crit_rate = _read_rate(data, "base_crit_rate")
+	cat.crit_damage_bonus = _read_rate(data, "base_crit_damage")
+	cat.evasion = _read_rate(data, "base_evasion")
+	cat.accuracy = _read_rate(data, "base_accuracy")
+	cat.multi_hit_rate = _read_rate(data, "base_multi_hit_rate")
+	cat.multi_hit_damage = _read_rate(data, "base_multi_hit_damage")
 	cat.rarity = str(data.get("rarity", "common"))
 	cat.gacha_available = bool(data.get("gacha_available", false))
 
@@ -56,6 +81,11 @@ static func _from_catalog(data: Dictionary) -> CatData:
 		"hp_percent": float(rank_growth_data.get("hp_percent", 1.0)),
 		"atk_percent": float(rank_growth_data.get("atk_percent", 1.0)),
 		"def_percent": float(rank_growth_data.get("def_percent", 1.0)),
+		"crit_rate": _read_rate(data, "crit_rate_growth"),
+		"crit_damage": _read_rate(data, "crit_damage_growth"),
+		"evasion": _read_rate(data, "evasion_growth"),
+		"accuracy": _read_rate(data, "accuracy_growth"),
+		"multi_hit_rate": _read_rate(data, "multi_hit_rate_growth"),
 	}
 
 	cat.passive_skill_ids = data.get("passive_skills", [])
@@ -111,7 +141,17 @@ func apply_rank_bonus(player_cat: PlayerCatData) -> void:
 	max_hp = int(max_hp * (1.0 + rank * rank_growth.get("hp_percent", 1.0) / 100.0))
 	atk = int(atk * (1.0 + rank * rank_growth.get("atk_percent", 1.0) / 100.0))
 	defense = int(defense * (1.0 + rank * rank_growth.get("def_percent", 1.0) / 100.0))
+	crit_rate += rank * float(rank_growth.get("crit_rate", 0.0))
+	crit_damage_bonus += rank * float(rank_growth.get("crit_damage", 0.0))
+	evasion += rank * float(rank_growth.get("evasion", 0.0))
+	accuracy += rank * float(rank_growth.get("accuracy", 0.0))
+	multi_hit_rate += rank * float(rank_growth.get("multi_hit_rate", 0.0))
 
 
 static func get_scaled_effect_value(base_value: float, per_5_ranks: float, current_rank: int) -> float:
 	return base_value + floorf(current_rank / 5.0) * per_5_ranks
+
+
+static func _read_rate(data: Dictionary, key: String) -> float:
+	var value: float = float(data.get(key, 0.0))
+	return value / 100.0 if value > 1.0 else value

@@ -33,6 +33,12 @@ Cat5 Cat4 Cat3 Cat2 Cat1  →←  Cat1 Cat2 Cat3 Cat4 Cat5
 | 回彈距離 | 基礎回彈 200px，再加上雙方 Weight 差 × 20px；最小 0px、最大 500px |
 | 硬直時間 | 碰撞後 0.2 秒；撞牆額外增加 2 秒 |
 
+- 衝撞傷害使用目前 runtime 數值，不直接讀靜態基礎值：`ATK`、`ATK%`、`DEF`、`DEF%`、`ArmorPen`、`DamageReduction`、`CritRate`、`CritDamage`、`Evasion`、`Accuracy`、`MultiHitRate`、`MultiHitDamage`、`CounterDamageChance`、技能 buff / debuff、裝備、記憶、寶物都需在計算前合併。
+- DEF 減傷公式：`effectiveDef = DEF × (1 - ArmorPen)`，`defReduction = effectiveDef / (effectiveDef + 100)`，基礎傷害為 `max(1, ATK × (1 - defReduction))`。
+- 閃避判定：`Evasion - Accuracy`，最小 0%，最高 75%；成功閃避時該次攻擊傷害為 0。
+- 暴擊率最高 100%；超過 100% 的暴擊率不再提高觸發率，改為等量轉換成暴擊傷害加成。暴擊倍率為 `1.5 + CritDamage + max(0, CritRate - 1.0)`。
+- 連擊率最高 75%；連擊觸發時追加 1 次額外傷害，額外傷害倍率為 `50% + MultiHitDamage`。連擊只增加傷害，不新增碰撞擊退事件。
+- 反傷機率（`CounterDamageChance`）觸發時，該次原本承受的傷害由受擊者承受 50%，攻擊者承受 50%。技能型反擊 / 反傷則依技能 `value` 將實際承受傷害反彈給攻擊者。
 - 碰撞判定以戰鬥角色視覺寬度約 96px 為基準；兩方中心距離小於等於 96px 時視為前緣接觸。
 - 每次碰撞只檢查雙方目前最前排角色；後排角色不會穿過前排去碰撞對方第二排。
 - 正式戰鬥以畫面 runtime 位置作為碰撞來源；角色實際跑到接觸點時才計算碰撞、傷害、擊退、死亡與勝負。`BattleSimulator` 僅保留為開發快速模擬工具，不作為正式畫面戰鬥的事件來源。

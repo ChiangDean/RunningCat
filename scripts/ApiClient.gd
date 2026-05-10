@@ -547,6 +547,10 @@ func purchase_shop_bundle(bundle_id: int, callback: Callable, record_daily_free_
 	_api_post("shop/bundles/%d/purchase" % bundle_id, {}, request_callback)
 
 
+func upgrade_scooper_ability(ability_id: int, expected_cost: int, callback: Callable) -> void:
+	_api_post("scooper/ability/%d/upgrade" % ability_id, {"expectedCost": expected_cost}, callback)
+
+
 func purchase_trap_points(trap_point_amount: int, callback: Callable) -> void:
 	_api_post("shop/trap-points/purchase", {
 		"trapPointAmount": trap_point_amount,

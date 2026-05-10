@@ -97,6 +97,8 @@
 | `revive` | 復活最近陣亡的友方，回復 `value%` HP | 血量最少/最近陣亡 | 限 SR+ |
 | `cd_reset` | `value=1`：完全重置全隊 CD；`0<value<1`：縮減 `value×100%` CD（上限 40%） | 全隊/自身 | |
 
+目前 runtime 已接上：`damage`、`heal`、`heal_over_time`、`shield`、`buff_stat`、`debuff_stat`、`damage_reduction`、`reflect`、`counter`、`next_attack_buff`、`mark`、`execute`、`invincibility`、`cd_reset`、`revive`。`damage_share` 保留為後續需要分攤傷害 UI / 記錄時再實作的技能類型。
+
 ### 被動技能效果
 
 | type | 說明 |
@@ -104,6 +106,8 @@
 | `stat_boost` | 戰鬥開始永久提升屬性（不倒數） |
 | `damage_reduction` | 永久減少自身受到的傷害 |
 | `cooldown_reduction` | 永久縮短全隊冷卻時間（上限 40%） |
+
+被動 `stat_boost` 可使用的戰鬥屬性包含 `max_hp` / `max_hp_percent`、`atk` / `atk_percent`、`defense` / `def_percent`、`speed`、`crit_rate`、`crit_damage`、`armor_pen`、`evasion`、`accuracy`、`multi_hit_rate`、`multi_hit_damage`、`counter_damage_chance`、`damage_reduction`、`cooldown_reduction`。
 
 ---
 
