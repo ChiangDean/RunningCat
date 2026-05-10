@@ -35,6 +35,9 @@ const DIAMOND_STORE_ITEMS := [
 
 const TRAP_CAGE_DIAMOND_COST := 100
 const BUNDLE_ACTION_WIDTH := 220.0
+const SHOP_ABILITY_GROUP_ID := "15"
+const SHOP_ABILITY_UPGRADE_CONFIRM_BODY := "確定花費 %d 鑽石升級「%s」？"
+const SHOP_ABILITY_UPGRADE_SUCCESS := "升級成功！"
 const SHOP_PANEL_FILL := Color(0.16, 0.15, 0.18, 0.25)
 const SHOP_PAGE_SIDE_MARGIN := 10
 const SHOP_REWARD_SLOT_BASE_SIZE := Vector2(512.0, 512.0)
@@ -243,7 +246,8 @@ func _build_secondary_detail(tab_key: String, item_key: String) -> Control:
 
 func _build_bundle_group_detail(tab_key: String, group_id: String) -> Control:
 	var bundles: Array = _get_bundles_for_group(tab_key, group_id)
-	if bundles.is_empty():
+	var ability_upgrades: Array = _get_ability_upgrades_for_group(group_id)
+	if bundles.is_empty() and ability_upgrades.is_empty():
 		return _build_empty_state(UiText.SHOP_EMPTY_CATEGORY)
 
 	var root: VBoxContainer = VBoxContainer.new()
@@ -254,7 +258,108 @@ func _build_bundle_group_detail(tab_key: String, group_id: String) -> Control:
 		if bundle_variant is Dictionary:
 			root.add_child(_build_bundle_detail_card(bundle_variant))
 
+	for ability_variant: Variant in ability_upgrades:
+		if ability_variant is Dictionary:
+			root.add_child(_build_ability_upgrade_card(ability_variant))
+
 	return root
+
+
+func _get_ability_upgrades_for_group(group_id: String) -> Array:
+	if group_id != SHOP_ABILITY_GROUP_ID:
+		return []
+	var result: Array = []
+	for item: Variant in GameState.scooper_ability_data:
+		if not (item is Dictionary):
+			continue
+		var ability: Dictionary = item
+		var next_cost = ability.get("nextUpgradeCost", null)
+		if next_cost != null and int(next_cost) > 0:
+			result.append(ability)
+	return result
+
+
+func _build_ability_upgrade_card(ability: Dictionary) -> Control:
+	var panel: PanelContainer = _make_shop_panel(OverlaySceneChrome.PANEL_BORDER)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var margin: MarginContainer = OverlaySceneChrome.make_content_margin(14)
+	panel.add_child(margin)
+
+	var card: VBoxContainer = VBoxContainer.new()
+	card.add_theme_constant_override("separation", 8)
+	margin.add_child(card)
+
+	var title_row: HBoxContainer = HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 8)
+	card.add_child(title_row)
+
+	var title: Label = Label.new()
+	title.text = str(ability.get("displayName", ""))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_HEADING)
+	title.add_theme_color_override("font_color", OverlaySceneChrome.TITLE_TEXT_COLOR)
+	title_row.add_child(title)
+
+	var current_tier: int = int(ability.get("currentTier", ability.get("quantity", 1)))
+	var max_tier = ability.get("maxTier", null)
+	var tier_label: Label = Label.new()
+	if max_tier != null and int(max_tier) > 0:
+		tier_label.text = "Lv %d / %d" % [current_tier, int(max_tier)]
+	else:
+		tier_label.text = "Lv %d" % current_tier
+	tier_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_LABEL)
+	tier_label.add_theme_color_override("font_color", Color(0.92, 0.80, 0.48, 1.0))
+	title_row.add_child(tier_label)
+
+	var desc: Label = Label.new()
+	desc.text = str(ability.get("description", ""))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+	desc.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+	card.add_child(desc)
+
+	var next_cost: int = int(ability.get("nextUpgradeCost", 0))
+	var ability_id: int = int(ability.get("abilityId", 0))
+	var ability_name: String = str(ability.get("displayName", ""))
+
+	var action_button: Button = Button.new()
+	action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_button.custom_minimum_size = Vector2(0.0, 48.0)
+	UiPalette.apply_button_kind(action_button, "confirm")
+	action_button.text = UiText.SCOOPER_ABILITY_UPGRADE_FORMAT % next_cost
+	action_button.pressed.connect(Callable(self, "_confirm_ability_upgrade").bind(ability_id, ability_name, next_cost))
+	card.add_child(action_button)
+
+	return panel
+
+
+func _confirm_ability_upgrade(ability_id: int, ability_name: String, expected_cost: int) -> void:
+	var message: String = SHOP_ABILITY_UPGRADE_CONFIRM_BODY % [expected_cost, ability_name]
+	DialogManager.show_confirm(
+		UiText.SHOP_PURCHASE_BUNDLE_TITLE,
+		message,
+		Callable(self, "_execute_ability_upgrade").bind(ability_id, expected_cost)
+	)
+
+
+func _execute_ability_upgrade(ability_id: int, expected_cost: int) -> void:
+	_api_client.upgrade_scooper_ability(ability_id, expected_cost, Callable(self, "_on_ability_upgrade_completed"))
+
+
+func _on_ability_upgrade_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.SHOP_PURCHASE_FAILED_TITLE, str(error.get("message", UiText.SCOOPER_ABILITY_UPGRADE_FAILED)))
+		return
+	if data is Dictionary:
+		GameState.apply_ability_upgrade(data)
+		var remaining: int = int(data.get("remainingDiamonds", -1))
+		if remaining >= 0 and GameState.player_data != null:
+			GameState.player_data.diamonds = remaining
+			GameState.player_data.save()
+	_refresh_content()
+	ToastManager.success(UiText.SHOP_PURCHASE_SUCCESS_TITLE, SHOP_ABILITY_UPGRADE_SUCCESS)
 
 
 func _build_bundle_detail_card(bundle: Dictionary) -> Control:

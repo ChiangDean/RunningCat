@@ -1706,6 +1706,9 @@ func update_shop(data: Dictionary) -> void:
 				purchase_counts[str(bundle.get("bundleId", ""))] = int(bundle.get("purchaseCount", 0))
 	player_data.bundle_purchase_counts = purchase_counts
 	player_data.save()
+	var ability_upgrades_variant: Variant = shop_data.get("abilityUpgrades", null)
+	if ability_upgrades_variant is Array and not ability_upgrades_variant.is_empty():
+		update_scooper_ability(ability_upgrades_variant)
 	_emit_red_dot_state_changed()
 
 
@@ -2586,19 +2589,38 @@ func apply_player_combat_bonuses(data: CatData) -> void:
 			"hp", "max_hp":
 				data.max_hp += int(value)
 			"crit_rate":
-				data.set_meta("crit_rate", minf(float(data.get_meta("crit_rate", 0.0)) + value, 1.0))
+				data.crit_rate = maxf(0.0, data.crit_rate + value)
+				data.set_meta("crit_rate", data.crit_rate)
 			"crit_damage":
-				data.set_meta("crit_damage_bonus",
-						maxf(0.0, float(data.get_meta("crit_damage_bonus", 0.0)) + value))
+				data.crit_damage_bonus = maxf(0.0, data.crit_damage_bonus + value)
+				data.set_meta("crit_damage_bonus", data.crit_damage_bonus)
 			"damage_reduction":
-				data.set_meta("damage_reduction_bonus",
-						minf(float(data.get_meta("damage_reduction_bonus", 0.0)) + value, 0.9))
+				data.damage_reduction = minf(data.damage_reduction + value, 0.9)
+				data.set_meta("damage_reduction_bonus", data.damage_reduction)
 			"cooldown_reduction":
-				data.set_meta("cdr", minf(float(data.get_meta("cdr", 0.0)) + value, 0.5))
+				data.cooldown_reduction = minf(data.cooldown_reduction + value, 0.4)
+				data.set_meta("cdr", data.cooldown_reduction)
 			_:
-				if stat in ["armor_pen", "evasion", "accuracy", "multi_hit_rate", "multi_hit_damage",
-						"dungeon_damage_boost", "dungeon_damage_reduction", "life_steal",
-						"counter_damage_chance", "physical_damage_boost", "physical_damage_reduction"]:
+				if stat == "armor_pen":
+					data.armor_pen = maxf(0.0, data.armor_pen + value)
+					data.set_meta(stat, data.armor_pen)
+				elif stat == "evasion":
+					data.evasion = maxf(0.0, data.evasion + value)
+					data.set_meta(stat, data.evasion)
+				elif stat == "accuracy":
+					data.accuracy = maxf(0.0, data.accuracy + value)
+					data.set_meta(stat, data.accuracy)
+				elif stat == "multi_hit_rate":
+					data.multi_hit_rate = maxf(0.0, data.multi_hit_rate + value)
+					data.set_meta(stat, data.multi_hit_rate)
+				elif stat == "multi_hit_damage":
+					data.multi_hit_damage = maxf(0.0, data.multi_hit_damage + value)
+					data.set_meta(stat, data.multi_hit_damage)
+				elif stat == "counter_damage_chance":
+					data.counter_damage_chance = maxf(0.0, data.counter_damage_chance + value)
+					data.set_meta(stat, data.counter_damage_chance)
+				elif stat in ["dungeon_damage_boost", "dungeon_damage_reduction", "life_steal",
+						"physical_damage_boost", "physical_damage_reduction"]:
 					data.set_meta(stat, maxf(0.0, float(data.get_meta(stat, 0.0)) + value))
 
 

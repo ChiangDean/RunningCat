@@ -59,6 +59,7 @@ var _cat_airborne_timers: Dictionary = {}
 var _cat_skill_animation_timers: Dictionary = {}
 var _pending_recycled_cats: Dictionary = {}
 var _pending_recycle_count: int = 0
+var _defeated_runtime_records: Dictionary = {}
 
 var _player_team_node: Node2D
 var _enemy_team_node: Node2D
@@ -96,6 +97,7 @@ func setup(_events_param: Array, player_cats: Array, enemy_cats: Array,
 	_cat_skill_animation_timers.clear()
 	_pending_recycled_cats.clear()
 	_pending_recycle_count = 0
+	_defeated_runtime_records.clear()
 	_player_skill_slots.clear()
 	_enemy_skill_slots.clear()
 	_event_idx = 0
@@ -183,11 +185,22 @@ func _spawn_runtime_cat(cat_id: int, team_name: String, cat_data: CatData, pos_x
 		"defense": float(cat_data.defense),
 		"speed": float(cat_data.speed),
 		"weight": float(cat_data.weight),
-		"damage_reduction": 0.0,
-		"crit_rate": 0.0,
-		"crit_damage_bonus": 0.0,
+		"damage_reduction": clampf(float(cat_data.damage_reduction), 0.0, 0.9),
+		"crit_rate": maxf(0.0, float(cat_data.crit_rate)),
+		"crit_damage_bonus": maxf(0.0, float(cat_data.crit_damage_bonus)),
+		"armor_pen": maxf(0.0, float(cat_data.armor_pen)),
+		"evasion": maxf(0.0, float(cat_data.evasion)),
+		"accuracy": maxf(0.0, float(cat_data.accuracy)),
+		"multi_hit_rate": maxf(0.0, float(cat_data.multi_hit_rate)),
+		"multi_hit_damage": maxf(0.0, float(cat_data.multi_hit_damage)),
+		"counter_damage_chance": maxf(0.0, float(cat_data.counter_damage_chance)),
 		"reflect": 0.0,
+		"shield": 0,
+		"invincible_hits": 0,
+		"next_attack_damage_bonus": 0.0,
+		"damage_taken_bonus": 0.0,
 		"buffs": [],
+		"hot_effects": [],
 	}
 	_cat_skill_animation_timers[cat_id] = 0.0
 	_update_skill_slot_spawn_state(cat_id, cat_data.max_hp, cat_data.max_hp)
@@ -444,16 +457,16 @@ func _handle_runtime_collision(p_node: CatNode, e_node: CatNode) -> void:
 	var e_damage: int = 0
 	if not p_staggered:
 		e_damage = _calc_runtime_attack_damage(p_id, e_id, _get_runtime_atk(p_id))
-		_apply_runtime_damage(e_id, e_damage)
+		e_damage = _apply_runtime_damage(e_id, e_damage, p_id)
 	if not e_staggered:
 		p_damage = _calc_runtime_attack_damage(e_id, p_id, _get_runtime_atk(e_id))
-		_apply_runtime_damage(p_id, p_damage)
+		p_damage = _apply_runtime_damage(p_id, p_damage, e_id)
 	if e_damage > 0:
 		var reflect_to_p: int = int(float(e_damage) * _get_runtime_reflect(e_id))
-		_apply_runtime_damage(p_id, reflect_to_p)
+		_apply_runtime_damage(p_id, reflect_to_p, e_id, false)
 	if p_damage > 0:
 		var reflect_to_e: int = int(float(p_damage) * _get_runtime_reflect(p_id))
-		_apply_runtime_damage(e_id, reflect_to_e)
+		_apply_runtime_damage(e_id, reflect_to_e, p_id, false)
 
 	var p_weight: float = float(p_runtime.get("weight", 100.0))
 	var e_weight: float = float(e_runtime.get("weight", 100.0))
@@ -586,13 +599,33 @@ func _get_wall_counter_arc_height(target_knockback: float) -> float:
 	)
 
 
-func _apply_runtime_damage(cat_id: int, damage: int) -> void:
+func _apply_runtime_damage(cat_id: int, damage: int, source_id: int = -1, can_counter: bool = true) -> int:
 	if damage <= 0:
-		return
+		return 0
 	if not _cat_runtime.has(cat_id):
-		return
+		return 0
 	var runtime: Dictionary = _cat_runtime[cat_id]
-	var current_hp: int = maxi(0, int(runtime.get("current_hp", 0)) - damage)
+	if can_counter and source_id >= 0 and _cat_runtime.has(source_id):
+		var counter_chance: float = clampf(float(runtime.get("counter_damage_chance", 0.0)), 0.0, 1.0)
+		if counter_chance > 0.0 and _rng.randf() < counter_chance:
+			var counter_damage: int = int(float(damage) * 0.5)
+			damage = max(0, damage - counter_damage)
+			_apply_runtime_damage(source_id, counter_damage, cat_id, false)
+	var invincible_hits: int = int(runtime.get("invincible_hits", 0))
+	if invincible_hits > 0:
+		runtime["invincible_hits"] = invincible_hits - 1
+		_cat_runtime[cat_id] = runtime
+		return 0
+	var shield: int = int(runtime.get("shield", 0))
+	if shield > 0:
+		var absorbed: int = mini(shield, damage)
+		runtime["shield"] = shield - absorbed
+		damage -= absorbed
+	if damage <= 0:
+		_cat_runtime[cat_id] = runtime
+		return 0
+	var previous_hp: int = int(runtime.get("current_hp", 0))
+	var current_hp: int = maxi(0, previous_hp - damage)
 	runtime["current_hp"] = current_hp
 	_cat_runtime[cat_id] = runtime
 	var node: CatNode = _get_cat_node(cat_id)
@@ -600,6 +633,7 @@ func _apply_runtime_damage(cat_id: int, damage: int) -> void:
 		node.update_hp(current_hp)
 		node.show_damage_number(damage)
 	_update_skill_slot_hp(cat_id, current_hp)
+	return previous_hp - current_hp
 
 
 func _check_runtime_death(cat_id: int) -> void:
@@ -608,6 +642,10 @@ func _check_runtime_death(cat_id: int) -> void:
 	var runtime: Dictionary = _cat_runtime[cat_id]
 	if int(runtime.get("current_hp", 0)) > 0:
 		return
+	_defeated_runtime_records[cat_id] = {
+		"team": runtime.get("team", ""),
+		"data": runtime.get("data", null),
+	}
 	var node: CatNode = _get_cat_node(cat_id)
 	if node != null:
 		node.play_death()
@@ -684,25 +722,65 @@ func _apply_runtime_passive_effect(cat_id: int, effect_type: String, stat: Strin
 	var runtime: Dictionary = _cat_runtime[cat_id]
 	match effect_type:
 		"stat_boost":
-			var bonus_base: float = float(runtime.get(stat, 0.0))
-			var bonus: float = bonus_base * value if value_type == "percent" else value
-			if stat == "max_hp":
-				runtime["max_hp"] = int(runtime.get("max_hp", 0)) + int(bonus)
-				runtime["current_hp"] = int(runtime.get("current_hp", 0)) + int(bonus)
-				var node: CatNode = _get_cat_node(cat_id)
-				if node != null:
-					node.max_hp = int(runtime["max_hp"])
-					node.update_hp(int(runtime["current_hp"]))
-				_update_skill_slot_spawn_state(cat_id, int(runtime["current_hp"]), int(runtime["max_hp"]))
-			elif runtime.has(stat):
-				runtime[stat] = bonus_base + bonus
-				if stat == "speed":
-					_cat_speeds[cat_id] = float(runtime[stat])
+			_apply_runtime_stat_delta(cat_id, runtime, stat, value, value_type)
 		"damage_reduction":
 			runtime["damage_reduction"] = minf(float(runtime.get("damage_reduction", 0.0)) + value, 0.9)
 		"cooldown_reduction":
-			runtime["cooldown_reduction"] = minf(float(runtime.get("cooldown_reduction", 0.0)) + value, 0.5)
+			runtime["cooldown_reduction"] = minf(float(runtime.get("cooldown_reduction", 0.0)) + value, 0.4)
 	_cat_runtime[cat_id] = runtime
+
+
+func _apply_runtime_stat_delta(cat_id: int, runtime: Dictionary, stat: String,
+		value: float, value_type: String) -> float:
+	var amount: float = 0.0
+	match stat:
+		"max_hp", "hp":
+			amount = float(runtime.get("max_hp", 0)) * value if value_type == "percent" else value
+			runtime["max_hp"] = int(runtime.get("max_hp", 0)) + int(amount)
+			runtime["current_hp"] = int(runtime.get("current_hp", 0)) + int(amount)
+			_update_runtime_hp_display(cat_id, runtime)
+		"max_hp_percent", "hp_percent":
+			amount = float(runtime.get("max_hp", 0)) * value
+			runtime["max_hp"] = int(runtime.get("max_hp", 0)) + int(amount)
+			runtime["current_hp"] = int(runtime.get("current_hp", 0)) + int(amount)
+			_update_runtime_hp_display(cat_id, runtime)
+		"atk":
+			amount = float(runtime.get("atk", 0.0)) * value if value_type == "percent" else value
+			runtime["atk"] = float(runtime.get("atk", 0.0)) + amount
+		"atk_percent":
+			amount = float(runtime.get("atk", 0.0)) * value
+			runtime["atk"] = float(runtime.get("atk", 0.0)) + amount
+		"defense", "def":
+			amount = float(runtime.get("defense", 0.0)) * value if value_type == "percent" else value
+			runtime["defense"] = float(runtime.get("defense", 0.0)) + amount
+		"def_percent":
+			amount = float(runtime.get("defense", 0.0)) * value
+			runtime["defense"] = float(runtime.get("defense", 0.0)) + amount
+		"speed":
+			amount = float(runtime.get("speed", 0.0)) * value if value_type == "percent" else value
+			runtime["speed"] = float(runtime.get("speed", 0.0)) + amount
+			_cat_speeds[cat_id] = float(runtime["speed"])
+		"crit_rate", "armor_pen", "evasion", "accuracy", "multi_hit_rate", "multi_hit_damage", "counter_damage_chance":
+			amount = value
+			runtime[stat] = maxf(0.0, float(runtime.get(stat, 0.0)) + amount)
+		"crit_damage":
+			amount = value
+			runtime["crit_damage_bonus"] = maxf(0.0, float(runtime.get("crit_damage_bonus", 0.0)) + amount)
+		"damage_reduction":
+			amount = value
+			runtime["damage_reduction"] = clampf(float(runtime.get("damage_reduction", 0.0)) + amount, 0.0, 0.9)
+		"cooldown_reduction":
+			amount = value
+			runtime["cooldown_reduction"] = clampf(float(runtime.get("cooldown_reduction", 0.0)) + amount, 0.0, 0.4)
+	return amount
+
+
+func _update_runtime_hp_display(cat_id: int, runtime: Dictionary) -> void:
+	var node: CatNode = _get_cat_node(cat_id)
+	if node != null:
+		node.max_hp = int(runtime.get("max_hp", 0))
+		node.update_hp(int(runtime.get("current_hp", 0)))
+	_update_skill_slot_spawn_state(cat_id, int(runtime.get("current_hp", 0)), int(runtime.get("max_hp", 0)))
 
 
 func _update_runtime_skills(delta: float) -> void:
@@ -751,26 +829,55 @@ func _execute_runtime_skill(caster_id: int, skill_d: Dictionary) -> void:
 		var value: float = _get_scaled_value(skill_d, eff_idx, eff.get("value", 0.0), rank)
 		match effect_type:
 			"damage":
-				var target_id: int = _resolve_runtime_target_id(caster_id, str(eff.get("target", "enemy_front")))
-				if target_id < 0:
-					continue
+				var target_ids: Array = _resolve_runtime_target_ids(caster_id, str(eff.get("target", "enemy_front")))
 				var hits: int = int(eff.get("hits", 1))
-				for _hit_index in range(hits):
-					var damage: int = _calc_runtime_attack_damage(caster_id, target_id, _get_runtime_atk(caster_id) * value)
-					_apply_runtime_damage(target_id, damage)
-					if _is_runtime_dead(target_id):
-						_check_runtime_death(target_id)
-						break
+				for target_id_variant: Variant in target_ids:
+					var target_id: int = int(target_id_variant)
+					for _hit_index in range(hits):
+						var damage: int = _calc_runtime_attack_damage(caster_id, target_id, _get_runtime_atk(caster_id) * value)
+						_apply_runtime_damage(target_id, damage, caster_id)
+						if _is_runtime_dead(target_id):
+							_check_runtime_death(target_id)
+							break
 				var extra_kb: float = maxf(float(eff.get("extra_knockback", 0.0)), DEFAULT_SKILL_HIT_KNOCKBACK)
-				if _cat_runtime.has(target_id) and not _is_cat_airborne(target_id):
-					_apply_skill_extra_knockback(caster_id, target_id, extra_kb)
-			"buff_stat":
-				var buff_target_id: int = _resolve_runtime_buff_target_id(caster_id, str(eff.get("target", "self")))
-				if buff_target_id < 0:
-					continue
-				_apply_runtime_buff(buff_target_id, str(eff.get("stat", "")), value, str(eff.get("value_type", "percent")), float(eff.get("duration", 3.0)))
+				for target_id_variant: Variant in target_ids:
+					var target_id: int = int(target_id_variant)
+					if _cat_runtime.has(target_id) and not _is_cat_airborne(target_id):
+						_apply_skill_extra_knockback(caster_id, target_id, extra_kb)
+			"heal":
+				for target_id_variant: Variant in _resolve_runtime_target_ids(caster_id, str(eff.get("target", "ally_lowest_hp"))):
+					_apply_runtime_heal(int(target_id_variant), int(_get_runtime_atk(caster_id) * value))
+			"heal_over_time":
+				for target_id_variant: Variant in _resolve_runtime_target_ids(caster_id, str(eff.get("target", "ally_lowest_hp"))):
+					_apply_runtime_hot(int(target_id_variant), _get_runtime_atk(caster_id) * value, float(eff.get("duration", 8.0)))
+			"shield":
+				for target_id_variant: Variant in _resolve_runtime_target_ids(caster_id, str(eff.get("target", "self"))):
+					_apply_runtime_shield(int(target_id_variant), int(_get_runtime_atk(caster_id) * value))
+			"buff_stat", "debuff_stat":
+				var signed_value: float = -value if effect_type == "debuff_stat" else value
+				for buff_target_id_variant: Variant in _resolve_runtime_target_ids(caster_id, str(eff.get("target", "self"))):
+					_apply_runtime_buff(int(buff_target_id_variant), str(eff.get("stat", "")), signed_value, str(eff.get("value_type", "percent")), float(eff.get("duration", 8.0)))
+			"damage_reduction":
+				for buff_target_id_variant: Variant in _resolve_runtime_target_ids(caster_id, str(eff.get("target", "self"))):
+					_apply_runtime_buff(int(buff_target_id_variant), "damage_reduction", value, "flat", float(eff.get("duration", 8.0)))
 			"reflect":
 				_apply_runtime_reflect(caster_id, value, float(eff.get("duration", 4.0)))
+			"counter":
+				_apply_runtime_reflect(caster_id, value, float(eff.get("duration", 8.0)))
+			"next_attack_buff":
+				_apply_runtime_next_attack_buff(caster_id, value)
+			"mark":
+				for target_id_variant: Variant in _resolve_runtime_target_ids(caster_id, str(eff.get("target", "enemy_front"))):
+					_apply_runtime_buff(int(target_id_variant), "damage_taken_bonus", value, "flat", float(eff.get("duration", 8.0)))
+			"execute":
+				for target_id_variant: Variant in _resolve_runtime_target_ids(caster_id, str(eff.get("target", "enemy_lowest_hp"))):
+					_apply_runtime_execute(int(target_id_variant), value, caster_id)
+			"invincibility":
+				_apply_runtime_invincibility(caster_id, int(eff.get("max_stack", 1)))
+			"cd_reset":
+				_apply_runtime_cd_reset(caster_id, value)
+			"revive":
+				_apply_runtime_revive(caster_id, value)
 
 
 func _tick_runtime_buffs(delta: float) -> void:
@@ -784,19 +891,34 @@ func _tick_runtime_buffs(delta: float) -> void:
 			runtime["reflect_remaining"] = maxf(0.0, float(runtime["reflect_remaining"]) - scaled_delta)
 			if float(runtime["reflect_remaining"]) <= 0.0:
 				runtime["reflect"] = 0.0
+		var hot_effects: Array = runtime.get("hot_effects", [])
+		for i in range(hot_effects.size() - 1, -1, -1):
+			var hot: Dictionary = hot_effects[i]
+			var remaining: float = maxf(0.0, float(hot.get("remaining", 0.0)) - scaled_delta)
+			var tick_accum: float = float(hot.get("tick_accum", 0.0)) + scaled_delta
+			while tick_accum >= 1.0 and remaining > 0.0:
+				_apply_runtime_heal(cat_id, int(hot.get("heal_per_second", 0.0)))
+				tick_accum -= 1.0
+			if remaining <= 0.0:
+				hot_effects.remove_at(i)
+			else:
+				hot["remaining"] = remaining
+				hot["tick_accum"] = tick_accum
+				hot_effects[i] = hot
+		var latest_runtime: Dictionary = _cat_runtime.get(cat_id, runtime)
+		runtime["current_hp"] = latest_runtime.get("current_hp", runtime.get("current_hp", 0))
+		runtime["max_hp"] = latest_runtime.get("max_hp", runtime.get("max_hp", 0))
 		var buffs: Array = runtime.get("buffs", [])
 		for i in range(buffs.size() - 1, -1, -1):
 			var buff: Dictionary = buffs[i]
 			buff["remaining"] = maxf(0.0, float(buff.get("remaining", 0.0)) - scaled_delta)
 			if float(buff["remaining"]) <= 0.0:
-				var stat: String = str(buff.get("stat", ""))
-				runtime[stat] = float(runtime.get(stat, 0.0)) - float(buff.get("amount", 0.0))
-				if stat == "speed":
-					_cat_speeds[cat_id] = float(runtime.get("speed", 80.0))
+				_revert_runtime_buff_amount(cat_id, runtime, buff)
 				buffs.remove_at(i)
 			else:
 				buffs[i] = buff
 		runtime["buffs"] = buffs
+		runtime["hot_effects"] = hot_effects
 		_cat_runtime[cat_id] = runtime
 
 
@@ -811,16 +933,39 @@ func _apply_runtime_buff(cat_id: int, stat: String, value: float, value_type: St
 	if not _cat_runtime.has(cat_id):
 		return
 	var runtime: Dictionary = _cat_runtime[cat_id]
-	var base_value: float = float(runtime.get(stat, 0.0))
-	var amount: float = base_value * value if value_type == "percent" else value
-	runtime[stat] = base_value + amount
 	var buffs: Array = runtime.get("buffs", [])
+	for i in range(buffs.size() - 1, -1, -1):
+		var old_buff: Dictionary = buffs[i]
+		if str(old_buff.get("stat", "")) == stat:
+			_revert_runtime_buff_amount(cat_id, runtime, old_buff)
+			buffs.remove_at(i)
+	var amount: float = _apply_runtime_stat_delta(cat_id, runtime, stat, value, value_type)
 	buffs.append({"stat": stat, "amount": amount, "remaining": duration})
 	runtime["buffs"] = buffs
 	_cat_runtime[cat_id] = runtime
-	if stat == "speed":
-		_cat_speeds[cat_id] = float(runtime[stat])
 	_update_skill_slot_buff(cat_id, duration)
+
+
+func _revert_runtime_buff_amount(cat_id: int, runtime: Dictionary, buff: Dictionary) -> void:
+	var stat: String = str(buff.get("stat", ""))
+	var amount: float = float(buff.get("amount", 0.0))
+	match stat:
+		"max_hp", "hp", "max_hp_percent", "hp_percent":
+			runtime["max_hp"] = max(1, int(runtime.get("max_hp", 0)) - int(amount))
+			runtime["current_hp"] = mini(int(runtime.get("current_hp", 0)), int(runtime.get("max_hp", 0)))
+			_update_runtime_hp_display(cat_id, runtime)
+		"atk", "atk_percent":
+			runtime["atk"] = float(runtime.get("atk", 0.0)) - amount
+		"defense", "def", "def_percent":
+			runtime["defense"] = float(runtime.get("defense", 0.0)) - amount
+		"speed":
+			runtime["speed"] = float(runtime.get("speed", 0.0)) - amount
+			_cat_speeds[cat_id] = float(runtime.get("speed", 80.0))
+		"crit_damage":
+			runtime["crit_damage_bonus"] = maxf(0.0, float(runtime.get("crit_damage_bonus", 0.0)) - amount)
+		_:
+			if runtime.has(stat):
+				runtime[stat] = maxf(0.0, float(runtime.get(stat, 0.0)) - amount)
 
 
 func _apply_runtime_reflect(cat_id: int, value: float, duration: float) -> void:
@@ -831,6 +976,111 @@ func _apply_runtime_reflect(cat_id: int, value: float, duration: float) -> void:
 	runtime["reflect_remaining"] = duration
 	_cat_runtime[cat_id] = runtime
 	_update_skill_slot_buff(cat_id, duration)
+
+
+func _apply_runtime_heal(cat_id: int, amount: int) -> void:
+	if amount <= 0 or not _cat_runtime.has(cat_id):
+		return
+	var runtime: Dictionary = _cat_runtime[cat_id]
+	var max_hp: int = int(runtime.get("max_hp", 0))
+	var current_hp: int = mini(max_hp, int(runtime.get("current_hp", 0)) + amount)
+	runtime["current_hp"] = current_hp
+	_cat_runtime[cat_id] = runtime
+	var node: CatNode = _get_cat_node(cat_id)
+	if node != null:
+		node.update_hp(current_hp)
+	_update_skill_slot_hp(cat_id, current_hp)
+
+
+func _apply_runtime_hot(cat_id: int, heal_per_second: float, duration: float) -> void:
+	if not _cat_runtime.has(cat_id):
+		return
+	var runtime: Dictionary = _cat_runtime[cat_id]
+	var hot_effects: Array = runtime.get("hot_effects", [])
+	hot_effects.append({
+		"heal_per_second": heal_per_second,
+		"remaining": duration,
+		"tick_accum": 0.0,
+	})
+	runtime["hot_effects"] = hot_effects
+	_cat_runtime[cat_id] = runtime
+	_update_skill_slot_buff(cat_id, duration)
+
+
+func _apply_runtime_shield(cat_id: int, amount: int) -> void:
+	if amount <= 0 or not _cat_runtime.has(cat_id):
+		return
+	var runtime: Dictionary = _cat_runtime[cat_id]
+	runtime["shield"] = int(runtime.get("shield", 0)) + amount
+	_cat_runtime[cat_id] = runtime
+
+
+func _apply_runtime_next_attack_buff(cat_id: int, value: float) -> void:
+	if not _cat_runtime.has(cat_id):
+		return
+	var runtime: Dictionary = _cat_runtime[cat_id]
+	runtime["next_attack_damage_bonus"] = maxf(float(runtime.get("next_attack_damage_bonus", 0.0)), value)
+	_cat_runtime[cat_id] = runtime
+
+
+func _apply_runtime_execute(target_id: int, threshold: float, source_id: int) -> void:
+	if not _cat_runtime.has(target_id):
+		return
+	var runtime: Dictionary = _cat_runtime[target_id]
+	var max_hp: int = max(1, int(runtime.get("max_hp", 1)))
+	var current_hp: int = int(runtime.get("current_hp", 0))
+	if float(current_hp) / float(max_hp) <= threshold:
+		_apply_runtime_damage(target_id, current_hp, source_id, false)
+		_check_runtime_death(target_id)
+
+
+func _apply_runtime_invincibility(cat_id: int, hit_count: int) -> void:
+	if not _cat_runtime.has(cat_id):
+		return
+	var runtime: Dictionary = _cat_runtime[cat_id]
+	runtime["invincible_hits"] = int(runtime.get("invincible_hits", 0)) + max(1, hit_count)
+	_cat_runtime[cat_id] = runtime
+
+
+func _apply_runtime_cd_reset(caster_id: int, value: float) -> void:
+	var caster_runtime: Dictionary = _cat_runtime.get(caster_id, {})
+	var caster_team: String = str(caster_runtime.get("team", ""))
+	var reduce_ratio: float = clampf(value, 0.0, 0.4)
+	var slots: Array = _player_skill_slots if caster_team == "player" else _enemy_skill_slots
+	for i in range(slots.size()):
+		var slot: Dictionary = slots[i]
+		slot["remaining_cd"] = maxf(0.0, float(slot.get("remaining_cd", 0.0)) * (1.0 - reduce_ratio))
+		slots[i] = slot
+
+
+func _apply_runtime_revive(caster_id: int, hp_ratio: float) -> void:
+	var caster_runtime: Dictionary = _cat_runtime.get(caster_id, {})
+	var caster_team: String = str(caster_runtime.get("team", ""))
+	var revive_id: int = -1
+	for id_variant: Variant in _defeated_runtime_records.keys():
+		var cat_id: int = int(id_variant)
+		var record: Dictionary = _defeated_runtime_records[cat_id]
+		if str(record.get("team", "")) == caster_team:
+			revive_id = cat_id
+			break
+	if revive_id < 0:
+		return
+	var record: Dictionary = _defeated_runtime_records[revive_id]
+	var cat_data_variant: Variant = record.get("data", null)
+	var cat_data: CatData = cat_data_variant as CatData
+	if cat_data == null:
+		return
+	var front: CatNode = _get_front_runtime_node(caster_team)
+	var fallback_x: float = PLAYER_FRONT_START_X if caster_team == "player" else ENEMY_FRONT_START_X
+	var pos_x: float = fallback_x if front == null else front.position.x + (-TEAM_ROW_SPACING if caster_team == "player" else TEAM_ROW_SPACING)
+	_spawn_runtime_cat(revive_id, caster_team, cat_data, pos_x)
+	if _cat_runtime.has(revive_id):
+		var runtime: Dictionary = _cat_runtime[revive_id]
+		var revive_hp: int = max(1, int(float(runtime.get("max_hp", 1)) * hp_ratio))
+		runtime["current_hp"] = revive_hp
+		_cat_runtime[revive_id] = runtime
+		_update_runtime_hp_display(revive_id, runtime)
+	_defeated_runtime_records.erase(revive_id)
 
 
 func _apply_skill_extra_knockback(caster_id: int, target_id: int, extra_kb: float) -> void:
@@ -857,6 +1107,32 @@ func _get_current_wall_left() -> float:
 func _get_current_wall_right() -> float:
 	var progress: float = clampf(_sim_time / BATTLE_WALL_SHRINK_DURATION, 0.0, 1.0)
 	return lerpf(BATTLE_WALL_START_RIGHT, BATTLE_WALL_RIGHT, progress)
+
+
+func _resolve_runtime_target_ids(caster_id: int, target: String) -> Array:
+	var caster_runtime: Dictionary = _cat_runtime.get(caster_id, {})
+	var caster_team: String = str(caster_runtime.get("team", ""))
+	var enemy_team: String = "enemy" if caster_team == "player" else "player"
+	match target:
+		"enemy_lowest_hp":
+			var enemy_lowest_id: int = _get_lowest_hp_cat_id(enemy_team)
+			return [] if enemy_lowest_id < 0 else [enemy_lowest_id]
+		"ally_lowest_hp":
+			var ally_lowest_id: int = _get_lowest_hp_cat_id(caster_team)
+			return [] if ally_lowest_id < 0 else [ally_lowest_id]
+		"enemy_all":
+			return _get_team_cat_ids(enemy_team)
+		"ally_all", "team":
+			return _get_team_cat_ids(caster_team)
+		"all":
+			var all_ids: Array = _get_team_cat_ids(caster_team)
+			all_ids.append_array(_get_team_cat_ids(enemy_team))
+			return all_ids
+		"self":
+			return [caster_id]
+		_:
+			var front: CatNode = _get_front_runtime_node(enemy_team)
+			return [] if front == null else [front.instance_id]
 
 
 func _resolve_runtime_target_id(caster_id: int, target: String) -> int:
@@ -909,14 +1185,34 @@ func _get_team_cat_ids(team_name: String) -> Array:
 
 
 func _calc_runtime_attack_damage(attacker_id: int, defender_id: int, raw_atk: float) -> int:
-	var damage: int = int(CatStats.calc_damage(raw_atk, _get_runtime_defense(defender_id)))
+	var attacker_runtime: Dictionary = _cat_runtime.get(attacker_id, {})
+	var defender_runtime: Dictionary = _cat_runtime.get(defender_id, {})
+	var evasion_chance: float = clampf(
+		float(defender_runtime.get("evasion", 0.0)) - float(attacker_runtime.get("accuracy", 0.0)),
+		0.0,
+		0.75
+	)
+	if evasion_chance > 0.0 and _rng.randf() < evasion_chance:
+		return 0
+	var next_attack_bonus: float = float(attacker_runtime.get("next_attack_damage_bonus", 0.0))
+	if next_attack_bonus > 0.0:
+		raw_atk *= 1.0 + next_attack_bonus
+		attacker_runtime["next_attack_damage_bonus"] = 0.0
+		_cat_runtime[attacker_id] = attacker_runtime
+	var effective_defense: float = _get_runtime_defense(defender_id)
+	var armor_pen: float = clampf(float(attacker_runtime.get("armor_pen", 0.0)), 0.0, 1.0)
+	var damage: int = int(CatStats.calc_damage(raw_atk, effective_defense, effective_defense * armor_pen))
 	if damage <= 0:
 		return 0
 	if _rng.randf() < _get_runtime_crit_rate(attacker_id):
 		damage = int(float(damage) * (BASE_CRIT_DAMAGE_MULT + _get_runtime_crit_damage_bonus(attacker_id)))
-	var defender_runtime: Dictionary = _cat_runtime.get(defender_id, {})
 	var reduction: float = float(defender_runtime.get("damage_reduction", 0.0))
-	return int(float(damage) * (1.0 - reduction))
+	damage = int(float(damage) * (1.0 - reduction) * (1.0 + float(defender_runtime.get("damage_taken_bonus", 0.0))))
+	var multi_hit_rate: float = clampf(float(attacker_runtime.get("multi_hit_rate", 0.0)), 0.0, 0.75)
+	if damage > 0 and multi_hit_rate > 0.0 and _rng.randf() < multi_hit_rate:
+		var multi_hit_damage: float = 0.5 + maxf(0.0, float(attacker_runtime.get("multi_hit_damage", 0.0)))
+		damage += int(float(damage) * multi_hit_damage)
+	return damage
 
 
 func _get_runtime_atk(cat_id: int) -> float:
@@ -931,17 +1227,18 @@ func _get_runtime_defense(cat_id: int) -> float:
 
 func _get_runtime_crit_rate(cat_id: int) -> float:
 	var runtime: Dictionary = _cat_runtime.get(cat_id, {})
-	return float(runtime.get("crit_rate", 0.0))
+	return clampf(float(runtime.get("crit_rate", 0.0)), 0.0, 1.0)
 
 
 func _get_runtime_crit_damage_bonus(cat_id: int) -> float:
 	var runtime: Dictionary = _cat_runtime.get(cat_id, {})
-	return float(runtime.get("crit_damage_bonus", 0.0))
+	var crit_overcap: float = maxf(0.0, float(runtime.get("crit_rate", 0.0)) - 1.0)
+	return float(runtime.get("crit_damage_bonus", 0.0)) + crit_overcap
 
 
 func _get_runtime_reflect(cat_id: int) -> float:
 	var runtime: Dictionary = _cat_runtime.get(cat_id, {})
-	return float(runtime.get("reflect", 0.0))
+	return clampf(float(runtime.get("reflect", 0.0)), 0.0, 1.0)
 
 
 func _is_runtime_dead(cat_id: int) -> bool:
@@ -1094,7 +1391,8 @@ func _refresh_initial_skill_slot_cooldowns() -> void:
 	for id_variant: Variant in _cat_runtime.keys():
 		var cat_id: int = int(id_variant)
 		var runtime: Dictionary = _cat_runtime.get(cat_id, {})
-		var cat_data: CatData = runtime.get("data", null) as CatData
+		var cat_data_variant: Variant = runtime.get("data", null)
+		var cat_data: CatData = cat_data_variant as CatData
 		if cat_data == null or cat_data.active_skills_data.is_empty():
 			continue
 		var slot: Dictionary = _get_skill_slot_entry(cat_id)
