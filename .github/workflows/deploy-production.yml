@@ -101,7 +101,14 @@ jobs:
           fi
           ls -lh build/web/index.pck
 
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-web-production
+          path: build/web
+
       - name: Setup SSH key
+        if: ${{ false }}
         env:
           DEPLOY_HOST: ${{ secrets.HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -117,6 +124,7 @@ jobs:
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
       - name: Deploy to VM
+        if: ${{ false }}
         env:
           DEPLOY_HOST: ${{ secrets.HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
