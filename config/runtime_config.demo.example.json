@@ -1,9 +1,9 @@
 {
   "environment": "Production",
   "support_email": "",
-  "support_url": "https://chiangdean.github.io/MeowPartyDashClient/support/",
-  "privacy_policy_url": "https://chiangdean.github.io/MeowPartyDashClient/privacy/",
-  "account_deletion_url": "https://chiangdean.github.io/MeowPartyDashClient/account-deletion/",
+  "support_url": "https://app.meowpartydash.qoo-entertainment.com/support/",
+  "privacy_policy_url": "https://app.meowpartydash.qoo-entertainment.com/privacy/",
+  "account_deletion_url": "https://app.meowpartydash.qoo-entertainment.com/account-deletion/",
   "assets_base_url": "https://pub-your-production-bucket-id.r2.dev",
   "use_cdn_assets": true,
   "feature_flags": {
@@ -12,7 +12,7 @@
   },
   "environments": {
     "Production": {
-      "api_base_url": "https://your-production-api.example.com/api",
+      "api_base_url": "https://api.meowpartydash.qoo-entertainment.com/api",
       "assets_base_url": "https://pub-your-production-bucket-id.r2.dev",
       "use_cdn_assets": true
     }

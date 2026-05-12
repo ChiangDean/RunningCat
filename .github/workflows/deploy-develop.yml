@@ -7,16 +7,16 @@ on:
       - develop
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: gh-pages
+  group: cloudflare-pages-dev
   cancel-in-progress: false
 
 jobs:
   export-web:
     runs-on: ubuntu-latest
-    environment: Dev
+    environment: dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           AWS_REGION: auto
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-          R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          R2_ENDPOINT: https://7644cba9ce00623bed1bada1e541d0ad.r2.cloudflarestorage.com
         run: |
           if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$R2_BUCKET_NAME" ] || [ -z "$R2_ENDPOINT" ]; then
             echo "Missing required R2 deployment secrets for Dev environment." >&2
@@ -59,7 +59,7 @@ jobs:
             */api) FINAL_API_BASE_URL="$API_BASE_URL" ;;
             *) FINAL_API_BASE_URL="${API_BASE_URL%/}/api" ;;
           esac
-          SITE_BASE_URL="https://chiangdean.github.io/MeowPartyDashClient/develop"
+          SITE_BASE_URL="https://dev.app.meowpartydash.qoo-entertainment.com"
           mkdir -p config
           cat > config/runtime_config.json <<EOF
           {
@@ -99,9 +99,15 @@ jobs:
           ls -lh build/web/index.pck
 
       - name: Deploy to Develop
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: build/web
-          destination_dir: develop
-          keep_files: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7644cba9ce00623bed1bada1e541d0ad
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "Missing Cloudflare Pages deployment credentials for Dev environment." >&2
+            exit 1
+          fi
+          npm install --global wrangler
+          wrangler pages deploy build/web \
+            --project-name=meow-party-dash-client \
+            --branch=dev
