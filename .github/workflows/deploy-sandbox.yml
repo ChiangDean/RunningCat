@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: cloudflare-pages-sandbox
+  group: client-vm-sandbox
   cancel-in-progress: false
 
 jobs:
@@ -95,19 +95,31 @@ jobs:
         run: |
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
-          cp -R site/. build/web/
+          if [ -d site ]; then
+            cp -R site/. build/web/
+          fi
           ls -lh build/web/index.pck
 
-      - name: Deploy to Sandbox
+      - name: Setup SSH key
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: 7644cba9ce00623bed1bada1e541d0ad
+          DEPLOY_HOST: ${{ secrets.HOST }}
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "Missing Cloudflare Pages deployment credentials for Sandbox environment." >&2
+          if [ -z "$DEPLOY_HOST" ] || [ -z "${{ secrets.SSH_USER }}" ] || [ -z "${{ secrets.SSH_KEY }}" ]; then
+            echo "Missing VM deployment credentials for Sandbox environment." >&2
             exit 1
           fi
-          npm install --global wrangler
-          wrangler pages deploy build/web \
-            --project-name=meow-party-dash-client \
-            --branch=sandbox
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy to VM
+        env:
+          DEPLOY_HOST: ${{ secrets.HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          if [ -z "$DEPLOY_PATH" ]; then
+            echo "DEPLOY_PATH is not set for Sandbox environment." >&2
+            exit 1
+          fi
+          rsync -avz --delete build/web/ ${{ secrets.SSH_USER }}@"$DEPLOY_HOST":"$DEPLOY_PATH"/
