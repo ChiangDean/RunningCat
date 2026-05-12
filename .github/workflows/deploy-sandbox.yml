@@ -1,23 +1,78 @@
 name: Deploy to Sandbox
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - sandbox
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: gh-pages
+  group: cloudflare-pages-sandbox
   cancel-in-progress: false
 
 jobs:
   export-web:
     runs-on: ubuntu-latest
+    environment: sandbox
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Sync assets to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_REGION: auto
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_ENDPOINT: https://7644cba9ce00623bed1bada1e541d0ad.r2.cloudflarestorage.com
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$R2_BUCKET_NAME" ] || [ -z "$R2_ENDPOINT" ]; then
+            echo "Missing required R2 deployment secrets for Sandbox environment." >&2
+            exit 1
+          fi
+          aws --version
+          python3 scripts/ci/cdn_manifest_paths.py sync | while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            if [ -d "$path" ]; then
+              aws s3 sync "$path" "s3://$R2_BUCKET_NAME/$path" \
+                --endpoint-url "$R2_ENDPOINT" \
+                --delete
+            else
+              echo "Skipping missing CDN path: $path"
+            fi
+          done
+
+      - name: Generate runtime config
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          ASSETS_BASE_URL: ${{ vars.ASSETS_BASE_URL }}
+          USE_CDN_ASSETS: ${{ vars.USE_CDN_ASSETS }}
+        run: |
+          if [ -z "$API_BASE_URL" ]; then
+            echo "API_BASE_URL is not set for Sandbox environment." >&2
+            exit 1
+          fi
+          case "$API_BASE_URL" in
+            */api) FINAL_API_BASE_URL="$API_BASE_URL" ;;
+            *) FINAL_API_BASE_URL="${API_BASE_URL%/}/api" ;;
+          esac
+          SITE_BASE_URL="https://sandbox.app.meowpartydash.qoo-entertainment.com"
+          mkdir -p config
+          cat > config/runtime_config.json <<EOF
+          {
+            "environment": "Sandbox",
+            "api_base_url": "$FINAL_API_BASE_URL",
+            "assets_base_url": "$ASSETS_BASE_URL",
+            "use_cdn_assets": ${USE_CDN_ASSETS:-false},
+            "support_email": "",
+            "support_url": "$SITE_BASE_URL/support/",
+            "privacy_policy_url": "$SITE_BASE_URL/privacy/",
+            "account_deletion_url": "$SITE_BASE_URL/account-deletion/"
+          }
+          EOF
 
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
@@ -26,15 +81,33 @@ jobs:
           use-dotnet: false
           include-templates: true
 
+      - name: Import Resources
+        run: godot --headless --import || true
+
+      - name: Remove CDN-managed assets from Web export
+        run: |
+          python3 scripts/ci/cdn_manifest_paths.py export-prune | while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            rm -rf "$path"
+          done
+
       - name: Export Web
         run: |
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
+          cp -R site/. build/web/
+          ls -lh build/web/index.pck
 
       - name: Deploy to Sandbox
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: build/web
-          destination_dir: sandbox
-          keep_files: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7644cba9ce00623bed1bada1e541d0ad
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "Missing Cloudflare Pages deployment credentials for Sandbox environment." >&2
+            exit 1
+          fi
+          npm install --global wrangler
+          wrangler pages deploy build/web \
+            --project-name=meow-party-dash-client \
+            --branch=sandbox

@@ -1,0 +1,47 @@
+{
+  "environment": "Local",
+  "support_email": "",
+  "support_url": "https://app.meowpartydash.qoo-entertainment.com/support/",
+  "privacy_policy_url": "https://app.meowpartydash.qoo-entertainment.com/privacy/",
+  "account_deletion_url": "https://app.meowpartydash.qoo-entertainment.com/account-deletion/",
+  "assets_base_url": "",
+  "use_cdn_assets": false,
+  "feature_flags": {
+    "oauth_enabled": true,
+    "paid_shop_enabled": true
+  },
+  "environments": {
+    "Local": {
+      "api_base_url": "http://localhost:5000/api",
+      "assets_base_url": "",
+      "use_cdn_assets": false,
+      "support_url": "https://dev.app.meowpartydash.qoo-entertainment.com/support/",
+      "privacy_policy_url": "https://dev.app.meowpartydash.qoo-entertainment.com/privacy/",
+      "account_deletion_url": "https://dev.app.meowpartydash.qoo-entertainment.com/account-deletion/"
+    },
+    "DEV": {
+      "api_base_url": "https://dev.api.meowpartydash.qoo-entertainment.com/api",
+      "assets_base_url": "https://pub-your-dev-bucket-id.r2.dev",
+      "use_cdn_assets": true,
+      "support_url": "https://dev.app.meowpartydash.qoo-entertainment.com/support/",
+      "privacy_policy_url": "https://dev.app.meowpartydash.qoo-entertainment.com/privacy/",
+      "account_deletion_url": "https://dev.app.meowpartydash.qoo-entertainment.com/account-deletion/"
+    },
+    "Sandbox": {
+      "api_base_url": "https://sandbox.api.meowpartydash.qoo-entertainment.com/api",
+      "assets_base_url": "https://pub-your-sandbox-bucket-id.r2.dev",
+      "use_cdn_assets": true,
+      "support_url": "https://sandbox.app.meowpartydash.qoo-entertainment.com/support/",
+      "privacy_policy_url": "https://sandbox.app.meowpartydash.qoo-entertainment.com/privacy/",
+      "account_deletion_url": "https://sandbox.app.meowpartydash.qoo-entertainment.com/account-deletion/"
+    },
+    "Production": {
+      "api_base_url": "https://api.meowpartydash.qoo-entertainment.com/api",
+      "assets_base_url": "https://pub-your-production-bucket-id.r2.dev",
+      "use_cdn_assets": true,
+      "support_url": "https://app.meowpartydash.qoo-entertainment.com/support/",
+      "privacy_policy_url": "https://app.meowpartydash.qoo-entertainment.com/privacy/",
+      "account_deletion_url": "https://app.meowpartydash.qoo-entertainment.com/account-deletion/"
+    }
+  }
+}

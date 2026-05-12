@@ -1,0 +1,14 @@
+{
+  "environment": "DEV",
+  "api_base_url": "http://localhost:5000/api",
+  "assets_base_url": "https://pub-your-dev-bucket-id.r2.dev",
+  "use_cdn_assets": false,
+  "support_email": "",
+  "support_url": "https://dev.app.meowpartydash.qoo-entertainment.com/support/",
+  "privacy_policy_url": "https://dev.app.meowpartydash.qoo-entertainment.com/privacy/",
+  "account_deletion_url": "https://dev.app.meowpartydash.qoo-entertainment.com/account-deletion/",
+  "feature_flags": {
+    "oauth_enabled": true,
+    "paid_shop_enabled": true
+  }
+}
