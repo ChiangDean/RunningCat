@@ -103,23 +103,26 @@ jobs:
       - name: Setup SSH key
         env:
           DEPLOY_HOST: ${{ secrets.HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
-          if [ -z "$DEPLOY_HOST" ] || [ -z "${{ secrets.SSH_USER }}" ] || [ -z "${{ secrets.SSH_KEY }}" ]; then
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
             echo "Missing VM deployment credentials for Dev environment." >&2
             exit 1
           fi
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
       - name: Deploy to VM
         env:
           DEPLOY_HOST: ${{ secrets.HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           if [ -z "$DEPLOY_PATH" ]; then
             echo "DEPLOY_PATH is not set for Dev environment." >&2
             exit 1
           fi
-          rsync -avz --delete build/web/ ${{ secrets.SSH_USER }}@"$DEPLOY_HOST":"$DEPLOY_PATH"/
+          rsync -avz --delete build/web/ "$SSH_USER"@"$DEPLOY_HOST":"$DEPLOY_PATH"/
