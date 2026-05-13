@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: client-vm-sandbox
+  group: client-pages-sandbox
   cancel-in-progress: false
 
 jobs:
@@ -100,37 +100,12 @@ jobs:
           fi
           ls -lh build/web/index.pck
 
-      - name: Upload web artifact
-        uses: actions/upload-artifact@v4
+      - name: Deploy to GitHub Pages repo
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          name: client-web-sandbox
-          path: build/web
-
-      - name: Setup SSH key
-        if: ${{ false }}
-        env:
-          DEPLOY_HOST: ${{ secrets.HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-        run: |
-          if [ -z "$DEPLOY_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
-            echo "Missing VM deployment credentials for Sandbox environment." >&2
-            exit 1
-          fi
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
-
-      - name: Deploy to VM
-        if: ${{ false }}
-        env:
-          DEPLOY_HOST: ${{ secrets.HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-        run: |
-          if [ -z "$DEPLOY_PATH" ]; then
-            echo "DEPLOY_PATH is not set for Sandbox environment." >&2
-            exit 1
-          fi
-          rsync -avz --delete build/web/ "$SSH_USER"@"$DEPLOY_HOST":"$DEPLOY_PATH"/
+          personal_token: ${{ secrets.PAGES_DEPLOY_TOKEN }}
+          external_repository: ChiangDean/MeowPartyDashClientPagesSandbox
+          publish_branch: gh-pages
+          publish_dir: build/web
+          cname: sandbox.app.meowpartydash.qoo-entertainment.com
+          enable_jekyll: false
