@@ -179,8 +179,9 @@ func _make_achievement_card(scene: Control, entry: Dictionary) -> Control:
 		reward_lbl.text = "\n".join(display_parts)
 	else:
 		reward_lbl.text = str(reward_info.get("label", ""))
-	reward_icon.texture = _resolve_reward_texture(_resolve_achievement_reward_icon_path(entry, reward_info))
-	reward_icon.visible = reward_icon.texture != null
+	var achievement_icon_path: String = _resolve_achievement_reward_icon_path(entry, reward_info)
+	reward_icon.visible = achievement_icon_path != ""
+	AssetResolver.apply_catalog_texture(reward_icon, achievement_icon_path)
 	var reward_amount: int = int(reward_info.get("amount", 0))
 	reward_count_lbl.visible = reward_amount > 0
 	reward_count_lbl.text = "x%s" % GameState.format_number(reward_amount)

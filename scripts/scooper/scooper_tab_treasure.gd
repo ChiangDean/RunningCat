@@ -97,11 +97,8 @@ func _make_treasure_slot(scene: Control, item: Dictionary) -> Control:
 	var frame: TextureRect = slot.get_node("Frame") as TextureRect
 	var overlay_mask: TextureRect = slot.get_node("OverlayMask") as TextureRect
 
-	var treasure_texture: Texture2D = AssetResolver.resolve_catalog_texture(item.get("imagePath", ""))
-	if treasure_texture != null:
-		icon.texture = treasure_texture
-	else:
-		icon.visible = false
+	AssetResolver.apply_catalog_texture(icon, item.get("imagePath", ""))
+	icon.visible = item.get("imagePath", "") != ""
 
 	name_label.text = str(item.get("displayName", ""))
 	name_label.tooltip_text = name_label.text

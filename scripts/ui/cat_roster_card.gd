@@ -93,6 +93,19 @@ static func build(options: Dictionary) -> PanelContainer:
 	_fit_template(fit_box, template, template_size)
 	fit_box.resized.connect(_fit_template.bind(fit_box, template, template_size))
 
+	# Apply CDN textures asynchronously for frame, type icon, and portrait
+	var frame_rect: TextureRect = template.get_node("CardFrame")
+	var type_rect: TextureRect = template.get_node("TypeIcon")
+	var portrait_rect: TextureRect = template.get_node("Portrait")
+	AssetResolver.apply_cat_card_square_frame_texture(frame_rect, rarity_key)
+	if show_type_icon:
+		AssetResolver.apply_cat_type_icon_texture(type_rect, cat_type)
+	var cat_id_opt: String = str(options.get("cat_id", ""))
+	if cat_id_opt != "":
+		AssetResolver.apply_cat_icon_texture(portrait_rect, cat_id_opt)
+	elif cat_icon == null:
+		AssetResolver.apply_cat_card_empty_silhouette_texture(portrait_rect)
+
 	var badge_anchor: Control = Control.new()
 	badge_anchor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	badge_anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE

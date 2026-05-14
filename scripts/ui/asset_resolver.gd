@@ -1181,6 +1181,17 @@ static func resolve_gacha_frame(result: Dictionary) -> Texture2D:
 	return load_texture(str(GACHA_FRAMES.get(DEFAULT_GACHA_FRAME_KEY, "")))
 
 
+static func apply_gacha_frame_texture(texture_rect: TextureRect, result: Dictionary) -> void:
+	if texture_rect == null:
+		return
+	var rarity_key := str(result.get("rarityKey", "")).to_lower()
+	if rarity_key == "":
+		rarity_key = str(result.get("rarityType", "")).to_lower()
+	var resolved_path: String = str(GACHA_FRAMES.get(rarity_key, GACHA_FRAMES.get(DEFAULT_GACHA_FRAME_KEY, "")))
+	var fallback_texture: Texture2D = resolve_gacha_frame(result)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
 static func resolve_equipment_icon(item: Dictionary) -> Texture2D:
 	return resolve_texture_or_placeholder(resolve_equipment_icon_path(item))
 
@@ -1190,6 +1201,14 @@ static func apply_equipment_icon_texture(texture_rect: TextureRect, item: Dictio
 		return
 	var resolved_path: String = resolve_equipment_icon_path(item)
 	var fallback_texture: Texture2D = resolve_equipment_icon(item)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
+static func apply_ability_icon_texture(texture_rect: TextureRect, item: Dictionary) -> void:
+	if texture_rect == null:
+		return
+	var resolved_path: String = resolve_ability_icon_path(item)
+	var fallback_texture: Texture2D = resolve_ability_icon(item)
 	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
 
 
@@ -1300,9 +1319,33 @@ static func resolve_cat_card_square_frame(rarity_key: String) -> Texture2D:
 	return load_texture(CAT_CARD_SQUARE_FRAMES.get(normalized, CAT_CARD_SQUARE_FRAMES["common"]))
 
 
+static func apply_cat_card_square_frame_texture(texture_rect: TextureRect, rarity_key: String) -> void:
+	if texture_rect == null:
+		return
+	var normalized: String = rarity_key.strip_edges().to_lower()
+	var resolved_path: String = str(CAT_CARD_SQUARE_FRAMES.get(normalized, CAT_CARD_SQUARE_FRAMES.get("common", "")))
+	var fallback_texture: Texture2D = resolve_cat_card_square_frame(rarity_key)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
 static func resolve_cat_type_icon(cat_type: String) -> Texture2D:
 	var normalized: String = cat_type.strip_edges().to_lower()
 	return load_texture(CAT_TYPE_ICONS.get(normalized, CAT_TYPE_ICONS["base"]))
+
+
+static func apply_cat_type_icon_texture(texture_rect: TextureRect, cat_type: String) -> void:
+	if texture_rect == null:
+		return
+	var normalized: String = cat_type.strip_edges().to_lower()
+	var resolved_path: String = str(CAT_TYPE_ICONS.get(normalized, CAT_TYPE_ICONS.get("base", "")))
+	var fallback_texture: Texture2D = resolve_cat_type_icon(cat_type)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
+static func apply_cat_card_empty_silhouette_texture(texture_rect: TextureRect) -> void:
+	if texture_rect == null:
+		return
+	_apply_remote_texture(texture_rect, CAT_CARD_EMPTY_SILHOUETTE, null)
 
 
 static func create_icon_rect(texture: Texture2D, size: Vector2) -> TextureRect:

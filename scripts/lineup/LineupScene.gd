@@ -340,6 +340,7 @@ func _make_team_slot_card(_slot_index: int, member: Dictionary, host_size: Vecto
 	var slot_card: PanelContainer = CatRosterCard.build({
 		"template_key": "lineup_team",
 		"title_text": "",
+		"cat_id": cat_file_id,
 		"icon_texture": team_icon,
 		"fallback_text": _get_cat_visual_fallback(cat_name),
 		"level_value": int(member.get("catFoodLevel", 1)) if is_filled else 0,
@@ -428,6 +429,7 @@ func _make_cat_card(cat: Dictionary, in_team_ids: Array) -> PanelContainer:
 		"is_selected": already_in,
 		"template_key": "lineup_owned",
 		"title_text": display_name,
+		"cat_id": local_cat_id,
 		"icon_texture": cat_icon,
 		"fallback_text": _get_cat_visual_fallback(display_name),
 		"level_value": lv,
