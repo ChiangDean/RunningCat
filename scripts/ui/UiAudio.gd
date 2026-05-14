@@ -266,11 +266,16 @@ func _install_web_audio_unlock_hooks() -> void:
 			let unlocked = false;
 			for (const context of this.contexts) {
 				if (!context) continue;
-				if (context.state !== 'running') {
-					try {
-						context.resume();
-					} catch (_err) {}
+				if (context.state === 'running') {
+					unlocked = true;
+					continue;
 				}
+				try {
+					const p = context.resume();
+					if (p && typeof p.then === 'function') {
+						p.then(() => { this.userActivated = true; });
+					}
+				} catch (_err) {}
 				if (context.state === 'running') {
 					unlocked = true;
 				}
@@ -279,15 +284,20 @@ func _install_web_audio_unlock_hooks() -> void:
 			return unlocked;
 		},
 		notifyUserGesture() {
-			this.userActivated = true;
 			this.ensureFallbackContext();
-			return this.resumeAllContexts() || this.userActivated;
+			const unlocked = this.resumeAllContexts();
+			this.userActivated = this.userActivated || unlocked;
+			return unlocked;
 		},
 		install() {
 			if (this.installed) return;
 			this.installConstructorHook('AudioContext');
 			this.installConstructorHook('webkitAudioContext');
-			const resume = () => this.notifyUserGesture();
+			const resume = () => {
+				this.userActivated = true;
+				this.ensureFallbackContext();
+				this.resumeAllContexts();
+			};
 			['click', 'touchend', 'pointerup', 'keydown'].forEach((eventName) => {
 				document.addEventListener(eventName, resume, { capture: true, passive: true });
 			});
@@ -323,9 +333,7 @@ func _retry_pending_bgm_after_unlock() -> void:
 		return
 	if _bgm_player == null:
 		return
-	if _bgm_player.playing and not _pending_bgm_restart:
-		return
-	play_bgm(_pending_bgm_stream, _pending_bgm_restart)
+	play_bgm(_pending_bgm_stream, true)
 
 
 func _schedule_web_audio_unlock_retry() -> void:
