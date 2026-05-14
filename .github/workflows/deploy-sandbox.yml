@@ -59,7 +59,7 @@ jobs:
             */api) FINAL_API_BASE_URL="$API_BASE_URL" ;;
             *) FINAL_API_BASE_URL="${API_BASE_URL%/}/api" ;;
           esac
-          SITE_BASE_URL="https://sandbox.app.meowpartydash.qoo-entertainment.com"
+          SITE_BASE_URL="https://sandbox-app-meowpartydash.qoo-entertainment.com"
           mkdir -p config
           cat > config/runtime_config.json <<EOF
           {
@@ -107,5 +107,5 @@ jobs:
           external_repository: ChiangDean/MeowPartyDashClientPagesSandbox
           publish_branch: gh-pages
           publish_dir: build/web
-          cname: sandbox.app.meowpartydash.qoo-entertainment.com
+          cname: sandbox-app-meowpartydash.qoo-entertainment.com
           enable_jekyll: false
