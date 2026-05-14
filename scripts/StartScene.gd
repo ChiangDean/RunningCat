@@ -10,7 +10,7 @@ const REQUEST_TIMEOUT_SECONDS := 15.0
 const BOOTSTRAP_MAX_RETRY_COUNT := 2
 const BOOTSTRAP_RETRY_DELAY_SECONDS := 5.0
 const BOOTSTRAP_PROGRESS_MAX_PERCENT := 96.0
-const BOOTSTRAP_PROGRESS_DURATION_SECONDS := 12.0
+const BOOTSTRAP_PROGRESS_DURATION_SECONDS := 36.0
 const NGROK_SKIP_WARNING_HEADER := "ngrok-skip-browser-warning: true"
 const REQUEST_KIND_AUTH := "auth"
 const REQUEST_KIND_BOOTSTRAP := "bootstrap"
@@ -117,6 +117,7 @@ var _loading_fill_tween: Tween
 var _loading_percent_tween: Tween
 var _loading_animation_finished := false
 var _bootstrap_completed := false
+var _cdn_warmup_completed := false
 var _bootstrap_retry_count: int = 0
 var _auth_request_mode: AuthMode = AuthMode.LOGIN
 var _bootstrap_retry_timer: Timer
@@ -1190,9 +1191,12 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 				return
 			_cancel_bootstrap_retry()
 			GameState.apply_player_bootstrap(data)
+			_cdn_warmup_completed = false
+			if not CdnTextureLoader.warmup_completed.is_connected(_on_cdn_warmup_completed):
+				CdnTextureLoader.warmup_completed.connect(_on_cdn_warmup_completed, CONNECT_ONE_SHOT)
 			CdnTextureLoader.warm_cache(AssetResolver.collect_warmup_cdn_urls(GameState.get_owned_cats()))
 			_bootstrap_completed = true
-			_complete_loading_state()
+			_try_finish_loading()
 			return
 		if completed_request_kind == REQUEST_KIND_LOGOUT_REFRESH:
 			GameState.set_auth_session(GameState.api_base_url, data)
@@ -1460,6 +1464,7 @@ func _begin_refresh_then_bootstrap() -> void:
 func _show_loading_state() -> void:
 	_input_ready = false
 	_bootstrap_completed = false
+	_cdn_warmup_completed = false
 	_bootstrap_retry_count = 0
 	_loading_animation_finished = false
 	_cancel_loading_tweens()
@@ -1499,7 +1504,16 @@ func _on_loading_animation_finished() -> void:
 	_loading_fill_tween = null
 	_loading_percent_tween = null
 	_loading_animation_finished = true
-	if _bootstrap_completed:
+	_try_finish_loading()
+
+
+func _on_cdn_warmup_completed() -> void:
+	_cdn_warmup_completed = true
+	_try_finish_loading()
+
+
+func _try_finish_loading() -> void:
+	if _bootstrap_completed and _loading_animation_finished and _cdn_warmup_completed:
 		_complete_loading_state()
 
 
@@ -1542,7 +1556,10 @@ func _abort_loading_state() -> void:
 	_cancel_bootstrap_retry()
 	_bootstrap_retry_count = 0
 	_bootstrap_completed = false
+	_cdn_warmup_completed = false
 	_loading_animation_finished = false
+	if CdnTextureLoader.warmup_completed.is_connected(_on_cdn_warmup_completed):
+		CdnTextureLoader.warmup_completed.disconnect(_on_cdn_warmup_completed)
 	if _auth_block != null:
 		_auth_block.visible = true
 	if _loading_block != null:
