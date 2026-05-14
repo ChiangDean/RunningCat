@@ -845,6 +845,29 @@ static func resolve_cdn_asset_url(path: String) -> String:
 	return "%s/%s" % [RuntimeConfig.get_assets_base_url(), normalized_path.trim_prefix("res://")]
 
 
+static func collect_warmup_cdn_urls(owned_cat_ids: Array[String]) -> Array[String]:
+	if not RuntimeConfig.should_use_cdn_assets():
+		return []
+	var seen: Dictionary = {}
+	var urls: Array[String] = []
+	for cat_id: String in owned_cat_ids:
+		var url: String = resolve_cdn_asset_url(_resolve_cat_icon_path(cat_id))
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+	for rarity_path: Variant in CAT_CARD_SQUARE_FRAMES.values():
+		var url: String = resolve_cdn_asset_url(str(rarity_path))
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+	for type_path: Variant in CAT_TYPE_ICONS.values():
+		var url: String = resolve_cdn_asset_url(str(type_path))
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+	return urls
+
+
 static func apply_background_texture(texture_rect: TextureRect, slot: String) -> void:
 	if texture_rect == null:
 		return
@@ -1133,8 +1156,9 @@ static func get_cat_battle_animation_names() -> Array[String]:
 
 static func _resolve_cat_icon_path(cat_id: String) -> String:
 	var mapped_path: String = str(CAT_ICONS.get(cat_id, ""))
-	if mapped_path != "" and ResourceLoader.exists(mapped_path):
-		return mapped_path
+	if mapped_path != "":
+		if mapped_path.begins_with(UI_CDN_ROOT) or ResourceLoader.exists(mapped_path):
+			return mapped_path
 	return _resolve_character_ref_path(cat_id, "icon_v1")
 
 
@@ -1143,7 +1167,7 @@ static func _resolve_character_ref_path(cat_id: String, suffix: String) -> Strin
 		return ""
 	for root: String in _get_character_ref_roots(cat_id):
 		var candidate_path: String = "%s%s/%s_%s.png" % [root, cat_id, cat_id, suffix]
-		if ResourceLoader.exists(candidate_path):
+		if root.begins_with(UI_CDN_ROOT) or ResourceLoader.exists(candidate_path):
 			return candidate_path
 	return ""
 
