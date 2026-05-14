@@ -11,10 +11,15 @@ var _warmup_total: int = 0
 var _warmup_loaded: int = 0
 
 
+const MAX_CONCURRENT_REQUESTS := 8
+var _warmup_queue: Array[String] = []
+var _active_request_count: int = 0
+
+
 func warm_cache(remote_urls: Array[String]) -> void:
 	_warmup_urls.clear()
+	_warmup_queue.clear()
 	_warmup_loaded = 0
-	var urls_to_fetch: Array[String] = []
 	for url: String in remote_urls:
 		if url == "":
 			continue
@@ -22,22 +27,31 @@ func warm_cache(remote_urls: Array[String]) -> void:
 			continue
 		if not _warmup_urls.has(url):
 			_warmup_urls[url] = true
-			urls_to_fetch.append(url)
-	_warmup_total = urls_to_fetch.size()
+			_warmup_queue.append(url)
+	_warmup_total = _warmup_queue.size()
 	if _warmup_total == 0:
 		warmup_completed.emit()
 		return
-	for url: String in urls_to_fetch:
+	_pump_warmup_queue()
+
+
+func _pump_warmup_queue() -> void:
+	while _active_request_count < MAX_CONCURRENT_REQUESTS and _warmup_queue.size() > 0:
+		var url: String = _warmup_queue.pop_front()
 		if _pending_targets.has(url):
+			_on_warmup_url_done()
 			continue
 		_pending_targets[url] = []
+		_active_request_count += 1
 		var request: HTTPRequest = HTTPRequest.new()
+		request.process_mode = Node.PROCESS_MODE_ALWAYS
 		add_child(request)
 		request.request_completed.connect(_on_request_completed.bind(url, request))
 		var request_error: int = request.request(url)
 		if request_error != OK:
 			request.queue_free()
 			_pending_targets.erase(url)
+			_active_request_count -= 1
 			_on_warmup_url_done()
 
 
@@ -51,6 +65,8 @@ func _on_warmup_url_done() -> void:
 	_warmup_loaded += 1
 	if _warmup_loaded >= _warmup_total:
 		warmup_completed.emit()
+	else:
+		_pump_warmup_queue()
 
 
 func apply_texture(texture_rect: TextureRect, remote_url: String, fallback_texture: Texture2D) -> void:
@@ -94,6 +110,8 @@ func _on_request_completed(
 ) -> void:
 	if request != null:
 		request.queue_free()
+
+	_active_request_count = max(0, _active_request_count - 1)
 
 	var texture: Texture2D = _decode_texture(remote_url, result, response_code, body)
 	if texture != null:

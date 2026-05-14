@@ -845,14 +845,15 @@ static func resolve_cdn_asset_url(path: String) -> String:
 	return "%s/%s" % [RuntimeConfig.get_assets_base_url(), normalized_path.trim_prefix("res://")]
 
 
-static func collect_warmup_cdn_urls(owned_cat_ids: Array[String]) -> Array[String]:
+static func collect_warmup_cdn_urls(owned_cat_ids: Array) -> Array[String]:
 	if not RuntimeConfig.should_use_cdn_assets():
 		return []
 	var seen: Dictionary = {}
 	var urls: Array[String] = []
 
 	# Cat icons (owned)
-	for cat_id: String in owned_cat_ids:
+	for cat_id_variant: Variant in owned_cat_ids:
+		var cat_id: String = str(cat_id_variant)
 		var url: String = resolve_cdn_asset_url(_resolve_cat_icon_path(cat_id))
 		if url != "" and not seen.has(url):
 			seen[url] = true
