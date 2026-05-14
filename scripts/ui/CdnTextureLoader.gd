@@ -6,6 +6,20 @@ var _texture_cache: Dictionary = {}
 var _pending_targets: Dictionary = {}
 
 
+func warm_cache(remote_urls: Array[String]) -> void:
+	for url: String in remote_urls:
+		if url == "" or _texture_cache.has(url) or _pending_targets.has(url):
+			continue
+		_pending_targets[url] = []
+		var request: HTTPRequest = HTTPRequest.new()
+		add_child(request)
+		request.request_completed.connect(_on_request_completed.bind(url, request))
+		var request_error: int = request.request(url)
+		if request_error != OK:
+			request.queue_free()
+			_pending_targets.erase(url)
+
+
 func apply_texture(texture_rect: TextureRect, remote_url: String, fallback_texture: Texture2D) -> void:
 	if texture_rect == null:
 		return

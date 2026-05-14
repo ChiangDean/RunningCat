@@ -1190,6 +1190,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 				return
 			_cancel_bootstrap_retry()
 			GameState.apply_player_bootstrap(data)
+			CdnTextureLoader.warm_cache(AssetResolver.collect_warmup_cdn_urls(GameState.get_owned_cats()))
 			_bootstrap_completed = true
 			_complete_loading_state()
 			return
