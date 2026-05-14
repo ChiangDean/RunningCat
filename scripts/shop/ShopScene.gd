@@ -821,15 +821,13 @@ func _set_bundle_action_button_content(button: Button, label_text: String, icon_
 	center.add_child(row)
 
 	if icon_path != "":
-		var icon_texture: Texture2D = AssetResolver.resolve_texture_or_placeholder(icon_path)
-		if icon_texture != null:
-			var icon: TextureRect = TextureRect.new()
-			icon.custom_minimum_size = SHOP_BUTTON_ICON_SIZE
-			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			icon.texture = icon_texture
-			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			row.add_child(icon)
+		var icon: TextureRect = TextureRect.new()
+		icon.custom_minimum_size = SHOP_BUTTON_ICON_SIZE
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon)
+		AssetResolver.apply_catalog_texture(icon, icon_path)
 
 	var label: Label = Label.new()
 	label.text = label_text
@@ -879,7 +877,8 @@ func _show_reward_detail(reward: Dictionary) -> void:
 		icon.custom_minimum_size = Vector2(96.0, 96.0)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture = AssetResolver.resolve_texture_or_placeholder(icon_path)
+		icon.texture = null
+		AssetResolver.apply_catalog_texture(icon, icon_path)
 		icon_wrapper.add_child(icon)
 		content.add_child(icon_wrapper)
 

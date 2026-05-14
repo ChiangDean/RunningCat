@@ -75,9 +75,8 @@ func _make_ability_card(_scene: Control, item: Dictionary) -> Control:
 	var source_chip: Label = panel.get_node("Margin/ContentCanvas/SourceLabel") as Label
 	var desc: Label = panel.get_node("Margin/ContentCanvas/DescriptionLabel") as Label
 	var count_label: Label = panel.get_node("Margin/ContentCanvas/CountLabel") as Label
-	var icon: Texture2D = AssetResolver.resolve_ability_icon(item)
-	icon_rect.texture = icon
-	icon_rect.visible = icon != null
+	AssetResolver.apply_ability_icon_texture(icon_rect, item)
+	icon_rect.visible = true
 	title.text = str(item.get("displayName", item.get("display_name", "")))
 	source_chip.text = UiText.SCOOPER_ABILITY_SOURCE_VALUE
 	desc.text = str(item.get("description", ""))

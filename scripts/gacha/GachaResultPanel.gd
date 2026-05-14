@@ -28,13 +28,14 @@ func _build_row(result: Dictionary) -> Control:
 	row.add_theme_constant_override("separation", 12)
 	panel.add_child(row)
 
-	var frame_texture: Texture2D = AssetResolver.resolve_gacha_frame(result)
-	if frame_texture != null:
-		row.add_child(AssetResolver.create_icon_rect(frame_texture, Vector2(74.0, 74.0)))
+	var frame_rect: TextureRect = AssetResolver.create_icon_rect(null, Vector2(74.0, 74.0))
+	row.add_child(frame_rect)
+	AssetResolver.apply_gacha_frame_texture(frame_rect, result)
 
-	var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(str(result.get("catId", "")))
-	if cat_icon != null:
-		row.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(56.0, 56.0)))
+	var cat_id_str: String = str(result.get("catId", ""))
+	var cat_rect: TextureRect = AssetResolver.create_icon_rect(null, Vector2(56.0, 56.0))
+	row.add_child(cat_rect)
+	AssetResolver.apply_cat_icon_texture(cat_rect, cat_id_str)
 
 	var rarity: String = str(result.get("rarityDisplayName", result.get("rarityType", UiText.GACHA_RESULT_RARITY_FALLBACK)))
 	var rarity_label: Label = Label.new()

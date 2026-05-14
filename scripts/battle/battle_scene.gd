@@ -757,8 +757,6 @@ func _build_ui() -> void:
 
 	_top_avatar_rect = top_bar_root.get_node("Avatar") as TextureRect
 	AssetResolver.apply_profile_avatar_texture(_top_avatar_rect, GameState.get_profile_avatar_id())
-	if _top_avatar_rect.texture == null:
-		_top_avatar_rect.texture = AssetResolver.load_texture(PROFILE_AVATAR_TEXTURE_PATH)
 	var avatar_circle_material := ShaderMaterial.new()
 	avatar_circle_material.shader = Shader.new()
 	avatar_circle_material.shader.code = "shader_type canvas_item;\nvoid fragment(){\n\tvec2 uv = UV - vec2(0.5);\n\tif (length(uv) > 0.5) {\n\t\tdiscard;\n\t}\n\tCOLOR = texture(TEXTURE, UV) * COLOR;\n}\n"
@@ -2356,12 +2354,9 @@ func _build_idle_reward_slot(reward_name: String, reward_key: String, amount: in
 	var icon: TextureRect = slot.get_node("ItemIcon") as TextureRect
 	var name_label: Label = slot.get_node("ItemNameLabel") as Label
 	var count_label: Label = slot.get_node("CountLabel") as Label
-	var texture: Texture2D = AssetResolver.load_texture(_get_idle_reward_icon_path(reward_key))
-	if texture != null:
-		icon.texture = texture
-		icon.visible = true
-	else:
-		icon.visible = false
+	var reward_icon_path: String = _get_idle_reward_icon_path(reward_key)
+	AssetResolver.apply_catalog_texture(icon, reward_icon_path)
+	icon.visible = reward_icon_path != ""
 
 	name_label.text = reward_name
 	name_label.tooltip_text = reward_name
@@ -2615,8 +2610,6 @@ func _refresh_ui() -> void:
 		_profile_level_label.text = str(GameState.player_data.scooper_level)
 	if _top_avatar_rect != null:
 		AssetResolver.apply_profile_avatar_texture(_top_avatar_rect, GameState.get_profile_avatar_id())
-		if _top_avatar_rect.texture == null:
-			_top_avatar_rect.texture = AssetResolver.load_texture(PROFILE_AVATAR_TEXTURE_PATH)
 	if _top_exp_bar != null and _top_progress_value_label != null:
 		var top_profile: Dictionary = GameState.scooper_profile_data
 		var top_scooper_level: int

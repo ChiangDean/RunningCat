@@ -983,7 +983,7 @@ func _apply_dialogue_inline_media(inline_kind: String, inline_image_path: String
 
 	if inline_kind == DIALOGUE_INLINE_KIND_CATALOG_IMAGE and inline_image_path != "":
 		_dialogue_inline_image.custom_minimum_size = inline_size
-		_dialogue_inline_image.texture = AssetResolver.resolve_catalog_texture(inline_image_path)
+		AssetResolver.apply_catalog_texture(_dialogue_inline_image, inline_image_path)
 		_dialogue_inline_image.visible = true
 	elif inline_kind == DIALOGUE_INLINE_KIND_IMAGE_ROW:
 		_populate_dialogue_inline_image_row(inline_image_paths, inline_size)
@@ -1039,8 +1039,8 @@ func _populate_dialogue_inline_image_row(image_paths: Array, inline_size: Vector
 		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		image.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		image.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		image.texture = AssetResolver.resolve_texture_or_placeholder(image_path)
 		_dialogue_inline_image_row.add_child(image)
+		AssetResolver.apply_catalog_texture(image, image_path)
 
 	_dialogue_inline_image_row.visible = _dialogue_inline_image_row.get_child_count() > 0
 
