@@ -1,14 +1,34 @@
 extends Node
 
+signal warmup_completed
+
 const META_PENDING_URL := "_cdn_pending_texture_url"
 
 var _texture_cache: Dictionary = {}
 var _pending_targets: Dictionary = {}
+var _warmup_urls: Dictionary = {}
+var _warmup_total: int = 0
+var _warmup_loaded: int = 0
 
 
 func warm_cache(remote_urls: Array[String]) -> void:
+	_warmup_urls.clear()
+	_warmup_loaded = 0
+	var urls_to_fetch: Array[String] = []
 	for url: String in remote_urls:
-		if url == "" or _texture_cache.has(url) or _pending_targets.has(url):
+		if url == "":
+			continue
+		if _texture_cache.has(url):
+			continue
+		if not _warmup_urls.has(url):
+			_warmup_urls[url] = true
+			urls_to_fetch.append(url)
+	_warmup_total = urls_to_fetch.size()
+	if _warmup_total == 0:
+		warmup_completed.emit()
+		return
+	for url: String in urls_to_fetch:
+		if _pending_targets.has(url):
 			continue
 		_pending_targets[url] = []
 		var request: HTTPRequest = HTTPRequest.new()
@@ -18,6 +38,19 @@ func warm_cache(remote_urls: Array[String]) -> void:
 		if request_error != OK:
 			request.queue_free()
 			_pending_targets.erase(url)
+			_on_warmup_url_done()
+
+
+func get_warmup_progress() -> float:
+	if _warmup_total <= 0:
+		return 1.0
+	return float(_warmup_loaded) / float(_warmup_total)
+
+
+func _on_warmup_url_done() -> void:
+	_warmup_loaded += 1
+	if _warmup_loaded >= _warmup_total:
+		warmup_completed.emit()
 
 
 func apply_texture(texture_rect: TextureRect, remote_url: String, fallback_texture: Texture2D) -> void:
@@ -82,6 +115,9 @@ func _on_request_completed(
 		if texture != null:
 			texture_rect.texture = texture
 			texture_rect.visible = true
+
+	if _warmup_urls.has(remote_url):
+		_on_warmup_url_done()
 
 
 func _decode_texture(remote_url: String, result: int, response_code: int, body: PackedByteArray) -> Texture2D:

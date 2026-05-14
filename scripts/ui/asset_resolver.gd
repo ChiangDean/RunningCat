@@ -850,21 +850,112 @@ static func collect_warmup_cdn_urls(owned_cat_ids: Array[String]) -> Array[Strin
 		return []
 	var seen: Dictionary = {}
 	var urls: Array[String] = []
+
+	# Cat icons (owned)
 	for cat_id: String in owned_cat_ids:
 		var url: String = resolve_cdn_asset_url(_resolve_cat_icon_path(cat_id))
 		if url != "" and not seen.has(url):
 			seen[url] = true
 			urls.append(url)
+
+	# Card square frames (all rarities)
 	for rarity_path: Variant in CAT_CARD_SQUARE_FRAMES.values():
 		var url: String = resolve_cdn_asset_url(str(rarity_path))
 		if url != "" and not seen.has(url):
 			seen[url] = true
 			urls.append(url)
+
+	# Cat type icons
 	for type_path: Variant in CAT_TYPE_ICONS.values():
 		var url: String = resolve_cdn_asset_url(str(type_path))
 		if url != "" and not seen.has(url):
 			seen[url] = true
 			urls.append(url)
+
+	# Equipment icons
+	for equip_path: Variant in SCOOPER_EQUIPMENT.values():
+		var url: String = resolve_cdn_asset_url(str(equip_path))
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
+	# Ability icons
+	for ability_path: Variant in SCOOPER_ABILITIES.values():
+		var url: String = resolve_cdn_asset_url(str(ability_path))
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
+	# Gacha frames
+	for gacha_path: Variant in GACHA_FRAMES.values():
+		var url: String = resolve_cdn_asset_url(str(gacha_path))
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
+	# Rewards
+	var reward_files: Array[String] = [
+		"arena_ticket.png", "battle_speed_ticket.png", "cat_food.png",
+		"cat_food_dungeon_ticket.png", "diamond_dungeon_ticket.png",
+		"gold_dungeon_ticket.png", "memory_shards.png", "party_cheer_coupon.png",
+		"poop_dungeon_ticket.png", "special_cat_food.png", "trap_cages.png",
+		"trap_points.png", "whisker_dungeon_ticket.png", "whisker_shards.png",
+	]
+	for f: String in reward_files:
+		var url: String = resolve_cdn_asset_url(UI_CDN_REWARDS_ROOT + f)
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
+	# Dungeon resource icons
+	var dungeon_files: Array[String] = ["cat_food.png", "diamond.png", "gold.png", "poop.png", "whisker.png"]
+	for f: String in dungeon_files:
+		var url: String = resolve_cdn_asset_url(UI_CDN_DUNGEON_ROOT + f)
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
+	# Treasure icons
+	var treasure_files: Array[String] = [
+		"assassin_gear.png", "bastion_whisker_knot.png", "gilded_litter_scoop.png",
+		"iron_armor.png", "moon_chime.png", "night_gem.png", "shadow_fang_medal.png",
+		"speed_gear.png", "spring_paw_clockwork.png", "tank_shield.png", "velvet_guard_pin.png",
+	]
+	for f: String in treasure_files:
+		var url: String = resolve_cdn_asset_url(UI_CDN_TREASURE_ROOT + f)
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
+	# Arena rank badges
+	var arena_rank_files: Array[String] = [
+		"bronze_1.png", "bronze_2.png", "bronze_3.png",
+		"silver_1.png", "silver_2.png", "silver_3.png",
+		"gold_1.png", "gold_2.png", "gold_3.png",
+		"platinum_1.png", "platinum_2.png", "platinum_3.png",
+		"diamond_1.png", "diamond_2.png", "diamond_3.png",
+		"master_1.png", "master_2.png", "master_3.png", "elite.png",
+	]
+	for f: String in arena_rank_files:
+		var url: String = resolve_cdn_asset_url(UI_CDN_ARENA_RANKS_ROOT + f)
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
+	# Activity backgrounds
+	var activity_files: Array[String] = [
+		"activity_background_v1.png", "arena_background_v1.png",
+		"chat_background_v1.png", "config_background_v1.png",
+		"dungeon_background_v1.png", "enhance_background_v1.png",
+		"gacha_background_v1.png", "mail_background_v1.png",
+		"scooper_background_v1.png", "shop_background_v1.png",
+	]
+	for f: String in activity_files:
+		var url: String = resolve_cdn_asset_url(UI_CDN_ACTIVITY_ROOT + f)
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
 	return urls
 
 
