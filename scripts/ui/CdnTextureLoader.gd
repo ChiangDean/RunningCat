@@ -19,6 +19,7 @@ func apply_texture(texture_rect: TextureRect, remote_url: String, fallback_textu
 	var cached_variant: Variant = _texture_cache.get(remote_url, null)
 	if cached_variant is Texture2D:
 		texture_rect.texture = cached_variant
+		texture_rect.visible = true
 		return
 
 	var pending_variants: Array = _pending_targets.get(remote_url, [])
@@ -66,6 +67,7 @@ func _on_request_completed(
 			continue
 		if texture != null:
 			texture_rect.texture = texture
+			texture_rect.visible = true
 
 
 func _decode_texture(remote_url: String, result: int, response_code: int, body: PackedByteArray) -> Texture2D:
