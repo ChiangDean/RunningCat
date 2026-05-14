@@ -241,10 +241,9 @@ func _make_equip_card(scene: Control, item: Dictionary) -> Control:
 	_prepare_flat_button(action_btn)
 	_set_panel_fill(progress_frame, Color(0.19, 0.17, 0.15, 0.92))
 
-	var equipment_icon: Texture2D = AssetResolver.resolve_equipment_icon(item)
 	if icon_rect != null:
-		icon_rect.texture = equipment_icon
-		icon_rect.visible = equipment_icon != null
+		AssetResolver.apply_equipment_icon_texture(icon_rect, item)
+		icon_rect.visible = icon_rect.texture != null
 	level_lbl.visible = owned
 	level_lbl.text = str(level)
 	title_lbl.text = _format_equipment_title(name_str, level if owned else 0)

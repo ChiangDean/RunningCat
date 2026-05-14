@@ -1182,7 +1182,19 @@ static func resolve_gacha_frame(result: Dictionary) -> Texture2D:
 
 
 static func resolve_equipment_icon(item: Dictionary) -> Texture2D:
-	return resolve_texture_or_placeholder(str(SCOOPER_EQUIPMENT.get(int(item.get("equipmentId", 0)), "")))
+	return resolve_texture_or_placeholder(resolve_equipment_icon_path(item))
+
+
+static func apply_equipment_icon_texture(texture_rect: TextureRect, item: Dictionary) -> void:
+	if texture_rect == null:
+		return
+	var resolved_path: String = resolve_equipment_icon_path(item)
+	var fallback_texture: Texture2D = resolve_equipment_icon(item)
+	_apply_remote_texture(texture_rect, resolved_path, fallback_texture)
+
+
+static func resolve_equipment_icon_path(item: Dictionary) -> String:
+	return str(SCOOPER_EQUIPMENT.get(int(item.get("equipmentId", 0)), ""))
 
 
 static func resolve_ability_icon(item: Dictionary) -> Texture2D:
