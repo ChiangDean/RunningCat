@@ -1495,7 +1495,7 @@ func _start_fake_loading() -> void:
 		0.0,
 		BOOTSTRAP_PROGRESS_MAX_PERCENT,
 		BOOTSTRAP_PROGRESS_DURATION_SECONDS
-	).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	_loading_fill_tween.finished.connect(_on_loading_animation_finished)
 	_loading_percent_tween = _loading_fill_tween
 
