@@ -472,7 +472,10 @@ func _build_team_member_card(member: Dictionary) -> PanelContainer:
 
 	var cat_icon: Texture2D = Helpers.resolve_cat_icon_by_catalog_id(int(member.get("catCatalogId", 0))) if is_filled else null
 	if cat_icon != null:
-		art_center.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(42.0, 42.0)))
+		var cat_icon_rect: TextureRect = AssetResolver.create_icon_rect(cat_icon, Vector2(42.0, 42.0))
+		var _cat_file_id: String = GameState.get_cat_file_id_by_catalog_id(int(member.get("catCatalogId", 0)))
+		AssetResolver.apply_cat_icon_texture(cat_icon_rect, _cat_file_id)
+		art_center.add_child(cat_icon_rect)
 	else:
 		var fallback: Label = Label.new()
 		fallback.text = Helpers.get_name_fallback(str(member.get("catDisplayName", ""))) if is_filled else UiText.CONFIG_EMPTY_SLOT_ICON
@@ -571,7 +574,10 @@ func _build_opponent_member_card(member: Dictionary) -> PanelContainer:
 	var cat_catalog_id: int = int(member.get("catCatalogId", 0)) if is_filled else 0
 	var cat_icon: Texture2D = Helpers.resolve_cat_icon_by_catalog_id(cat_catalog_id) if is_filled else null
 	if cat_icon != null:
-		art_center.add_child(AssetResolver.create_icon_rect(cat_icon, Vector2(52.0, 52.0)))
+		var cat_icon_rect: TextureRect = AssetResolver.create_icon_rect(cat_icon, Vector2(52.0, 52.0))
+		var _cat_file_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id)
+		AssetResolver.apply_cat_icon_texture(cat_icon_rect, _cat_file_id)
+		art_center.add_child(cat_icon_rect)
 	else:
 		var fallback: Label = Label.new()
 		fallback.text = Helpers.get_name_fallback(str(member.get("catDisplayName", ""))) if is_filled else UiText.CONFIG_EMPTY_SLOT_ICON
@@ -885,9 +891,7 @@ func _build_reward_card(rank: Dictionary) -> Control:
 			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			var tex: Texture2D = AssetResolver.resolve_catalog_texture(str(entry.get("path", "")))
-			if tex != null:
-				icon.texture = tex
+			AssetResolver.apply_catalog_texture(icon, str(entry.get("path", "")))
 			slot.add_child(icon)
 
 			var qty_lbl: Label = Label.new()
@@ -914,12 +918,8 @@ func _apply_reward_slot(slot: Control, reward_entry: Dictionary) -> void:
 	var name_label: Label = slot.get_node("ItemNameLabel") as Label
 	var qty_label: Label = slot.get_node("CountLabel") as Label
 
-	var texture: Texture2D = AssetResolver.resolve_catalog_texture(str(reward_entry.get("path", "")))
-	if texture != null:
-		icon.texture = texture
-		icon.visible = true
-	else:
-		icon.visible = false
+	AssetResolver.apply_catalog_texture(icon, str(reward_entry.get("path", "")))
+	icon.visible = str(reward_entry.get("path", "")) != ""
 
 	name_label.text = str(reward_entry.get("name", ""))
 	name_label.tooltip_text = name_label.text

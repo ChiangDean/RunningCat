@@ -34,6 +34,7 @@ func setup(channel_key: String, message: Dictionary) -> void:
 		AssetResolver.resolve_profile_avatar(avatar_id),
 		Vector2(34.0, 34.0)
 	)
+	AssetResolver.apply_profile_avatar_texture(avatar_rect, avatar_id)
 	row.add_child(avatar_rect)
 
 	var body: Label = Label.new()

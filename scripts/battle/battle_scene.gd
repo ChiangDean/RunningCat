@@ -3042,12 +3042,14 @@ func _refresh_boss_warning_overlay_content() -> void:
 		return
 
 	_boss_warning_text_label.text = BOSS_WARNING_TEXT
-	var icon_texture: Texture2D = null
 	if not _current_enemy_cats.is_empty():
 		var boss_cat: CatData = _current_enemy_cats[0] as CatData
 		if boss_cat != null:
-			icon_texture = AssetResolver.resolve_cat_icon(boss_cat.id)
-	_boss_warning_icon.texture = icon_texture
+			AssetResolver.apply_cat_icon_texture(_boss_warning_icon, boss_cat.id)
+		else:
+			_boss_warning_icon.texture = null
+	else:
+		_boss_warning_icon.texture = null
 	_set_boss_warning_overlay_content_visible(_result_backdrop != null and _result_backdrop.visible)
 
 

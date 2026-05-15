@@ -1472,13 +1472,8 @@ func _refresh_skill_slot_ui(i: int, slot: Dictionary) -> void:
 
 	var icon_rect: TextureRect = slot_node.get_node_or_null("Icon")
 	if icon_rect:
-		var cat_icon: Texture2D = AssetResolver.resolve_cat_icon(cat_id)
-		if cat_icon != null:
-			icon_rect.texture = cat_icon
-			icon_rect.visible = true
-		else:
-			icon_rect.texture = null
-			icon_rect.visible = false
+		AssetResolver.apply_cat_icon_texture(icon_rect, cat_id)
+		icon_rect.visible = cat_id != ""
 		icon_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 	var death_overlay: ColorRect = slot_node.get_node_or_null("DeathOverlay")

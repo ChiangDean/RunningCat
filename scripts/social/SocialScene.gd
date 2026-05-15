@@ -1461,6 +1461,7 @@ func _build_friend_row(item_variant: Variant) -> Control:
 		AssetResolver.resolve_profile_avatar(avatar_id),
 		Vector2(56.0, 56.0)
 	)
+	AssetResolver.apply_profile_avatar_texture(avatar_rect, avatar_id)
 	row.add_child(avatar_rect)
 
 	if _is_overlay_panel_mode():
@@ -1584,6 +1585,7 @@ func _build_friend_inbox_row(item_variant: Variant) -> Control:
 		AssetResolver.resolve_profile_avatar(avatar_id),
 		Vector2(56.0, 56.0)
 	)
+	AssetResolver.apply_profile_avatar_texture(avatar_rect, avatar_id)
 	row.add_child(avatar_rect)
 
 	if _is_overlay_panel_mode():
@@ -1702,6 +1704,7 @@ func _build_friend_outbox_row(item_variant: Variant) -> Control:
 		AssetResolver.resolve_profile_avatar(avatar_id),
 		Vector2(56.0, 56.0)
 	)
+	AssetResolver.apply_profile_avatar_texture(avatar_rect, avatar_id)
 	row.add_child(avatar_rect)
 
 	if _is_overlay_panel_mode():
@@ -2724,6 +2727,7 @@ func _build_friend_search_candidate_row(dialog_state: Dictionary, candidate: Dic
 		AssetResolver.resolve_profile_avatar(avatar_id),
 		Vector2(64.0, 64.0)
 	)
+	AssetResolver.apply_profile_avatar_texture(avatar_rect, avatar_id)
 	row.add_child(avatar_rect)
 
 	var info_box: VBoxContainer = VBoxContainer.new()
@@ -3038,6 +3042,7 @@ func _build_invite_party_candidate_row(dialog_state: Dictionary, candidate: Dict
 		AssetResolver.resolve_profile_avatar(avatar_id),
 		Vector2(64.0, 64.0)
 	)
+	AssetResolver.apply_profile_avatar_texture(avatar_rect, avatar_id)
 	row.add_child(avatar_rect)
 
 	var info_box: VBoxContainer = VBoxContainer.new()
