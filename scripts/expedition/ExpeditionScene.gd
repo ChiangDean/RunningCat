@@ -362,6 +362,7 @@ func _make_cat_picker_row(zone_name: String, zone_id: int, cat_id: String) -> Co
 	margin.add_child(layout)
 
 	var icon: TextureRect = AssetResolver.create_icon_rect(AssetResolver.resolve_cat_icon(cat_id), Vector2(56.0, 56.0))
+	AssetResolver.apply_cat_icon_texture(icon, cat_id)
 	layout.add_child(icon)
 
 	var text_box: VBoxContainer = VBoxContainer.new()
