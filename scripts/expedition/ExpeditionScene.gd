@@ -265,7 +265,20 @@ func _make_zone_card(zone: Dictionary) -> Control:
 	action_button.text = UiText.EXPEDITION_REMAINING_TIME_FORMAT % _format_remaining_time(maxi(int(expedition.get("completesAtUnixSeconds", 0)) - int(Time.get_unix_time_from_system()), 0))
 	action_button.disabled = true
 	UiPalette.apply_button_kind(action_button, "neutral")
-	return card
+	var ad_speedup_count: int = int(expedition.get(\"adSpeedupCount\", 0))
+	var max_ad_speedup: int = int(expedition.get(\"maxAdSpeedupCount\", 2))
+	if ad_speedup_count < max_ad_speedup:
+		var speedup_btn: Button = Button.new()
+		speedup_btn.custom_minimum_size = Vector2(0.0, 44.0)
+		speedup_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var ad_free_label: String = \"免費\" if GameState.is_ad_free() else \"廣告\"
+		speedup_btn.text = \"%s加速30分鐘 (%d/%d)\" % [ad_free_label, ad_speedup_count, max_ad_speedup]
+		speedup_btn.disabled = _is_loading
+		UiPalette.apply_button_kind(speedup_btn, \"secondary\")
+		speedup_btn.pressed.connect(Callable(self, \"_on_ad_speedup_pressed\").bind(zone_id, speedup_btn))
+		var content_canvas: Control = card.get_node(\"Margin/ContentCanvas\")
+		if content_canvas != null:
+			content_canvas.add_child(speedup_btn)	return card
 
 
 func _on_zone_deploy_pressed(zone: Dictionary) -> void:
@@ -431,6 +444,28 @@ func _claim_expedition(zone_id: int) -> void:
 	var cat_id: String = str(expedition.get("catId", "")).strip_edges()
 	_is_loading = true
 	ApiClient.claim_expedition(zone_id, Callable(self, "_on_claim_expedition_completed").bind(cat_id))
+
+
+func _on_ad_speedup_pressed(zone_id: int, btn: Button) -> void:
+	if _is_loading:
+		return
+	btn.disabled = true
+	_is_loading = true
+	ApiClient.expedition_ad_speedup(zone_id, Callable(self, "_on_ad_speedup_completed"))
+
+
+func _on_ad_speedup_completed(ok: bool, data: Variant, err: Dictionary) -> void:
+	_is_loading = false
+	if not ok:
+		ToastManager.error("巡視加速", str(err.get("message", "加速失敗")))
+		_refresh_zone_cards()
+		return
+	var result: Dictionary = data if data is Dictionary else {}
+	var active_variant: Variant = result.get("activeExpeditions", [])
+	if active_variant is Array:
+		GameState.expedition_active = active_variant
+	_refresh_zone_cards()
+	ToastManager.success("巡視加速", "已加速30分鐘！")
 
 
 func _on_claim_expedition_completed(ok: bool, data: Variant, err: Dictionary, cat_id: String) -> void:
