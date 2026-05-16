@@ -82,6 +82,7 @@ static func detach(scroll: ScrollContainer) -> void:
 # ── Init ───────────────────────────────────────────────
 
 func _init_attach() -> void:
+	set_process_input(true)
 	set_process(true)
 	target.mouse_filter = Control.MOUSE_FILTER_STOP
 
@@ -90,9 +91,6 @@ func _init_attach() -> void:
 	# scroll on every drag event, causing a double-move jump. Setting
 	# scroll_deadzone to INT_MAX makes the native drag threshold unreachable.
 	target.scroll_deadzone = 2147483647
-
-	if not target.gui_input.is_connected(_on_target_gui_input):
-		target.gui_input.connect(_on_target_gui_input)
 
 	# Only override the managed axis; leave the other axis untouched so callers
 	# can explicitly disable horizontal/vertical scrolling before attaching.
@@ -141,8 +139,13 @@ func _compute_canvas_layer_depth() -> int:
 
 # ── Helpers ────────────────────────────────────────────
 
+## Convert a viewport-space position to canvas-space for our target.
+func _to_canvas_pos(viewport_pos: Vector2) -> Vector2:
+	return target.get_canvas_transform().affine_inverse() * viewport_pos
+
 func _get_pos(event: InputEvent) -> float:
-	return event.position.y if axis == "vertical" else event.position.x
+	var canvas_pos := _to_canvas_pos(event.position)
+	return canvas_pos.y if axis == "vertical" else canvas_pos.x
 
 func _get_scroll() -> float:
 	return target.get_v_scroll() if axis == "vertical" else target.get_h_scroll()
@@ -169,15 +172,17 @@ func _event_inside_target(event: InputEvent) -> bool:
 		or event is InputEventScreenTouch \
 		or event is InputEventScreenDrag):
 		return false
-	if not target.get_global_rect().has_point(event.position):
-		return false
 	if not target.is_visible_in_tree():
+		return false
+	var canvas_pos := _to_canvas_pos(event.position)
+	if not target.get_global_rect().has_point(canvas_pos):
 		return false
 	return true
 
 
 ## Returns true if another visible InertialScroller covers the same point
 ## at a higher canvas layer, meaning this scroller should yield.
+## pos is in viewport space.
 func _is_occluded_at(pos: Vector2) -> bool:
 	for ref: WeakRef in _instances:
 		var inst = ref.get_ref() as InertialScroller
@@ -187,20 +192,29 @@ func _is_occluded_at(pos: Vector2) -> bool:
 			continue
 		if inst._canvas_layer_depth <= _canvas_layer_depth:
 			continue
-		if inst.target.get_global_rect().has_point(pos):
+		var inst_canvas_pos: Vector2 = inst.target.get_canvas_transform().affine_inverse() * pos
+		if inst.target.get_global_rect().has_point(inst_canvas_pos):
 			return true
 	return false
 
 # ── Input ──────────────────────────────────────────────
 
-# NOTE: We use ONLY gui_input (not _input) so that event positions are always
-# in the same coordinate space as the ScrollContainer. Using _input() gives
-# viewport-global coordinates which differ from gui_input's CanvasLayer-local
-# coordinates, causing two PRESS events with different _last_pos values and a
-# huge spurious delta on the first MOTION.
+# We use _input() to capture events globally — this ensures scrolling works
+# even when child controls have MOUSE_FILTER_STOP. Event positions are
+# transformed from viewport space to the target's canvas space so coordinates
+# are correct under CanvasLayers.
 
-func _on_target_gui_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
+	if target == null:
+		return
+	if not (event is InputEventMouseButton or event is InputEventMouseMotion \
+		or event is InputEventScreenTouch or event is InputEventScreenDrag):
+		return
 	_handle_scroll_input(event)
+
+
+func _on_target_gui_input(_event: InputEvent) -> void:
+	pass
 
 
 func _handle_scroll_input(event: InputEvent) -> void:
