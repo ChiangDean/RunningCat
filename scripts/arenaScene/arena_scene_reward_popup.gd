@@ -20,12 +20,12 @@ static func show(scene: Control, overview: Dictionary, claim_callback: Callable)
 		row.add_theme_constant_override("separation", 12)
 		list.add_child(row)
 
-		var badge_texture: Texture2D = ArenaSceneHelpers.resolve_rank_texture(
-			rank.get("imagePath", ""),
-			rank.get("rankKey", "")
-		)
-		if badge_texture != null:
-			row.add_child(AssetResolver.create_icon_rect(badge_texture, Vector2(44.0, 44.0)))
+		var badge_icon: TextureRect = TextureRect.new()
+		badge_icon.custom_minimum_size = Vector2(44.0, 44.0)
+		badge_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		badge_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ArenaSceneHelpers.apply_rank_badge_texture(badge_icon, rank.get("imagePath", ""), rank.get("rankKey", ""))
+		row.add_child(badge_icon)
 
 		var name_label: Label = Label.new()
 		name_label.text = str(rank.get("displayName", UiText.ARENA_REWARD_UNKNOWN_RANK))
