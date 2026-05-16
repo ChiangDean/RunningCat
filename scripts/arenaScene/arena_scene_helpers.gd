@@ -131,6 +131,25 @@ static func resolve_rank_texture(image_path: Variant, rank_key: Variant) -> Text
 	return AssetResolver.resolve_placeholder_icon()
 
 
+static func resolve_rank_catalog_path(image_path: Variant, rank_key: Variant) -> String:
+	var path_str: String = str(image_path if image_path != null else "").strip_edges()
+	if path_str != "":
+		return path_str
+	var normalized_rank_key: String = str(rank_key if rank_key != null else "").strip_edges().to_lower()
+	if normalized_rank_key != "":
+		return "catalog/arena/%s" % normalized_rank_key
+	return ""
+
+
+static func apply_rank_badge_texture(texture_rect: TextureRect, image_path: Variant, rank_key: Variant) -> void:
+	var catalog_path: String = resolve_rank_catalog_path(image_path, rank_key)
+	if catalog_path != "":
+		AssetResolver.apply_catalog_texture(texture_rect, catalog_path)
+		texture_rect.visible = true
+	else:
+		texture_rect.visible = false
+
+
 static func resolve_cat_icon_by_catalog_id(cat_catalog_id: int) -> Texture2D:
 	var cat_id: String = GameState.get_cat_file_id_by_catalog_id(cat_catalog_id)
 	if cat_id == "":
@@ -172,6 +191,10 @@ static func _get_reward_type_label(reward_type: String) -> String:
 			return UiText.REWARD_SPECIAL_CAT_FOOD
 		"Gold":
 			return UiText.REWARD_GOLD
+		"MemoryShard":
+			return UiText.REWARD_MEMORY_SHARDS
+		"WhiskerShard":
+			return UiText.BACKPACK_WHISKER_SHARDS
 		_:
 			return reward_type if reward_type != "" else UiText.COMMON_NO_REWARD
 
@@ -188,5 +211,9 @@ static func _get_reward_catalog_path(reward_type: String) -> String:
 			return "catalog/consumable/cat_food"
 		"SpecialCatFood":
 			return "catalog/consumable/special_cat_food"
+		"MemoryShard":
+			return "catalog/consumable/memory_shards"
+		"WhiskerShard":
+			return "catalog/consumable/whisker_shards"
 		_:
 			return ""

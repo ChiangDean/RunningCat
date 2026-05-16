@@ -41,6 +41,8 @@ var _content_scroll: ScrollContainer
 var _arena_section: VBoxContainer
 var _reward_section: VBoxContainer
 var _reward_list: VBoxContainer
+var _season_reward_section: VBoxContainer
+var _season_reward_list: VBoxContainer
 
 
 func _ready() -> void:
@@ -79,6 +81,13 @@ func _build_ui() -> void:
 				"shell_description": UiText.ARENA_REWARD_SECTION_DESC,
 				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
 				"shell_summary_right": Callable(self, "_build_shell_summary_right").bind("rewards"),
+			},
+			{
+				"key": "season_rewards",
+				"label": UiText.ARENA_TAB_SEASON_REWARDS,
+				"shell_description": UiText.ARENA_SEASON_REWARD_SECTION_DESC,
+				"shell_summary_left": Callable(self, "_build_shell_summary_left"),
+				"shell_summary_right": Callable(self, "_build_shell_summary_right").bind("season_rewards"),
 			},
 		],
 		"active_key": _active_tab,
@@ -226,6 +235,15 @@ func _build_ui() -> void:
 	_reward_list.add_theme_constant_override("separation", 0)
 	_reward_section.add_child(_reward_list)
 
+	_season_reward_section = VBoxContainer.new()
+	_season_reward_section.add_theme_constant_override("separation", 14)
+	scroll_box.add_child(_season_reward_section)
+
+	_season_reward_list = VBoxContainer.new()
+	_season_reward_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_season_reward_list.add_theme_constant_override("separation", 0)
+	_season_reward_section.add_child(_season_reward_list)
+
 	_refresh_tab_state()
 	_apply_overview({})
 
@@ -245,12 +263,7 @@ func _on_arena_overview_received(success: bool, data: Variant, error: Dictionary
 
 func _apply_overview(overview: Dictionary) -> void:
 	_overview = overview.duplicate(true)
-	var rank_texture: Texture2D = Helpers.resolve_rank_texture(
-		_overview.get("rankImagePath", ""),
-		_overview.get("rankKey", "")
-	)
-	_rank_badge.texture = rank_texture
-	_rank_badge.visible = rank_texture != null
+	Helpers.apply_rank_badge_texture(_rank_badge, _overview.get("rankImagePath", ""), _overview.get("rankKey", ""))
 	_rank_label.text = Helpers.get_current_rank(_overview)
 	_score_label.text = UiText.ARENA_SCORE_FORMAT % Helpers.get_current_score(_overview)
 	_ticket_label.text = UiText.ARENA_TICKETS_FORMAT % Helpers.get_current_tickets(_overview)
@@ -261,6 +274,7 @@ func _apply_overview(overview: Dictionary) -> void:
 	_refresh_team_panel()
 	_render_opponents()
 	_render_rewards()
+	_render_season_rewards()
 	_refresh_tab_state()
 
 
@@ -301,12 +315,12 @@ func _build_opponent_card(opponent: Dictionary) -> Control:
 	title_row.add_theme_constant_override("separation", 10)
 	box.add_child(title_row)
 
-	var rank_texture: Texture2D = Helpers.resolve_rank_texture(
-		opponent.get("rankImagePath", ""),
-		opponent.get("rankKey", "")
-	)
-	if rank_texture != null:
-		title_row.add_child(AssetResolver.create_icon_rect(rank_texture, Vector2(54.0, 54.0)))
+	var opponent_rank_badge: TextureRect = TextureRect.new()
+	opponent_rank_badge.custom_minimum_size = Vector2(54.0, 54.0)
+	opponent_rank_badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	opponent_rank_badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	Helpers.apply_rank_badge_texture(opponent_rank_badge, opponent.get("rankImagePath", ""), opponent.get("rankKey", ""))
+	title_row.add_child(opponent_rank_badge)
 
 	var title_box: VBoxContainer = VBoxContainer.new()
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -778,6 +792,8 @@ func _refresh_tab_state() -> void:
 		_arena_section.visible = _active_tab == "arena"
 	if _reward_section != null:
 		_reward_section.visible = _active_tab == "rewards"
+	if _season_reward_section != null:
+		_season_reward_section.visible = _active_tab == "season_rewards"
 	_apply_red_dots()
 
 
@@ -807,16 +823,37 @@ func _render_rewards() -> void:
 		_reward_list.add_child(_build_reward_card(rank))
 
 
-func _build_reward_card(rank: Dictionary) -> Control:
+func _render_season_rewards() -> void:
+	if _season_reward_list == null:
+		return
+
+	for child: Node in _season_reward_list.get_children():
+		child.queue_free()
+
+	if _overview.is_empty():
+		var empty_label: Label = Label.new()
+		empty_label.text = UiText.ARENA_DATA_MISSING
+		empty_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_BODY)
+		empty_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
+		_season_reward_list.add_child(empty_label)
+		return
+
+	for rank_variant: Variant in _overview.get("ranks", []):
+		if not (rank_variant is Dictionary):
+			continue
+		var rank: Dictionary = rank_variant
+		var settlement_rewards: Array = rank.get("settlementRewards", [])
+		if settlement_rewards.is_empty():
+			continue
+		_season_reward_list.add_child(_build_season_reward_card(rank, settlement_rewards))
+
+
+func _build_season_reward_card(rank: Dictionary, settlement_rewards: Array) -> Control:
 	var shell: Control = REWARD_ROW_SCENE.instantiate() as Control
 	if shell == null:
 		return Control.new()
 	shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	var badge_texture: Texture2D = Helpers.resolve_rank_texture(
-		rank.get("imagePath", ""),
-		rank.get("rankKey", "")
-	)
 	var rank_badge: TextureRect = shell.get_node("RankBadge") as TextureRect
 	var rank_label: Label = shell.get_node("RankLabel") as Label
 	var requirement_hint: Label = shell.get_node("RequirementHintLabel") as Label
@@ -825,8 +862,47 @@ func _build_reward_card(rank: Dictionary) -> Control:
 	var locked_label: Label = shell.get_node("LockedLabel") as Label
 
 	if rank_badge != null:
-		rank_badge.texture = badge_texture
-		rank_badge.visible = badge_texture != null
+		Helpers.apply_rank_badge_texture(rank_badge, rank.get("imagePath", ""), rank.get("rankKey", ""))
+
+	rank_label.text = Helpers.get_rank_display_name(
+		str(rank.get("rankKey", "")),
+		str(rank.get("displayName", UiText.ARENA_REWARD_UNKNOWN_RANK))
+	)
+	requirement_hint.visible = false
+	claim_button.visible = false
+	claimed_label.visible = false
+	locked_label.visible = false
+
+	var reward_slot_paths: Array[String] = ["RewardSlot1", "RewardSlot2", "RewardSlot3", "RewardSlot4"]
+	var entries: Array[Dictionary] = Helpers.get_reward_entries(settlement_rewards)
+	for index: int in range(reward_slot_paths.size()):
+		var reward_slot: Control = shell.get_node(reward_slot_paths[index]) as Control
+		if reward_slot == null:
+			continue
+		if index < entries.size():
+			_apply_reward_slot(reward_slot, entries[index])
+			reward_slot.visible = true
+		else:
+			reward_slot.visible = false
+
+	return shell
+
+
+func _build_reward_card(rank: Dictionary) -> Control:
+	var shell: Control = REWARD_ROW_SCENE.instantiate() as Control
+	if shell == null:
+		return Control.new()
+	shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var rank_badge: TextureRect = shell.get_node("RankBadge") as TextureRect
+	var rank_label: Label = shell.get_node("RankLabel") as Label
+	var requirement_hint: Label = shell.get_node("RequirementHintLabel") as Label
+	var claim_button: Button = shell.get_node("ClaimButton") as Button
+	var claimed_label: Label = shell.get_node("ClaimedLabel") as Label
+	var locked_label: Label = shell.get_node("LockedLabel") as Label
+
+	if rank_badge != null:
+		Helpers.apply_rank_badge_texture(rank_badge, rank.get("imagePath", ""), rank.get("rankKey", ""))
 
 	rank_label.text = Helpers.get_rank_display_name(
 		str(rank.get("rankKey", "")),
@@ -837,6 +913,7 @@ func _build_reward_card(rank: Dictionary) -> Control:
 		"RewardSlot1",
 		"RewardSlot2",
 		"RewardSlot3",
+		"RewardSlot4",
 	]
 	var reward_entries: Array[Dictionary] = Helpers.get_reward_entries(rank.get("rewards", []))
 	for index: int in range(reward_slot_paths.size()):
@@ -864,45 +941,6 @@ func _build_reward_card(rank: Dictionary) -> Control:
 	else:
 		locked_label.visible = true
 		locked_label.text = UiText.ARENA_REQUIRE_SCORE_FORMAT % int(rank.get("scoreMin", 0))
-
-	# 結算獎勵區塊
-	var settlement_rewards: Array = rank.get("settlementRewards", [])
-	if settlement_rewards.size() > 0:
-		var settlement_section: VBoxContainer = VBoxContainer.new()
-		settlement_section.add_theme_constant_override("separation", 4)
-
-		var section_label: Label = Label.new()
-		section_label.text = UiText.ARENA_SETTLEMENT_REWARD_LABEL
-		section_label.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_CAPTION)
-		section_label.add_theme_color_override("font_color", OverlaySceneChrome.MUTED_TEXT_COLOR)
-		settlement_section.add_child(section_label)
-
-		var slots_row: HBoxContainer = HBoxContainer.new()
-		slots_row.add_theme_constant_override("separation", 6)
-		settlement_section.add_child(slots_row)
-
-		var settlement_entries: Array[Dictionary] = Helpers.get_reward_entries(settlement_rewards)
-		for entry: Dictionary in settlement_entries:
-			var slot: VBoxContainer = VBoxContainer.new()
-			slot.add_theme_constant_override("separation", 2)
-
-			var icon: TextureRect = TextureRect.new()
-			icon.custom_minimum_size = Vector2(32.0, 32.0)
-			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			AssetResolver.apply_catalog_texture(icon, str(entry.get("path", "")))
-			slot.add_child(icon)
-
-			var qty_lbl: Label = Label.new()
-			qty_lbl.text = "x%d" % int(entry.get("qty", 0))
-			qty_lbl.add_theme_font_size_override("font_size", UiPalette.FONT_SIZE_CAPTION)
-			qty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			slot.add_child(qty_lbl)
-
-			slots_row.add_child(slot)
-
-		shell.add_child(settlement_section)
 
 	return shell
 
@@ -946,5 +984,14 @@ func _build_shell_summary_right(tab_key: String) -> String:
 			if rank_variant is Dictionary and bool((rank_variant as Dictionary).get("isClaimable", false)):
 				claimable_count += 1
 		return UiText.ARENA_CLAIMABLE_FORMAT % claimable_count
+
+	if tab_key == "season_rewards":
+		var season_rank_count: int = 0
+		for rank_variant: Variant in _overview.get("ranks", []):
+			if rank_variant is Dictionary:
+				var settlement: Array = (rank_variant as Dictionary).get("settlementRewards", [])
+				if not settlement.is_empty():
+					season_rank_count += 1
+		return "%d" % season_rank_count if season_rank_count > 0 else ""
 
 	return UiText.ARENA_SCORE_TAB_FORMAT % Helpers.get_current_score(_overview)
