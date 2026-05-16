@@ -423,6 +423,9 @@ func _populate_cat_picker() -> void:
 		var display_name: String = str(item.get("display_name", cat_key))
 		if cat_key == "":
 			continue
+		var rarity: String = str(item.get("rarity", ""))
+		if rarity != "common":
+			continue
 
 		var card := _build_cat_card(cat_key, display_name)
 		_picker_grid.add_child(card)
