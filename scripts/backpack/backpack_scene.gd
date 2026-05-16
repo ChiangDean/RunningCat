@@ -143,17 +143,12 @@ func _make_item_card(item: Dictionary) -> Control:
 	var overlay_mask: TextureRect = slot.get_node("OverlayMask") as TextureRect
 	var name_label: Label = slot.get_node("ItemNameLabel") as Label
 	var qty_label: Label = slot.get_node("CountLabel") as Label
-	var texture: Texture2D = AssetResolver.resolve_catalog_texture(str(item.get("path", "")))
+	AssetResolver.apply_catalog_texture(icon, str(item.get("path", "")))
 
 	name_label.text = str(item.get("name", ""))
 	name_label.tooltip_text = name_label.text
 	qty_label.text = GameState.format_number(qty)
 	qty_label.tooltip_text = qty_label.text
-
-	if texture != null:
-		icon.texture = texture
-	else:
-		icon.visible = false
 
 	if has_qty:
 		frame.modulate = Color(1.0, 1.0, 1.0, 1.0)

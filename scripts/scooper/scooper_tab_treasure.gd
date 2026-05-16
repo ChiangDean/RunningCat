@@ -140,11 +140,7 @@ func _show_treasure_detail(scene: Control, item: Dictionary) -> void:
 	var detail_frame: TextureRect = detail_slot.get_node("Frame") as TextureRect
 	var detail_overlay: TextureRect = detail_slot.get_node("OverlayMask") as TextureRect
 
-	var treasure_texture: Texture2D = AssetResolver.resolve_catalog_texture(item.get("imagePath", ""))
-	if treasure_texture != null:
-		detail_icon.texture = treasure_texture
-	else:
-		detail_icon.visible = false
+	AssetResolver.apply_catalog_texture(detail_icon, item.get("imagePath", ""))
 	detail_name.visible = false
 	detail_qty.text = GameState.format_number(int(item.get("quantity", 0)))
 	detail_frame.modulate = Color(1.0, 1.0, 1.0, 1.0)

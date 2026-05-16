@@ -363,11 +363,10 @@ static func _bind_reward_slot(slot: Control, reward_items: Array[Dictionary], in
 	var reward_item: Dictionary = reward_items[index]
 	var reward_key: String = str(reward_item.get("key", ""))
 	var amount: int = int(reward_item.get("amount", 0))
-	var texture: Texture2D = AssetResolver.resolve_catalog_texture(_get_reward_catalog_path(reward_key))
+	AssetResolver.apply_catalog_texture(icon, _get_reward_catalog_path(reward_key))
 
 	frame.visible = true
-	icon.visible = texture != null
-	icon.texture = texture
+	icon.visible = true
 	overlay_mask.visible = true
 	item_name_label.visible = true
 	item_name_label.text = _get_reward_label(reward_key)
