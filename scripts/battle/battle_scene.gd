@@ -3715,7 +3715,11 @@ func _show_daily_tasks_dialog(data: Dictionary) -> void:
 	var close_ref: Array = [Callable()]
 	for task_variant: Variant in tasks:
 		if task_variant is Dictionary:
-			list.add_child(_build_daily_task_card(task_variant as Dictionary, close_ref))
+			var task_dict: Dictionary = task_variant as Dictionary
+			var task_unlock_level: int = int(task_dict.get("unlockLevel", 1))
+			if GameState.player_data.scooper_level < task_unlock_level:
+				continue
+			list.add_child(_build_daily_task_card(task_dict, close_ref))
 
 	close_ref[0] = DialogManager.show_info_node(UiText.HOME_DAILY_TASKS_TITLE, root, Callable(), "xlarge")
 
