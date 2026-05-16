@@ -10,6 +10,7 @@ var _content_box: VBoxContainer
 var _pull_panel: Control
 var _pull_option_list: VBoxContainer
 var _free_button: Button
+var _ad_pull_button: Button
 var _technique_panel: Control
 var _technique_title: Label
 var _technique_desc: Label
@@ -73,6 +74,12 @@ func _build_ui() -> void:
 	_free_button.pressed.connect(_on_free_pull_pressed)
 	UiPalette.apply_button_kind(_free_button, "confirm")
 	pull_box.add_child(_free_button)
+
+	_ad_pull_button = Button.new()
+	_ad_pull_button.custom_minimum_size = Vector2(0.0, 52.0)
+	_ad_pull_button.pressed.connect(_on_ad_pull_pressed)
+	UiPalette.apply_button_kind(_ad_pull_button, "secondary")
+	pull_box.add_child(_ad_pull_button)
 
 	_technique_panel = Control.new()
 	_technique_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -154,6 +161,24 @@ func _on_free_pull_pressed() -> void:
 	_request_pull(1, true)
 
 
+func _on_ad_pull_pressed() -> void:
+	_ad_pull_button.disabled = true
+	ApiClient.perform_gacha_ad_pull(Callable(self, "_on_ad_pull_completed"))
+
+
+func _on_ad_pull_completed(success: bool, data: Variant, error: Dictionary) -> void:
+	if not success:
+		ToastManager.error(UiText.GACHA_PULL_FAILED_TITLE, str(error.get("message", UiText.GACHA_PULL_FAILED_BODY)))
+		_ad_pull_button.disabled = false
+		return
+	var payload: Dictionary = data if data is Dictionary else {}
+	GameState.apply_gacha_pull_response(payload)
+	_refresh_view()
+	var results_variant: Variant = payload.get("results", [])
+	var results: Array = results_variant if results_variant is Array else []
+	_show_results(results)
+
+
 func _on_gacha_bootstrap_refreshed(success: bool, data: Variant, error: Dictionary, show_error_dialog: bool) -> void:
 	if success and data is Dictionary:
 		GameState.apply_player_bootstrap(data)
@@ -203,6 +228,21 @@ func _refresh_pull_options() -> void:
 	else:
 		_free_button.text = UiText.GACHA_FREE_PULL_FORMAT % maxi(free_pull_count, 1)
 		_free_button.disabled = false
+
+	var remaining_ad_pulls: int = int(GameState.gacha_data.get("remainingAdPullCount", 0))
+	var daily_ad_pull_limit: int = int(GameState.gacha_data.get("dailyAdPullLimit", 0))
+	var ad_used: int = int(GameState.gacha_data.get("dailyAdPullUsedCount", 0))
+	if daily_ad_pull_limit > 0 and has_used_free_pull_today:
+		_ad_pull_button.visible = true
+		if remaining_ad_pulls > 0:
+			var ad_free_label: String = "免費" if GameState.is_ad_free() else "廣告"
+			_ad_pull_button.text = "%s誘捕 (%d/%d)" % [ad_free_label, ad_used, daily_ad_pull_limit]
+			_ad_pull_button.disabled = false
+		else:
+			_ad_pull_button.text = "廣告誘捕已用完"
+			_ad_pull_button.disabled = true
+	else:
+		_ad_pull_button.visible = false
 	_apply_red_dots()
 
 

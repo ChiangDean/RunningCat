@@ -163,7 +163,9 @@ const SKILL_PANEL_H := NAV_Y - SKILL_PANEL_Y
 const SKILL_PANEL_ALL_H := NAV_Y - SKILL_PANEL_Y
 const DEFAULT_FREE_SPEED_BOOST_MULT: float = 1.2
 const FREE_SPEED_BOOST_DURATION_SECONDS: int = 30 * 60
-const FREE_SPEED_BOOST_MAX_USES: int = 2
+const FREE_SPEED_BOOST_MAX_USES: int = 1
+const AD_SPEED_BOOST_DURATION_SECONDS: int = 30 * 60
+const AD_SPEED_BOOST_MAX_USES: int = 1
 const ENHANCE_APPLY_DISABLED_BG := Color(0.24, 0.21, 0.18, 0.86)
 const ENHANCE_APPLY_DISABLED_FG := Color(0.72, 0.69, 0.64, 1.0)
 const ENHANCE_DETAIL_TAB_ACTIVE_FILL := Color(0.43, 0.31, 0.14, 0.98)
@@ -343,6 +345,9 @@ var _current_speed_mult: float = 1.0
 var _free_speed_boost_end_unix: int = 0
 var _free_speed_boost_mult: float = 1.0
 var _free_speed_boost_remaining_uses: int = FREE_SPEED_BOOST_MAX_USES
+var _ad_speed_boost_end_unix: int = 0
+var _ad_speed_boost_remaining_uses: int = AD_SPEED_BOOST_MAX_USES
+var _ad_speed_boost_checked: bool = false
 var _boss_warning_flash_tween: Tween
 var _boss_warning_pulse_tween: Tween
 var _result_animation_tween: Tween
@@ -2509,12 +2514,17 @@ func _set_speed(mult: float, active_btn: Button) -> void:
 
 
 func _cycle_speed() -> void:
-	if _is_free_speed_boost_active() or _free_speed_boost_remaining_uses <= 0:
+	if _is_free_speed_boost_active() or _is_ad_speed_boost_active():
 		return
-	_free_speed_boost_mult = _get_free_speed_boost_mult()
-	_free_speed_boost_end_unix = int(Time.get_unix_time_from_system()) + FREE_SPEED_BOOST_DURATION_SECONDS
-	_free_speed_boost_remaining_uses -= 1
-	_set_speed(_free_speed_boost_mult, _speed_1x)
+	if _free_speed_boost_remaining_uses > 0:
+		_free_speed_boost_mult = _get_free_speed_boost_mult()
+		_free_speed_boost_end_unix = int(Time.get_unix_time_from_system()) + FREE_SPEED_BOOST_DURATION_SECONDS
+		_free_speed_boost_remaining_uses -= 1
+		_set_speed(_free_speed_boost_mult, _speed_1x)
+		return
+	if _ad_speed_boost_remaining_uses > 0:
+		_prompt_ad_speed_boost()
+		return
 
 
 func _get_available_speed_options() -> Array[float]:
@@ -2537,6 +2547,7 @@ func _format_speed_label(mult: float) -> String:
 
 func _apply_speed_unlocks() -> void:
 	_refresh_speed_boost_button()
+	_check_ad_speed_boost_status()
 
 
 func _highlight_speed_btn(active: Button) -> void:
@@ -2547,15 +2558,26 @@ func _highlight_speed_btn(active: Button) -> void:
 
 
 func _refresh_speed_boost_state() -> void:
-	var boost_active: bool = _is_free_speed_boost_active()
-	if boost_active and not is_equal_approx(_current_speed_mult, _free_speed_boost_mult):
+	var free_active: bool = _is_free_speed_boost_active()
+	var ad_active: bool = _is_ad_speed_boost_active()
+	if free_active and not is_equal_approx(_current_speed_mult, _free_speed_boost_mult):
 		_set_speed(_free_speed_boost_mult, _speed_1x)
-	elif not boost_active and _free_speed_boost_end_unix != 0:
+	elif not free_active and _free_speed_boost_end_unix != 0:
 		_free_speed_boost_end_unix = 0
 		_free_speed_boost_mult = 1.0
+		if not ad_active:
+			_set_speed(1.0, _speed_1x)
+	elif ad_active and not is_equal_approx(_current_speed_mult, _get_free_speed_boost_mult()):
+		_set_speed(_get_free_speed_boost_mult(), _speed_1x)
+	elif not ad_active and _ad_speed_boost_end_unix != 0:
+		_ad_speed_boost_end_unix = 0
 		_set_speed(1.0, _speed_1x)
 	else:
 		_refresh_speed_boost_button()
+
+
+func _is_ad_speed_boost_active() -> bool:
+	return _ad_speed_boost_end_unix > int(Time.get_unix_time_from_system())
 
 
 func _is_free_speed_boost_active() -> bool:
@@ -2565,23 +2587,35 @@ func _is_free_speed_boost_active() -> bool:
 func _refresh_speed_boost_button() -> void:
 	if _speed_1x == null:
 		return
+	var total_max: int = FREE_SPEED_BOOST_MAX_USES + AD_SPEED_BOOST_MAX_USES
 	if _is_free_speed_boost_active():
 		var remaining_seconds: int = _free_speed_boost_end_unix - int(Time.get_unix_time_from_system())
 		_speed_1x.text = "戰鬥加速\n%s" % _format_countdown_time(remaining_seconds)
 		_speed_1x.disabled = true
-	elif _free_speed_boost_remaining_uses <= 0:
-		_speed_1x.text = "戰鬥加速\n(0/%d)" % FREE_SPEED_BOOST_MAX_USES
+	elif _is_ad_speed_boost_active():
+		var remaining_seconds: int = _ad_speed_boost_end_unix - int(Time.get_unix_time_from_system())
+		_speed_1x.text = "戰鬥加速\n%s" % _format_countdown_time(remaining_seconds)
 		_speed_1x.disabled = true
-	else:
-		_speed_1x.text = "戰鬥加速\n(%d/%d)" % [_free_speed_boost_remaining_uses, FREE_SPEED_BOOST_MAX_USES]
+	elif _free_speed_boost_remaining_uses > 0:
+		var total_remaining: int = _free_speed_boost_remaining_uses + _ad_speed_boost_remaining_uses
+		_speed_1x.text = "戰鬥加速\n(%d/%d)" % [total_remaining, total_max]
 		_speed_1x.disabled = false
+	elif _ad_speed_boost_remaining_uses > 0:
+		var ad_free_label: String = "免費" if GameState.is_ad_free() else "廣告"
+		_speed_1x.text = "%s加速\n(%d/%d)" % [ad_free_label, _ad_speed_boost_remaining_uses, AD_SPEED_BOOST_MAX_USES]
+		_speed_1x.disabled = false
+	else:
+		_speed_1x.text = "戰鬥加速\n(0/%d)" % total_max
+		_speed_1x.disabled = true
 	if _speed_boost_visual_btn != null:
 		_speed_boost_visual_btn.disabled = _speed_1x.disabled
-		_speed_boost_visual_btn.modulate = Color(1.0, 1.0, 1.0, 0.58) if _speed_1x.disabled and not _is_free_speed_boost_active() else Color(1.0, 1.0, 1.0, 1.0)
+		var boost_active: bool = _is_free_speed_boost_active() or _is_ad_speed_boost_active()
+		_speed_boost_visual_btn.modulate = Color(1.0, 1.0, 1.0, 0.58) if _speed_1x.disabled and not boost_active else Color(1.0, 1.0, 1.0, 1.0)
 	if _speed_boost_status_label != null:
 		_speed_boost_status_label.text = _speed_1x.text
-	_highlight_speed_btn(_speed_1x if _is_free_speed_boost_active() else null)
-	_apply_skill_speed_button_style(_speed_1x, _is_free_speed_boost_active() or not _speed_1x.disabled)
+	var boost_active_for_highlight: bool = _is_free_speed_boost_active() or _is_ad_speed_boost_active()
+	_highlight_speed_btn(_speed_1x if boost_active_for_highlight else null)
+	_apply_skill_speed_button_style(_speed_1x, boost_active_for_highlight or not _speed_1x.disabled)
 
 
 func _format_countdown_time(total_seconds: int) -> String:
@@ -2600,6 +2634,47 @@ func _get_free_speed_boost_mult() -> float:
 	if speed_cap >= 1.5:
 		return 1.5
 	return DEFAULT_FREE_SPEED_BOOST_MULT
+
+
+func _prompt_ad_speed_boost() -> void:
+	var ad_free_label: String = "免費" if GameState.is_ad_free() else "觀看廣告"
+	DialogManager.show_confirm(
+		"戰鬥加速",
+		"%s以獲得30分鐘戰鬥加速？" % ad_free_label,
+		Callable(self, "_confirm_ad_speed_boost"),
+		"confirm"
+	)
+
+
+func _confirm_ad_speed_boost() -> void:
+	_speed_1x.disabled = true
+	ApiClient.use_ad_speed_boost(Callable(self, "_on_ad_speed_boost_completed"))
+
+
+func _on_ad_speed_boost_completed(ok: bool, data: Variant, err: Dictionary) -> void:
+	if not ok:
+		ToastManager.error("戰鬥加速", str(err.get("message", "廣告加速失敗")))
+		_refresh_speed_boost_button()
+		return
+	_ad_speed_boost_remaining_uses -= 1
+	_ad_speed_boost_end_unix = int(Time.get_unix_time_from_system()) + AD_SPEED_BOOST_DURATION_SECONDS
+	_set_speed(_get_free_speed_boost_mult(), _speed_1x)
+	ToastManager.success("戰鬥加速", "已加速30分鐘！")
+
+
+func _check_ad_speed_boost_status() -> void:
+	if _ad_speed_boost_checked:
+		return
+	_ad_speed_boost_checked = true
+	ApiClient.get_ad_speed_boost_status(Callable(self, "_on_ad_speed_boost_status"))
+
+
+func _on_ad_speed_boost_status(ok: bool, data: Variant, _err: Dictionary) -> void:
+	if not ok or not (data is Dictionary):
+		return
+	var remaining: int = int(data.get("remainingAdSpeedBoostCount", AD_SPEED_BOOST_MAX_USES))
+	_ad_speed_boost_remaining_uses = remaining
+	_refresh_speed_boost_button()
 
 
 func _refresh_ui() -> void:

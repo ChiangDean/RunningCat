@@ -519,6 +519,10 @@ func claim_expedition(zone_id: int, callback: Callable) -> void:
 	_api_post("expedition/%d/claim" % zone_id, {}, callback)
 
 
+func expedition_ad_speedup(zone_id: int, callback: Callable) -> void:
+	_api_post("expedition/%d/ad-speedup" % zone_id, {}, _with_daily_task_event(callback, "watch_ad"))
+
+
 func get_gacha_overview(callback: Callable) -> void:
 	_api_get("gacha", callback)
 
@@ -530,6 +534,10 @@ func perform_gacha_pull(pull_count: int, use_free_pull: bool, spend_trap_cages_f
 		"useFreePull": use_free_pull,
 		"spendTrapCagesFirst": spend_trap_cages_first,
 	}, request_callback)
+
+
+func perform_gacha_ad_pull(callback: Callable) -> void:
+	_api_post("gacha/ad-pull", {}, _with_daily_task_event(callback, "watch_ad"))
 
 
 func get_shop_overview(callback: Callable) -> void:
@@ -589,6 +597,14 @@ func complete_arena_battle(opponent_id: String, is_win: bool, callback: Callable
 
 func grant_dungeon_ad_ticket(dungeon_id: int, callback: Callable) -> void:
 	_api_post("dungeon/%d/ad-ticket" % dungeon_id, {}, callback)
+
+
+func get_ad_speed_boost_status(callback: Callable) -> void:
+	_api_get("scooper/profile/ad-speed-boost", callback)
+
+
+func use_ad_speed_boost(callback: Callable) -> void:
+	_api_post("scooper/profile/ad-speed-boost", {}, _with_daily_task_event(callback, "watch_ad"))
 
 
 func sweep_dungeon(dungeon_id: int, callback: Callable) -> void:
