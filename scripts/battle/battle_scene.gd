@@ -3705,6 +3705,7 @@ func _show_daily_tasks_dialog(data: Dictionary) -> void:
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(scroll)
+	InertialScroller.attach(scroll, "vertical")
 
 	var list: VBoxContainer = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 10)

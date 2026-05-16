@@ -1513,7 +1513,7 @@ func _on_cdn_warmup_completed() -> void:
 
 
 func _try_finish_loading() -> void:
-	if _bootstrap_completed and _loading_animation_finished and _cdn_warmup_completed:
+	if _bootstrap_completed and _cdn_warmup_completed:
 		_complete_loading_state()
 
 
