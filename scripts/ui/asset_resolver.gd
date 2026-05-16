@@ -928,6 +928,28 @@ static func collect_warmup_cdn_urls(owned_cat_ids: Array) -> Array[String]:
 			seen[url] = true
 			urls.append(url)
 
+	# Memory icons
+	var memory_files: Array[String] = [
+		"armor_intuition.png", "armor_limit.png", "armor_pierce.png",
+		"atk_apex.png", "big_bite.png", "blanket_watch.png",
+		"box_kingdom.png", "burst_memory.png", "burst_threshold.png",
+		"cardboard_hideout.png", "claw_memory.png", "combo_awakening.png",
+		"combo_flow.png", "combo_instinct.png", "desperation_counter.png",
+		"eternal_life.png", "fearless_charge.png", "first_crit.png",
+		"frontline_charge.png", "full_effort.png", "hunt_practice.png",
+		"indestructible.png", "infinite_burst.png", "iron_will.png",
+		"lethal_moment.png", "light_chase.png", "midnight_zoomies.png",
+		"moonlight_walk.png", "paw_moment.png", "scoop_ritual.png",
+		"sharp_apex.png", "shield_instinct.png", "shield_wall.png",
+		"snack_standoff.png", "sunny_nap.png", "tenacity_law.png",
+		"ultimate_combo.png", "undying_will.png", "warm_nest.png",
+	]
+	for f: String in memory_files:
+		var url: String = resolve_cdn_asset_url(UI_CDN_MEMORY_ROOT + f)
+		if url != "" and not seen.has(url):
+			seen[url] = true
+			urls.append(url)
+
 	# Arena rank badges
 	var arena_rank_files: Array[String] = [
 		"bronze_1.png", "bronze_2.png", "bronze_3.png",
